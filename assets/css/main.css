@@ -1,11 +1,13 @@
-/* Minimal, Human-Centered Design System */
+/* Minimal, Human-Centered Design System - Poppins Font */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 :root {
-    /* Natural, professional color palette */
-    --primary: #2563eb;
-    --primary-dark: #1e40af;
-    --primary-light: #3b82f6;
-    --secondary: #64748b;
+    /* Black and gray palette for minimal design */
+    --primary: #000000;
+    --primary-dark: #000000;
+    --primary-light: #1a1a1a;
+    --secondary: #4b5563;
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
@@ -24,8 +26,7 @@
     --gray-900: #111827;
     
     /* Typography */
-    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
-    --font-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    --font-poppins: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
 * {
@@ -34,46 +35,49 @@
 }
 
 body {
-    font-family: var(--font-sans);
+    font-family: var(--font-poppins);
     color: var(--gray-800);
     background: var(--gray-50);
     font-size: 15px;
     line-height: 1.6;
+    font-weight: 400;
 }
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     color: var(--gray-900);
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
+    font-family: var(--font-poppins);
 }
 
-h1 { font-size: 2rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.25rem; }
-h4 { font-size: 1.125rem; }
+h1 { font-size: 2rem; font-weight: 700; }
+h2 { font-size: 1.5rem; font-weight: 600; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+h4 { font-size: 1.125rem; font-weight: 600; }
 
 /* Navbar - Clean and minimal */
 .navbar {
     background: white !important;
     border-bottom: 1px solid var(--gray-200);
-    padding: 0.75rem 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding: 0.875rem 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .navbar-brand {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 1.125rem;
-    color: var(--gray-900) !important;
+    color: var(--primary) !important;
     letter-spacing: -0.02em;
 }
 
 .navbar-brand:hover {
     color: var(--primary) !important;
+    opacity: 0.8;
 }
 
 .navbar-nav .nav-link {
-    color: var(--gray-600) !important;
+    color: var(--gray-700) !important;
     font-weight: 500;
     padding: 0.5rem 1rem !important;
     transition: color 0.15s ease;
@@ -106,6 +110,7 @@ h4 { font-size: 1.125rem; }
     font-size: 0.9375rem;
     transition: all 0.15s ease;
     border: none;
+    font-family: var(--font-poppins);
 }
 
 .btn-primary {
@@ -114,9 +119,9 @@ h4 { font-size: 1.125rem; }
 }
 
 .btn-primary:hover {
-    background: var(--primary-dark);
+    background: var(--gray-800);
     transform: none;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
@@ -185,6 +190,7 @@ h4 { font-size: 1.125rem; }
 .table {
     font-size: 0.9375rem;
     margin-bottom: 0;
+    font-family: var(--font-poppins);
 }
 
 .table thead th {
@@ -218,6 +224,7 @@ h4 { font-size: 1.125rem; }
     color: var(--gray-700);
     margin-bottom: 0.5rem;
     font-size: 0.9375rem;
+    font-family: var(--font-poppins);
 }
 
 .form-control,
@@ -228,12 +235,13 @@ h4 { font-size: 1.125rem; }
     font-size: 0.9375rem;
     transition: all 0.15s ease;
     color: var(--gray-800);
+    font-family: var(--font-poppins);
 }
 
 .form-control:focus,
 .form-select:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
     outline: none;
 }
 
@@ -248,6 +256,7 @@ h4 { font-size: 1.125rem; }
     font-size: 0.75rem;
     border-radius: 4px;
     letter-spacing: 0;
+    font-family: var(--font-poppins);
 }
 
 .bg-primary { background: var(--primary) !important; }
@@ -264,6 +273,7 @@ h4 { font-size: 1.125rem; }
     padding: 0.875rem 1rem;
     font-size: 0.9375rem;
     margin-bottom: 1rem;
+    font-family: var(--font-poppins);
 }
 
 .alert-success {
@@ -292,6 +302,7 @@ h4 { font-size: 1.125rem; }
     padding: 0;
     margin: 0.5rem 0;
     font-size: 0.875rem;
+    font-family: var(--font-poppins);
 }
 
 .breadcrumb-item a {
@@ -331,7 +342,7 @@ h4 { font-size: 1.125rem; }
     font-size: 1.25rem;
 }
 
-.stat-icon.primary { background: #dbeafe; color: var(--primary); }
+.stat-icon.primary { background: var(--gray-100); color: var(--primary); }
 .stat-icon.success { background: #d1fae5; color: var(--success); }
 .stat-icon.warning { background: #fef3c7; color: var(--warning); }
 .stat-icon.danger { background: #fee2e2; color: var(--danger); }
@@ -367,7 +378,7 @@ h4 { font-size: 1.125rem; }
 
 .page-title {
     font-size: 1.75rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--gray-900);
     margin-bottom: 0.5rem;
     letter-spacing: -0.025em;
@@ -379,6 +390,7 @@ h4 { font-size: 1.125rem; }
     border-radius: 6px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     padding: 0.5rem;
+    font-family: var(--font-poppins);
 }
 
 .dropdown-item {
@@ -437,19 +449,241 @@ footer {
 .badge.bg-primary { background: var(--primary) !important; }
 .badge.bg-secondary { background: var(--gray-500) !important; }
 .badge.bg-success { background: var(--success) !important; }
+.badge.bg-dark { background: var(--gray-800) !important; }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Responsive Design - Mobile First */
+@media (max-width: 576px) {
     .container-fluid {
         padding-left: 1rem;
         padding-right: 1rem;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
     }
     
     .card-body {
         padding: 1rem;
     }
     
-    .page-title {
+    .card-header {
+        padding: 0.875rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .stat-number {
         font-size: 1.5rem;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .table thead th {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    .table tbody td {
+        padding: 0.75rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.875rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .navbar-nav .nav-link {
+        padding: 0.625rem 1rem !important;
+        font-size: 0.875rem;
+    }
+    
+    .page-header {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+    }
+}
+
+/* Tablet */
+@media (min-width: 577px) and (max-width: 768px) {
+    .container-fluid {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+    }
+    
+    .page-title {
+        font-size: 1.625rem;
+    }
+    
+    .stat-number {
+        font-size: 1.625rem;
+    }
+}
+
+/* Desktop adjustments */
+@media (min-width: 769px) and (max-width: 992px) {
+    .container-fluid {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+/* Large Desktop */
+@media (min-width: 993px) {
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+}
+
+/* Navigation responsive */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--gray-200);
+    }
+    
+    .navbar-nav {
+        padding-left: 0;
+    }
+}
+
+/* Forms responsive */
+@media (max-width: 768px) {
+    .form-control,
+    .form-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .row .col-md-6,
+    .row .col-md-4,
+    .row .col-md-3 {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Table responsive */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table {
+        min-width: 600px;
+    }
+}
+
+/* Card grid responsive */
+@media (max-width: 768px) {
+    .row.g-3 > *,
+    .row.g-4 > * {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Login page responsive */
+@media (max-width: 576px) {
+    .login-card {
+        margin: 1rem;
+        border-radius: 8px;
+        max-width: calc(100% - 2rem);
+    }
+    
+    .login-header {
+        padding: 1.5rem;
+    }
+    
+    .login-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .login-body {
+        padding: 1.5rem;
+    }
+}
+
+/* Install wizard responsive */
+@media (max-width: 768px) {
+    .install-container {
+        padding: 1rem;
+    }
+    
+    .install-card {
+        border-radius: 8px;
+    }
+    
+    .install-header {
+        padding: 1.5rem;
+    }
+    
+    .install-body {
+        padding: 1.5rem;
+    }
+    
+    .step-indicator {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .step {
+        flex: 0 0 calc(33.333% - 0.5rem);
+        min-width: 80px;
+    }
+    
+    .step .step-number {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
+    
+    .step small {
+        font-size: 0.7rem;
+    }
+}
+
+/* Additional mobile optimizations */
+@media (max-width: 576px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .d-flex.justify-content-between .btn {
+        width: 100%;
+    }
+    
+    .page-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .page-header .d-flex .btn {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+    
+    .stat-card .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stat-card .d-flex .stat-icon {
+        margin: 0 auto 0.75rem auto;
     }
 }

@@ -188,9 +188,16 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Installation Wizard - Business Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
         body {
             background: #f9fafb;
             min-height: 100vh;
@@ -209,7 +216,7 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
             overflow: hidden;
         }
         .install-header {
-            background: #2563eb;
+            background: #000000;
             color: white;
             padding: 2rem;
             text-align: center;
@@ -242,7 +249,7 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
             margin-bottom: 0.5rem;
         }
         .step.active .step-number {
-            background: #2563eb;
+            background: #000000;
             color: white;
         }
         .step.completed .step-number {
@@ -271,16 +278,16 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
             margin-bottom: 0.5rem;
         }
         .btn-install {
-            background: #2563eb;
+            background: #000000;
             border: none;
             padding: 0.75rem 2rem;
             font-weight: 500;
             color: white;
         }
         .btn-install:hover {
-            background: #1e40af;
+            background: #1a1a1a;
             transform: none;
-            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
         }
     </style>
 </head>

@@ -54,9 +54,9 @@ function isManager() {
 function getRoleBadgeClass($role) {
     $classes = [
         'super_admin' => 'danger',
-        'admin' => 'warning',
+        'admin' => 'dark', // Changed from warning to dark for minimal look
         'manager' => 'info',
-        'staff' => 'primary',
+        'staff' => 'dark', // Changed from primary to dark
         'user' => 'secondary'
     ];
     return $classes[$role] ?? 'secondary';

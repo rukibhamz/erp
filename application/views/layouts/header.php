@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title><?= $page_title ?? 'Business Management System' ?> - ERP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= base_url('assets/css/main.css') ?>" rel="stylesheet">
@@ -48,7 +51,7 @@
     </nav>
     <?php endif; ?>
     
-    <div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding-top: 2rem; padding-bottom: 2rem;">
+    <div class="container-fluid">
         <?php if (isset($flash)): ?>
             <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show" role="alert">
                 <?= htmlspecialchars($flash['message']) ?>

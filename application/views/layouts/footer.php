@@ -1,7 +1,7 @@
     </div>
     
     <footer>
-        <div class="container-fluid" style="max-width: 1400px; margin: 0 auto;">
+        <div class="container-fluid">
             <div class="text-center text-muted" style="font-size: 0.875rem;">
                 &copy; <?= date('Y') ?> Business ERP
             </div>
