@@ -29,13 +29,71 @@ class Payroll_model extends Base_Model {
         );
     }
     
-    public function getByPeriod($startDate, $endDate) {
-        return $this->db->fetchAll(
-            "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-             WHERE pay_period_start >= ? AND pay_period_end <= ? 
-             ORDER BY payment_date",
-            [$startDate, $endDate]
-        );
+    public function getByPeriod($period) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . "payroll_runs` 
+                 WHERE period = ? 
+                 ORDER BY processed_date DESC",
+                [$period]
+            );
+        } catch (Exception $e) {
+            error_log('Payroll_model getByPeriod error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    public function createRun($data) {
+        try {
+            return $this->db->insert('payroll_runs', $data);
+        } catch (Exception $e) {
+            error_log('Payroll_model createRun error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function getRunById($runId) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . "payroll_runs` WHERE id = ?",
+                [$runId]
+            );
+        } catch (Exception $e) {
+            error_log('Payroll_model getRunById error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function updateRun($runId, $data) {
+        try {
+            return $this->db->update('payroll_runs', $data, "id = ?", [$runId]);
+        } catch (Exception $e) {
+            error_log('Payroll_model updateRun error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function createPayslip($data) {
+        try {
+            return $this->db->insert('payslips', $data);
+        } catch (Exception $e) {
+            error_log('Payroll_model createPayslip error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function getPayslips($payrollRunId) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . "payslips` 
+                 WHERE payroll_run_id = ? 
+                 ORDER BY employee_id",
+                [$payrollRunId]
+            );
+        } catch (Exception $e) {
+            error_log('Payroll_model getPayslips error: ' . $e->getMessage());
+            return [];
+        }
     }
 }
 

@@ -17,6 +17,11 @@ class Recurring_transaction_model extends Base_Model {
         }
     }
     
+    public function getDueTransactions() {
+        // Alias for getDue
+        return $this->getDue();
+    }
+    
     public function calculateNextRunDate($startDate, $frequency, $currentDate = null) {
         $currentDate = $currentDate ?: date('Y-m-d');
         $date = new DateTime($currentDate);

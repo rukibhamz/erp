@@ -83,8 +83,36 @@ $route['journal'] = 'Ledger/index';
 $route['journal/create'] = 'Ledger/create';
 $route['ledger/create'] = 'Ledger/create';
 $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
-$route['ledger/approve/(:num)'] = 'Ledger/approve/$1';
-$route['ledger/post/(:num)'] = 'Ledger/post/$1';
+        $route['ledger/approve/(:num)'] = 'Ledger/approve/$1';
+        $route['ledger/post/(:num)'] = 'Ledger/post/$1';
 
-return $route;
+        // Financial Reports
+        $route['reports'] = 'Reports/index';
+        $route['reports/profit-loss'] = 'Reports/profitLoss';
+        $route['reports/balance-sheet'] = 'Reports/balanceSheet';
+        $route['reports/cash-flow'] = 'Reports/cashFlow';
+        $route['reports/trial-balance'] = 'Reports/trialBalance';
+        $route['reports/general-ledger'] = 'Reports/generalLedger';
+
+        // Payroll
+        $route['payroll'] = 'Payroll/index';
+        $route['payroll/employees'] = 'Payroll/employees';
+        $route['payroll/employees/create'] = 'Payroll/createEmployee';
+        $route['payroll/process'] = 'Payroll/processPayroll';
+        $route['payroll/view/(:num)'] = 'Payroll/view/$1';
+        $route['payroll/post/(:num)'] = 'Payroll/postPayroll/$1';
+
+        // Financial Year Management
+        $route['financial-years'] = 'Financial_years/index';
+        $route['financial-years/create'] = 'Financial_years/create';
+        $route['financial-years/close/(:num)'] = 'Financial_years/close/$1';
+        $route['financial-years/periods/(:num)'] = 'Financial_years/periods/$1';
+        $route['financial-years/lock-period'] = 'Financial_years/lockPeriod';
+        $route['financial-years/unlock-period'] = 'Financial_years/unlockPeriod';
+
+        // Recurring Transactions
+        $route['recurring'] = 'Recurring/index';
+        $route['recurring/process'] = 'Recurring/process';
+
+        return $route;
 

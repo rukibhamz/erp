@@ -384,7 +384,7 @@ class Payables extends Base_Controller {
                     $bill = $this->billModel->getById($billId);
                     if ($bill) {
                         // Create allocation
-                        $this->paymentAllocationModel->allocate($paymentId, null, $billId, $amount, 0);
+                        $this->paymentAllocationModel->allocate($paymentId, $amount, null, $billId, 0);
                         
                         // Update bill
                         $this->billModel->addPayment($billId, $amount);

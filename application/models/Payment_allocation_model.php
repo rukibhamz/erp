@@ -59,7 +59,7 @@ class Payment_allocation_model extends Base_Model {
         }
     }
     
-    public function allocate($paymentId, $invoiceId = null, $billId = null, $amount, $discountTaken = 0) {
+    public function allocate($paymentId, $amount, $invoiceId = null, $billId = null, $discountTaken = 0) {
         try {
             if (!$invoiceId && !$billId) {
                 return false;
