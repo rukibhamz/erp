@@ -22,6 +22,11 @@ $page_title = $page_title ?? 'Settings';
                             <i class="bi bi-puzzle me-2"></i> Modules
                         </a>
                     </li>
+                    <li class="mb-2">
+                        <a href="<?= base_url('settings/payment-gateways') ?>" class="text-decoration-none d-flex align-items-center text-muted">
+                            <i class="bi bi-credit-card me-2"></i> Payment Gateways
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>

@@ -27,7 +27,7 @@ class Base_Controller {
     }
     
     protected function checkAuth() {
-        $publicControllers = ['Auth', 'Error404', 'Booking_portal'];
+        $publicControllers = ['Auth', 'Error404', 'Booking_portal', 'Payment', 'Booking_wizard'];
         $currentController = get_class($this);
         
         if (!in_array($currentController, $publicControllers)) {

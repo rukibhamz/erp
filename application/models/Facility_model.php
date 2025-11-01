@@ -116,15 +116,12 @@ class Facility_model extends Base_Model {
         }
     }
     
-    public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly') {
+    public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly', $quantity = 1, $isMember = false) {
         try {
             $facility = $this->getById($facilityId);
             if (!$facility) {
                 return 0;
             }
-            
-            // Parse pricing rules
-            $pricingRules = json_decode($facility['pricing_rules'] ?? '{}', true);
             
             // Calculate duration
             $start = new DateTime($bookingDate . ' ' . $startTime);
@@ -133,41 +130,245 @@ class Facility_model extends Base_Model {
             $hours = $duration->h + ($duration->i / 60);
             $days = ceil($hours / 24);
             
-            // Check if weekend
+            // Check for custom pricing rules from resource_pricing table
             $dayOfWeek = date('w', strtotime($bookingDate));
-            $isWeekend = ($dayOfWeek == 0 || $dayOfWeek == 6);
+            $customPrice = $this->getCustomPrice($facilityId, $bookingDate, $dayOfWeek, $bookingType);
             
-            // Check if peak time
-            $isPeak = false;
-            if (!empty($pricingRules['peak_hours'])) {
-                $peakStart = $pricingRules['peak_hours']['start'] ?? '17:00';
-                $peakEnd = $pricingRules['peak_hours']['end'] ?? '22:00';
-                $isPeak = ($startTime >= $peakStart && $endTime <= $peakEnd);
-            }
-            
-            $baseRate = 0;
-            if ($bookingType === 'daily') {
-                $baseRate = floatval($facility['daily_rate']);
-                if ($isWeekend && $facility['weekend_rate'] > 0) {
-                    $baseRate = floatval($facility['weekend_rate']);
+            if ($customPrice) {
+                $baseRate = floatval($customPrice['price']);
+                
+                // Check for peak pricing
+                if ($customPrice['peak_price'] && $this->isPeakTime($startTime, $endTime, $facility)) {
+                    $baseRate = floatval($customPrice['peak_price']);
                 }
-                return $baseRate * $days;
+                
+                // Check for member pricing
+                if ($isMember && $customPrice['member_price']) {
+                    $baseRate = floatval($customPrice['member_price']);
+                }
             } else {
-                // Hourly booking
-                $baseRate = floatval($facility['hourly_rate']);
-                
-                if ($isPeak && $facility['peak_rate'] > 0) {
-                    $baseRate = floatval($facility['peak_rate']);
-                } elseif ($isWeekend && $facility['weekend_rate'] > 0) {
-                    // If hourly weekend rate is set
-                    $baseRate = floatval($facility['weekend_rate']);
+                // Use facility default rates
+                $baseRate = 0;
+                switch ($bookingType) {
+                    case 'hourly':
+                        $baseRate = floatval($facility['hourly_rate']);
+                        break;
+                    case 'half_day':
+                        $baseRate = floatval($facility['half_day_rate'] ?: ($facility['daily_rate'] / 2));
+                        break;
+                    case 'daily':
+                        $baseRate = floatval($facility['daily_rate']);
+                        break;
+                    case 'weekly':
+                        $baseRate = floatval($facility['weekly_rate'] ?: ($facility['daily_rate'] * 7));
+                        break;
                 }
                 
-                return $baseRate * $hours;
+                // Apply member rate if applicable
+                if ($isMember && $facility['member_rate']) {
+                    $baseRate = floatval($facility['member_rate']);
+                }
             }
+            
+            // Apply duration-based calculation
+            $totalPrice = 0;
+            if ($bookingType === 'hourly') {
+                $totalPrice = $baseRate * $hours;
+            } elseif ($bookingType === 'half_day') {
+                $totalPrice = $baseRate;
+            } elseif ($bookingType === 'daily') {
+                $totalPrice = $baseRate * $days;
+            } elseif ($bookingType === 'weekly') {
+                $totalPrice = $baseRate;
+            }
+            
+            // Apply quantity
+            $totalPrice *= $quantity;
+            
+            // Apply duration discounts if applicable
+            if ($customPrice && $customPrice['duration_discount']) {
+                $discounts = json_decode($customPrice['duration_discount'], true);
+                foreach ($discounts as $discount) {
+                    if ($hours >= ($discount['min_hours'] ?? 0) && $hours <= ($discount['max_hours'] ?? 999)) {
+                        $totalPrice *= (1 - ($discount['discount_percent'] ?? 0) / 100);
+                        break;
+                    }
+                }
+            }
+            
+            // Apply quantity discounts if applicable
+            if ($customPrice && $customPrice['quantity_discount']) {
+                $discounts = json_decode($customPrice['quantity_discount'], true);
+                foreach ($discounts as $discount) {
+                    if ($quantity >= ($discount['min_qty'] ?? 0) && $quantity <= ($discount['max_qty'] ?? 999)) {
+                        $totalPrice *= (1 - ($discount['discount_percent'] ?? 0) / 100);
+                        break;
+                    }
+                }
+            }
+            
+            return $totalPrice;
         } catch (Exception $e) {
             error_log('Facility_model calculatePrice error: ' . $e->getMessage());
             return 0;
+        }
+    }
+    
+    public function getCustomPrice($facilityId, $bookingDate, $dayOfWeek, $rateType) {
+        try {
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . "resource_pricing` 
+                    WHERE resource_id = ? AND rate_type = ?
+                    AND (start_date IS NULL OR start_date <= ?)
+                    AND (end_date IS NULL OR end_date >= ?)
+                    AND (day_of_week IS NULL OR day_of_week = ?)
+                    ORDER BY day_of_week DESC, start_date DESC
+                    LIMIT 1";
+            
+            return $this->db->fetchOne($sql, [$facilityId, $rateType, $bookingDate, $bookingDate, $dayOfWeek]);
+        } catch (Exception $e) {
+            error_log('Facility_model getCustomPrice error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    private function isPeakTime($startTime, $endTime, $facility) {
+        $pricingRules = json_decode($facility['pricing_rules'] ?? '{}', true);
+        if (!empty($pricingRules['peak_hours'])) {
+            $peakStart = $pricingRules['peak_hours']['start'] ?? '17:00';
+            $peakEnd = $pricingRules['peak_hours']['end'] ?? '22:00';
+            return ($startTime >= $peakStart && $endTime <= $peakEnd);
+        }
+        return false;
+    }
+    
+    public function getByType($type) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE resource_type = ? AND status = 'available'
+                 ORDER BY facility_name",
+                [$type]
+            );
+        } catch (Exception $e) {
+            error_log('Facility_model getByType error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    public function getByCategory($category) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE category = ? AND status = 'available'
+                 ORDER BY facility_name",
+                [$category]
+            );
+        } catch (Exception $e) {
+            error_log('Facility_model getByCategory error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    public function getAmenities($facilityId) {
+        try {
+            $facility = $this->getById($facilityId);
+            if (!$facility || !$facility['amenities']) {
+                return [];
+            }
+            return json_decode($facility['amenities'], true) ?: [];
+        } catch (Exception $e) {
+            error_log('Facility_model getAmenities error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    public function checkAdvancedAvailability($facilityId, $startDateTime, $endDateTime, $excludeBookingId = null, $quantity = 1) {
+        try {
+            $facility = $this->getById($facilityId);
+            if (!$facility || $facility['status'] !== 'available') {
+                return false;
+            }
+            
+            $startDate = date('Y-m-d', strtotime($startDateTime));
+            $endDate = date('Y-m-d', strtotime($endDateTime));
+            $startTime = date('H:i:s', strtotime($startDateTime));
+            $endTime = date('H:i:s', strtotime($endDateTime));
+            
+            // Check blockouts
+            $blockoutCheck = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "resource_blockouts`
+                 WHERE resource_id = ?
+                 AND ((start_date <= ? AND end_date >= ?)
+                 OR (start_date = ? AND start_time <= ? AND (end_time IS NULL OR end_time >= ?))
+                 OR (end_date = ? AND (start_time IS NULL OR start_time <= ?) AND end_time >= ?))",
+                [$facilityId, $endDate, $startDate, $startDate, $startTime, $endTime, $endDate, $endTime, $startTime]
+            );
+            
+            if ($blockoutCheck && $blockoutCheck['count'] > 0) {
+                return false;
+            }
+            
+            // Check day-of-week availability
+            $dayOfWeek = date('w', strtotime($startDate));
+            $dayAvailability = $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . "resource_availability`
+                 WHERE resource_id = ? AND day_of_week = ?",
+                [$facilityId, $dayOfWeek]
+            );
+            
+            if ($dayAvailability && !$dayAvailability['is_available']) {
+                return false;
+            }
+            
+            if ($dayAvailability && $dayAvailability['start_time'] && $dayAvailability['end_time']) {
+                if ($startTime < $dayAvailability['start_time'] || $endTime > $dayAvailability['end_time']) {
+                    return false;
+                }
+                
+                // Check break times
+                if ($dayAvailability['break_start'] && $dayAvailability['break_end']) {
+                    if (($startTime >= $dayAvailability['break_start'] && $startTime < $dayAvailability['break_end']) ||
+                        ($endTime > $dayAvailability['break_start'] && $endTime <= $dayAvailability['break_end'])) {
+                        return false;
+                    }
+                }
+            }
+            
+            // Check existing bookings (with simultaneous limit)
+            $simultaneousLimit = intval($facility['simultaneous_limit'] ?? 1);
+            $bookingCount = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "bookings`
+                 WHERE facility_id = ?
+                 AND booking_date BETWEEN ? AND ?
+                 AND status NOT IN ('cancelled', 'no_show')
+                 AND (start_time < ? AND end_time > ?)",
+                [$facilityId, $startDate, $endDate, $endTime, $startTime]
+            );
+            
+            if ($bookingCount && intval($bookingCount['count']) >= $simultaneousLimit) {
+                return false;
+            }
+            
+            // Check lead time
+            if ($facility['lead_time'] > 0) {
+                $daysInAdvance = (strtotime($startDate) - time()) / (60 * 60 * 24);
+                if ($daysInAdvance > $facility['lead_time']) {
+                    return false;
+                }
+            }
+            
+            // Check cutoff time
+            if ($facility['cutoff_time'] > 0) {
+                $hoursUntilBooking = (strtotime($startDateTime) - time()) / (60 * 60);
+                if ($hoursUntilBooking < $facility['cutoff_time']) {
+                    return false;
+                }
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log('Facility_model checkAdvancedAvailability error: ' . $e->getMessage());
+            return false;
         }
     }
 }

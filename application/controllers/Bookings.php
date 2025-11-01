@@ -9,6 +9,13 @@ class Bookings extends Base_Controller {
     private $cashAccountModel;
     private $accountModel;
     private $activityModel;
+    private $bookingResourceModel;
+    private $bookingAddonModel;
+    private $addonModel;
+    private $promoCodeModel;
+    private $cancellationPolicyModel;
+    private $paymentScheduleModel;
+    private $bookingModificationModel;
 
     public function __construct() {
         parent::__construct();
@@ -20,6 +27,13 @@ class Bookings extends Base_Controller {
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->bookingResourceModel = $this->loadModel('Booking_resource_model');
+        $this->bookingAddonModel = $this->loadModel('Booking_addon_model');
+        $this->addonModel = $this->loadModel('Addon_model');
+        $this->promoCodeModel = $this->loadModel('Promo_code_model');
+        $this->cancellationPolicyModel = $this->loadModel('Cancellation_policy_model');
+        $this->paymentScheduleModel = $this->loadModel('Payment_schedule_model');
+        $this->bookingModificationModel = $this->loadModel('Booking_modification_model');
     }
 
     public function index() {

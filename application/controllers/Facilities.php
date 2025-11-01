@@ -4,24 +4,62 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Facilities extends Base_Controller {
     private $facilityModel;
     private $activityModel;
+    private $availabilityModel;
+    private $blockoutModel;
+    private $pricingModel;
+    private $addonModel;
 
     public function __construct() {
         parent::__construct();
         $this->requirePermission('bookings', 'read');
         $this->facilityModel = $this->loadModel('Facility_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->availabilityModel = $this->loadModel('Resource_availability_model');
+        $this->blockoutModel = $this->loadModel('Resource_blockout_model');
+        $this->pricingModel = $this->loadModel('Resource_pricing_model');
+        $this->addonModel = $this->loadModel('Addon_model');
     }
 
     public function index() {
+        $resourceType = $_GET['type'] ?? 'all';
+        $category = $_GET['category'] ?? 'all';
+        $status = $_GET['status'] ?? 'all';
+        
         try {
-            $facilities = $this->facilityModel->getActive();
+            if ($resourceType !== 'all') {
+                $facilities = $this->facilityModel->getByType($resourceType);
+            } elseif ($category !== 'all') {
+                $facilities = $this->facilityModel->getByCategory($category);
+            } else {
+                $facilities = $this->facilityModel->getActive();
+            }
+            
+            // Filter by status if needed
+            if ($status !== 'all') {
+                $facilities = array_filter($facilities, function($f) use ($status) {
+                    return ($f['status'] ?? 'available') === $status;
+                });
+            }
+            
+            // Get unique categories and types for filters
+            $allFacilities = $this->facilityModel->getAll();
+            $categories = array_unique(array_column($allFacilities, 'category'));
+            $categories = array_filter($categories);
+            $types = ['hall', 'meeting_room', 'equipment', 'vehicle', 'staff', 'other'];
         } catch (Exception $e) {
             $facilities = [];
+            $categories = [];
+            $types = [];
         }
 
         $data = [
-            'page_title' => 'Facilities',
+            'page_title' => 'Resources & Facilities',
             'facilities' => $facilities,
+            'categories' => $categories,
+            'types' => $types,
+            'selected_type' => $resourceType,
+            'selected_category' => $category,
+            'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];
 

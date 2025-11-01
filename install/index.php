@@ -111,6 +111,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("Payment gateway migrations warning: " . $e->getMessage());
             }
         }
+        
+        // Run enhanced booking migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_booking_enhanced.php')) {
+            require __DIR__ . '/migrations_booking_enhanced.php';
+            try {
+                runBookingEnhancedMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Enhanced booking migrations warning: " . $e->getMessage());
+            }
+        }
                 
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);

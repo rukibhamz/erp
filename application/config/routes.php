@@ -114,10 +114,21 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['recurring'] = 'Recurring/index';
         $route['recurring/process'] = 'Recurring/process';
 
-        // Booking System
+        // Booking System - Resources
         $route['facilities'] = 'Facilities/index';
         $route['facilities/create'] = 'Facilities/create';
         $route['facilities/edit/(:num)'] = 'Facilities/edit/$1';
+        $route['resource-management/availability/(:num)'] = 'Resource_management/availability/$1';
+        $route['resource-management/blockouts/(:num)'] = 'Resource_management/blockouts/$1';
+        $route['resource-management/add-blockout'] = 'Resource_management/addBlockout';
+        $route['resource-management/delete-blockout/(:num)'] = 'Resource_management/deleteBlockout/$1';
+        $route['resource-management/pricing/(:num)'] = 'Resource_management/pricing/$1';
+        $route['resource-management/add-pricing'] = 'Resource_management/addPricing';
+        $route['resource-management/delete-pricing/(:num)'] = 'Resource_management/deletePricing/$1';
+        $route['resource-management/addons'] = 'Resource_management/addons';
+        $route['resource-management/addons/(:num)'] = 'Resource_management/addons/$1';
+        
+        // Booking System - Bookings
         $route['bookings'] = 'Bookings/index';
         $route['bookings/create'] = 'Bookings/create';
         $route['bookings/calendar'] = 'Bookings/calendar';
@@ -125,12 +136,25 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['bookings/payment'] = 'Bookings/recordPayment';
         $route['bookings/status/(:num)'] = 'Bookings/updateStatus/$1';
         
-        // Public Booking Portal
+        // Public Booking Portal (Legacy)
         $route['booking-portal'] = 'Booking_portal/index';
         $route['booking-portal/facility/(:num)'] = 'Booking_portal/facility/$1';
         $route['booking-portal/check-availability'] = 'Booking_portal/checkAvailability';
         $route['booking-portal/calculate-price'] = 'Booking_portal/calculatePrice';
         $route['booking-portal/submit'] = 'Booking_portal/submitBooking';
+        
+        // Enhanced Booking Wizard (Multi-step)
+        $route['booking-wizard'] = 'Booking_wizard/step1';
+        $route['booking-wizard/step1'] = 'Booking_wizard/step1';
+        $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
+        $route['booking-wizard/step3/(:num)'] = 'Booking_wizard/step3/$1';
+        $route['booking-wizard/step4'] = 'Booking_wizard/step4';
+        $route['booking-wizard/step5'] = 'Booking_wizard/step5';
+        $route['booking-wizard/get-time-slots'] = 'Booking_wizard/getTimeSlots';
+        $route['booking-wizard/save-step'] = 'Booking_wizard/saveStep';
+        $route['booking-wizard/validate-promo'] = 'Booking_wizard/validatePromoCode';
+        $route['booking-wizard/finalize'] = 'Booking_wizard/finalize';
+        $route['booking-wizard/confirmation/(:num)'] = 'Booking_wizard/confirmation/$1';
         
         // Booking Reports
         $route['booking-reports'] = 'Booking_reports/index';
@@ -138,6 +162,17 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['booking-reports/utilization'] = 'Booking_reports/utilization';
         $route['booking-reports/customer-history'] = 'Booking_reports/customerHistory';
         $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
+        
+        // Payment Gateway Settings
+        $route['settings/payment-gateways'] = 'Settings/paymentGateways';
+        $route['settings/payment-gateways/edit/(:num)'] = 'Settings/editGateway/$1';
+        $route['settings/payment-gateways/toggle/(:num)'] = 'Settings/toggleGateway/$1';
+        
+        // Payment Processing
+        $route['payment/initialize'] = 'Payment/initialize';
+        $route['payment/callback'] = 'Payment/callback';
+        $route['payment/webhook'] = 'Payment/webhook';
+        $route['payment/verify'] = 'Payment/verify';
 
         return $route;
 
