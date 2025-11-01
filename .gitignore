@@ -1,0 +1,37 @@
+# Application
+application/config/config.installed.php
+application/config/config.php
+
+# Logs
+logs/*.log
+logs/*.txt
+!logs/.htaccess
+
+# Uploads
+uploads/*
+!uploads/.htaccess
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+vendor/*
+!vendor/.htaccess
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Environment
+.env
+.env.local
+

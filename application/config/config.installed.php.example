@@ -1,0 +1,23 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+/**
+ * This file will be auto-generated during installation.
+ * Copy this file to config.installed.php and configure your settings.
+ */
+
+return [
+    'installed' => false,
+    'base_url' => 'http://localhost/erp/',
+    'db' => [
+        'hostname' => 'localhost',
+        'username' => 'root',
+        'password' => '',
+        'database' => 'erp_db',
+        'dbprefix' => 'erp_',
+        'charset' => 'utf8mb4',
+        'collation' => 'utf8mb4_unicode_ci'
+    ],
+    'encryption_key' => ''
+];
+
