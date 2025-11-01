@@ -23,6 +23,9 @@ class Spaces extends Base_Controller {
     
     public function index($propertyId = null) {
         try {
+            // Check if property_id is in GET params
+            $propertyId = $propertyId ?: (isset($_GET['property_id']) ? intval($_GET['property_id']) : null);
+            
             if ($propertyId) {
                 $spaces = $this->spaceModel->getByProperty($propertyId);
                 $property = $this->propertyModel->getById($propertyId);

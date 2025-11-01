@@ -104,6 +104,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </tbody>
                 </table>
             </div>
+            
+            <?php if (empty($gateways)): ?>
+                <div class="alert alert-info mt-3">
+                    <p class="mb-0">
+                        <i class="bi bi-info-circle"></i> 
+                        Payment gateways are configured during installation. If none are showing, please run the installer database migrations.
+                    </p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 

@@ -69,6 +69,12 @@
                             <span class="nav-text">Bookings</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="<?= base_url('properties') ?>" class="nav-link <?= strpos($current_url, 'properties') === 0 || strpos($current_url, 'spaces') === 0 || strpos($current_url, 'leases') === 0 || strpos($current_url, 'rent-invoices') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-building"></i>
+                            <span class="nav-text">Properties</span>
+                        </a>
+                    </li>
                     <li class="nav-divider"></li>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">
