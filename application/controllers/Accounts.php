@@ -67,11 +67,19 @@ class Accounts extends Base_Controller {
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'status' => sanitize_input($_POST['status'] ?? 'active'),
+                'is_default' => !empty($_POST['is_default']) ? 1 : 0,
                 'created_by' => $this->session['user_id']
             ];
             
+            // Generate account_number if not provided
+            if (empty($_POST['account_number'])) {
+                $data['account_number'] = $this->accountModel->getNextAccountCode($data['account_type'], $data['parent_id']);
+            } else {
+                $data['account_number'] = sanitize_input($_POST['account_number']);
+            }
+            
             if (empty($data['account_code'])) {
-                $data['account_code'] = $this->accountModel->getNextAccountCode($data['account_type'], $data['parent_id']);
+                $data['account_code'] = $data['account_number']; // Use account_number as code if code is empty
             }
             
             if ($this->accountModel->create($data)) {
@@ -116,8 +124,19 @@ class Accounts extends Base_Controller {
                 'opening_balance' => floatval($_POST['opening_balance'] ?? 0),
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
                 'description' => sanitize_input($_POST['description'] ?? ''),
-                'status' => sanitize_input($_POST['status'] ?? 'active')
+                'status' => sanitize_input($_POST['status'] ?? 'active'),
+                'is_default' => !empty($_POST['is_default']) ? 1 : 0
             ];
+            
+            // Update account_number if provided
+            if (!empty($_POST['account_number'])) {
+                $data['account_number'] = sanitize_input($_POST['account_number']);
+            }
+            
+            // If setting as default, handle it
+            if (!empty($_POST['is_default'])) {
+                $this->accountModel->setDefaultAccount($id);
+            }
             
             if ($this->accountModel->update($id, $data)) {
                 $this->activityModel->log($this->session['user_id'], 'update', 'Accounts', 'Updated account: ' . $data['account_name']);

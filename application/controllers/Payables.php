@@ -5,6 +5,7 @@ class Payables extends Base_Controller {
     private $vendorModel;
     private $billModel;
     private $paymentModel;
+    private $paymentAllocationModel;
     private $accountModel;
     private $transactionModel;
     private $cashAccountModel;
@@ -16,6 +17,7 @@ class Payables extends Base_Controller {
         $this->vendorModel = $this->loadModel('Vendor_model');
         $this->billModel = $this->loadModel('Bill_model');
         $this->paymentModel = $this->loadModel('Payment_model');
+        $this->paymentAllocationModel = $this->loadModel('Payment_allocation_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
@@ -86,35 +88,87 @@ class Payables extends Base_Controller {
         $this->loadView('payables/create_vendor', $data);
     }
     
+    public function editVendor($id) {
+        $this->requirePermission('payables', 'update');
+        
+        $vendor = $this->vendorModel->getById($id);
+        if (!$vendor) {
+            $this->setFlashMessage('danger', 'Vendor not found.');
+            redirect('payables/vendors');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'company_name' => sanitize_input($_POST['company_name'] ?? ''),
+                'contact_name' => sanitize_input($_POST['contact_name'] ?? ''),
+                'email' => sanitize_input($_POST['email'] ?? ''),
+                'phone' => sanitize_input($_POST['phone'] ?? ''),
+                'address' => sanitize_input($_POST['address'] ?? ''),
+                'city' => sanitize_input($_POST['city'] ?? ''),
+                'state' => sanitize_input($_POST['state'] ?? ''),
+                'zip_code' => sanitize_input($_POST['zip_code'] ?? ''),
+                'country' => sanitize_input($_POST['country'] ?? ''),
+                'tax_id' => sanitize_input($_POST['tax_id'] ?? ''),
+                'credit_limit' => floatval($_POST['credit_limit'] ?? 0),
+                'payment_terms' => sanitize_input($_POST['payment_terms'] ?? ''),
+                'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
+                'status' => sanitize_input($_POST['status'] ?? 'active')
+            ];
+            
+            if ($this->vendorModel->update($id, $data)) {
+                $this->activityModel->log($this->session['user_id'], 'update', 'Payables', 'Updated vendor: ' . $data['company_name']);
+                $this->setFlashMessage('success', 'Vendor updated successfully.');
+                redirect('payables/vendors');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to update vendor.');
+            }
+        }
+        
+        $data = [
+            'page_title' => 'Edit Vendor',
+            'vendor' => $vendor,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('payables/edit_vendor', $data);
+    }
+    
     public function bills() {
         $status = $_GET['status'] ?? null;
         $vendorId = $_GET['vendor_id'] ?? null;
-        
-        $sql = "SELECT b.*, v.company_name 
-                FROM `" . $this->db->getPrefix() . "bills` b
-                JOIN `" . $this->db->getPrefix() . "vendors` v ON b.vendor_id = v.id";
-        
-        $params = [];
-        $where = [];
-        
-        if ($status) {
-            $where[] = "b.status = ?";
-            $params[] = $status;
-        }
-        
-        if ($vendorId) {
-            $where[] = "b.vendor_id = ?";
-            $params[] = $vendorId;
-        }
-        
-        if (!empty($where)) {
-            $sql .= " WHERE " . implode(' AND ', $where);
-        }
-        
-        $sql .= " ORDER BY b.bill_date DESC";
-        
+
         try {
-            $bills = $this->db->fetchAll($sql, $params);
+            if ($status || $vendorId) {
+                $sql = "SELECT b.*, v.company_name 
+                        FROM `" . $this->db->getPrefix() . "bills` b
+                        JOIN `" . $this->db->getPrefix() . "vendors` v ON b.vendor_id = v.id";
+                $conditions = [];
+                $params = [];
+
+                if ($status) {
+                    $conditions[] = "b.status = ?";
+                    $params[] = $status;
+                }
+
+                if ($vendorId) {
+                    $conditions[] = "b.vendor_id = ?";
+                    $params[] = $vendorId;
+                }
+
+                if (!empty($conditions)) {
+                    $sql .= " WHERE " . implode(' AND ', $conditions);
+                }
+
+                $sql .= " ORDER BY b.bill_date DESC";
+                $bills = $this->db->fetchAll($sql, $params);
+            } else {
+                $bills = $this->billModel->getAll();
+                foreach ($bills as &$bill) {
+                    $vendor = $this->vendorModel->getById($bill['vendor_id']);
+                    $bill['company_name'] = $vendor ? $vendor['company_name'] : '-';
+                }
+            }
+
             $vendors = $this->vendorModel->getAll();
         } catch (Exception $e) {
             $bills = [];
@@ -230,46 +284,205 @@ class Payables extends Base_Controller {
     public function editBill($id) {
         $this->requirePermission('payables', 'update');
         
-        $bill = $this->billModel->getWithVendor($id);
+        $bill = $this->billModel->getById($id);
         if (!$bill) {
             $this->setFlashMessage('danger', 'Bill not found.');
             redirect('payables/bills');
         }
         
-        $items = $this->billModel->getItems($id);
+        try {
+            $items = $this->billModel->getItems($id);
+            $vendor = $this->vendorModel->getById($bill['vendor_id']);
+        } catch (Exception $e) {
+            $items = [];
+            $vendor = null;
+        }
         
         $data = [
             'page_title' => 'Edit Bill',
             'bill' => $bill,
             'items' => $items,
+            'vendor' => $vendor,
             'flash' => $this->getFlashMessage()
         ];
         
         $this->loadView('payables/edit_bill', $data);
     }
     
-    public function aging() {
-        $this->requirePermission('payables', 'read');
+    public function batchPayment() {
+        $this->requirePermission('payables', 'create');
         
-        $vendorId = $_GET['vendor_id'] ?? null;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $billIds = $_POST['bill_ids'] ?? [];
+            $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
+            $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'bank_transfer');
+            $cashAccountId = intval($_POST['cash_account_id'] ?? 0);
+            $reference = sanitize_input($_POST['reference'] ?? '');
+            
+            if (empty($billIds)) {
+                $this->setFlashMessage('danger', 'Please select at least one bill to pay.');
+                redirect('payables/batch-payment');
+            }
+            
+            $cashAccount = $this->cashAccountModel->getById($cashAccountId);
+            if (!$cashAccount) {
+                $this->setFlashMessage('danger', 'Cash account not found.');
+                redirect('payables/batch-payment');
+            }
+            
+            $totalAmount = 0;
+            $allocations = [];
+            
+            // Calculate total and allocations
+            foreach ($billIds as $billId) {
+                $bill = $this->billModel->getById($billId);
+                if ($bill && $bill['balance_amount'] > 0) {
+                    $amount = floatval($_POST['amount_' . $billId] ?? $bill['balance_amount']);
+                    if ($amount > $bill['balance_amount']) {
+                        $amount = $bill['balance_amount'];
+                    }
+                    
+                    $allocations[$billId] = $amount;
+                    $totalAmount += $amount;
+                }
+            }
+            
+            if ($totalAmount <= 0) {
+                $this->setFlashMessage('danger', 'No valid payment amount.');
+                redirect('payables/batch-payment');
+            }
+            
+            try {
+                $this->db->beginTransaction();
+                
+                // Create single payment for batch
+                $paymentData = [
+                    'payment_number' => $this->paymentModel->getNextPaymentNumber('payment'),
+                    'payment_date' => $paymentDate,
+                    'payment_type' => 'payment',
+                    'reference_type' => 'manual',
+                    'reference_id' => null,
+                    'vendor_id' => null, // Multiple vendors in batch
+                    'account_id' => $cashAccount['account_id'],
+                    'bank_account_id' => $cashAccountId,
+                    'amount' => $totalAmount,
+                    'payment_method' => $paymentMethod,
+                    'reference' => $reference,
+                    'notes' => 'Batch payment for ' . count($billIds) . ' bills',
+                    'status' => 'posted',
+                    'created_by' => $this->session['user_id']
+                ];
+                
+                $paymentId = $this->paymentModel->create($paymentData);
+                
+                if (!$paymentId) {
+                    throw new Exception('Failed to create payment');
+                }
+                
+                // Create allocations for each bill
+                foreach ($allocations as $billId => $amount) {
+                    $bill = $this->billModel->getById($billId);
+                    if ($bill) {
+                        // Create allocation
+                        $this->paymentAllocationModel->allocate($paymentId, null, $billId, $amount, 0);
+                        
+                        // Update bill
+                        $this->billModel->addPayment($billId, $amount);
+                        $this->billModel->updateStatus($billId);
+                        
+                        // Create transactions for vendor account
+                        $vendor = $this->vendorModel->getById($bill['vendor_id']);
+                        if ($vendor && $vendor['account_id']) {
+                            // Credit Accounts Payable
+                            $this->transactionModel->create([
+                                'transaction_number' => $paymentData['payment_number'] . '-AP-' . $billId,
+                                'transaction_date' => $paymentDate,
+                                'transaction_type' => 'payment',
+                                'reference_id' => $paymentId,
+                                'reference_type' => 'payment',
+                                'account_id' => $vendor['account_id'],
+                                'description' => 'Payment for bill ' . $bill['bill_number'],
+                                'debit' => $amount,
+                                'credit' => 0,
+                                'status' => 'posted',
+                                'created_by' => $this->session['user_id']
+                            ]);
+                            
+                            $this->accountModel->updateBalance($vendor['account_id'], $amount, 'debit');
+                        }
+                    }
+                }
+                
+                // Create cash account transaction (credit)
+                $this->transactionModel->create([
+                    'transaction_number' => $paymentData['payment_number'] . '-CASH',
+                    'transaction_date' => $paymentDate,
+                    'transaction_type' => 'payment',
+                    'reference_id' => $paymentId,
+                    'reference_type' => 'payment',
+                    'account_id' => $cashAccount['account_id'],
+                    'description' => 'Batch payment for ' . count($billIds) . ' bills',
+                    'debit' => 0,
+                    'credit' => $totalAmount,
+                    'status' => 'posted',
+                    'created_by' => $this->session['user_id']
+                ]);
+                
+                $this->accountModel->updateBalance($cashAccount['account_id'], $totalAmount, 'credit');
+                $this->cashAccountModel->updateBalance($cashAccountId, $totalAmount, 'withdrawal');
+                
+                $this->db->commit();
+                $this->activityModel->log($this->session['user_id'], 'create', 'Payables', 'Processed batch payment for ' . count($billIds) . ' bills');
+                $this->setFlashMessage('success', 'Batch payment processed successfully.');
+                redirect('payables/bills');
+            } catch (Exception $e) {
+                $this->db->rollBack();
+                error_log('Payables batchPayment error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to process batch payment: ' . $e->getMessage());
+                redirect('payables/batch-payment');
+            }
+        }
         
+        // Get unpaid bills
         try {
-            $agingReport = $this->vendorModel->getAgingReport($vendorId);
-            $vendors = $this->vendorModel->getAll();
+            $bills = $this->db->fetchAll(
+                "SELECT b.*, v.company_name 
+                 FROM `" . $this->db->getPrefix() . "bills` b
+                 JOIN `" . $this->db->getPrefix() . "vendors` v ON b.vendor_id = v.id
+                 WHERE b.status IN ('received', 'partially_paid', 'overdue') 
+                 AND b.balance_amount > 0
+                 ORDER BY b.due_date ASC, v.company_name"
+            );
+            
+            $cashAccounts = $this->cashAccountModel->getActive();
         } catch (Exception $e) {
-            $agingReport = [];
-            $vendors = [];
+            $bills = [];
+            $cashAccounts = [];
         }
         
         $data = [
-            'page_title' => 'Accounts Payable Aging',
+            'page_title' => 'Batch Bill Payment',
+            'bills' => $bills,
+            'cash_accounts' => $cashAccounts,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('payables/batch_payment', $data);
+    }
+    
+    public function aging() {
+        try {
+            $agingReport = $this->vendorModel->getAgingReport();
+        } catch (Exception $e) {
+            $agingReport = [];
+        }
+        
+        $data = [
+            'page_title' => 'Vendor Aging Report',
             'aging_report' => $agingReport,
-            'vendors' => $vendors,
-            'selected_vendor' => $vendorId,
             'flash' => $this->getFlashMessage()
         ];
         
         $this->loadView('payables/aging', $data);
     }
 }
-

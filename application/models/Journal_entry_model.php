@@ -98,16 +98,108 @@ class Journal_entry_model extends Base_Model {
     }
     
     public function validateBalanced($entryId) {
-        $lines = $this->getLines($entryId);
-        $totalDebit = 0;
-        $totalCredit = 0;
-        
-        foreach ($lines as $line) {
-            $totalDebit += floatval($line['debit']);
-            $totalCredit += floatval($line['credit']);
+        try {
+            $lines = $this->getLines($entryId);
+            $totalDebit = 0;
+            $totalCredit = 0;
+            
+            foreach ($lines as $line) {
+                $totalDebit += floatval($line['debit']);
+                $totalCredit += floatval($line['credit']);
+            }
+            
+            return abs($totalDebit - $totalCredit) < 0.01; // Allow for floating point precision
+        } catch (Exception $e) {
+            error_log('Journal_entry_model validateBalanced error: ' . $e->getMessage());
+            return false;
         }
-        
-        return abs($totalDebit - $totalCredit) < 0.01; // Allow for floating point precision
+    }
+    
+    public function reverse($entryId, $userId) {
+        try {
+            $entry = $this->getById($entryId);
+            if (!$entry || $entry['status'] !== 'posted') {
+                return false;
+            }
+            
+            $this->db->beginTransaction();
+            
+            // Create reversed entry
+            $reversedData = [
+                'entry_number' => $this->getNextEntryNumber(),
+                'entry_date' => date('Y-m-d'),
+                'reference' => 'REV-' . $entry['entry_number'],
+                'description' => 'Reversal of ' . $entry['entry_number'] . ': ' . ($entry['description'] ?? ''),
+                'amount' => $entry['amount'],
+                'status' => 'draft',
+                'journal_type' => $entry['journal_type'] ?? 'general',
+                'reversed_entry_id' => $entryId,
+                'created_by' => $userId
+            ];
+            
+            $reversedId = $this->create($reversedData);
+            if (!$reversedId) {
+                throw new Exception('Failed to create reversal entry');
+            }
+            
+            // Reverse all lines
+            $lines = $this->getLines($entryId);
+            foreach ($lines as $line) {
+                $reversedLine = [
+                    'journal_entry_id' => $reversedId,
+                    'account_id' => $line['account_id'],
+                    'description' => 'Reversal: ' . ($line['description'] ?? ''),
+                    'debit' => $line['credit'], // Swap debit and credit
+                    'credit' => $line['debit']
+                ];
+                
+                $this->db->query(
+                    "INSERT INTO `" . $this->db->getPrefix() . "journal_entry_lines` 
+                     (journal_entry_id, account_id, description, debit, credit, created_at) 
+                     VALUES (?, ?, ?, ?, ?, NOW())",
+                    [$reversedLine['journal_entry_id'], $reversedLine['account_id'], 
+                     $reversedLine['description'], $reversedLine['debit'], $reversedLine['credit']]
+                );
+            }
+            
+            // Update original entry
+            $this->update($entryId, ['reversed_entry_id' => $reversedId]);
+            
+            $this->db->commit();
+            return $reversedId;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log('Journal_entry_model reverse error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    public function getByType($type) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE journal_type = ? 
+                 ORDER BY entry_date DESC, id DESC",
+                [$type]
+            );
+        } catch (Exception $e) {
+            error_log('Journal_entry_model getByType error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    public function getAttachments($entryId) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . "journal_entry_attachments` 
+                 WHERE journal_entry_id = ? 
+                 ORDER BY created_at DESC",
+                [$entryId]
+            );
+        } catch (Exception $e) {
+            error_log('Journal_entry_model getAttachments error: ' . $e->getMessage());
+            return [];
+        }
     }
     
     private function loadModel($modelName) {

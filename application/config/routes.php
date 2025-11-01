@@ -71,8 +71,10 @@ $route['payables/vendors'] = 'Payables/vendors';
 $route['payables/vendors/create'] = 'Payables/createVendor';
 $route['payables/bills'] = 'Payables/bills';
 $route['payables/bills/create'] = 'Payables/createBill';
-$route['payables/bills/edit/(:num)'] = 'Payables/editBill/$1';
-$route['payables/aging'] = 'Payables/aging';
+        $route['payables/bills/edit/(:num)'] = 'Payables/editBill/$1';
+        $route['payables/batch-payment'] = 'Payables/batchPayment';
+        $route['payables/aging'] = 'Payables/aging';
+        $route['payables/vendors/edit/(:num)'] = 'Payables/editVendor/$1';
 
 // General Ledger
 $route['ledger'] = 'Ledger/index';

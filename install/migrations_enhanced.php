@@ -6,9 +6,6 @@
 
 function runEnhancedMigrations($pdo, $prefix = 'erp_') {
     $enhancedMigrations = [
-        // Enhanced Accounts table with account_number and is_default
-        // Note: MySQL doesn't support IF NOT EXISTS for columns, so we'll handle errors gracefully
-        
         // Products/Items Catalog
         'products' => "
             CREATE TABLE IF NOT EXISTS `{$prefix}products` (
@@ -161,32 +158,7 @@ function runEnhancedMigrations($pdo, $prefix = 'erp_') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
-        // Enhanced Invoices with template and recurring
-        'invoices_enhance' => "
-            ALTER TABLE `{$prefix}invoices`
-            ADD COLUMN IF NOT EXISTS `template_id` int(11) DEFAULT NULL AFTER `currency`,
-            ADD COLUMN IF NOT EXISTS `recurring` tinyint(1) DEFAULT 0 AFTER `template_id`,
-            ADD COLUMN IF NOT EXISTS `recurring_frequency` enum('daily','weekly','monthly','quarterly','annually') DEFAULT NULL AFTER `recurring`,
-            ADD COLUMN IF NOT EXISTS `recurring_next_date` date DEFAULT NULL AFTER `recurring_frequency`,
-            ADD COLUMN IF NOT EXISTS `recurring_end_date` date DEFAULT NULL AFTER `recurring_next_date`,
-            ADD COLUMN IF NOT EXISTS `invoice_prefix` varchar(20) DEFAULT 'INV' AFTER `invoice_number`,
-            ADD COLUMN IF NOT EXISTS `payment_link` varchar(255) DEFAULT NULL AFTER `notes`,
-            ADD COLUMN IF NOT EXISTS `sent_at` datetime DEFAULT NULL AFTER `payment_link`,
-            ADD INDEX IF NOT EXISTS `template_id` (`template_id`),
-            ADD INDEX IF NOT EXISTS `recurring` (`recurring`);
-        ",
-        
-        // Enhanced Invoice Items with product reference
-        'invoice_items_enhance' => "
-            ALTER TABLE `{$prefix}invoice_items`
-            ADD COLUMN IF NOT EXISTS `product_id` int(11) DEFAULT NULL AFTER `invoice_id`,
-            ADD COLUMN IF NOT EXISTS `tax_id` int(11) DEFAULT NULL AFTER `tax_rate`,
-            ADD COLUMN IF NOT EXISTS `tax_amount` decimal(15,2) DEFAULT 0.00 AFTER `tax_id`,
-            ADD COLUMN IF NOT EXISTS `discount_rate` decimal(5,2) DEFAULT 0.00 AFTER `tax_amount`,
-            ADD COLUMN IF NOT EXISTS `discount_amount` decimal(15,2) DEFAULT 0.00 AFTER `discount_rate`,
-            ADD INDEX IF NOT EXISTS `product_id` (`product_id`),
-            ADD INDEX IF NOT EXISTS `tax_id` (`tax_id`);
-        ",
+        // Enhanced Invoices and Invoice Items columns are handled in migrations_alter.php
         
         // Credit Notes
         'credit_notes' => "
@@ -256,12 +228,7 @@ function runEnhancedMigrations($pdo, $prefix = 'erp_') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
-        // Enhanced Payments with bank_account_id
-        'payments_enhance' => "
-            ALTER TABLE `{$prefix}payments`
-            ADD COLUMN IF NOT EXISTS `bank_account_id` int(11) DEFAULT NULL AFTER `account_id`,
-            ADD INDEX IF NOT EXISTS `bank_account_id` (`bank_account_id`);
-        ",
+        // Enhanced Payments columns are handled in migrations_alter.php
         
         // Bank Transactions for Reconciliation
         'bank_transactions' => "
@@ -294,14 +261,7 @@ function runEnhancedMigrations($pdo, $prefix = 'erp_') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
-        // Enhanced Bank Reconciliations
-        'bank_reconciliations_enhance' => "
-            ALTER TABLE `{$prefix}bank_reconciliations`
-            ADD COLUMN IF NOT EXISTS `ending_balance` decimal(15,2) DEFAULT NULL AFTER `closing_balance`,
-            ADD COLUMN IF NOT EXISTS `cleared_transactions_count` int(11) DEFAULT 0 AFTER `adjustments`,
-            ADD COLUMN IF NOT EXISTS `outstanding_deposits` decimal(15,2) DEFAULT 0.00 AFTER `cleared_transactions_count`,
-            ADD COLUMN IF NOT EXISTS `outstanding_checks` decimal(15,2) DEFAULT 0.00 AFTER `outstanding_deposits`;
-        ",
+        // Enhanced Bank Reconciliations columns are handled in migrations_alter.php
         
         // Multi-Currency Support
         'currencies' => "
@@ -426,28 +386,7 @@ function runEnhancedMigrations($pdo, $prefix = 'erp_') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
-        // Enhanced Employees with bank details and salary structure
-        'employees_enhance' => "
-            ALTER TABLE `{$prefix}employees`
-            ADD COLUMN IF NOT EXISTS `bank_name` varchar(255) DEFAULT NULL AFTER `basic_salary`,
-            ADD COLUMN IF NOT EXISTS `bank_account_number` varchar(100) DEFAULT NULL AFTER `bank_name`,
-            ADD COLUMN IF NOT EXISTS `bank_routing_number` varchar(50) DEFAULT NULL AFTER `bank_account_number`,
-            ADD COLUMN IF NOT EXISTS `tax_number` varchar(100) DEFAULT NULL AFTER `bank_routing_number`,
-            ADD COLUMN IF NOT EXISTS `salary_structure_json` text DEFAULT NULL AFTER `tax_number`,
-            ADD COLUMN IF NOT EXISTS `allowances_json` text DEFAULT NULL AFTER `salary_structure_json`,
-            ADD COLUMN IF NOT EXISTS `deductions_json` text DEFAULT NULL AFTER `allowances_json`;
-        ",
-        
-        // Enhanced Payroll with detailed breakdown
-        'payroll_enhance' => "
-            ALTER TABLE `{$prefix}payroll`
-            ADD COLUMN IF NOT EXISTS `overtime_hours` decimal(5,2) DEFAULT 0.00 AFTER `basic_salary`,
-            ADD COLUMN IF NOT EXISTS `overtime_amount` decimal(15,2) DEFAULT 0.00 AFTER `overtime_hours`,
-            ADD COLUMN IF NOT EXISTS `bonus` decimal(15,2) DEFAULT 0.00 AFTER `overtime_amount`,
-            ADD COLUMN IF NOT EXISTS `leave_deduction` decimal(15,2) DEFAULT 0.00 AFTER `deductions`,
-            ADD COLUMN IF NOT EXISTS `gross_salary` decimal(15,2) DEFAULT 0.00 AFTER `tax_amount`,
-            ADD COLUMN IF NOT EXISTS `employer_contribution` decimal(15,2) DEFAULT 0.00 AFTER `net_salary`;
-        ",
+        // Enhanced Employees and Payroll columns are handled in migrations_alter.php
         
         // Recurring Transactions
         'recurring_transactions' => "

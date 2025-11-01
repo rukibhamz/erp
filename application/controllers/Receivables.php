@@ -5,6 +5,7 @@ class Receivables extends Base_Controller {
     private $customerModel;
     private $invoiceModel;
     private $paymentModel;
+    private $paymentAllocationModel;
     private $accountModel;
     private $transactionModel;
     private $cashAccountModel;
@@ -16,6 +17,7 @@ class Receivables extends Base_Controller {
         $this->customerModel = $this->loadModel('Customer_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->paymentModel = $this->loadModel('Payment_model');
+        $this->paymentAllocationModel = $this->loadModel('Payment_allocation_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
