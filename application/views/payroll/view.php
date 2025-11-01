@@ -36,7 +36,7 @@
                 <div class="card">
                     <div class="card-body">
                         <h6 class="text-muted">Total Amount</h6>
-                        <h5><?= format_currency($payroll_run['total_amount'] ?? 0, 'USD') ?></h5>
+                        <h5><?= format_currency($payroll_run['total_amount'] ?? 0) ?></h5>
                     </div>
                 </div>
             </div>
@@ -75,10 +75,10 @@
                                 <?php foreach ($payslips as $payslip): ?>
                                     <tr>
                                         <td><?= htmlspecialchars($payslip['employee_name'] ?? '-') ?></td>
-                                        <td><?= format_currency($payslip['basic_salary'] ?? 0, 'USD') ?></td>
-                                        <td><?= format_currency($payslip['gross_pay'] ?? 0, 'USD') ?></td>
-                                        <td><?= format_currency($payslip['total_deductions'] ?? 0, 'USD') ?></td>
-                                        <td><strong><?= format_currency($payslip['net_pay'] ?? 0, 'USD') ?></strong></td>
+                                        <td><?= format_currency($payslip['basic_salary'] ?? 0) ?></td>
+                                        <td><?= format_currency($payslip['gross_pay'] ?? 0) ?></td>
+                                        <td><?= format_currency($payslip['total_deductions'] ?? 0) ?></td>
+                                        <td><strong><?= format_currency($payslip['net_pay'] ?? 0) ?></strong></td>
                                         <td>
                                             <span class="badge bg-<?= $payslip['status'] === 'paid' ? 'success' : 'secondary' ?>">
                                                 <?= ucfirst($payslip['status']) ?>
@@ -98,7 +98,7 @@
                                 <td></td>
                                 <td></td>
                                 <td></td>
-                                <td><strong><?= format_currency($payroll_run['total_amount'] ?? 0, 'USD') ?></strong></td>
+                                <td><strong><?= format_currency($payroll_run['total_amount'] ?? 0) ?></strong></td>
                                 <td></td>
                             </tr>
                         </tfoot>

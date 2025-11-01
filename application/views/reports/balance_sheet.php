@@ -54,12 +54,12 @@
                                 <?php foreach ($assets['accounts'] as $item): ?>
                                     <tr>
                                         <td><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                        <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                        <td class="text-end"><?= format_currency($item['balance']) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <tr class="table-primary">
                                     <td><strong>Total Assets</strong></td>
-                                    <td class="text-end"><strong><?= format_currency($total_assets, 'USD') ?></strong></td>
+                                    <td class="text-end"><strong><?= format_currency($total_assets) ?></strong></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -79,12 +79,12 @@
                                 <?php foreach ($liabilities['accounts'] as $item): ?>
                                     <tr>
                                         <td style="padding-left: 30px;"><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                        <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                        <td class="text-end"><?= format_currency($item['balance']) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <tr>
                                     <td><strong>Total Liabilities</strong></td>
-                                    <td class="text-end"><strong><?= format_currency($liabilities['total'], 'USD') ?></strong></td>
+                                    <td class="text-end"><strong><?= format_currency($liabilities['total']) ?></strong></td>
                                 </tr>
 
                                 <!-- Equity -->
@@ -94,16 +94,16 @@
                                 <?php foreach ($equity['accounts'] as $item): ?>
                                     <tr>
                                         <td style="padding-left: 30px;"><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                        <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                        <td class="text-end"><?= format_currency($item['balance']) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <tr>
                                     <td>Retained Earnings</td>
-                                    <td class="text-end"><?= format_currency($retained_earnings, 'USD') ?></td>
+                                    <td class="text-end"><?= format_currency($retained_earnings) ?></td>
                                 </tr>
                                 <tr class="table-primary">
                                     <td><strong>Total Liabilities & Equity</strong></td>
-                                    <td class="text-end"><strong><?= format_currency($total_liabilities_equity, 'USD') ?></strong></td>
+                                    <td class="text-end"><strong><?= format_currency($total_liabilities_equity) ?></strong></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -117,7 +117,7 @@
                 <?php if (abs($total_assets - $total_liabilities_equity) < 0.01): ?>
                     Assets = Liabilities + Equity (Balanced ✓)
                 <?php else: ?>
-                    Assets ≠ Liabilities + Equity (Difference: <?= format_currency(abs($total_assets - $total_liabilities_equity), 'USD') ?>)
+                    Assets ≠ Liabilities + Equity (Difference: <?= format_currency(abs($total_assets - $total_liabilities_equity)) ?>)
                 <?php endif; ?>
             </div>
         </div>

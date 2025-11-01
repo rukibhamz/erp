@@ -58,7 +58,7 @@
                         <?php if ($method === 'indirect'): ?>
                             <tr>
                                 <td style="padding-left: 30px;">Net Income</td>
-                                <td class="text-end"><?= format_currency($net_income, 'USD') ?></td>
+                                <td class="text-end"><?= format_currency($net_income) ?></td>
                             </tr>
                             <tr>
                                 <td style="padding-left: 30px;">Adjustments for non-cash items</td>
@@ -67,7 +67,7 @@
                         <?php endif; ?>
                         <tr>
                             <td><strong>Net Cash from Operating Activities</strong></td>
-                            <td class="text-end"><strong><?= format_currency($cash_flow_operating, 'USD') ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($cash_flow_operating) ?></strong></td>
                         </tr>
 
                         <!-- Investing Activities -->
@@ -77,12 +77,12 @@
                         <?php foreach ($investing['accounts'] as $item): ?>
                             <tr>
                                 <td style="padding-left: 30px;"><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                <td class="text-end"><?= format_currency($item['balance']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                         <tr>
                             <td><strong>Net Cash from Investing Activities</strong></td>
-                            <td class="text-end"><strong><?= format_currency($cash_flow_investing, 'USD') ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($cash_flow_investing) ?></strong></td>
                         </tr>
 
                         <!-- Financing Activities -->
@@ -92,24 +92,24 @@
                         <?php foreach ($financing['liabilities']['accounts'] as $item): ?>
                             <tr>
                                 <td style="padding-left: 30px;"><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                <td class="text-end"><?= format_currency($item['balance']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                         <?php foreach ($financing['equity']['accounts'] as $item): ?>
                             <tr>
                                 <td style="padding-left: 30px;"><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                <td class="text-end"><?= format_currency($item['balance']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                         <tr>
                             <td><strong>Net Cash from Financing Activities</strong></td>
-                            <td class="text-end"><strong><?= format_currency($cash_flow_financing, 'USD') ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($cash_flow_financing) ?></strong></td>
                         </tr>
 
                         <!-- Net Cash Flow -->
                         <tr class="table-success">
                             <td><strong>NET INCREASE (DECREASE) IN CASH</strong></td>
-                            <td class="text-end"><strong><?= format_currency($net_cash_flow, 'USD') ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($net_cash_flow) ?></strong></td>
                         </tr>
                     </tbody>
                 </table>

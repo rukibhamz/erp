@@ -64,7 +64,7 @@
                                         <td><?= htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']) ?></td>
                                         <td><?= htmlspecialchars($employee['department'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($employee['position'] ?? '-') ?></td>
-                                        <td><?= format_currency($basicSalary, 'USD') ?></td>
+                                        <td><?= format_currency($basicSalary) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>

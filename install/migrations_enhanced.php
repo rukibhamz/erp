@@ -482,11 +482,21 @@ function insertDefaultAccountingData($pdo, $prefix) {
         }
     }
     
-    // Insert base currency (USD)
+    // Insert base currency (NGN - Nigerian Naira)
     try {
         $stmt = $pdo->prepare("INSERT IGNORE INTO `{$prefix}currencies` 
             (currency_code, currency_name, symbol, exchange_rate, is_base, position, precision, status, updated_at) 
-            VALUES ('USD', 'US Dollar', '$', 1.000000, 1, 'before', 2, 'active', NOW())");
+            VALUES ('NGN', 'Nigerian Naira', '₦', 1.000000, 1, 'before', 2, 'active', NOW())");
+        $stmt->execute();
+    } catch (PDOException $e) {
+        // Ignore duplicates
+    }
+    
+    // Also insert USD as a secondary currency
+    try {
+        $stmt = $pdo->prepare("INSERT IGNORE INTO `{$prefix}currencies` 
+            (currency_code, currency_name, symbol, exchange_rate, is_base, position, precision, status, updated_at) 
+            VALUES ('USD', 'US Dollar', '$', 0.000000, 0, 'before', 2, 'active', NOW())");
         $stmt->execute();
     } catch (PDOException $e) {
         // Ignore duplicates

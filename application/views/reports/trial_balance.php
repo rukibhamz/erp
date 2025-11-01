@@ -81,10 +81,10 @@
                                     <td><?= htmlspecialchars($item['account']['account_code']) ?></td>
                                     <td><?= htmlspecialchars($item['account']['account_name']) ?></td>
                                     <td class="text-end">
-                                        <?= $item['debit'] > 0 ? format_currency($item['debit'], 'USD') : '-' ?>
+                                        <?= $item['debit'] > 0 ? format_currency($item['debit']) : '-' ?>
                                     </td>
                                     <td class="text-end">
-                                        <?= $item['credit'] > 0 ? format_currency($item['credit'], 'USD') : '-' ?>
+                                        <?= $item['credit'] > 0 ? format_currency($item['credit']) : '-' ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -97,8 +97,8 @@
                     <tfoot class="table-primary">
                         <tr>
                             <td colspan="2"><strong>TOTAL</strong></td>
-                            <td class="text-end"><strong><?= format_currency($total_debits, 'USD') ?></strong></td>
-                            <td class="text-end"><strong><?= format_currency($total_credits, 'USD') ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($total_debits) ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($total_credits) ?></strong></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -110,7 +110,7 @@
                 <?php if (abs($total_debits - $total_credits) < 0.01): ?>
                     Debits = Credits (Balanced ✓)
                 <?php else: ?>
-                    Debits ≠ Credits (Difference: <?= format_currency(abs($total_debits - $total_credits), 'USD') ?>)
+                    Debits ≠ Credits (Difference: <?= format_currency(abs($total_debits - $total_credits)) ?>)
                 <?php endif; ?>
             </div>
         </div>

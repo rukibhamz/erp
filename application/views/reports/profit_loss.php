@@ -73,7 +73,7 @@
                         <?php foreach ($revenue['accounts'] as $item): ?>
                             <tr>
                                 <td style="padding-left: 30px;"><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                <td class="text-end"><?= format_currency($item['balance']) ?></td>
                                 <?php if ($comparison_data): ?>
                                     <td class="text-end">
                                         <?php
@@ -86,7 +86,7 @@
                                         }
                                         $change = $item['balance'] - $prevAmount;
                                         $class = $change >= 0 ? 'text-success' : 'text-danger';
-                                        echo '<span class="' . $class . '">' . format_currency($change, 'USD') . '</span>';
+                                        echo '<span class="' . $class . '">' . format_currency($change) . '</span>';
                                         ?>
                                     </td>
                                 <?php endif; ?>
@@ -94,13 +94,13 @@
                         <?php endforeach; ?>
                         <tr class="table-success">
                             <td><strong>Total Revenue</strong></td>
-                            <td class="text-end"><strong><?= format_currency($revenue['total'], 'USD') ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($revenue['total']) ?></strong></td>
                             <?php if ($comparison_data): ?>
                                 <td class="text-end">
                                     <?php
                                     $change = $revenue['total'] - $comparison_data['revenue']['total'];
                                     $class = $change >= 0 ? 'text-success' : 'text-danger';
-                                    echo '<strong class="' . $class . '">' . format_currency($change, 'USD') . '</strong>';
+                                    echo '<strong class="' . $class . '">' . format_currency($change) . '</strong>';
                                     ?>
                                 </td>
                             <?php endif; ?>
@@ -113,7 +113,7 @@
                         <?php foreach ($expenses['accounts'] as $item): ?>
                             <tr>
                                 <td style="padding-left: 30px;"><?= htmlspecialchars($item['account']['account_name']) ?></td>
-                                <td class="text-end"><?= format_currency($item['balance'], 'USD') ?></td>
+                                <td class="text-end"><?= format_currency($item['balance']) ?></td>
                                 <?php if ($comparison_data): ?>
                                     <td class="text-end">
                                         <?php
@@ -126,7 +126,7 @@
                                         }
                                         $change = $item['balance'] - $prevAmount;
                                         $class = $change >= 0 ? 'text-danger' : 'text-success';
-                                        echo '<span class="' . $class . '">' . format_currency($change, 'USD') . '</span>';
+                                        echo '<span class="' . $class . '">' . format_currency($change) . '</span>';
                                         ?>
                                     </td>
                                 <?php endif; ?>
@@ -140,7 +140,7 @@
                                     <?php
                                     $change = $expenses['total'] - $comparison_data['expenses']['total'];
                                     $class = $change >= 0 ? 'text-danger' : 'text-success';
-                                    echo '<strong class="' . $class . '">' . format_currency($change, 'USD') . '</strong>';
+                                    echo '<strong class="' . $class . '">' . format_currency($change) . '</strong>';
                                     ?>
                                 </td>
                             <?php endif; ?>
@@ -150,14 +150,14 @@
                         <tr class="<?= $net_income >= 0 ? 'table-success' : 'table-danger' ?>">
                             <td><strong>NET INCOME</strong></td>
                             <td class="text-end">
-                                <strong><?= format_currency($net_income, 'USD') ?></strong>
+                                <strong><?= format_currency($net_income) ?></strong>
                             </td>
                             <?php if ($comparison_data): ?>
                                 <td class="text-end">
                                     <?php
                                     $change = $net_income - $comparison_data['net_income'];
                                     $class = $change >= 0 ? 'text-success' : 'text-danger';
-                                    echo '<strong class="' . $class . '">' . format_currency($change, 'USD') . '</strong>';
+                                    echo '<strong class="' . $class . '">' . format_currency($change) . '</strong>';
                                     ?>
                                 </td>
                             <?php endif; ?>

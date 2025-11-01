@@ -39,7 +39,7 @@
                             <?php foreach ($cash_accounts as $account): ?>
                                 <option value="<?= $account['id'] ?>">
                                     <?= htmlspecialchars($account['account_name']) ?> 
-                                    (<?= format_currency($account['current_balance'], $account['currency'] ?? 'USD') ?>)
+                                    (<?= format_currency($account['current_balance'], $account['currency'] ?? 'NGN') ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -77,7 +77,7 @@
                                         <td class="<?= strtotime($bill['due_date']) < time() ? 'text-danger' : '' ?>">
                                             <?= date('M d, Y', strtotime($bill['due_date'])) ?>
                                         </td>
-                                        <td><?= format_currency($bill['balance_amount'], $bill['currency'] ?? 'USD') ?></td>
+                                        <td><?= format_currency($bill['balance_amount'], $bill['currency'] ?? 'NGN') ?></td>
                                         <td>
                                             <input type="number" name="amount_<?= $bill['id'] ?>" 
                                                    class="form-control form-control-sm payment-amount" 

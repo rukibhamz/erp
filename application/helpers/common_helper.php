@@ -17,7 +17,7 @@ function format_date($date, $format = 'Y-m-d H:i:s') {
     return date($format, strtotime($date));
 }
 
-function format_currency($amount, $currency = 'USD') {
+function format_currency($amount, $currency = 'NGN') {
     // Load currency helper if not loaded
     if (!function_exists('get_currency_symbol')) {
         require_once BASEPATH . 'helpers/currency_helper.php';
@@ -30,7 +30,7 @@ function format_currency($amount, $currency = 'USD') {
     $decimals = in_array($currency, $decimal_currencies) ? 0 : 2;
     
     // Position of symbol (before or after)
-    $symbol_before = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'AUD', 'CAD', 'CHF', 'INR', 'BRL', 'MXN', 'SGD', 'HKD', 'NZD', 'TRY', 'RUB', 'SEK', 'NOK', 'DKK', 'PLN', 'ILS', 'THB', 'MYR', 'PHP', 'CZK', 'HUF', 'RON', 'BGN'];
+    $symbol_before = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'AUD', 'CAD', 'CHF', 'INR', 'BRL', 'MXN', 'SGD', 'HKD', 'NZD', 'TRY', 'RUB', 'SEK', 'NOK', 'DKK', 'PLN', 'ILS', 'THB', 'MYR', 'PHP', 'CZK', 'HUF', 'RON', 'BGN', 'NGN'];
     
     if (in_array($currency, $symbol_before)) {
         return $symbol . number_format($amount, $decimals);

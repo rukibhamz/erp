@@ -142,11 +142,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <?= format_date($dueDate) ?>
                                     </span>
                                 </td>
-                                <td class="text-end"><strong><?= format_currency($invoice['total_amount'] ?? 0, $invoice['currency'] ?? 'USD') ?></strong></td>
-                                <td class="text-end"><?= format_currency($invoice['paid_amount'] ?? 0, $invoice['currency'] ?? 'USD') ?></td>
+                                <td class="text-end"><strong><?= format_currency($invoice['total_amount'] ?? 0, $invoice['currency'] ?? 'NGN') ?></strong></td>
+                                <td class="text-end"><?= format_currency($invoice['paid_amount'] ?? 0, $invoice['currency'] ?? 'NGN') ?></td>
                                 <td class="text-end">
                                     <strong class="<?= ($invoice['balance_amount'] ?? 0) > 0 ? 'text-danger' : 'text-success' ?>">
-                                        <?= format_currency($invoice['balance_amount'] ?? 0, $invoice['currency'] ?? 'USD') ?>
+                                        <?= format_currency($invoice['balance_amount'] ?? 0, $invoice['currency'] ?? 'NGN') ?>
                                     </strong>
                                 </td>
                                 <td>

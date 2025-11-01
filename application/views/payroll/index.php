@@ -54,7 +54,7 @@
                                 <tr>
                                     <td><?= htmlspecialchars($run['period']) ?></td>
                                     <td><?= date('M d, Y', strtotime($run['processed_date'])) ?></td>
-                                    <td><?= format_currency($run['total_amount'] ?? 0, 'USD') ?></td>
+                                    <td><?= format_currency($run['total_amount'] ?? 0) ?></td>
                                     <td>
                                         <span class="badge bg-<?= $run['status'] === 'posted' ? 'success' : ($run['status'] === 'processed' ? 'info' : 'secondary') ?>">
                                             <?= ucfirst($run['status']) ?>

@@ -75,13 +75,13 @@
                                         <td><?= htmlspecialchars($transaction['transaction_number'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($transaction['description'] ?? '-') ?></td>
                                         <td class="text-end">
-                                            <?= $transaction['debit'] > 0 ? format_currency($transaction['debit'], 'USD') : '-' ?>
+                                            <?= $transaction['debit'] > 0 ? format_currency($transaction['debit']) : '-' ?>
                                         </td>
                                         <td class="text-end">
-                                            <?= $transaction['credit'] > 0 ? format_currency($transaction['credit'], 'USD') : '-' ?>
+                                            <?= $transaction['credit'] > 0 ? format_currency($transaction['credit']) : '-' ?>
                                         </td>
                                         <td class="text-end">
-                                            <strong><?= format_currency($transaction['running_balance'], 'USD') ?></strong>
+                                            <strong><?= format_currency($transaction['running_balance']) ?></strong>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

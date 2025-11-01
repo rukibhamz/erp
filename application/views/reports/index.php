@@ -85,9 +85,9 @@
                             foreach ($revenueAccounts as $acc) {
                                 $total += floatval($acc['balance'] ?? 0);
                             }
-                            echo format_currency($total, 'USD');
+                            echo format_currency($total);
                         } catch (Exception $e) {
-                            echo format_currency(0, 'USD');
+                            echo format_currency(0);
                         }
                         ?>
                     </h4>
@@ -107,9 +107,9 @@
                             foreach ($expenseAccounts as $acc) {
                                 $total += floatval($acc['balance'] ?? 0);
                             }
-                            echo format_currency($total, 'USD');
+                            echo format_currency($total);
                         } catch (Exception $e) {
-                            echo format_currency(0, 'USD');
+                            echo format_currency(0);
                         }
                         ?>
                     </h4>
@@ -136,9 +136,9 @@
                             }
                             $netIncome = $revenue - $expenses;
                             $class = $netIncome >= 0 ? 'text-success' : 'text-danger';
-                            echo '<span class="' . $class . '">' . format_currency($netIncome, 'USD') . '</span>';
+                            echo '<span class="' . $class . '">' . format_currency($netIncome) . '</span>';
                         } catch (Exception $e) {
-                            echo format_currency(0, 'USD');
+                            echo format_currency(0);
                         }
                         ?>
                     </h4>
@@ -158,9 +158,9 @@
                             foreach ($assetAccounts as $acc) {
                                 $total += floatval($acc['balance'] ?? 0);
                             }
-                            echo format_currency($total, 'USD');
+                            echo format_currency($total);
                         } catch (Exception $e) {
-                            echo format_currency(0, 'USD');
+                            echo format_currency(0);
                         }
                         ?>
                     </h4>
