@@ -68,6 +68,7 @@ require_once BASEPATH . 'helpers/url_helper.php';
 require_once BASEPATH . 'helpers/form_helper.php';
 require_once BASEPATH . 'helpers/security_helper.php';
 require_once BASEPATH . 'helpers/common_helper.php';
+require_once BASEPATH . 'helpers/permission_helper.php';
 
 // Initialize and run application
 try {

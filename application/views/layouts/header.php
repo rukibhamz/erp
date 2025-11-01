@@ -42,6 +42,9 @@
                             <i class="bi bi-person-circle"></i> <?= htmlspecialchars($current_user['username'] ?? 'User') ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="<?= base_url('profile') ?>">
+                                <i class="bi bi-person-circle"></i> My Profile
+                            </a></li>
                             <li><a class="dropdown-item" href="<?= base_url('settings') ?>">
                                 <i class="bi bi-gear"></i> Settings
                             </a></li>

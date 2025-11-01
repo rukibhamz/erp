@@ -81,5 +81,37 @@ class Base_Controller {
         }
         return null;
     }
+    
+    protected function requirePermission($module, $permission) {
+        if (!isset($this->session['user_id'])) {
+            redirect('login');
+        }
+        
+        // Super admin bypass
+        if (isset($this->session['role']) && $this->session['role'] === 'super_admin') {
+            return true;
+        }
+        
+        $permissionModel = $this->loadModel('User_permission_model');
+        if (!$permissionModel->hasPermission($this->session['user_id'], $module, $permission)) {
+            $this->setFlashMessage('danger', 'You do not have permission to perform this action.');
+            redirect('dashboard');
+        }
+        
+        return true;
+    }
+    
+    protected function requireRole($roles) {
+        if (!is_array($roles)) {
+            $roles = [$roles];
+        }
+        
+        if (!isset($this->session['role']) || !in_array($this->session['role'], $roles)) {
+            $this->setFlashMessage('danger', 'You do not have sufficient privileges.');
+            redirect('dashboard');
+        }
+        
+        return true;
+    }
 }
 

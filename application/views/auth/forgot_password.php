@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Business Management System</title>
+    <title>Forgot Password - Business Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -44,8 +44,8 @@
 <body>
     <div class="login-card">
         <div class="login-header">
-            <h2 class="mb-0"><i class="bi bi-building"></i> Business ERP</h2>
-            <p class="mb-0 mt-2">Sign in to your account</p>
+            <h2 class="mb-0"><i class="bi bi-key"></i> Reset Password</h2>
+            <p class="mb-0 mt-2">Enter your email address</p>
         </div>
         <div class="login-body">
             <?php if (isset($flash)): ?>
@@ -55,26 +55,19 @@
                 </div>
             <?php endif; ?>
             
-            <form method="POST" action="<?= base_url('login') ?>">
+            <form method="POST" action="<?= base_url('forgot-password') ?>">
                 <div class="mb-3">
-                    <label for="username" class="form-label">Username or Email</label>
-                    <input type="text" class="form-control" id="username" name="username" required autofocus value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
-                    <label class="form-check-label" for="remember_me">Remember me</label>
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="email" name="email" required autofocus>
+                    <small class="text-muted">We'll send you a password reset link</small>
                 </div>
                 <div class="d-grid mb-3">
                     <button type="submit" class="btn btn-primary btn-login text-white">
-                        <i class="bi bi-box-arrow-in-right"></i> Sign In
+                        <i class="bi bi-envelope"></i> Send Reset Link
                     </button>
                 </div>
                 <div class="text-center">
-                    <a href="<?= base_url('forgot-password') ?>" class="text-decoration-none">Forgot your password?</a>
+                    <a href="<?= base_url('login') ?>" class="text-decoration-none">Back to Login</a>
                 </div>
             </form>
         </div>

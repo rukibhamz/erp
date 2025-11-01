@@ -75,10 +75,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 require __DIR__ . '/migrations.php';
                 runMigrations($pdo, $_SESSION['db_prefix']);
                 
-                // Create admin user
+                // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);
-                $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}users (username, email, password, role, status, created_at) VALUES (?, ?, ?, 'admin', 'active', NOW())");
+                $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}users (username, email, password, role, status, created_at) VALUES (?, ?, ?, 'super_admin', 'active', NOW())");
                 $stmt->execute([$_SESSION['admin_username'], $_SESSION['admin_email'], $password_hash]);
+                
+                // Assign all permissions to super admin
+                $adminId = $pdo->lastInsertId();
+                $stmt = $pdo->prepare("INSERT IGNORE INTO {$_SESSION['db_prefix']}user_permissions (user_id, permission_id, created_at) SELECT ?, id, NOW() FROM {$_SESSION['db_prefix']}permissions");
+                $stmt->execute([$adminId]);
                 
                 // Create default company
                 $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}companies (name, created_at) VALUES (?, NOW())");

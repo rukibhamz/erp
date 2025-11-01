@@ -12,14 +12,71 @@ function runMigrations($pdo, $prefix = 'erp_') {
                 `username` varchar(50) NOT NULL,
                 `email` varchar(100) NOT NULL,
                 `password` varchar(255) NOT NULL,
-                `role` enum('admin','manager','user') NOT NULL DEFAULT 'user',
-                `status` enum('active','inactive','suspended') NOT NULL DEFAULT 'active',
+                `first_name` varchar(100) DEFAULT NULL,
+                `last_name` varchar(100) DEFAULT NULL,
+                `phone` varchar(20) DEFAULT NULL,
+                `avatar` varchar(255) DEFAULT NULL,
+                `role` enum('super_admin','admin','manager','staff','user') NOT NULL DEFAULT 'user',
+                `status` enum('active','inactive','suspended','locked') NOT NULL DEFAULT 'active',
+                `failed_login_attempts` int(11) DEFAULT 0,
+                `locked_until` datetime DEFAULT NULL,
+                `remember_token` varchar(100) DEFAULT NULL,
+                `password_reset_token` varchar(100) DEFAULT NULL,
+                `password_reset_expires` datetime DEFAULT NULL,
+                `two_factor_secret` varchar(255) DEFAULT NULL,
+                `two_factor_enabled` tinyint(1) DEFAULT 0,
+                `last_login` datetime DEFAULT NULL,
                 `created_at` datetime NOT NULL,
                 `updated_at` datetime DEFAULT NULL,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `username` (`username`),
                 UNIQUE KEY `email` (`email`),
-                KEY `status` (`status`)
+                KEY `status` (`status`),
+                KEY `role` (`role`),
+                KEY `password_reset_token` (`password_reset_token`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ",
+        
+        'permissions' => "
+            CREATE TABLE IF NOT EXISTS `{$prefix}permissions` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `module` varchar(50) NOT NULL,
+                `permission` varchar(50) NOT NULL,
+                `description` varchar(255) DEFAULT NULL,
+                `created_at` datetime NOT NULL,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `module_permission` (`module`, `permission`),
+                KEY `module` (`module`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ",
+        
+        'user_permissions' => "
+            CREATE TABLE IF NOT EXISTS `{$prefix}user_permissions` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `user_id` int(11) NOT NULL,
+                `permission_id` int(11) NOT NULL,
+                `created_at` datetime NOT NULL,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `user_permission` (`user_id`, `permission_id`),
+                KEY `user_id` (`user_id`),
+                KEY `permission_id` (`permission_id`),
+                CONSTRAINT `{$prefix}user_permissions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `{$prefix}users` (`id`) ON DELETE CASCADE,
+                CONSTRAINT `{$prefix}user_permissions_ibfk_2` FOREIGN KEY (`permission_id`) REFERENCES `{$prefix}permissions` (`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ",
+        
+        'sessions' => "
+            CREATE TABLE IF NOT EXISTS `{$prefix}sessions` (
+                `id` varchar(128) NOT NULL,
+                `user_id` int(11) DEFAULT NULL,
+                `ip_address` varchar(45) DEFAULT NULL,
+                `user_agent` text DEFAULT NULL,
+                `last_activity` int(11) NOT NULL,
+                `data` text DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `user_id` (`user_id`),
+                KEY `last_activity` (`last_activity`),
+                CONSTRAINT `{$prefix}sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `{$prefix}users` (`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
@@ -82,6 +139,26 @@ function runMigrations($pdo, $prefix = 'erp_') {
             $pdo->exec($sql);
         } catch (PDOException $e) {
             throw new Exception("Failed to create table {$table}: " . $e->getMessage());
+        }
+    }
+    
+    // Insert default permissions
+    insertDefaultPermissions($pdo, $prefix);
+}
+
+function insertDefaultPermissions($pdo, $prefix) {
+    $modules = ['users', 'companies', 'settings', 'reports', 'modules'];
+    $actions = ['create', 'read', 'update', 'delete'];
+    
+    foreach ($modules as $module) {
+        foreach ($actions as $action) {
+            try {
+                $stmt = $pdo->prepare("INSERT IGNORE INTO `{$prefix}permissions` (module, permission, description, created_at) VALUES (?, ?, ?, NOW())");
+                $description = ucfirst($action) . ' ' . ucfirst($module);
+                $stmt->execute([$module, $action, $description]);
+            } catch (PDOException $e) {
+                // Ignore duplicate errors
+            }
         }
     }
 }
