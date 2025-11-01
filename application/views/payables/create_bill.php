@@ -177,7 +177,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-circle"></i> Create Bill
                         </button>
-                        <a href="<?= base_url('payables/bills') ?>" class="btn btn-secondary">Cancel</a>
+                        <a href="<?= base_url('payables/bills') ?>" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
                     </div>
                 </form>
             </div>

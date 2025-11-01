@@ -125,7 +125,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
                             <i class="bi bi-check-circle"></i> Create Journal Entry
                         </button>
-                        <a href="<?= base_url('ledger') ?>" class="btn btn-secondary">Cancel</a>
+                        <a href="<?= base_url('ledger') ?>" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
                     </div>
                 </form>
             </div>

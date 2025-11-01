@@ -3,17 +3,69 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
 <div class="page-header">
-    <h1 class="page-title mb-0">Create Customer</h1>
+    <h1 class="page-title mb-0">Create Vendor</h1>
 </div>
+
+<!-- Accounting Navigation -->
+<div class="accounting-nav mb-4">
+    <nav class="nav nav-pills nav-fill">
+        <a class="nav-link" href="<?= base_url('accounting') ?>">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a class="nav-link" href="<?= base_url('accounts') ?>">
+            <i class="bi bi-diagram-3"></i> Chart of Accounts
+        </a>
+        <a class="nav-link" href="<?= base_url('cash') ?>">
+            <i class="bi bi-wallet2"></i> Cash Management
+        </a>
+        <a class="nav-link" href="<?= base_url('receivables') ?>">
+            <i class="bi bi-receipt"></i> Receivables
+        </a>
+        <a class="nav-link active" href="<?= base_url('payables') ?>">
+            <i class="bi bi-file-earmark-medical"></i> Payables
+        </a>
+        <a class="nav-link" href="<?= base_url('ledger') ?>">
+            <i class="bi bi-journal-text"></i> General Ledger
+        </a>
+    </nav>
+</div>
+
+<style>
+.accounting-nav {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+}
+
+.accounting-nav .nav-link {
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.accounting-nav .nav-link:hover {
+    background-color: #e9ecef;
+    color: #000;
+}
+
+.accounting-nav .nav-link.active {
+    background-color: #000;
+    color: #fff;
+    border-color: #000;
+}
+
+.accounting-nav .nav-link i {
+    margin-right: 0.5rem;
+}
+</style>
 
 <div class="row">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?= base_url('receivables/customers/create') ?>">
+                <form method="POST" action="<?= base_url('payables/vendors/create') ?>">
                     <div class="mb-3">
-                        <label for="customer_code" class="form-label">Customer Code <span class="text-muted">(Auto-generated if empty)</span></label>
-                        <input type="text" class="form-control" id="customer_code" name="customer_code" placeholder="Auto-generated">
+                        <label for="vendor_code" class="form-label">Vendor Code <span class="text-muted">(Auto-generated if empty)</span></label>
+                        <input type="text" class="form-control" id="vendor_code" name="vendor_code" placeholder="Auto-generated">
                     </div>
                     
                     <div class="mb-3">
@@ -107,9 +159,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle"></i> Create Customer
+                            <i class="bi bi-check-circle"></i> Create Vendor
                         </button>
-                        <a href="<?= base_url('receivables/customers') ?>" class="btn btn-secondary">
+                        <a href="<?= base_url('payables/vendors') ?>" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Back
                         </a>
                     </div>

@@ -82,6 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 require __DIR__ . '/migrations.php';
                 runMigrations($pdo, $_SESSION['db_prefix']);
                 
+                // Run enhanced migrations if file exists
+                if (file_exists(__DIR__ . '/migrations_enhanced.php')) {
+                    require __DIR__ . '/migrations_enhanced.php';
+                    try {
+                        runEnhancedMigrations($pdo, $_SESSION['db_prefix']);
+                    } catch (Exception $e) {
+                        error_log("Enhanced migrations warning: " . $e->getMessage());
+                    }
+                }
+                
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);
                 $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}users (username, email, password, role, status, created_at) VALUES (?, ?, ?, 'super_admin', 'active', NOW())");

@@ -594,6 +594,17 @@ function runMigrations($pdo, $prefix = 'erp_') {
     
     // Insert default permissions
     insertDefaultPermissions($pdo, $prefix);
+    
+    // Run enhanced migrations for production features
+    try {
+        if (file_exists(__DIR__ . '/migrations_enhanced.php')) {
+            require __DIR__ . '/migrations_enhanced.php';
+            runEnhancedMigrations($pdo, $prefix);
+        }
+    } catch (Exception $e) {
+        // Log but don't fail installation if enhanced migrations fail
+        error_log("Enhanced migrations warning: " . $e->getMessage());
+    }
 }
 
 function insertDefaultPermissions($pdo, $prefix) {
