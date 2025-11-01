@@ -59,7 +59,8 @@ class Database {
     }
     
     public function fetchOne($sql, $params = []) {
-        return $this->query($sql, $params)->fetch();
+        $result = $this->query($sql, $params)->fetch();
+        return $result ?: false;
     }
     
     public function insert($table, $data) {

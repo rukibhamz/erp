@@ -59,10 +59,13 @@ $page_title = $page_title ?? 'Create Company';
                 <div class="col-md-6 mb-3">
                     <label for="currency" class="form-label">Currency</label>
                     <select class="form-select" id="currency" name="currency">
-                        <option value="USD">USD - US Dollar</option>
-                        <option value="EUR">EUR - Euro</option>
-                        <option value="GBP">GBP - British Pound</option>
-                        <option value="JPY">JPY - Japanese Yen</option>
+                        <?php
+                        $currencies = get_all_currencies();
+                        foreach ($currencies as $code => $name): ?>
+                            <option value="<?= $code ?>" <?= $code === 'USD' ? 'selected' : '' ?>>
+                                <?= $code ?> - <?= $name ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>

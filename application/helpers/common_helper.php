@@ -18,14 +18,25 @@ function format_date($date, $format = 'Y-m-d H:i:s') {
 }
 
 function format_currency($amount, $currency = 'USD') {
-    $formats = [
-        'USD' => '$',
-        'EUR' => '€',
-        'GBP' => '£',
-        'JPY' => '¥'
-    ];
-    $symbol = $formats[$currency] ?? $currency . ' ';
-    return $symbol . number_format($amount, 2);
+    // Load currency helper if not loaded
+    if (!function_exists('get_currency_symbol')) {
+        require_once BASEPATH . 'helpers/currency_helper.php';
+    }
+    
+    $symbol = get_currency_symbol($currency);
+    
+    // Some currencies don't use decimals (JPY, KRW, etc.)
+    $decimal_currencies = ['JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UZS'];
+    $decimals = in_array($currency, $decimal_currencies) ? 0 : 2;
+    
+    // Position of symbol (before or after)
+    $symbol_before = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'AUD', 'CAD', 'CHF', 'INR', 'BRL', 'MXN', 'SGD', 'HKD', 'NZD', 'TRY', 'RUB', 'SEK', 'NOK', 'DKK', 'PLN', 'ILS', 'THB', 'MYR', 'PHP', 'CZK', 'HUF', 'RON', 'BGN'];
+    
+    if (in_array($currency, $symbol_before)) {
+        return $symbol . number_format($amount, $decimals);
+    } else {
+        return number_format($amount, $decimals) . ' ' . $symbol;
+    }
 }
 
 function truncate_string($string, $length = 100, $suffix = '...') {

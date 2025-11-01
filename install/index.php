@@ -12,12 +12,19 @@ define('STEP_COMPLETE', 5);
 $current_step = isset($_GET['step']) ? (int)$_GET['step'] : STEP_WELCOME;
 $current_step = max(STEP_WELCOME, min($current_step, STEP_COMPLETE));
 
-// Check if already installed
-$config_file = dirname(__DIR__) . '/application/config/config.php';
-if (file_exists($config_file) && $current_step != STEP_COMPLETE) {
-    $config = require $config_file;
-    if (isset($config['installed']) && $config['installed'] === true) {
-        die('Application is already installed. Please remove the install directory or reinstall.');
+// Check if already installed (only on non-complete steps)
+$config_installed_file = dirname(__DIR__) . '/application/config/config.installed.php';
+if ($current_step != STEP_COMPLETE && file_exists($config_installed_file)) {
+    // Simple check: read file content to see if installed = true
+    $config_content = file_get_contents($config_installed_file);
+    if (strpos($config_content, "'installed' => true") !== false || strpos($config_content, '"installed" => true') !== false) {
+        // Already installed - redirect to login
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'];
+        $path = dirname($_SERVER['SCRIPT_NAME']);
+        $path = rtrim($path, '/');
+        header('Location: ' . $protocol . $host . $path . '/login');
+        exit;
     }
 }
 
@@ -137,7 +144,10 @@ function generateConfigFile($session) {
     $baseUrl = rtrim($protocol . '://' . $host . $scriptPath, '/') . '/';
     
     $config = "<?php\n";
-    $config .= "defined('BASEPATH') OR exit('No direct script access allowed');\n\n";
+    $config .= "// Allow loading from index.php without BASEPATH check (during bootstrap)\n";
+    $config .= "if (!defined('BASEPATH')) {\n";
+    $config .= "    define('BASEPATH', dirname(__DIR__) . '/');\n";
+    $config .= "}\n\n";
     $config .= "return [\n";
     $config .= "    'installed' => true,\n";
     $config .= "    'base_url' => '" . addslashes($baseUrl) . "',\n";
@@ -167,14 +177,48 @@ function createHtaccess() {
     $htaccess .= "    <Files \"config.php\">\n";
     $htaccess .= "        Require all denied\n";
     $htaccess .= "    </Files>\n";
+    $htaccess .= "    <Files \"config.installed.php\">\n";
+    $htaccess .= "        Require all denied\n";
+    $htaccess .= "    </Files>\n";
     $htaccess .= "</FilesMatch>\n\n";
     $htaccess .= "# Block access to install directory after installation\n";
-    $htaccess .= "RewriteCond %{REQUEST_URI} ^/install\n";
-    $htaccess .= "RewriteRule . - [F,L]\n\n";
-    $htaccess .= "# Route all requests to index.php\n";
+    $htaccess .= "# Uncomment the following lines AFTER installation is complete and verified\n";
+    $htaccess .= "# RewriteCond %{REQUEST_URI} ^/install\n";
+    $htaccess .= "# RewriteRule . - [F,L]\n\n";
+    $htaccess .= "# Route all requests to index.php (allow assets and install to pass through)\n";
     $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-f\n";
     $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-d\n";
-    $htaccess .= "RewriteRule ^(.*)$ index.php?/$1 [L,QSA]\n";
+    $htaccess .= "RewriteCond %{REQUEST_URI} !^/install\n";
+    $htaccess .= "RewriteCond %{REQUEST_URI} !^/assets\n";
+    $htaccess .= "RewriteCond %{REQUEST_URI} !^/uploads\n";
+    $htaccess .= "RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]\n\n";
+    $htaccess .= "# Set default charset\n";
+    $htaccess .= "AddDefaultCharset UTF-8\n\n";
+    $htaccess .= "# Prevent access to .htaccess\n";
+    $htaccess .= "<Files .htaccess>\n";
+    $htaccess .= "    Require all denied\n";
+    $htaccess .= "</Files>\n\n";
+    $htaccess .= "# Security headers\n";
+    $htaccess .= "<IfModule mod_headers.c>\n";
+    $htaccess .= "    Header set X-Content-Type-Options \"nosniff\"\n";
+    $htaccess .= "    Header set X-Frame-Options \"SAMEORIGIN\"\n";
+    $htaccess .= "    Header set X-XSS-Protection \"1; mode=block\"\n";
+    $htaccess .= "</IfModule>\n\n";
+    $htaccess .= "# Enable compression\n";
+    $htaccess .= "<IfModule mod_deflate.c>\n";
+    $htaccess .= "    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json\n";
+    $htaccess .= "</IfModule>\n\n";
+    $htaccess .= "# Browser caching\n";
+    $htaccess .= "<IfModule mod_expires.c>\n";
+    $htaccess .= "    ExpiresActive On\n";
+    $htaccess .= "    ExpiresByType image/jpg \"access plus 1 year\"\n";
+    $htaccess .= "    ExpiresByType image/jpeg \"access plus 1 year\"\n";
+    $htaccess .= "    ExpiresByType image/gif \"access plus 1 year\"\n";
+    $htaccess .= "    ExpiresByType image/png \"access plus 1 year\"\n";
+    $htaccess .= "    ExpiresByType image/svg+xml \"access plus 1 year\"\n";
+    $htaccess .= "    ExpiresByType text/css \"access plus 1 month\"\n";
+    $htaccess .= "    ExpiresByType application/javascript \"access plus 1 month\"\n";
+    $htaccess .= "</IfModule>\n";
     
     file_put_contents(dirname(__DIR__) . '/.htaccess', $htaccess);
 }
@@ -446,7 +490,14 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
                             <i class="bi bi-exclamation-triangle"></i> <strong>Important:</strong> For security reasons, please delete the <code>install</code> directory after verifying the installation.
                         </div>
                         <div class="mt-4">
-                            <a href="../index.php" class="btn btn-install btn-lg text-white">
+                            <?php
+                            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+                            $host = $_SERVER['HTTP_HOST'];
+                            $path = dirname(dirname($_SERVER['SCRIPT_NAME']));
+                            $path = rtrim($path, '/');
+                            $app_url = $protocol . $host . $path . '/login';
+                            ?>
+                            <a href="<?= $app_url ?>" class="btn btn-install btn-lg text-white">
                                 <i class="bi bi-house-door"></i> Go to Application
                             </a>
                         </div>

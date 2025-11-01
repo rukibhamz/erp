@@ -10,6 +10,7 @@ class Companies extends Base_Controller {
     }
     
     public function index() {
+        $this->requirePermission('companies', 'read');
         $data = [
             'page_title' => 'Companies',
             'companies' => $this->companyModel->getAll(null, 0, 'created_at DESC'),
@@ -20,6 +21,8 @@ class Companies extends Base_Controller {
     }
     
     public function create() {
+        $this->requirePermission('companies', 'create');
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [
                 'name' => $_POST['name'] ?? '',
@@ -50,6 +53,8 @@ class Companies extends Base_Controller {
     }
     
     public function edit($id) {
+        $this->requirePermission('companies', 'update');
+        
         $company = $this->companyModel->getById($id);
         
         if (!$company) {

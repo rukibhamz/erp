@@ -59,10 +59,14 @@ $page_title = $page_title ?? 'Edit Company';
                 <div class="col-md-6 mb-3">
                     <label for="currency" class="form-label">Currency</label>
                     <select class="form-select" id="currency" name="currency">
-                        <option value="USD" <?= ($company['currency'] ?? 'USD') === 'USD' ? 'selected' : '' ?>>USD - US Dollar</option>
-                        <option value="EUR" <?= ($company['currency'] ?? '') === 'EUR' ? 'selected' : '' ?>>EUR - Euro</option>
-                        <option value="GBP" <?= ($company['currency'] ?? '') === 'GBP' ? 'selected' : '' ?>>GBP - British Pound</option>
-                        <option value="JPY" <?= ($company['currency'] ?? '') === 'JPY' ? 'selected' : '' ?>>JPY - Japanese Yen</option>
+                        <?php
+                        $currencies = get_all_currencies();
+                        $currentCurrency = $company['currency'] ?? 'USD';
+                        foreach ($currencies as $code => $name): ?>
+                            <option value="<?= $code ?>" <?= $code === $currentCurrency ? 'selected' : '' ?>>
+                                <?= $code ?> - <?= $name ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>

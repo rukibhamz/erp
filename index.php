@@ -10,8 +10,17 @@ define('ROOTPATH', __DIR__ . '/');
 define('SYSPATH', __DIR__ . '/application/core/');
 
 // Check if installed
+// Prefer config.installed.php if it exists (created during installation)
+$config_installed_file = BASEPATH . 'config/config.installed.php';
 $config_file = BASEPATH . 'config/config.php';
-if (!file_exists($config_file)) {
+
+// Load configuration - prefer config.installed.php if it exists
+if (file_exists($config_installed_file)) {
+    $config = require $config_installed_file;
+} elseif (file_exists($config_file)) {
+    $config = require $config_file;
+} else {
+    // No config files - redirect to installer
     if (file_exists(__DIR__ . '/install/index.php')) {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
         $host = $_SERVER['HTTP_HOST'];
@@ -23,10 +32,9 @@ if (!file_exists($config_file)) {
     die('Application not configured. Please run the installer.');
 }
 
-// Load configuration
-$config = require $config_file;
-
+// Verify installation status
 if (!isset($config['installed']) || $config['installed'] !== true) {
+    // Not installed - redirect to installer
     if (file_exists(__DIR__ . '/install/index.php')) {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
         $host = $_SERVER['HTTP_HOST'];
@@ -69,6 +77,7 @@ require_once BASEPATH . 'helpers/form_helper.php';
 require_once BASEPATH . 'helpers/security_helper.php';
 require_once BASEPATH . 'helpers/common_helper.php';
 require_once BASEPATH . 'helpers/permission_helper.php';
+require_once BASEPATH . 'helpers/currency_helper.php';
 
 // Initialize and run application
 try {

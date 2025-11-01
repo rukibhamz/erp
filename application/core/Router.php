@@ -11,34 +11,104 @@ class Router {
     }
     
     private function parseUrl() {
+        // Get URL from query string
         $url = $_GET['url'] ?? '';
-        $url = rtrim($url, '/');
+        $url = trim($url, '/');
         $url = filter_var($url, FILTER_SANITIZE_URL);
-        $url = explode('/', $url);
         
         // Load routes
         $routes = require BASEPATH . 'config/routes.php';
         
-        // Check routes
-        $path = implode('/', $url);
-        if (isset($routes[$path])) {
-            $path = $routes[$path];
-            $url = explode('/', $path);
+        // Ensure routes is an array
+        if (!is_array($routes)) {
+            $routes = [];
         }
         
-        // Set controller
-        if (isset($url[0]) && !empty($url[0])) {
-            $this->controller = ucfirst($url[0]);
+        // If URL is empty, use default controller
+        if (empty($url)) {
+            if (isset($routes['default_controller'])) {
+                $default = explode('/', $routes['default_controller']);
+                $this->controller = $default[0] ?? 'Dashboard';
+                $this->method = $default[1] ?? 'index';
+            } else {
+                $this->controller = 'Dashboard';
+                $this->method = 'index';
+            }
+            return;
         }
         
-        // Set method
-        if (isset($url[1]) && !empty($url[1])) {
-            $this->method = $url[1];
+        $urlParts = explode('/', $url);
+        $path = $url;
+        
+        // Check exact route matches first (case-insensitive)
+        $pathLower = strtolower($path);
+        foreach ($routes as $pattern => $route) {
+            if ($pattern === 'default_controller' || $pattern === '404_override') {
+                continue;
+            }
+            if (strtolower($pattern) === $pathLower) {
+                $routeParts = explode('/', $route);
+                $this->controller = $routeParts[0];
+                $this->method = $routeParts[1] ?? 'index';
+                if (count($routeParts) > 2) {
+                    $this->params = array_slice($routeParts, 2);
+                }
+                return;
+            }
         }
         
-        // Set params
-        if (count($url) > 2) {
-            $this->params = array_slice($url, 2);
+        // Check pattern routes (with parameters like (:num), (:any))
+        foreach ($routes as $pattern => $route) {
+            if ($pattern === 'default_controller' || $pattern === '404_override') {
+                continue;
+            }
+            
+            // Skip exact matches (already checked)
+            if (strpos($pattern, '(') === false) {
+                continue;
+            }
+            
+            // Convert route pattern to regex
+            $regexPattern = preg_quote($pattern, '#');
+            $regexPattern = str_replace('\\(:num\\)', '([0-9]+)', $regexPattern);
+            $regexPattern = str_replace('\\(:any\\)', '(.+)', $regexPattern);
+            $regex = '#^' . $regexPattern . '$#';
+            
+            if (preg_match($regex, $path, $matches)) {
+                array_shift($matches); // Remove full match
+                
+                $routeParts = explode('/', $route);
+                $this->controller = $routeParts[0];
+                $this->method = $routeParts[1] ?? 'index';
+                
+                // Extract parameters from route string ($1, $2, etc.)
+                $params = [];
+                foreach ($routeParts as $part) {
+                    if (preg_match('#\$(\d+)#', $part, $paramMatch)) {
+                        $paramIndex = intval($paramMatch[1]) - 1;
+                        if (isset($matches[$paramIndex])) {
+                            $params[] = $matches[$paramIndex];
+                        }
+                    }
+                }
+                // Add any remaining matches
+                $params = array_merge($params, array_slice($matches, count($params)));
+                $this->params = $params;
+                return;
+            }
+        }
+        
+        // No route match, use direct controller/method parsing
+        if (isset($urlParts[0]) && !empty($urlParts[0])) {
+            $this->controller = ucfirst($urlParts[0]);
+        }
+        
+        if (isset($urlParts[1]) && !empty($urlParts[1])) {
+            $this->method = $urlParts[1];
+        }
+        
+        if (count($urlParts) > 2) {
+            $this->params = array_slice($urlParts, 2);
         }
     }
     

@@ -11,17 +11,22 @@ class Base_Model {
     }
     
     public function getAll($limit = null, $offset = 0, $orderBy = null) {
-        $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`";
-        
-        if ($orderBy) {
-            $sql .= " ORDER BY {$orderBy}";
+        try {
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`";
+            
+            if ($orderBy) {
+                $sql .= " ORDER BY {$orderBy}";
+            }
+            
+            if ($limit) {
+                $sql .= " LIMIT {$limit} OFFSET {$offset}";
+            }
+            
+            return $this->db->fetchAll($sql);
+        } catch (Exception $e) {
+            error_log('Base_Model getAll error: ' . $e->getMessage());
+            return [];
         }
-        
-        if ($limit) {
-            $sql .= " LIMIT {$limit} OFFSET {$offset}";
-        }
-        
-        return $this->db->fetchAll($sql);
     }
     
     public function getById($id) {

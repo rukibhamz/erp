@@ -28,7 +28,14 @@
         <h1 class="display-1 fw-bold" style="color: #000000; font-weight: 700;">404</h1>
         <h2 class="mb-4" style="color: #374151;">Page Not Found</h2>
         <p class="lead mb-4" style="color: #6b7280;">The page you're looking for doesn't exist.</p>
-        <a href="/" class="btn btn-dark btn-lg" style="background: #000000; border: none; font-weight: 500;">
+        <?php
+        // Get base URL
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'];
+        $path = dirname($_SERVER['SCRIPT_NAME']);
+        $baseUrl = rtrim($protocol . $host . $path, '/') . '/';
+        ?>
+        <a href="<?= $baseUrl ?>" class="btn btn-dark btn-lg" style="background: #000000; border: none; font-weight: 500;">
             <i class="bi bi-house-door"></i> Go Home
         </a>
     </div>

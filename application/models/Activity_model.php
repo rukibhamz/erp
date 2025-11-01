@@ -36,5 +36,19 @@ class Activity_model extends Base_Model {
         
         return $this->db->fetchAll($sql, [$userId]);
     }
+    
+    public function getAll($where = null, $offset = 0, $orderBy = 'created_at DESC', $limit = 50) {
+        $sql = "SELECT a.*, u.username, u.email 
+                FROM `" . $this->db->getPrefix() . $this->table . "` a
+                LEFT JOIN `" . $this->db->getPrefix() . "users` u ON a.user_id = u.id";
+        
+        if ($where) {
+            $sql .= " WHERE " . $where;
+        }
+        
+        $sql .= " ORDER BY " . $orderBy . " LIMIT {$limit} OFFSET {$offset}";
+        
+        return $this->db->fetchAll($sql);
+    }
 }
 
