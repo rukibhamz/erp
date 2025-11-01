@@ -2,27 +2,17 @@
 $page_title = $page_title ?? 'Companies';
 ?>
 
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="h3 mb-0"><?= htmlspecialchars($page_title) ?></h1>
-            <nav aria-label="breadcrumb" class="mt-2">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Companies</li>
-                </ol>
-            </nav>
-        </div>
-        <a href="<?= base_url('companies/create') ?>" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Create Company
-        </a>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Companies</h1>
+        <a href="<?= base_url('companies/create') ?>" class="btn btn-primary">Create Company</a>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm">
+<div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>ID</th>

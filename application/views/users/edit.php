@@ -3,24 +3,15 @@ $page_title = $page_title ?? 'Edit User';
 $userPermissions = $userPermissions ?? [];
 ?>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h3 mb-0"><?= htmlspecialchars($page_title) ?></h1>
-        <nav aria-label="breadcrumb" class="mt-2">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="<?= base_url('users') ?>">Users</a></li>
-                <li class="breadcrumb-item active">Edit</li>
-            </ol>
-        </nav>
-    </div>
+<div class="page-header">
+    <h1 class="page-title mb-0">Edit User</h1>
 </div>
 
 <div class="row">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-person-gear"></i> User Information</h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                User Information
             </div>
             <div class="card-body">
                 <form method="POST" action="<?= base_url('users/edit/' . $user['id']) ?>">
@@ -91,9 +82,9 @@ $userPermissions = $userPermissions ?? [];
     </div>
     
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-info-circle"></i> User Stats</h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                User Stats
             </div>
             <div class="card-body">
                 <p><strong>Created:</strong> <?= date('M d, Y', strtotime($user['created_at'])) ?></p>

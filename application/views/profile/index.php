@@ -2,21 +2,13 @@
 $page_title = $page_title ?? 'My Profile';
 ?>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h3 mb-0"><?= htmlspecialchars($page_title) ?></h1>
-        <nav aria-label="breadcrumb" class="mt-2">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-                <li class="breadcrumb-item active">Profile</li>
-            </ol>
-        </nav>
-    </div>
+<div class="page-header">
+    <h1 class="page-title mb-0">My Profile</h1>
 </div>
 
 <div class="row">
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="card mb-4">
             <div class="card-body text-center">
                 <?php 
                 $avatarPath = $user['avatar'] ? base_url('uploads/avatars/' . $user['avatar']) : base_url('assets/images/default-avatar.png');
@@ -42,9 +34,9 @@ $page_title = $page_title ?? 'My Profile';
     
     <div class="col-lg-8">
         <!-- Profile Information -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-person"></i> Profile Information</h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                Profile Information
             </div>
             <div class="card-body">
                 <form method="POST">
@@ -82,9 +74,9 @@ $page_title = $page_title ?? 'My Profile';
         </div>
         
         <!-- Change Password -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-key"></i> Change Password</h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                Change Password
             </div>
             <div class="card-body">
                 <form method="POST">
@@ -111,9 +103,9 @@ $page_title = $page_title ?? 'My Profile';
         
         <!-- Active Sessions -->
         <?php if (!empty($sessions)): ?>
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-laptop"></i> Active Sessions</h5>
+        <div class="card">
+            <div class="card-header">
+                Active Sessions
             </div>
             <div class="card-body">
                 <div class="table-responsive">

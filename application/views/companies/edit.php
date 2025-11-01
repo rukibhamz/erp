@@ -2,20 +2,11 @@
 $page_title = $page_title ?? 'Edit Company';
 ?>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h3 mb-0"><?= htmlspecialchars($page_title) ?></h1>
-        <nav aria-label="breadcrumb" class="mt-2">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="<?= base_url('companies') ?>">Companies</a></li>
-                <li class="breadcrumb-item active">Edit</li>
-            </ol>
-        </nav>
-    </div>
+<div class="page-header">
+    <h1 class="page-title mb-0">Edit Company</h1>
 </div>
 
-<div class="card border-0 shadow-sm">
+<div class="card">
     <div class="card-body">
         <form method="POST" action="<?= base_url('companies/edit/' . $company['id']) ?>">
             <div class="row">

@@ -38,9 +38,9 @@ if (!isset($config['installed']) || $config['installed'] !== true) {
     die('Application not installed. Please run the installer.');
 }
 
-// Set error reporting
+// Set error reporting (show errors during development)
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set('display_errors', 1); // Set to 1 for debugging, 0 for production
 ini_set('log_errors', 1);
 ini_set('error_log', ROOTPATH . 'logs/error.log');
 

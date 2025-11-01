@@ -10,10 +10,10 @@
 </head>
 <body>
     <?php if (isset($current_user)): ?>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
             <a class="navbar-brand" href="<?= base_url('dashboard') ?>">
-                <i class="bi bi-building"></i> Business ERP
+                Business ERP
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -21,37 +21,25 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('dashboard') ?>">
-                            <i class="bi bi-speedometer2"></i> Dashboard
-                        </a>
+                        <a class="nav-link" href="<?= base_url('dashboard') ?>">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('companies') ?>">
-                            <i class="bi bi-building"></i> Companies
-                        </a>
+                        <a class="nav-link" href="<?= base_url('companies') ?>">Companies</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('users') ?>">
-                            <i class="bi bi-people"></i> Users
-                        </a>
+                        <a class="nav-link" href="<?= base_url('users') ?>">Users</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?= htmlspecialchars($current_user['username'] ?? 'User') ?>
+                            <?= htmlspecialchars($current_user['username'] ?? 'User') ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="<?= base_url('profile') ?>">
-                                <i class="bi bi-person-circle"></i> My Profile
-                            </a></li>
-                            <li><a class="dropdown-item" href="<?= base_url('settings') ?>">
-                                <i class="bi bi-gear"></i> Settings
-                            </a></li>
+                            <li><a class="dropdown-item" href="<?= base_url('profile') ?>">My Profile</a></li>
+                            <li><a class="dropdown-item" href="<?= base_url('settings') ?>">Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="<?= base_url('logout') ?>">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
+                            <li><a class="dropdown-item" href="<?= base_url('logout') ?>">Logout</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -60,7 +48,7 @@
     </nav>
     <?php endif; ?>
     
-    <div class="container-fluid mt-4">
+    <div class="container-fluid" style="max-width: 1400px; margin: 0 auto; padding-top: 2rem; padding-bottom: 2rem;">
         <?php if (isset($flash)): ?>
             <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show" role="alert">
                 <?= htmlspecialchars($flash['message']) ?>

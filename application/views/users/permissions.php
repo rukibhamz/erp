@@ -3,28 +3,18 @@ $page_title = $page_title ?? 'Manage Permissions';
 $userPermissions = $userPermissions ?? [];
 ?>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h3 mb-0"><?= htmlspecialchars($page_title) ?></h1>
-        <nav aria-label="breadcrumb" class="mt-2">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="<?= base_url('users') ?>">Users</a></li>
-                <li class="breadcrumb-item"><a href="<?= base_url('users/edit/' . $user['id']) ?>">Edit</a></li>
-                <li class="breadcrumb-item active">Permissions</li>
-            </ol>
-        </nav>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Manage Permissions</h1>
+        <span class="badge bg-<?= getRoleBadgeClass($user['role']) ?>"><?= ucfirst(str_replace('_', ' ', $user['role'])) ?></span>
     </div>
 </div>
 
 <div class="row">
     <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0 py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-shield-check"></i> Permission Matrix</h5>
-                    <span class="badge bg-<?= getRoleBadgeClass($user['role']) ?>"><?= ucfirst(str_replace('_', ' ', $user['role'])) ?></span>
-                </div>
+        <div class="card">
+            <div class="card-header">
+                Permission Matrix
             </div>
             <div class="card-body">
                 <form method="POST" action="<?= base_url('users/permissions/' . $user['id']) ?>">

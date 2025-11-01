@@ -1,8 +1,10 @@
     </div>
     
-    <footer class="mt-5 py-4 bg-light">
-        <div class="container-fluid text-center text-muted">
-            <p class="mb-0">&copy; <?= date('Y') ?> Business Management System. All rights reserved.</p>
+    <footer>
+        <div class="container-fluid" style="max-width: 1400px; margin: 0 auto;">
+            <div class="text-center text-muted" style="font-size: 0.875rem;">
+                &copy; <?= date('Y') ?> Business ERP
+            </div>
         </div>
     </footer>
     

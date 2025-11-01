@@ -2,24 +2,15 @@
 $page_title = $page_title ?? 'Create User';
 ?>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h3 mb-0"><?= htmlspecialchars($page_title) ?></h1>
-        <nav aria-label="breadcrumb" class="mt-2">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="<?= base_url('users') ?>">Users</a></li>
-                <li class="breadcrumb-item active">Create</li>
-            </ol>
-        </nav>
-    </div>
+<div class="page-header">
+    <h1 class="page-title mb-0">Create User</h1>
 </div>
 
 <div class="row">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-person-plus"></i> User Information</h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                User Information
             </div>
             <div class="card-body">
                 <form method="POST" action="<?= base_url('users/create') ?>">
@@ -86,9 +77,9 @@ $page_title = $page_title ?? 'Create User';
     </div>
     
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-shield-check"></i> Permissions</h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                Permissions
             </div>
             <div class="card-body">
                 <?php if (!empty($modules)): ?>
@@ -122,9 +113,9 @@ $page_title = $page_title ?? 'Create User';
                 <?php endif; ?>
             </div>
         </div>
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Note</h5>
+        <div class="card">
+            <div class="card-header">
+                Note
             </div>
             <div class="card-body">
                 <p class="small text-muted mb-0">Select permissions to grant to this user. Super Admin role automatically has all permissions.</p>

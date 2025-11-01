@@ -14,15 +14,13 @@ Options -Indexes
     </Files>
 </FilesMatch>
 
-# Route all requests to index.php
+# Route all requests to index.php (allow assets and install to pass through)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/install
+RewriteCond %{REQUEST_URI} !^/assets
+RewriteCond %{REQUEST_URI} !^/uploads
 RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
-
-# Protect sensitive directories (only after installation)
-# Uncomment the following lines after installation
-# RewriteRule ^application/ - [F,L]
-# RewriteRule ^install/ - [F,L]
 
 # Set default charset
 AddDefaultCharset UTF-8

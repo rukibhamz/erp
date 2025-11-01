@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f9fafb;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -23,7 +23,7 @@
             width: 100%;
         }
         .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2563eb;
             color: white;
             padding: 2rem;
             text-align: center;
@@ -32,12 +32,13 @@
             padding: 2rem;
         }
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2563eb;
             border: none;
             width: 100%;
+            font-weight: 500;
         }
         .btn-login:hover {
-            opacity: 0.9;
+            background: #1e40af;
         }
     </style>
 </head>

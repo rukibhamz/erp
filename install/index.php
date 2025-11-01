@@ -192,7 +192,7 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f9fafb;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -209,7 +209,7 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
             overflow: hidden;
         }
         .install-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2563eb;
             color: white;
             padding: 2rem;
             text-align: center;
@@ -242,7 +242,7 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
             margin-bottom: 0.5rem;
         }
         .step.active .step-number {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2563eb;
             color: white;
         }
         .step.completed .step-number {
@@ -271,15 +271,16 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
             margin-bottom: 0.5rem;
         }
         .btn-install {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2563eb;
             border: none;
             padding: 0.75rem 2rem;
-            font-weight: 600;
+            font-weight: 500;
+            color: white;
         }
         .btn-install:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            background: #1e40af;
+            transform: none;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
         }
     </style>
 </head>
