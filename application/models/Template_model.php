@@ -54,6 +54,20 @@ class Template_model extends Base_Model {
         }
     }
     
+    public function getByTypeAndName($type, $name) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE template_type = ? AND template_name = ? AND status = 'active' 
+                 LIMIT 1",
+                [$type, $name]
+            );
+        } catch (Exception $e) {
+            error_log('Template_model getByTypeAndName error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
     public function render($templateId, $data) {
         try {
             $template = $this->getById($templateId);

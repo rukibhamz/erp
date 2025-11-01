@@ -63,5 +63,30 @@ class Invoice_model extends Base_Model {
         
         return $this->update($invoiceId, ['status' => $status]);
     }
+    
+    public function addItem($invoiceId, $itemData) {
+        try {
+            $sql = "INSERT INTO `" . $this->db->getPrefix() . "invoice_items` 
+                    (invoice_id, product_id, item_description, quantity, unit_price, tax_rate, tax_amount, discount_rate, discount_amount, line_total, account_id, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            
+            return $this->db->query($sql, [
+                $invoiceId,
+                $itemData['product_id'] ?? null,
+                $itemData['item_description'] ?? '',
+                $itemData['quantity'] ?? 0,
+                $itemData['unit_price'] ?? 0,
+                $itemData['tax_rate'] ?? 0,
+                $itemData['tax_amount'] ?? 0,
+                $itemData['discount_rate'] ?? 0,
+                $itemData['discount_amount'] ?? 0,
+                $itemData['line_total'] ?? 0,
+                $itemData['account_id'] ?? null
+            ]);
+        } catch (Exception $e) {
+            error_log('Invoice_model addItem error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
 

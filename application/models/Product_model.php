@@ -64,6 +64,19 @@ class Product_model extends Base_Model {
         }
     }
     
+    public function getActive() {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE status = 'active' 
+                 ORDER BY product_name"
+            );
+        } catch (Exception $e) {
+            error_log('Product_model getActive error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
     public function getCategories() {
         try {
             $result = $this->db->fetchAll(
