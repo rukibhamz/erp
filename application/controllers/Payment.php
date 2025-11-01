@@ -130,7 +130,7 @@ class Payment extends Base_Controller {
         
         if (!$transactionRef) {
             $this->setFlashMessage('danger', 'Invalid payment reference.');
-            redirect('booking-portal');
+            redirect('booking-wizard');
         }
         
         // Verify payment
@@ -140,11 +140,11 @@ class Payment extends Base_Controller {
         $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
         if ($transaction) {
             if ($transaction['payment_type'] === 'booking_payment') {
-                redirect('booking-portal?payment=success&ref=' . $transactionRef);
+                redirect('booking-wizard?payment=success&ref=' . $transactionRef);
             }
         }
         
-        redirect('booking-portal');
+        redirect('booking-wizard');
     }
     
     /**

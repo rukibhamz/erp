@@ -54,6 +54,20 @@ class Facility_model extends Base_Model {
         }
     }
     
+    public function getPhotos($facilityId) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . "facility_photos` 
+                 WHERE facility_id = ? 
+                 ORDER BY is_primary DESC, display_order ASC",
+                [$facilityId]
+            );
+        } catch (Exception $e) {
+            error_log('Facility_model getPhotos error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
     public function addPhoto($facilityId, $photoPath, $photoName = null, $isPrimary = false) {
         try {
             // If this is primary, unset other primary photos

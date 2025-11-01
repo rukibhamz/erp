@@ -91,6 +91,30 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
 
             <div class="col-md-4">
+                <!-- Actions -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2 mb-3">
+                            <?php if ($booking['status'] !== 'cancelled'): ?>
+                                <a href="<?= base_url('bookings/reschedule/' . $booking['id']) ?>" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-calendar-event"></i> Reschedule
+                                </a>
+                                <?php if ($booking['status'] !== 'completed'): ?>
+                                    <a href="<?= base_url('bookings/cancel/' . $booking['id']) ?>" class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-x-circle"></i> Cancel Booking
+                                    </a>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                            <a href="<?= base_url('bookings/modifications/' . $booking['id']) ?>" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-clock-history"></i> View History
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Status Update -->
                 <div class="card mb-3">
                     <div class="card-header">
@@ -102,9 +126,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <select name="status" class="form-select">
                                     <option value="pending" <?= $booking['status'] === 'pending' ? 'selected' : '' ?>>Pending</option>
                                     <option value="confirmed" <?= $booking['status'] === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
+                                    <option value="in_progress" <?= $booking['status'] === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
                                     <option value="completed" <?= $booking['status'] === 'completed' ? 'selected' : '' ?>>Completed</option>
                                     <option value="cancelled" <?= $booking['status'] === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
                                 </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Reason (optional)</label>
+                                <textarea name="reason" class="form-control" rows="2" placeholder="Reason for status change..."></textarea>
                             </div>
                             <button type="submit" class="btn btn-primary w-100">Update Status</button>
                         </form>

@@ -40,6 +40,15 @@ class Booking_wizard extends Base_Controller {
         // Public controller - allow guest booking
         return true;
     }
+    
+    protected function loadView($view, $data = []) {
+        $data['config'] = $this->config;
+        $data['session'] = $this->session;
+        
+        $this->loader->view('layouts/header_public', $data);
+        $this->loader->view($view, $data);
+        $this->loader->view('layouts/footer_public', $data);
+    }
 
     /**
      * Step 1: Select Resource
@@ -57,6 +66,16 @@ class Booking_wizard extends Base_Controller {
             } else {
                 $resources = $this->facilityModel->getActive();
             }
+            
+            // Get photos for each resource
+            foreach ($resources as &$resource) {
+                try {
+                    $resource['photos'] = $this->facilityModel->getPhotos($resource['id']);
+                } catch (Exception $e) {
+                    $resource['photos'] = [];
+                }
+            }
+            unset($resource); // Break reference
             
             // Get categories and types for filters
             $allResources = $this->facilityModel->getAll();

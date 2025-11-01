@@ -194,13 +194,40 @@ class Booking_model extends Base_Model {
                     AND b.booking_date >= ? 
                     AND b.booking_date <= ?
                     AND b.status NOT IN ('cancelled', 'refunded')
-                 WHERE f.status = 'active'
+                 WHERE f.status = 'active' OR f.status = 'available'
                  GROUP BY f.id, f.facility_name
                  ORDER BY total_revenue DESC",
                 [$startDate, $endDate]
             );
         } catch (Exception $e) {
             error_log('Booking_model getRevenueByFacility error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    public function getByCustomerEmail($customerEmail, $startDate = null, $endDate = null) {
+        try {
+            $sql = "SELECT b.*, f.facility_name, f.facility_code 
+                    FROM `" . $this->db->getPrefix() . $this->table . "` b
+                    JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                    WHERE b.customer_email = ?";
+            $params = [$customerEmail];
+            
+            if ($startDate) {
+                $sql .= " AND b.booking_date >= ?";
+                $params[] = $startDate;
+            }
+            
+            if ($endDate) {
+                $sql .= " AND b.booking_date <= ?";
+                $params[] = $endDate;
+            }
+            
+            $sql .= " ORDER BY b.booking_date DESC, b.created_at DESC";
+            
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Booking_model getByCustomerEmail error: ' . $e->getMessage());
             return [];
         }
     }

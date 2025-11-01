@@ -27,7 +27,7 @@ class Base_Controller {
     }
     
     protected function checkAuth() {
-        $publicControllers = ['Auth', 'Error404', 'Booking_portal', 'Payment', 'Booking_wizard'];
+        $publicControllers = ['Auth', 'Error404', 'Payment', 'Booking_wizard', 'Customer_portal'];
         $currentController = get_class($this);
         
         if (!in_array($currentController, $publicControllers)) {
@@ -45,6 +45,37 @@ class Base_Controller {
         $data['config'] = $this->config;
         $data['session'] = $this->session;
         $data['current_user'] = $this->getCurrentUser();
+        
+        // Load notifications for logged-in users
+        if (isset($this->session['user_id'])) {
+            try {
+                $notificationModel = $this->loadModel('Notification_model');
+                $data['notifications'] = $notificationModel->getUserNotifications($this->session['user_id'], true, 10);
+                $data['unread_notification_count'] = $notificationModel->getUnreadCount($this->session['user_id']);
+            } catch (Exception $e) {
+                $data['notifications'] = [];
+                $data['unread_notification_count'] = 0;
+            }
+        } elseif (isset($this->session['customer_user_id'])) {
+            try {
+                $notificationModel = $this->loadModel('Notification_model');
+                $customerUserModel = $this->loadModel('Customer_portal_user_model');
+                $customer = $customerUserModel->getById($this->session['customer_user_id']);
+                if ($customer) {
+                    $data['notifications'] = $notificationModel->getCustomerNotifications($customer['email'], true, 10);
+                    $data['unread_notification_count'] = $notificationModel->getUnreadCount(null, $customer['email']);
+                } else {
+                    $data['notifications'] = [];
+                    $data['unread_notification_count'] = 0;
+                }
+            } catch (Exception $e) {
+                $data['notifications'] = [];
+                $data['unread_notification_count'] = 0;
+            }
+        } else {
+            $data['notifications'] = [];
+            $data['unread_notification_count'] = 0;
+        }
         
         $this->loader->view('layouts/header', $data);
         $this->loader->view($view, $data);

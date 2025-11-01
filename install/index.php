@@ -121,6 +121,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("Enhanced booking migrations warning: " . $e->getMessage());
             }
         }
+        
+        // Run customer portal migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_customer_portal.php')) {
+            require __DIR__ . '/migrations_customer_portal.php';
+            try {
+                runCustomerPortalMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Customer portal migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run notification migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_notifications.php')) {
+            require __DIR__ . '/migrations_notifications.php';
+            try {
+                runNotificationMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Notification migrations warning: " . $e->getMessage());
+            }
+        }
                 
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);

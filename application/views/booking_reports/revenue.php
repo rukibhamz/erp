@@ -1,118 +1,126 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
-
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Revenue by Facility</h1>
-        <div>
-            <button onclick="window.print()" class="btn btn-outline-primary">
-                <i class="bi bi-printer"></i> Print
-            </button>
-            <a href="<?= base_url('booking-reports') ?>" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back
-            </a>
-        </div>
+        <h1 class="h3 mb-0">Revenue Report</h1>
+        <a href="<?= base_url('booking-reports') ?>" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
     </div>
 
     <!-- Filters -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-4">
+            <form method="GET" action="<?= base_url('booking-reports/revenue') ?>" class="row g-3 align-items-end">
+                <div class="col-md-3">
                     <label class="form-label">Start Date</label>
-                    <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($start_date) ?>">
+                    <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($start_date) ?>" required>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">End Date</label>
-                    <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($end_date) ?>">
+                    <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($end_date) ?>" required>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                <div class="col-md-3">
+                    <label class="form-label">Facility (Optional)</label>
+                    <select name="facility_id" class="form-select">
+                        <option value="">All Facilities</option>
+                        <?php foreach ($facilities as $facility): ?>
+                            <option value="<?= $facility['id'] ?>" <?= $facility_id == $facility['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($facility['facility_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-filter"></i> Apply Filter
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Summary -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Total Revenue</h6>
-                    <h4 class="text-success mb-0"><?= format_currency($total_revenue) ?></h4>
-                </div>
-            </div>
+    <!-- Revenue by Date -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Daily Revenue</h5>
         </div>
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Paid Revenue</h6>
-                    <h4 class="text-primary mb-0"><?= format_currency($total_paid) ?></h4>
+        <div class="card-body">
+            <?php if (!empty($revenue_by_date)): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-end">Bookings</th>
+                                <th class="text-end">Total Revenue</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Pending</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($revenue_by_date as $data): ?>
+                                <tr>
+                                    <td><?= date('M d, Y', strtotime($data['date'])) ?></td>
+                                    <td class="text-end"><?= $data['total_bookings'] ?></td>
+                                    <td class="text-end"><strong><?= format_currency($data['total_revenue']) ?></strong></td>
+                                    <td class="text-end text-success"><?= format_currency($data['paid_revenue']) ?></td>
+                                    <td class="text-end text-warning"><?= format_currency($data['pending_revenue']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td>Total</td>
+                                <td class="text-end"><?= array_sum(array_column($revenue_by_date, 'total_bookings')) ?></td>
+                                <td class="text-end"><?= format_currency(array_sum(array_column($revenue_by_date, 'total_revenue'))) ?></td>
+                                <td class="text-end"><?= format_currency(array_sum(array_column($revenue_by_date, 'paid_revenue'))) ?></td>
+                                <td class="text-end"><?= format_currency(array_sum(array_column($revenue_by_date, 'pending_revenue'))) ?></td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card text-center">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Pending Revenue</h6>
-                    <h4 class="text-warning mb-0"><?= format_currency($total_pending) ?></h4>
-                </div>
-            </div>
+            <?php else: ?>
+                <p class="text-muted mb-0">No revenue data for the selected period</p>
+            <?php endif; ?>
         </div>
     </div>
 
-    <!-- Report Table -->
+    <!-- Revenue by Facility -->
     <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Revenue by Facility</h5>
+        </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Facility</th>
-                            <th>Total Bookings</th>
-                            <th class="text-end">Total Revenue</th>
-                            <th class="text-end">Paid Revenue</th>
-                            <th class="text-end">Pending Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($revenue_by_facility)): ?>
-                            <?php foreach ($revenue_by_facility as $item): ?>
+            <?php if (!empty($revenue_by_facility)): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Facility</th>
+                                <th class="text-end">Bookings</th>
+                                <th class="text-end">Total Revenue</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Pending</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($revenue_by_facility as $facility): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['facility_name']) ?></td>
-                                    <td><?= $item['total_bookings'] ?></td>
-                                    <td class="text-end"><?= format_currency($item['total_revenue']) ?></td>
-                                    <td class="text-end text-success"><?= format_currency($item['paid_revenue']) ?></td>
-                                    <td class="text-end text-warning"><?= format_currency($item['pending_revenue']) ?></td>
+                                    <td><?= htmlspecialchars($facility['facility_name']) ?></td>
+                                    <td class="text-end"><?= $facility['total_bookings'] ?></td>
+                                    <td class="text-end"><strong><?= format_currency($facility['total_revenue']) ?></strong></td>
+                                    <td class="text-end text-success"><?= format_currency($facility['paid_revenue']) ?></td>
+                                    <td class="text-end text-warning"><?= format_currency($facility['pending_revenue']) ?></td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">No data found for the selected period.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                    <tfoot class="table-primary">
-                        <tr>
-                            <th>Total</th>
-                            <th></th>
-                            <th class="text-end"><?= format_currency($total_revenue) ?></th>
-                            <th class="text-end"><?= format_currency($total_paid) ?></th>
-                            <th class="text-end"><?= format_currency($total_pending) ?></th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <p class="text-muted mb-0">No revenue data available</p>
+            <?php endif; ?>
         </div>
     </div>
 </div>
-
-<style>
-@media print {
-    .btn, .card.mb-4 { display: none; }
-    .card { border: none; box-shadow: none; }
-}
-</style>
-

@@ -1,0 +1,43 @@
+HOW TO ACCESS THE BOOKING PORTAL AS A CUSTOMER
+================================================
+
+There are TWO ways customers can book facilities:
+
+1. ENHANCED MULTI-STEP BOOKING WIZARD (Recommended)
+   URL: http://yoursite.com/erp/booking-wizard
+   
+   This is the new professional booking system with:
+   - 5-step guided booking process
+   - Real-time availability checking
+   - Add-ons and extras selection
+   - Promo code support
+   - Multiple payment options
+   - Payment gateway integration
+
+2. SIMPLE BOOKING PORTAL (Legacy)
+   URL: http://yoursite.com/erp/booking-portal
+   
+   This is a simpler interface for basic bookings.
+
+IMPORTANT NOTES:
+===============
+
+✅ Both portals are PUBLIC - NO login required
+✅ Both work without authentication
+✅ Customers can book as guests (no registration needed)
+✅ All bookings are visible in admin panel at /erp/login
+
+To test it yourself:
+1. Open your browser
+2. Go to: http://localhost/erp/booking-wizard
+3. Or: http://localhost/erp/booking-portal
+
+The booking wizard will guide customers through:
+Step 1: Select Resource
+Step 2: Choose Date & Time
+Step 3: Add Extras
+Step 4: Customer Information
+Step 5: Review & Payment
+
+All customer-facing URLs are accessible without login!
+

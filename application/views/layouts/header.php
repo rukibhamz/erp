@@ -94,17 +94,52 @@
             </a>
             <div class="topbar-right">
                 <!-- Notifications -->
-                <button class="topbar-icon-btn" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-bell"></i>
-                    <span class="notification-badge">0</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
-                    <li class="dropdown-header">Notifications</li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li class="dropdown-item-text text-center text-muted py-3">
-                        <small>No new notifications</small>
-                    </li>
-                </ul>
+                <div class="nav-item-dropdown">
+                    <button class="topbar-icon-btn" type="button" data-bs-toggle="dropdown" id="notificationsDropdown">
+                        <i class="bi bi-bell"></i>
+                        <span class="notification-badge" id="notificationBadge"><?= $unread_notification_count ?? 0 ?></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end notification-dropdown" id="notificationsMenu">
+                        <li class="dropdown-header d-flex justify-content-between align-items-center">
+                            <span>Notifications</span>
+                            <?php if (($unread_notification_count ?? 0) > 0): ?>
+                                <a href="<?= base_url('notifications/mark-all-read') ?>" class="btn btn-sm btn-link text-decoration-none" onclick="markAllNotificationsRead(event)">
+                                    Mark all read
+                                </a>
+                            <?php endif; ?>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <div id="notificationsList">
+                            <?php if (!empty($notifications)): ?>
+                                <?php foreach ($notifications as $notification): ?>
+                                    <li>
+                                        <a class="dropdown-item notification-item <?= !$notification['is_read'] ? 'unread' : '' ?>" 
+                                           href="<?= $notification['related_module'] && $notification['related_id'] ? base_url($notification['related_module'] . '/view/' . $notification['related_id']) : '#' ?>"
+                                           data-notification-id="<?= $notification['id'] ?>"
+                                           onclick="markNotificationRead(<?= $notification['id'] ?>)">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <div>
+                                                    <h6 class="mb-1"><?= htmlspecialchars($notification['title']) ?></h6>
+                                                    <p class="mb-0 small text-muted"><?= htmlspecialchars(substr($notification['message'], 0, 60)) ?></p>
+                                                    <small class="text-muted"><?= timeAgo($notification['created_at']) ?></small>
+                                                </div>
+                                                <?php if (!$notification['is_read']): ?>
+                                                    <span class="badge bg-primary rounded-circle" style="width: 8px; height: 8px;"></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center" href="<?= base_url('notifications') ?>">View all notifications</a></li>
+                            <?php else: ?>
+                                <li class="dropdown-item-text text-center text-muted py-3">
+                                    <small>No new notifications</small>
+                                </li>
+                            <?php endif; ?>
+                        </div>
+                    </ul>
+                </div>
                 
                 <!-- Profile -->
                 <div class="nav-item-dropdown">
@@ -149,16 +184,49 @@
             <div class="navbar-right">
                 <!-- Notifications -->
                 <div class="nav-item-dropdown">
-                    <button class="nav-icon-btn" type="button" data-bs-toggle="dropdown">
+                    <button class="nav-icon-btn" type="button" data-bs-toggle="dropdown" id="notificationsDropdownDesktop">
                         <i class="bi bi-bell"></i>
-                        <span class="notification-badge">0</span>
+                        <span class="notification-badge" id="notificationBadgeDesktop"><?= $unread_notification_count ?? 0 ?></span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
-                        <li class="dropdown-header">Notifications</li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li class="dropdown-item-text text-center text-muted py-3">
-                            <small>No new notifications</small>
+                    <ul class="dropdown-menu dropdown-menu-end notification-dropdown" id="notificationsMenuDesktop">
+                        <li class="dropdown-header d-flex justify-content-between align-items-center">
+                            <span>Notifications</span>
+                            <?php if (($unread_notification_count ?? 0) > 0): ?>
+                                <a href="<?= base_url('notifications/mark-all-read') ?>" class="btn btn-sm btn-link text-decoration-none" onclick="markAllNotificationsRead(event)">
+                                    Mark all read
+                                </a>
+                            <?php endif; ?>
                         </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <div id="notificationsListDesktop">
+                            <?php if (!empty($notifications)): ?>
+                                <?php foreach ($notifications as $notification): ?>
+                                    <li>
+                                        <a class="dropdown-item notification-item <?= !$notification['is_read'] ? 'unread' : '' ?>" 
+                                           href="<?= $notification['related_module'] && $notification['related_id'] ? base_url($notification['related_module'] . '/view/' . $notification['related_id']) : '#' ?>"
+                                           data-notification-id="<?= $notification['id'] ?>"
+                                           onclick="markNotificationRead(<?= $notification['id'] ?>)">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <div>
+                                                    <h6 class="mb-1"><?= htmlspecialchars($notification['title']) ?></h6>
+                                                    <p class="mb-0 small text-muted"><?= htmlspecialchars(substr($notification['message'], 0, 60)) ?></p>
+                                                    <small class="text-muted"><?= timeAgo($notification['created_at']) ?></small>
+                                                </div>
+                                                <?php if (!$notification['is_read']): ?>
+                                                    <span class="badge bg-primary rounded-circle" style="width: 8px; height: 8px;"></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center" href="<?= base_url('notifications') ?>">View all notifications</a></li>
+                            <?php else: ?>
+                                <li class="dropdown-item-text text-center text-muted py-3">
+                                    <small>No new notifications</small>
+                                </li>
+                            <?php endif; ?>
+                        </div>
                     </ul>
                 </div>
                 

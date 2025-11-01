@@ -1,119 +1,159 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
-
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Pending Payments Report</h1>
-        <div>
-            <button onclick="window.print()" class="btn btn-outline-primary">
-                <i class="bi bi-printer"></i> Print
-            </button>
-            <a href="<?= base_url('booking-reports') ?>" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back
-            </a>
+        <a href="<?= base_url('booking-reports') ?>" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="<?= base_url('booking-reports/pending-payments') ?>" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($start_date ?? '') ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($end_date ?? '') ?>">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-filter"></i> Apply Filter
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <?php
-    $totalPending = 0;
-    foreach ($pending_payments as $payment) {
-        $totalPending += floatval($payment['balance_amount']);
-    }
-    ?>
-
-    <!-- Summary -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>Total Pending Amount</h5>
-                    <h3 class="text-warning"><?= format_currency($totalPending) ?></h3>
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6>Total Outstanding</h6>
+                    <h2><?= format_currency($total_outstanding) ?></h2>
                 </div>
-                <div class="col-md-6">
-                    <h5>Number of Bookings</h5>
-                    <h3><?= count($pending_payments) ?></h3>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6>Overdue Payments</h6>
+                    <h2><?= format_currency($total_overdue) ?></h2>
+                    <small><?= count($overdue_payments) ?> booking(s)</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Report Table -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Booking #</th>
-                            <th>Facility</th>
-                            <th>Customer</th>
-                            <th>Booking Date</th>
-                            <th class="text-end">Total Amount</th>
-                            <th class="text-end">Paid Amount</th>
-                            <th class="text-end">Balance</th>
-                            <th>Payment Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (!empty($pending_payments)): ?>
-                            <?php foreach ($pending_payments as $booking): ?>
+    <!-- Overdue Payments -->
+    <?php if (!empty($overdue_payments)): ?>
+        <div class="card mb-4 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Overdue Payments</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Booking #</th>
+                                <th>Customer</th>
+                                <th>Facility</th>
+                                <th>Booking Date</th>
+                                <th class="text-end">Total Amount</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Balance</th>
+                                <th>Days Overdue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($overdue_payments as $booking): ?>
+                                <?php 
+                                $daysOverdue = floor((time() - strtotime($booking['booking_date'])) / 86400);
+                                ?>
                                 <tr>
                                     <td><strong><?= htmlspecialchars($booking['booking_number']) ?></strong></td>
-                                    <td>
-                                        <?php
-                                        try {
-                                            $facility = $this->loadModel('Facility_model')->getById($booking['facility_id']);
-                                            echo htmlspecialchars($facility['facility_name'] ?? '-');
-                                        } catch (Exception $e) {
-                                            echo '-';
-                                        }
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <?= htmlspecialchars($booking['customer_name']) ?><br>
-                                        <small class="text-muted"><?= htmlspecialchars($booking['customer_phone'] ?? '') ?></small>
-                                    </td>
+                                    <td><?= htmlspecialchars($booking['customer_name']) ?></td>
+                                    <td><?= htmlspecialchars($booking['facility_name']) ?></td>
                                     <td><?= date('M d, Y', strtotime($booking['booking_date'])) ?></td>
                                     <td class="text-end"><?= format_currency($booking['total_amount']) ?></td>
-                                    <td class="text-end text-success"><?= format_currency($booking['paid_amount']) ?></td>
-                                    <td class="text-end text-danger"><strong><?= format_currency($booking['balance_amount']) ?></strong></td>
+                                    <td class="text-end"><?= format_currency($booking['paid_amount']) ?></td>
+                                    <td class="text-end"><strong class="text-danger"><?= format_currency($booking['balance_amount']) ?></strong></td>
                                     <td>
-                                        <span class="badge bg-<?= $booking['payment_status'] === 'partial' ? 'warning' : 'danger' ?>">
-                                            <?= ucfirst($booking['payment_status']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="<?= base_url('bookings/view/' . $booking['id']) ?>" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
+                                        <span class="badge bg-danger"><?= $daysOverdue ?> days</span>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">No pending payments found.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                    <tfoot class="table-primary">
-                        <tr>
-                            <th colspan="6">Total Pending</th>
-                            <th class="text-end"><?= format_currency($totalPending) ?></th>
-                            <th colspan="2"></th>
-                        </tr>
-                    </tfoot>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- All Pending Payments -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">All Pending Payments</h5>
+        </div>
+        <div class="card-body">
+            <?php if (!empty($pending_payments)): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Booking #</th>
+                                <th>Customer</th>
+                                <th>Email</th>
+                                <th>Facility</th>
+                                <th>Booking Date</th>
+                                <th class="text-end">Total Amount</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Balance</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($pending_payments as $booking): ?>
+                                <tr>
+                                    <td><strong><?= htmlspecialchars($booking['booking_number']) ?></strong></td>
+                                    <td><?= htmlspecialchars($booking['customer_name']) ?></td>
+                                    <td><?= htmlspecialchars($booking['customer_email'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($booking['facility_name']) ?></td>
+                                    <td><?= date('M d, Y', strtotime($booking['booking_date'])) ?></td>
+                                    <td class="text-end"><?= format_currency($booking['total_amount']) ?></td>
+                                    <td class="text-end"><?= format_currency($booking['paid_amount']) ?></td>
+                                    <td class="text-end"><strong class="text-warning"><?= format_currency($booking['balance_amount']) ?></strong></td>
+                                    <td>
+                                        <span class="badge bg-<?= 
+                                            $booking['status'] === 'confirmed' ? 'success' : 'warning'
+                                        ?>">
+                                            <?= ucfirst($booking['status']) ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td colspan="6" class="text-end">Total Outstanding:</td>
+                                <td class="text-end"><?= format_currency($total_outstanding) ?></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> No pending payments found!
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
-
-<style>
-@media print {
-    .btn, .card.mb-4 { display: none; }
-    .card { border: none; box-shadow: none; }
-}
-</style>
-

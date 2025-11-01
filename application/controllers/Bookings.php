@@ -353,6 +353,22 @@ class Bookings extends Base_Controller {
             }
 
             $pdo->commit();
+            
+            // Send payment notification
+            try {
+                $notificationModel = $this->loadModel('Notification_model');
+                $notificationModel->createNotification([
+                    'customer_email' => $booking['customer_email'],
+                    'type' => 'payment_received',
+                    'title' => 'Payment Received',
+                    'message' => "Payment of " . format_currency($amount) . " received for booking {$booking['booking_number']}",
+                    'related_module' => 'booking',
+                    'related_id' => $bookingId
+                ]);
+            } catch (Exception $e) {
+                error_log('Bookings payment notification error: ' . $e->getMessage());
+            }
+            
             $this->activityModel->log($this->session['user_id'], 'create', 'Bookings', 'Recorded payment for booking: ' . $booking['booking_number']);
             return true;
         } catch (Exception $e) {
@@ -361,44 +377,480 @@ class Bookings extends Base_Controller {
         }
     }
 
+    /**
+     * Reschedule booking
+     */
+    public function reschedule($id) {
+        $this->requirePermission('bookings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $newDate = sanitize_input($_POST['booking_date'] ?? '');
+            $newStartTime = sanitize_input($_POST['start_time'] ?? '');
+            $newEndTime = sanitize_input($_POST['end_time'] ?? '');
+            $reason = sanitize_input($_POST['reason'] ?? '');
+            
+            try {
+                $booking = $this->bookingModel->getById($id);
+                if (!$booking) {
+                    $this->setFlashMessage('danger', 'Booking not found.');
+                    redirect('bookings');
+                }
+                
+                // Check new availability
+                $resourceId = $booking['facility_id'];
+                if (!$this->facilityModel->checkAdvancedAvailability($resourceId, $newDate . ' ' . $newStartTime, $newDate . ' ' . $newEndTime, $id)) {
+                    $this->setFlashMessage('danger', 'The selected time slot is not available.');
+                    redirect('bookings/reschedule/' . $id);
+                }
+                
+                $pdo = $this->db->getConnection();
+                $pdo->beginTransaction();
+                
+                // Log modification
+                $oldValue = json_encode([
+                    'date' => $booking['booking_date'],
+                    'start_time' => $booking['start_time'],
+                    'end_time' => $booking['end_time']
+                ]);
+                $newValue = json_encode([
+                    'date' => $newDate,
+                    'start_time' => $newStartTime,
+                    'end_time' => $newEndTime
+                ]);
+                
+                $this->bookingModificationModel->logModification(
+                    $id,
+                    'reschedule',
+                    $oldValue,
+                    $newValue,
+                    $reason,
+                    $this->session['user_id']
+                );
+                
+                // Update booking
+                $duration = $this->calculateDuration($newDate, $newStartTime, $newEndTime);
+                $updateData = [
+                    'booking_date' => $newDate,
+                    'start_time' => $newStartTime,
+                    'end_time' => $newEndTime,
+                    'duration_hours' => $duration
+                ];
+                
+                $this->bookingModel->update($id, $updateData);
+                
+                // Update booking slots
+                $this->bookingModel->createSlots($id, $resourceId, $newDate, $newStartTime, $newEndTime);
+                
+                $pdo->commit();
+                $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Rescheduled booking: ' . $booking['booking_number']);
+                $this->setFlashMessage('success', 'Booking rescheduled successfully.');
+                redirect('bookings/view/' . $id);
+            } catch (Exception $e) {
+                if (isset($pdo)) {
+                    $pdo->rollBack();
+                }
+                error_log('Bookings reschedule error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to reschedule booking.');
+                redirect('bookings/view/' . $id);
+            }
+        }
+        
+        try {
+            $booking = $this->bookingModel->getWithFacility($id);
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('bookings');
+            }
+        } catch (Exception $e) {
+            $booking = null;
+        }
+        
+        $data = [
+            'page_title' => 'Reschedule Booking',
+            'booking' => $booking,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('bookings/reschedule', $data);
+    }
+    
+    /**
+     * Cancel booking
+     */
+    public function cancel($id) {
+        $this->requirePermission('bookings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $reason = sanitize_input($_POST['cancellation_reason'] ?? '');
+            $applyRefund = !empty($_POST['apply_refund']);
+            
+            try {
+                $booking = $this->bookingModel->getById($id);
+                if (!$booking) {
+                    $this->setFlashMessage('danger', 'Booking not found.');
+                    redirect('bookings');
+                }
+                
+                if ($booking['status'] === 'cancelled') {
+                    $this->setFlashMessage('warning', 'Booking is already cancelled.');
+                    redirect('bookings/view/' . $id);
+                }
+                
+                $pdo = $this->db->getConnection();
+                $pdo->beginTransaction();
+                
+                // Calculate refund if applicable
+                $refundAmount = 0;
+                if ($applyRefund && $booking['cancellation_policy_id']) {
+                    $refundAmount = $this->cancellationPolicyModel->calculateRefund(
+                        $booking['cancellation_policy_id'],
+                        $booking['booking_date'],
+                        date('Y-m-d'),
+                        $booking['total_amount']
+                    );
+                }
+                
+                // Update booking status
+                $updateData = [
+                    'status' => 'cancelled',
+                    'cancelled_at' => date('Y-m-d H:i:s'),
+                    'cancellation_reason' => $reason
+                ];
+                
+                // If refund applies, update balance
+                if ($refundAmount > 0) {
+                    $updateData['paid_amount'] = max(0, floatval($booking['paid_amount']) - $refundAmount);
+                    $updateData['balance_amount'] = floatval($booking['total_amount']) - floatval($updateData['paid_amount']);
+                }
+                
+                $this->bookingModel->update($id, $updateData);
+                
+                // Log modification
+                $this->bookingModificationModel->logModification(
+                    $id,
+                    'status_change',
+                    $booking['status'],
+                    'cancelled',
+                    $reason,
+                    $this->session['user_id']
+                );
+                
+                // Reverse accounting entries if booking was confirmed
+                if ($booking['status'] === 'confirmed' || $booking['status'] === 'in_progress') {
+                    $this->reverseBookingRevenue($id);
+                }
+                
+                $pdo->commit();
+                $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Cancelled booking: ' . $booking['booking_number']);
+                $this->setFlashMessage('success', 'Booking cancelled successfully.' . ($refundAmount > 0 ? ' Refund: ' . format_currency($refundAmount) : ''));
+                redirect('bookings/view/' . $id);
+            } catch (Exception $e) {
+                if (isset($pdo)) {
+                    $pdo->rollBack();
+                }
+                error_log('Bookings cancel error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to cancel booking.');
+                redirect('bookings/view/' . $id);
+            }
+        }
+        
+        try {
+            $booking = $this->bookingModel->getWithFacility($id);
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('bookings');
+            }
+            
+            $cancellationPolicy = null;
+            if ($booking['cancellation_policy_id']) {
+                $cancellationPolicy = $this->cancellationPolicyModel->getById($booking['cancellation_policy_id']);
+            } else {
+                $cancellationPolicy = $this->cancellationPolicyModel->getDefault();
+            }
+            
+            // Calculate potential refund
+            $potentialRefund = 0;
+            if ($cancellationPolicy) {
+                $potentialRefund = $this->cancellationPolicyModel->calculateRefund(
+                    $cancellationPolicy['id'],
+                    $booking['booking_date'],
+                    date('Y-m-d'),
+                    $booking['total_amount']
+                );
+            }
+        } catch (Exception $e) {
+            $booking = null;
+            $cancellationPolicy = null;
+            $potentialRefund = 0;
+        }
+        
+        $data = [
+            'page_title' => 'Cancel Booking',
+            'booking' => $booking,
+            'cancellation_policy' => $cancellationPolicy,
+            'potential_refund' => $potentialRefund,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('bookings/cancel', $data);
+    }
+    
+    /**
+     * Update booking status
+     */
     public function updateStatus($id) {
         $this->requirePermission('bookings', 'update');
-
-        $status = sanitize_input($_POST['status'] ?? '');
-        $oldStatus = '';
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $newStatus = sanitize_input($_POST['status'] ?? '');
+            $reason = sanitize_input($_POST['reason'] ?? '');
+            
+            try {
+                $booking = $this->bookingModel->getById($id);
+                if (!$booking) {
+                    $this->setFlashMessage('danger', 'Booking not found.');
+                    redirect('bookings');
+                }
+                
+                $oldStatus = $booking['status'];
+                
+                $pdo = $this->db->getConnection();
+                $pdo->beginTransaction();
+                
+                // Update status
+                $updateData = ['status' => $newStatus];
+                
+                // Handle status-specific logic
+                if ($newStatus === 'confirmed' && $oldStatus === 'pending') {
+                    // Recognize revenue when confirmed
+                    $this->recognizeBookingRevenue($id, $booking);
+                    // Send confirmation notification
+                    $this->sendBookingNotification($id, $booking);
+                } elseif ($newStatus === 'in_progress' && $oldStatus === 'confirmed') {
+                    // Booking has started
+                    $updateData['started_at'] = date('Y-m-d H:i:s');
+                } elseif ($newStatus === 'completed' && in_array($oldStatus, ['confirmed', 'in_progress'])) {
+                    // Finalize revenue
+                    $this->finalizeBookingRevenue($id);
+                    $updateData['completed_at'] = date('Y-m-d H:i:s');
+                } elseif ($newStatus === 'cancelled' && in_array($oldStatus, ['pending', 'confirmed', 'in_progress'])) {
+                    // Reverse revenue if cancelled
+                    $this->reverseBookingRevenue($id);
+                    $updateData['cancelled_at'] = date('Y-m-d H:i:s');
+                    $updateData['cancellation_reason'] = $reason;
+                }
+                
+                $this->bookingModel->update($id, $updateData);
+                
+                // Log modification
+                $this->bookingModificationModel->logModification(
+                    $id,
+                    'status_change',
+                    $oldStatus,
+                    $newStatus,
+                    $reason,
+                    $this->session['user_id']
+                );
+                
+                $pdo->commit();
+                $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Updated booking status: ' . $booking['booking_number'] . ' (' . $oldStatus . ' → ' . $newStatus . ')');
+                $this->setFlashMessage('success', 'Booking status updated successfully.');
+                redirect('bookings/view/' . $id);
+            } catch (Exception $e) {
+                if (isset($pdo)) {
+                    $pdo->rollBack();
+                }
+                error_log('Bookings updateStatus error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to update booking status.');
+                redirect('bookings/view/' . $id);
+            }
+        }
+        
+        redirect('bookings/view/' . $id);
+    }
+    
+    /**
+     * View booking modifications history
+     */
+    public function modifications($id) {
+        $this->requirePermission('bookings', 'read');
         
         try {
             $booking = $this->bookingModel->getById($id);
-            if ($booking) {
-                $oldStatus = $booking['status'];
-                
-                // If status changed to confirmed, recognize revenue
-                if ($status === 'confirmed' && $oldStatus !== 'confirmed') {
-                    $this->recognizeBookingRevenue($id, $booking);
-                }
-                
-                // If status changed to completed, finalize revenue recognition
-                if ($status === 'completed' && $oldStatus !== 'completed') {
-                    $this->finalizeBookingRevenue($id, $booking);
-                }
-                
-                // If status changed to cancelled, reverse revenue entries
-                if ($status === 'cancelled' && $oldStatus !== 'cancelled') {
-                    $this->reverseBookingRevenue($id, $booking);
-                }
-            }
+            $modifications = $this->bookingModificationModel->getByBooking($id);
         } catch (Exception $e) {
-            error_log('Bookings updateStatus error: ' . $e->getMessage());
+            $booking = null;
+            $modifications = [];
         }
         
-        if ($this->bookingModel->updateStatus($id, $status)) {
-            $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Updated booking status to: ' . $status);
-            $this->setFlashMessage('success', 'Booking status updated successfully.');
-        } else {
-            $this->setFlashMessage('danger', 'Failed to update booking status.');
+        $data = [
+            'page_title' => 'Booking Modifications',
+            'booking' => $booking,
+            'modifications' => $modifications,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('bookings/modifications', $data);
+    }
+    
+    /**
+     * Add resources to booking (multiple resource booking)
+     */
+    public function addResource($bookingId) {
+        $this->requirePermission('bookings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $resourceId = intval($_POST['resource_id'] ?? 0);
+            $startDateTime = sanitize_input($_POST['start_datetime'] ?? '');
+            $endDateTime = sanitize_input($_POST['end_datetime'] ?? '');
+            $quantity = intval($_POST['quantity'] ?? 1);
+            
+            try {
+                $booking = $this->bookingModel->getById($bookingId);
+                if (!$booking) {
+                    throw new Exception('Booking not found');
+                }
+                
+                $resource = $this->facilityModel->getById($resourceId);
+                if (!$resource) {
+                    throw new Exception('Resource not found');
+                }
+                
+                // Check availability
+                if (!$this->facilityModel->checkAdvancedAvailability($resourceId, $startDateTime, $endDateTime, $bookingId)) {
+                    throw new Exception('Time slot not available');
+                }
+                
+                // Calculate rate
+                $rate = floatval($resource['hourly_rate']);
+                $start = new DateTime($startDateTime);
+                $end = new DateTime($endDateTime);
+                $hours = $end->diff($start)->h + ($end->diff($start)->i / 60);
+                $amount = $rate * $hours * $quantity;
+                
+                // Add to booking_resources
+                $this->bookingResourceModel->addResource(
+                    $bookingId,
+                    $resourceId,
+                    $startDateTime,
+                    $endDateTime,
+                    $quantity,
+                    $rate,
+                    'hourly'
+                );
+                
+                // Update booking total
+                $resourceTotal = $this->bookingResourceModel->getTotalByBooking($bookingId);
+                $addonsTotal = $this->bookingAddonModel->getTotalByBooking($bookingId);
+                $subtotal = $resourceTotal + $addonsTotal;
+                
+                $this->bookingModel->update($bookingId, [
+                    'subtotal' => $subtotal,
+                    'total_amount' => $subtotal + floatval($booking['security_deposit'] ?? 0),
+                    'balance_amount' => ($subtotal + floatval($booking['security_deposit'] ?? 0)) - floatval($booking['paid_amount'])
+                ]);
+                
+                $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Added resource to booking: ' . $booking['booking_number']);
+                $this->setFlashMessage('success', 'Resource added to booking successfully.');
+                redirect('bookings/view/' . $bookingId);
+            } catch (Exception $e) {
+                error_log('Bookings addResource error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', $e->getMessage());
+                redirect('bookings/view/' . $bookingId);
+            }
         }
-
-        redirect('bookings/view/' . $id);
+        
+        redirect('bookings/view/' . $bookingId);
+    }
+    
+    /**
+     * Remove resource from booking
+     */
+    public function removeResource($bookingResourceId) {
+        $this->requirePermission('bookings', 'update');
+        
+        try {
+            $bookingResource = $this->bookingResourceModel->getById($bookingResourceId);
+            if (!$bookingResource) {
+                $this->setFlashMessage('danger', 'Booking resource not found.');
+                redirect('bookings');
+            }
+            
+            $bookingId = $bookingResource['booking_id'];
+            $booking = $this->bookingModel->getById($bookingId);
+            
+            // Delete resource
+            $this->bookingResourceModel->delete($bookingResourceId);
+            
+            // Recalculate totals
+            $resourceTotal = $this->bookingResourceModel->getTotalByBooking($bookingId);
+            $addonsTotal = $this->bookingAddonModel->getTotalByBooking($bookingId);
+            $subtotal = $resourceTotal + $addonsTotal;
+            
+            $this->bookingModel->update($bookingId, [
+                'subtotal' => $subtotal,
+                'total_amount' => $subtotal + floatval($booking['security_deposit'] ?? 0),
+                'balance_amount' => ($subtotal + floatval($booking['security_deposit'] ?? 0)) - floatval($booking['paid_amount'])
+            ]);
+            
+            $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Removed resource from booking: ' . $booking['booking_number']);
+            $this->setFlashMessage('success', 'Resource removed from booking successfully.');
+            redirect('bookings/view/' . $bookingId);
+        } catch (Exception $e) {
+            error_log('Bookings removeResource error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to remove resource.');
+            redirect('bookings');
+        }
+    }
+    
+    private function calculateDuration($date, $startTime, $endTime) {
+        try {
+            $start = new DateTime($date . ' ' . $startTime);
+            $end = new DateTime($date . ' ' . $endTime);
+            $duration = $end->diff($start);
+            return $duration->h + ($duration->i / 60);
+        } catch (Exception $e) {
+            error_log('Bookings calculateDuration error: ' . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * Send booking notification
+     */
+    private function sendBookingNotification($bookingId, $bookingData = null) {
+        try {
+            $notificationModel = $this->loadModel('Notification_model');
+            $booking = $bookingData ?: $this->bookingModel->getWithFacility($bookingId);
+            
+            if ($booking && !empty($booking['customer_email'])) {
+                $notificationModel->sendBookingConfirmation($bookingId, $booking);
+            }
+        } catch (Exception $e) {
+            error_log('Bookings sendBookingNotification error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Send cancellation notification
+     */
+    private function sendCancellationNotification($bookingId, $booking, $reason = '') {
+        try {
+            $notificationModel = $this->loadModel('Notification_model');
+            
+            if ($booking && !empty($booking['customer_email'])) {
+                $notificationModel->createNotification([
+                    'customer_email' => $booking['customer_email'],
+                    'type' => 'booking_cancelled',
+                    'title' => 'Booking Cancelled',
+                    'message' => "Your booking {$booking['booking_number']} has been cancelled. " . ($reason ? "Reason: {$reason}" : ''),
+                    'related_module' => 'booking',
+                    'related_id' => $bookingId
+                ]);
+            }
+        } catch (Exception $e) {
+            error_log('Bookings sendCancellationNotification error: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -501,16 +953,25 @@ class Bookings extends Base_Controller {
     /**
      * Finalize booking revenue when booking is completed
      */
-    private function finalizeBookingRevenue($bookingId, $booking) {
+    private function finalizeBookingRevenue($bookingId, $booking = null) {
         // Revenue should already be recognized when confirmed
         // This method can handle any final adjustments if needed
         // For now, just log the completion
+        if (!$booking) {
+            $booking = $this->bookingModel->getById($bookingId);
+        }
     }
 
     /**
      * Reverse booking revenue when booking is cancelled
      */
-    private function reverseBookingRevenue($bookingId, $booking) {
+    private function reverseBookingRevenue($bookingId, $booking = null) {
+        if (!$booking) {
+            $booking = $this->bookingModel->getById($bookingId);
+            if (!$booking) {
+                return;
+            }
+        }
         try {
             // Find all transactions related to this booking
             $transactions = $this->transactionModel->getByReference('booking_revenue', $bookingId);

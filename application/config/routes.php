@@ -135,15 +135,14 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['bookings/view/(:num)'] = 'Bookings/view/$1';
         $route['bookings/payment'] = 'Bookings/recordPayment';
         $route['bookings/status/(:num)'] = 'Bookings/updateStatus/$1';
+        $route['bookings/reschedule/(:num)'] = 'Bookings/reschedule/$1';
+        $route['bookings/cancel/(:num)'] = 'Bookings/cancel/$1';
+        $route['bookings/modifications/(:num)'] = 'Bookings/modifications/$1';
+        $route['bookings/add-resource/(:num)'] = 'Bookings/addResource/$1';
+        $route['bookings/remove-resource/(:num)'] = 'Bookings/removeResource/$1';
         
-        // Public Booking Portal (Legacy)
-        $route['booking-portal'] = 'Booking_portal/index';
-        $route['booking-portal/facility/(:num)'] = 'Booking_portal/facility/$1';
-        $route['booking-portal/check-availability'] = 'Booking_portal/checkAvailability';
-        $route['booking-portal/calculate-price'] = 'Booking_portal/calculatePrice';
-        $route['booking-portal/submit'] = 'Booking_portal/submitBooking';
-        
-        // Enhanced Booking Wizard (Multi-step)
+        // Public Booking Portal - Enhanced Multi-step Wizard
+        // Legacy routes redirect to new wizard
         $route['booking-wizard'] = 'Booking_wizard/step1';
         $route['booking-wizard/step1'] = 'Booking_wizard/step1';
         $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
@@ -162,6 +161,7 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['booking-reports/utilization'] = 'Booking_reports/utilization';
         $route['booking-reports/customer-history'] = 'Booking_reports/customerHistory';
         $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
+        $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
         
         // Payment Gateway Settings
         $route['settings/payment-gateways'] = 'Settings/paymentGateways';
@@ -173,6 +173,23 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['payment/callback'] = 'Payment/callback';
         $route['payment/webhook'] = 'Payment/webhook';
         $route['payment/verify'] = 'Payment/verify';
+        
+        // Customer Portal
+        $route['customer-portal'] = 'Customer_portal/login';
+        $route['customer-portal/register'] = 'Customer_portal/register';
+        $route['customer-portal/login'] = 'Customer_portal/login';
+        $route['customer-portal/logout'] = 'Customer_portal/logout';
+        $route['customer-portal/dashboard'] = 'Customer_portal/dashboard';
+        $route['customer-portal/bookings'] = 'Customer_portal/bookings';
+        $route['customer-portal/bookings/(:any)'] = 'Customer_portal/bookings/$1';
+        $route['customer-portal/booking/(:num)'] = 'Customer_portal/viewBooking/$1';
+        $route['customer-portal/profile'] = 'Customer_portal/profile';
+        
+        // Notifications
+        $route['notifications'] = 'Notifications/getNotifications';
+        $route['notifications/mark-read/(:num)'] = 'Notifications/markRead/$1';
+        $route['notifications/mark-all-read'] = 'Notifications/markAllRead';
+        $route['notifications/settings'] = 'Notifications/settings';
 
         return $route;
 
