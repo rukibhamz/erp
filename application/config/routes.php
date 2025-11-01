@@ -190,6 +190,27 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['notifications/mark-read/(:num)'] = 'Notifications/markRead/$1';
         $route['notifications/mark-all-read'] = 'Notifications/markAllRead';
         $route['notifications/settings'] = 'Notifications/settings';
+        
+        // Property Management
+        $route['properties'] = 'Properties/index';
+        $route['properties/create'] = 'Properties/create';
+        $route['properties/view/(:num)'] = 'Properties/view/$1';
+        $route['properties/edit/(:num)'] = 'Properties/edit/$1';
+        $route['spaces'] = 'Spaces/index';
+        $route['spaces/(:num)'] = 'Spaces/index/$1';
+        $route['spaces/create'] = 'Spaces/create';
+        $route['spaces/create/(:num)'] = 'Spaces/create/$1';
+        $route['spaces/view/(:num)'] = 'Spaces/view/$1';
+        $route['spaces/edit/(:num)'] = 'Spaces/edit/$1';
+        $route['spaces/sync/(:num)'] = 'Spaces/syncToBooking/$1';
+        $route['leases'] = 'Leases/index';
+        $route['leases/create'] = 'Leases/create';
+        $route['leases/view/(:num)'] = 'Leases/view/$1';
+        $route['rent-invoices'] = 'Rent_invoices/index';
+        $route['rent-invoices/generate/(:num)'] = 'Rent_invoices/generate/$1';
+        $route['rent-invoices/auto-generate'] = 'Rent_invoices/autoGenerate';
+        $route['rent-invoices/view/(:num)'] = 'Rent_invoices/view/$1';
+        $route['rent-invoices/record-payment'] = 'Rent_invoices/recordPayment';
 
         return $route;
 
