@@ -75,6 +75,20 @@ class Transaction_model extends Base_Model {
         return $this->db->fetchAll($sql, $params);
     }
     
+    public function getByReference($referenceType, $referenceId) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE reference_type = ? AND reference_id = ? 
+                 ORDER BY transaction_date, id",
+                [$referenceType, $referenceId]
+            );
+        } catch (Exception $e) {
+            error_log('Transaction_model getByReference error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
     private function loadModel($modelName) {
         require_once BASEPATH . 'models/' . $modelName . '.php';
         return new $modelName();

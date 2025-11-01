@@ -63,6 +63,12 @@
                             <span class="nav-text">Accounting</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="<?= base_url('bookings') ?>" class="nav-link <?= strpos($current_url, 'bookings') === 0 || strpos($current_url, 'facilities') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-calendar-check"></i>
+                            <span class="nav-text">Bookings</span>
+                        </a>
+                    </li>
                     <li class="nav-divider"></li>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">

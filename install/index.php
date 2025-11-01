@@ -92,6 +92,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
+        // Run booking migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_booking.php')) {
+            require __DIR__ . '/migrations_booking.php';
+            try {
+                runBookingMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Booking migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run payment gateway migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_payment_gateways.php')) {
+            require __DIR__ . '/migrations_payment_gateways.php';
+            try {
+                runPaymentGatewayMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Payment gateway migrations warning: " . $e->getMessage());
+            }
+        }
+                
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);
                 $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}users (username, email, password, role, status, created_at) VALUES (?, ?, ?, 'super_admin', 'active', NOW())");

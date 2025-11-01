@@ -114,5 +114,30 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['recurring'] = 'Recurring/index';
         $route['recurring/process'] = 'Recurring/process';
 
+        // Booking System
+        $route['facilities'] = 'Facilities/index';
+        $route['facilities/create'] = 'Facilities/create';
+        $route['facilities/edit/(:num)'] = 'Facilities/edit/$1';
+        $route['bookings'] = 'Bookings/index';
+        $route['bookings/create'] = 'Bookings/create';
+        $route['bookings/calendar'] = 'Bookings/calendar';
+        $route['bookings/view/(:num)'] = 'Bookings/view/$1';
+        $route['bookings/payment'] = 'Bookings/recordPayment';
+        $route['bookings/status/(:num)'] = 'Bookings/updateStatus/$1';
+        
+        // Public Booking Portal
+        $route['booking-portal'] = 'Booking_portal/index';
+        $route['booking-portal/facility/(:num)'] = 'Booking_portal/facility/$1';
+        $route['booking-portal/check-availability'] = 'Booking_portal/checkAvailability';
+        $route['booking-portal/calculate-price'] = 'Booking_portal/calculatePrice';
+        $route['booking-portal/submit'] = 'Booking_portal/submitBooking';
+        
+        // Booking Reports
+        $route['booking-reports'] = 'Booking_reports/index';
+        $route['booking-reports/revenue'] = 'Booking_reports/revenue';
+        $route['booking-reports/utilization'] = 'Booking_reports/utilization';
+        $route['booking-reports/customer-history'] = 'Booking_reports/customerHistory';
+        $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
+
         return $route;
 
