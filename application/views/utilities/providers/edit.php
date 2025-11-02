@@ -1,0 +1,99 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+?>
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Edit Utility Provider</h1>
+        <a href="<?= base_url('utilities/providers/view/' . $provider['id']) ?>" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<?php include(BASEPATH . 'views/utilities/_nav.php'); ?>
+
+<?php if ($flash): ?>
+    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
+        <?= htmlspecialchars($flash['message']) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<div class="card">
+    <div class="card-body">
+        <form action="<?= base_url('utilities/providers/edit/' . $provider['id']) ?>" method="POST">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="provider_name" class="form-label">Provider Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="provider_name" name="provider_name" value="<?= htmlspecialchars($provider['provider_name']) ?>" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="utility_type_id" class="form-label">Utility Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="utility_type_id" name="utility_type_id" required>
+                        <option value="">Select Utility Type</option>
+                        <?php foreach ($utility_types as $type): ?>
+                            <option value="<?= $type['id'] ?>" <?= $provider['utility_type_id'] == $type['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($type['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="account_number" class="form-label">Account Number</label>
+                    <input type="text" class="form-control" id="account_number" name="account_number" value="<?= htmlspecialchars($provider['account_number'] ?? '') ?>">
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="contact_person" class="form-label">Contact Person</label>
+                    <input type="text" class="form-control" id="contact_person" name="contact_person" value="<?= htmlspecialchars($provider['contact_person'] ?? '') ?>">
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="<?= htmlspecialchars($provider['email'] ?? '') ?>">
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="phone" class="form-label">Phone</label>
+                    <input type="text" class="form-control" id="phone" name="phone" value="<?= htmlspecialchars($provider['phone'] ?? '') ?>">
+                </div>
+                
+                <div class="col-12">
+                    <label for="address" class="form-label">Address</label>
+                    <textarea class="form-control" id="address" name="address" rows="2"><?= htmlspecialchars($provider['address'] ?? '') ?></textarea>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="service_areas" class="form-label">Service Areas</label>
+                    <input type="text" class="form-control" id="service_areas" name="service_areas" value="<?= htmlspecialchars($provider['service_areas'] ?? '') ?>">
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="payment_terms" class="form-label">Payment Terms (Days)</label>
+                    <input type="number" class="form-control" id="payment_terms" name="payment_terms" value="<?= $provider['payment_terms'] ?? 30 ?>" min="1">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">Status</label>
+                    <div class="form-check mt-2">
+                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" value="1" <?= $provider['is_active'] ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="is_active">
+                            Active
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 d-flex justify-content-end gap-2">
+                <a href="<?= base_url('utilities/providers/view/' . $provider['id']) ?>" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Update Provider
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+

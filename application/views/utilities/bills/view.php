@@ -13,6 +13,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
+<?php include(BASEPATH . 'views/utilities/_nav.php'); ?>
+
 <?php if ($flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>
@@ -165,10 +167,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="card-body">
                 <?php if (($bill['balance_amount'] ?? 0) > 0): ?>
-                    <button type="button" class="btn btn-primary w-100 mb-2" disabled>
+                    <a href="<?= base_url('utilities/payments/record/' . $bill['id']) ?>" class="btn btn-primary w-100 mb-2">
                         <i class="bi bi-cash"></i> Record Payment
-                    </button>
-                    <small class="text-muted d-block mb-3">Payment recording coming soon</small>
+                    </a>
                 <?php endif; ?>
                 
                 <?php if (!empty($bill['meter_id'])): ?>

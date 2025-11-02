@@ -6,6 +6,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <h1 class="page-title mb-0">Utilities Dashboard</h1>
 </div>
 
+<?php include(BASEPATH . 'views/utilities/_nav.php'); ?>
+
 <?php if ($flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>

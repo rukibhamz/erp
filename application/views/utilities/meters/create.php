@@ -11,6 +11,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
+<?php include(BASEPATH . 'views/utilities/_nav.php'); ?>
+
 <?php if ($flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>
