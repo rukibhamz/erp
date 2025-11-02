@@ -7,7 +7,9 @@ $uri_segments = explode('/', trim($current_url, '/'));
 $is_dashboard = (empty($current_url) || $current_url === 'inventory') && !isset($uri_segments[1]);
 $is_items = isset($uri_segments[1]) && $uri_segments[1] === 'items';
 $is_locations = isset($uri_segments[1]) && $uri_segments[1] === 'locations';
-$is_movements = isset($uri_segments[1]) && ($uri_segments[1] === 'receive' || $uri_segments[1] === 'issue' || $uri_segments[1] === 'transfer' || $uri_segments[1] === 'adjust');
+$is_movements = isset($uri_segments[1]) && ($uri_segments[1] === 'receive' || $uri_segments[1] === 'issue' || $uri_segments[1] === 'transfer');
+$is_adjustments = isset($uri_segments[1]) && $uri_segments[1] === 'adjustments';
+$is_stock_takes = isset($uri_segments[1]) && $uri_segments[1] === 'stock-takes';
 $is_purchasing = isset($uri_segments[1]) && ($uri_segments[1] === 'purchase-orders' || $uri_segments[1] === 'goods-receipts');
 $is_suppliers = isset($uri_segments[1]) && $uri_segments[1] === 'suppliers';
 $is_reports = isset($uri_segments[1]) && $uri_segments[1] === 'reports';
@@ -28,6 +30,12 @@ $is_assets = isset($uri_segments[1]) && $uri_segments[1] === 'assets';
         </a>
         <a class="nav-link <?= $is_movements ? 'active' : '' ?>" href="<?= base_url('inventory/receive') ?>">
             <i class="bi bi-arrow-left-right"></i> Movements
+        </a>
+        <a class="nav-link <?= $is_adjustments ? 'active' : '' ?>" href="<?= base_url('inventory/adjustments') ?>">
+            <i class="bi bi-pencil-square"></i> Adjustments
+        </a>
+        <a class="nav-link <?= $is_stock_takes ? 'active' : '' ?>" href="<?= base_url('inventory/stock-takes') ?>">
+            <i class="bi bi-clipboard-check"></i> Stock Takes
         </a>
         <a class="nav-link <?= $is_purchasing ? 'active' : '' ?>" href="<?= base_url('inventory/purchase-orders') ?>">
             <i class="bi bi-cart-plus"></i> Purchasing
