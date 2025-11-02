@@ -4,9 +4,7 @@ include BASEPATH . 'views/layouts/header.php';
 include BASEPATH . 'views/inventory/_nav.php';
 ?>
 
-<div class="content-wrapper">
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
             <h3><?= htmlspecialchars($page_title) ?></h3>
             <div>
                 <?php if ($stock_take['status'] === 'scheduled' && hasPermission('inventory', 'update')): ?>
@@ -139,8 +137,6 @@ include BASEPATH . 'views/inventory/_nav.php';
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
 <?php if ($stock_take['status'] === 'in_progress'): ?>
 <script>

@@ -4,9 +4,7 @@ include BASEPATH . 'views/layouts/header.php';
 include BASEPATH . 'views/inventory/_nav.php';
 ?>
 
-<div class="content-wrapper">
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
             <h3><?= htmlspecialchars($page_title) ?></h3>
             <a href="<?= base_url('inventory/stock-takes') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back
@@ -69,8 +67,6 @@ include BASEPATH . 'views/inventory/_nav.php';
                 </form>
             </div>
         </div>
-    </div>
-</div>
 
 <?php include BASEPATH . 'views/layouts/footer.php'; ?>
 
