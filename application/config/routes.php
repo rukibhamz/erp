@@ -251,6 +251,36 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['utilities/allocations/allocate/(:num)'] = 'Utility_allocations/allocate/$1';
         $route['utilities/alerts'] = 'Utility_alerts/index';
         $route['utilities/alerts/resolve/(:num)'] = 'Utility_alerts/resolve/$1';
+        
+        // Inventory Management
+        $route['inventory'] = 'Inventory/index';
+        $route['inventory/items'] = 'Items/index';
+        $route['inventory/items/create'] = 'Items/create';
+        $route['inventory/items/view/(:num)'] = 'Items/view/$1';
+        $route['inventory/items/edit/(:num)'] = 'Items/edit/$1';
+        $route['inventory/locations'] = 'Locations/index';
+        $route['inventory/locations/create'] = 'Locations/create';
+        $route['inventory/locations/view/(:num)'] = 'Locations/view/$1';
+        $route['inventory/receive'] = 'Stock_movements/receive';
+        $route['inventory/issue'] = 'Stock_movements/issue';
+        $route['inventory/transfer'] = 'Stock_movements/transfer';
+        $route['inventory/purchase-orders'] = 'Purchase_orders/index';
+        $route['inventory/purchase-orders/create'] = 'Purchase_orders/create';
+        $route['inventory/purchase-orders/view/(:num)'] = 'Purchase_orders/view/$1';
+        $route['inventory/suppliers'] = 'Suppliers/index';
+        $route['inventory/suppliers/create'] = 'Suppliers/create';
+        $route['inventory/suppliers/view/(:num)'] = 'Suppliers/view/$1';
+        $route['inventory/goods-receipts'] = 'Goods_receipts/index';
+        $route['inventory/goods-receipts/create'] = 'Goods_receipts/create';
+        $route['inventory/goods-receipts/view/(:num)'] = 'Goods_receipts/view/$1';
+        $route['inventory/assets'] = 'Fixed_assets/index';
+        $route['inventory/reports'] = 'Inventory_reports/index';
+        $route['inventory/reports/stock'] = 'Inventory_reports/stock';
+        $route['inventory/reports/movements'] = 'Inventory_reports/movements';
+        $route['inventory/reports/valuation'] = 'Inventory_reports/valuation';
+        $route['inventory/reports/reorder'] = 'Inventory_reports/reorder';
+        $route['inventory/reports/movement-analysis'] = 'Inventory_reports/movementAnalysis';
+        $route['inventory/reports/purchases'] = 'Inventory_reports/purchases';
 
         return $route;
 

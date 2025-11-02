@@ -161,6 +161,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("Utilities migrations warning: " . $e->getMessage());
             }
         }
+        
+        // Run inventory migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_inventory.php')) {
+            require __DIR__ . '/migrations_inventory.php';
+            try {
+                runInventoryMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Inventory migrations warning: " . $e->getMessage());
+            }
+        }
                 
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);
