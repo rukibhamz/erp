@@ -1,20 +1,18 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-include BASEPATH . 'views/layouts/header.php';
+include(BASEPATH . 'views/accounting/_nav.php');
 ?>
 
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Process Payroll</h1>
-        <a href="<?= base_url('payroll') ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('payroll') ?>" class="btn btn-outline-dark">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
 </div>
 
-<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
-
-<?php if ($flash): ?>
+<?php if (isset($flash) && $flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -30,7 +28,7 @@ include BASEPATH . 'views/layouts/header.php';
             <div class="row mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Period (YYYY-MM) <span class="text-danger">*</span></label>
-                    <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($period) ?>" required>
+                    <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($period ?? date('Y-m')) ?>" required>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Payment Account <span class="text-danger">*</span></label>
@@ -102,6 +100,3 @@ function toggleAll() {
     checkboxes.forEach(cb => cb.checked = selectAll.checked);
 }
 </script>
-
-<?php include BASEPATH . 'views/layouts/footer.php'; ?>
-

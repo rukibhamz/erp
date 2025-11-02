@@ -1,22 +1,20 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-include BASEPATH . 'views/layouts/header.php';
+include(BASEPATH . 'views/accounting/_nav.php');
 ?>
 
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Employees</h1>
         <?php if (hasPermission('payroll', 'create')): ?>
-            <a href="<?= base_url('payroll/employees/create') ?>" class="btn btn-primary">
+            <a href="<?= base_url('payroll/employees/create') ?>" class="btn btn-dark">
                 <i class="bi bi-plus-circle"></i> Add Employee
             </a>
         <?php endif; ?>
     </div>
 </div>
 
-<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
-
-<?php if ($flash): ?>
+<?php if (isset($flash) && $flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -29,7 +27,7 @@ include BASEPATH . 'views/layouts/header.php';
             <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No employees found.</p>
             <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('payroll/employees/create') ?>" class="btn btn-primary">
+                <a href="<?= base_url('payroll/employees/create') ?>" class="btn btn-dark">
                     <i class="bi bi-plus-circle"></i> Add First Employee
                 </a>
             <?php endif; ?>
@@ -60,17 +58,17 @@ include BASEPATH . 'views/layouts/header.php';
                                 <td><?= htmlspecialchars($employee['position'] ?? '-') ?></td>
                                 <td>
                                     <span class="badge bg-info">
-                                        <?= ucfirst(str_replace('-', ' ', $employee['employment_type'])) ?>
+                                        <?= ucfirst(str_replace('-', ' ', $employee['employment_type'] ?? 'N/A')) ?>
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-<?= $employee['status'] === 'active' ? 'success' : 'secondary' ?>">
-                                        <?= ucfirst($employee['status']) ?>
+                                    <span class="badge bg-<?= ($employee['status'] ?? 'active') === 'active' ? 'success' : 'secondary' ?>">
+                                        <?= ucfirst($employee['status'] ?? 'active') ?>
                                     </span>
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('payroll/employees/edit/' . $employee['id']) ?>" class="btn btn-outline-primary" title="Edit">
+                                        <a href="<?= base_url('payroll/employees/edit/' . $employee['id']) ?>" class="btn btn-outline-dark" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>
@@ -83,5 +81,3 @@ include BASEPATH . 'views/layouts/header.php';
         </div>
     </div>
 <?php endif; ?>
-
-<?php include BASEPATH . 'views/layouts/footer.php'; ?>

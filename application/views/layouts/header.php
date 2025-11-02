@@ -87,6 +87,12 @@
                             <span class="nav-text">Inventory</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="<?= base_url('tax') ?>" class="nav-link <?= strpos($current_url, 'tax') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <span class="nav-text">Tax</span>
+                        </a>
+                    </li>
                     <li class="nav-divider"></li>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">

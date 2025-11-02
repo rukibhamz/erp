@@ -550,6 +550,85 @@ footer .container-fluid {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
+/* Dark button - ensure white text on dark background */
+.btn-dark {
+    background: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
+}
+
+.btn-dark:hover {
+    background: var(--gray-800) !important;
+    color: white !important;
+}
+
+.btn-outline-dark {
+    border: 1.5px solid var(--primary) !important;
+    color: var(--primary) !important;
+    background: transparent !important;
+}
+
+.btn-outline-dark:hover {
+    background: var(--primary) !important;
+    color: white !important;
+}
+
+/* Dark backgrounds must have white text */
+.bg-dark {
+    background: var(--gray-800) !important;
+    color: white !important;
+}
+
+.bg-dark * {
+    color: white !important;
+}
+
+.card-header.bg-dark {
+    background: var(--gray-800) !important;
+    color: white !important;
+}
+
+.card-header.bg-dark *,
+.card-header.bg-dark h1,
+.card-header.bg-dark h2,
+.card-header.bg-dark h3,
+.card-header.bg-dark h4,
+.card-header.bg-dark h5,
+.card-header.bg-dark h6 {
+    color: white !important;
+}
+
+/* Ensure badge text is readable */
+.badge.bg-dark {
+    background: var(--gray-800) !important;
+    color: white !important;
+}
+
+.badge.bg-success {
+    background: var(--success) !important;
+    color: white !important;
+}
+
+.badge.bg-danger {
+    background: var(--danger) !important;
+    color: white !important;
+}
+
+.badge.bg-warning {
+    background: var(--warning) !important;
+    color: var(--gray-900) !important;
+}
+
+.badge.bg-info {
+    background: var(--info) !important;
+    color: white !important;
+}
+
+.badge.bg-secondary {
+    background: var(--gray-500) !important;
+    color: white !important;
+}
+
 .btn-secondary {
     background: var(--gray-200);
     color: var(--gray-700);
@@ -634,6 +713,38 @@ footer .container-fluid {
     padding: 1rem;
     border-top: 1px solid var(--gray-100);
     color: var(--gray-700);
+}
+
+/* Table footer with dark background - ensure white text */
+.table-primary,
+.table-primary td,
+.table-primary th {
+    background: var(--gray-800) !important;
+    color: white !important;
+}
+
+.table-primary * {
+    color: white !important;
+}
+
+.table-warning {
+    background: #fef3c7 !important;
+    color: var(--gray-900) !important;
+}
+
+.table-warning td,
+.table-warning th {
+    color: var(--gray-900) !important;
+}
+
+.table-danger {
+    background: #fee2e2 !important;
+    color: var(--gray-900) !important;
+}
+
+.table-danger td,
+.table-danger th {
+    color: var(--gray-900) !important;
 }
 
 .table tbody tr:hover {
@@ -1167,3 +1278,49 @@ footer .container-fluid {
         margin: 0 auto 0.75rem auto;
     }
 }
+
+/* Color Contrast Enforcement - Ensure proper text contrast */
+/* Light backgrounds (white, gray-50, gray-100) - dark text */
+.card,
+.card-body,
+.card-header:not(.bg-dark) {
+    background: white;
+    color: var(--gray-800);
+}
+
+/* Ensure all text in cards is dark unless on dark background */
+.card-body *:not(.bg-dark):not(.bg-dark *) {
+    color: var(--gray-800);
+}
+
+/* Navigation active states - dark bg with white text */
+.accounting-nav .nav-link.active,
+.tax-nav .nav-link.active,
+.module-nav .nav-link.active {
+    background-color: var(--primary) !important;
+    color: white !important;
+}
+
+.accounting-nav .nav-link.active *,
+.tax-nav .nav-link.active *,
+.module-nav .nav-link.active * {
+    color: white !important;
+}
+
+/* Modal headers with dark backgrounds */
+.modal-header.bg-dark,
+.modal-header.bg-dark * {
+    color: white !important;
+}
+
+/* Ensure text readability on all backgrounds */
+.bg-light,
+.bg-white {
+    color: var(--gray-800) !important;
+}
+
+/* Alert text colors are already properly set */
+.alert-success { color: #065f46 !important; }
+.alert-danger { color: #991b1b !important; }
+.alert-warning { color: #92400e !important; }
+.alert-info { color: #164e63 !important; }

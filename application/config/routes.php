@@ -102,6 +102,28 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['payroll/view/(:num)'] = 'Payroll/view/$1';
         $route['payroll/post/(:num)'] = 'Payroll/postPayroll/$1';
 
+        // Tax Management
+        $route['tax'] = 'Tax/index';
+        $route['tax/settings'] = 'Tax/settings';
+        $route['tax/vat'] = 'Vat/index';
+        $route['tax/vat/create'] = 'Vat/create';
+        $route['tax/vat/view/(:num)'] = 'Vat/view/$1';
+        $route['tax/wht'] = 'Wht/index';
+        $route['tax/wht/create'] = 'Wht/create';
+        $route['tax/wht/view/(:num)'] = 'Wht/view/$1';
+        $route['tax/wht/transactions'] = 'Wht/transactions';
+        $route['tax/cit'] = 'Cit/index';
+        $route['tax/cit/calculate'] = 'Cit/calculate';
+        $route['tax/cit/view/(:num)'] = 'Cit/view/$1';
+        $route['tax/compliance/create-deadline'] = 'Tax_compliance/createDeadline';
+        $route['tax/compliance/mark-completed'] = 'Tax_compliance/markCompleted';
+        $route['tax/paye'] = 'Paye/index';
+        $route['tax/compliance'] = 'Tax_compliance/index';
+        $route['tax/reports'] = 'Tax_reports/index';
+        $route['tax/reports/export'] = 'Tax_reports/export';
+        $route['tax/payments'] = 'Tax_payments/index';
+        $route['tax/payments/create'] = 'Tax_payments/create';
+
         // Financial Year Management
         $route['financial-years'] = 'Financial_years/index';
         $route['financial-years/create'] = 'Financial_years/create';

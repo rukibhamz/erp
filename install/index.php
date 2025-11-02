@@ -171,6 +171,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("Inventory migrations warning: " . $e->getMessage());
             }
         }
+        
+        // Run tax migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_tax.php')) {
+            require __DIR__ . '/migrations_tax.php';
+            try {
+                runTaxMigrations($pdo, $_SESSION['db_prefix']);
+                // Insert default tax types
+                insertDefaultTaxTypes($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Tax migrations warning: " . $e->getMessage());
+            }
+        }
                 
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);

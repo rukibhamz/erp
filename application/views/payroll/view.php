@@ -1,27 +1,25 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-include BASEPATH . 'views/layouts/header.php';
+include(BASEPATH . 'views/accounting/_nav.php');
 ?>
 
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Payroll Run: <?= htmlspecialchars($payroll_run['period'] ?? '') ?></h1>
         <div class="d-flex gap-2">
-            <?php if ($payroll_run && $payroll_run['status'] !== 'posted' && hasPermission('payroll', 'update')): ?>
+            <?php if ($payroll_run && ($payroll_run['status'] ?? '') !== 'posted' && hasPermission('payroll', 'update')): ?>
                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#postModal">
                     <i class="bi bi-check-circle"></i> Post Payroll
                 </button>
             <?php endif; ?>
-            <a href="<?= base_url('payroll') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('payroll') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
     </div>
 </div>
 
-<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
-
-<?php if ($flash): ?>
+<?php if (isset($flash) && $flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -51,8 +49,8 @@ include BASEPATH . 'views/layouts/header.php';
                 <div class="card-body">
                     <h6 class="text-muted mb-2">Status</h6>
                     <h5 class="mb-0">
-                        <span class="badge bg-<?= $payroll_run['status'] === 'posted' ? 'success' : ($payroll_run['status'] === 'processed' ? 'info' : 'secondary') ?>">
-                            <?= ucfirst($payroll_run['status']) ?>
+                        <span class="badge bg-<?= ($payroll_run['status'] ?? '') === 'posted' ? 'success' : (($payroll_run['status'] ?? '') === 'processed' ? 'info' : 'secondary') ?>">
+                            <?= ucfirst($payroll_run['status'] ?? 'draft') ?>
                         </span>
                     </h5>
                 </div>
@@ -118,7 +116,7 @@ include BASEPATH . 'views/layouts/header.php';
     </div>
 
     <!-- Post Payroll Modal -->
-    <?php if ($payroll_run['status'] !== 'posted' && hasPermission('payroll', 'update')): ?>
+    <?php if (($payroll_run['status'] ?? '') !== 'posted' && hasPermission('payroll', 'update')): ?>
         <div class="modal fade" id="postModal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -133,18 +131,13 @@ include BASEPATH . 'views/layouts/header.php';
                                 <label class="form-label">Cash Account <span class="text-danger">*</span></label>
                                 <select name="cash_account_id" class="form-select" required>
                                     <option value="">Select Account</option>
-                                    <?php
-                                    // Load cash accounts from controller - this should be passed in $data
-                                    if (isset($cash_accounts) && !empty($cash_accounts)):
-                                        foreach ($cash_accounts as $acc):
-                                    ?>
-                                        <option value="<?= $acc['id'] ?>">
-                                            <?= htmlspecialchars($acc['account_name']) ?>
-                                        </option>
-                                    <?php
-                                        endforeach;
-                                    endif;
-                                    ?>
+                                    <?php if (isset($cash_accounts) && !empty($cash_accounts)): ?>
+                                        <?php foreach ($cash_accounts as $acc): ?>
+                                            <option value="<?= $acc['id'] ?>">
+                                                <?= htmlspecialchars($acc['account_name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </select>
                             </div>
                         </div>
@@ -158,6 +151,3 @@ include BASEPATH . 'views/layouts/header.php';
         </div>
     <?php endif; ?>
 <?php endif; ?>
-
-<?php include BASEPATH . 'views/layouts/footer.php'; ?>
-

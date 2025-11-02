@@ -1,20 +1,18 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-include BASEPATH . 'views/layouts/header.php';
+include(BASEPATH . 'views/accounting/_nav.php');
 ?>
 
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Create Employee</h1>
-        <a href="<?= base_url('payroll/employees') ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('payroll/employees') ?>" class="btn btn-outline-dark">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
 </div>
 
-<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
-
-<?php if ($flash): ?>
+<?php if (isset($flash) && $flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -122,6 +120,3 @@ include BASEPATH . 'views/layouts/header.php';
         </form>
     </div>
 </div>
-
-<?php include BASEPATH . 'views/layouts/footer.php'; ?>
-

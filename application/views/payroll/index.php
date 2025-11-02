@@ -1,6 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-include BASEPATH . 'views/layouts/header.php';
+include(BASEPATH . 'views/accounting/_nav.php');
 ?>
 
 <div class="page-header">
@@ -8,33 +8,31 @@ include BASEPATH . 'views/layouts/header.php';
         <h1 class="page-title mb-0">Payroll</h1>
         <div class="d-flex gap-2">
             <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('payroll/process') ?>" class="btn btn-primary">
+                <a href="<?= base_url('payroll/process') ?>" class="btn btn-dark">
                     <i class="bi bi-plus-circle"></i> Process Payroll
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('payroll/employees') ?>" class="btn btn-outline-primary">
+            <a href="<?= base_url('payroll/employees') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-people"></i> Employees
             </a>
         </div>
     </div>
 </div>
 
-<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
-
-<?php if ($flash): ?>
+<?php if (isset($flash) && $flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 <?php endif; ?>
 
-<!-- Filter -->
+<!-- Period Filter -->
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">Period (YYYY-MM)</label>
-                <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($selected_period) ?>" onchange="this.form.submit()">
+                <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($selected_period ?? date('Y-m')) ?>" onchange="this.form.submit()">
             </div>
             <div class="col-md-9">
                 <a href="<?= base_url('payroll') ?>" class="btn btn-outline-secondary">
@@ -51,7 +49,7 @@ include BASEPATH . 'views/layouts/header.php';
             <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No payroll runs found for the selected period.</p>
             <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('payroll/process') ?>" class="btn btn-primary">
+                <a href="<?= base_url('payroll/process') ?>" class="btn btn-dark">
                     <i class="bi bi-plus-circle"></i> Process First Payroll
                 </a>
             <?php endif; ?>
@@ -97,5 +95,3 @@ include BASEPATH . 'views/layouts/header.php';
         </div>
     </div>
 <?php endif; ?>
-
-<?php include BASEPATH . 'views/layouts/footer.php'; ?>
