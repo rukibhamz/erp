@@ -215,6 +215,19 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['rent-invoices/auto-generate'] = 'Rent_invoices/autoGenerate';
         $route['rent-invoices/view/(:num)'] = 'Rent_invoices/view/$1';
         $route['rent-invoices/record-payment'] = 'Rent_invoices/recordPayment';
+        
+        // Utilities Management
+        $route['utilities'] = 'Utilities/index';
+        $route['utilities/meters'] = 'Meters/index';
+        $route['utilities/meters/create'] = 'Meters/create';
+        $route['utilities/meters/view/(:num)'] = 'Meters/view/$1';
+        $route['utilities/meters/edit/(:num)'] = 'Meters/edit/$1';
+        $route['utilities/readings'] = 'Meter_readings/index';
+        $route['utilities/readings/create'] = 'Meter_readings/create';
+        $route['utilities/bills'] = 'Utility_bills/index';
+        $route['utilities/bills/generate'] = 'Utility_bills/generate';
+        $route['utilities/bills/generate/(:num)'] = 'Utility_bills/generate/$1';
+        $route['utilities/bills/view/(:num)'] = 'Utility_bills/view/$1';
 
         return $route;
 

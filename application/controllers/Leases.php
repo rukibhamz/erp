@@ -126,15 +126,23 @@ class Leases extends Base_Controller {
             }
             
             $tenants = $this->tenantModel->getActive();
+            
+            // Handle pre-selected space/tenant from query params
+            $preselectedSpaceId = isset($_GET['space_id']) ? intval($_GET['space_id']) : null;
+            $preselectedTenantId = isset($_GET['tenant_id']) ? intval($_GET['tenant_id']) : null;
         } catch (Exception $e) {
             $spaces = [];
             $tenants = [];
+            $preselectedSpaceId = null;
+            $preselectedTenantId = null;
         }
         
         $data = [
             'page_title' => 'Create Lease',
             'spaces' => $spaces,
             'tenants' => $tenants,
+            'preselected_space_id' => $preselectedSpaceId ?? null,
+            'preselected_tenant_id' => $preselectedTenantId ?? null,
             'flash' => $this->getFlashMessage()
         ];
         

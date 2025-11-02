@@ -25,6 +25,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <a class="nav-link" href="<?= base_url('spaces') ?>">
             <i class="bi bi-door-open"></i> Spaces
         </a>
+        <a class="nav-link" href="<?= base_url('tenants') ?>">
+            <i class="bi bi-people"></i> Tenants
+        </a>
         <a class="nav-link active" href="<?= base_url('leases') ?>">
             <i class="bi bi-file-earmark-text"></i> Leases
         </a>

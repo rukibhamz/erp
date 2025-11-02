@@ -151,6 +151,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("Property management migrations warning: " . $e->getMessage());
             }
         }
+        
+        // Run utilities migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_utilities.php')) {
+            require __DIR__ . '/migrations_utilities.php';
+            try {
+                runUtilitiesMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Utilities migrations warning: " . $e->getMessage());
+            }
+        }
                 
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);

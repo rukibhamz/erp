@@ -182,7 +182,12 @@ class Rent_invoices extends Base_Controller {
             $payments = $this->rentPaymentModel->getByInvoice($id);
             
             // Get lease details
-            $lease = $this->leaseModel->getWithDetails($invoice['lease_id']);
+            $lease = null;
+            try {
+                $lease = $this->leaseModel->getWithDetails($invoice['lease_id']);
+            } catch (Exception $e) {
+                error_log('Rent_invoices view - lease load error: ' . $e->getMessage());
+            }
         } catch (Exception $e) {
             $this->setFlashMessage('danger', 'Error loading invoice.');
             redirect('rent-invoices');

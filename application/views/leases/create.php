@@ -20,6 +20,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <a class="nav-link" href="<?= base_url('spaces') ?>">
             <i class="bi bi-door-open"></i> Spaces
         </a>
+        <a class="nav-link" href="<?= base_url('tenants') ?>">
+            <i class="bi bi-people"></i> Tenants
+        </a>
         <a class="nav-link active" href="<?= base_url('leases') ?>">
             <i class="bi bi-file-earmark-text"></i> Leases
         </a>
@@ -73,7 +76,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <select class="form-select" id="space_id" name="space_id" required>
                         <option value="">Select Space</option>
                         <?php foreach ($spaces as $space): ?>
-                            <option value="<?= $space['id'] ?>">
+                            <option value="<?= $space['id'] ?>" <?= ($preselected_space_id ?? null) == $space['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($space['space_name']) ?> - 
                                 <?= htmlspecialchars($space['property_name']) ?>
                             </option>
@@ -86,7 +89,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <select class="form-select" id="tenant_id" name="tenant_id" required>
                         <option value="">Select Tenant</option>
                         <?php foreach ($tenants as $tenant): ?>
-                            <option value="<?= $tenant['id'] ?>">
+                            <option value="<?= $tenant['id'] ?>" <?= ($preselected_tenant_id ?? null) == $tenant['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($tenant['business_name'] ?: $tenant['contact_person']) ?>
                             </option>
                         <?php endforeach; ?>

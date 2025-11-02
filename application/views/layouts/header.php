@@ -75,6 +75,12 @@
                             <span class="nav-text">Properties</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="<?= base_url('utilities') ?>" class="nav-link <?= strpos($current_url, 'utilities') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-lightning-charge"></i>
+                            <span class="nav-text">Utilities</span>
+                        </a>
+                    </li>
                     <li class="nav-divider"></li>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">
