@@ -234,10 +234,18 @@ class Payroll extends Base_Controller {
             $payslips = [];
         }
 
+        // Get cash accounts for posting
+        try {
+            $cashAccounts = $this->cashAccountModel->getActive();
+        } catch (Exception $e) {
+            $cashAccounts = [];
+        }
+        
         $data = [
             'page_title' => 'Payroll Run: ' . ($payrollRun['period'] ?? ''),
             'payroll_run' => $payrollRun,
             'payslips' => $payslips,
+            'cash_accounts' => $cashAccounts,
             'flash' => $this->getFlashMessage()
         ];
 

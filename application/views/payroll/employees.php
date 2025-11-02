@@ -1,22 +1,41 @@
-<?php $this->load->view('layouts/header', $data); ?>
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+include BASEPATH . 'views/layouts/header.php';
+?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Employees</h1>
-        <?php if (has_permission('payroll', 'create')): ?>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Employees</h1>
+        <?php if (hasPermission('payroll', 'create')): ?>
             <a href="<?= base_url('payroll/employees/create') ?>" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Employee
             </a>
         <?php endif; ?>
     </div>
+</div>
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
-            <?= htmlspecialchars($flash['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
+
+<?php if ($flash): ?>
+    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
+        <?= htmlspecialchars($flash['message']) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<?php if (empty($employees)): ?>
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="text-muted mt-3">No employees found.</p>
+            <?php if (hasPermission('payroll', 'create')): ?>
+                <a href="<?= base_url('payroll/employees/create') ?>" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add First Employee
+                </a>
+            <?php endif; ?>
         </div>
-    <?php endif; ?>
-
+    </div>
+<?php else: ?>
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
@@ -33,39 +52,36 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (!empty($employees)): ?>
-                            <?php foreach ($employees as $employee): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($employee['employee_code'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']) ?></td>
-                                    <td><?= htmlspecialchars($employee['department'] ?? '-') ?></td>
-                                    <td><?= htmlspecialchars($employee['position'] ?? '-') ?></td>
-                                    <td>
-                                        <span class="badge bg-info"><?= ucfirst(str_replace('-', ' ', $employee['employment_type'])) ?></span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-<?= $employee['status'] === 'active' ? 'success' : 'secondary' ?>">
-                                            <?= ucfirst($employee['status']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="<?= base_url('payroll/employees/edit/' . $employee['id']) ?>" class="btn btn-sm btn-outline-primary">
+                        <?php foreach ($employees as $employee): ?>
+                            <tr>
+                                <td><strong><?= htmlspecialchars($employee['employee_code'] ?? '-') ?></strong></td>
+                                <td><?= htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']) ?></td>
+                                <td><?= htmlspecialchars($employee['department'] ?? '-') ?></td>
+                                <td><?= htmlspecialchars($employee['position'] ?? '-') ?></td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        <?= ucfirst(str_replace('-', ' ', $employee['employment_type'])) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-<?= $employee['status'] === 'active' ? 'success' : 'secondary' ?>">
+                                        <?= ucfirst($employee['status']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="<?= base_url('payroll/employees/edit/' . $employee['id']) ?>" class="btn btn-outline-primary" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="7" class="text-center text-muted">No employees found.</td>
+                                    </div>
+                                </td>
                             </tr>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-</div>
+<?php endif; ?>
 
-<?php $this->load->view('layouts/footer'); ?>
-
+<?php include BASEPATH . 'views/layouts/footer.php'; ?>
