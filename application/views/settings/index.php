@@ -6,6 +6,47 @@ $page_title = $page_title ?? 'Settings';
     <h1 class="page-title mb-0">Settings</h1>
 </div>
 
+<?php if (isset($flash) && $flash): ?>
+    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
+        <?= htmlspecialchars($flash['message']) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<!-- Settings Navigation Tabs -->
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" href="<?= base_url('settings') ?>">
+            <i class="bi bi-house"></i> General
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="<?= base_url('settings/payment-gateways') ?>">
+            <i class="bi bi-credit-card"></i> Payment Gateways
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="<?= base_url('settings/backup') ?>">
+            <i class="bi bi-database"></i> Backup & Restore
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="<?= base_url('currencies') ?>">
+            <i class="bi bi-currency-exchange"></i> Currencies
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="<?= base_url('import-export') ?>">
+            <i class="bi bi-arrow-left-right"></i> Import/Export
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="<?= base_url('settings/system') ?>">
+            <i class="bi bi-gear"></i> System Settings
+        </a>
+    </li>
+</ul>
+
 <div class="row">
     <div class="col-lg-3 mb-4">
         <div class="card">

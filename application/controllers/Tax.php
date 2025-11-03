@@ -92,7 +92,30 @@ class Tax extends Base_Controller {
     public function settings() {
         $this->requirePermission('tax', 'update');
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Handle tax rate updates
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_tax_rates'])) {
+            $updated = 0;
+            if (isset($_POST['tax_rates']) && is_array($_POST['tax_rates'])) {
+                foreach ($_POST['tax_rates'] as $taxId => $rate) {
+                    $taxId = intval($taxId);
+                    $rate = floatval($rate);
+                    try {
+                        $this->taxTypeModel->update(['rate' => $rate], "id = ?", [$taxId]);
+                        $updated++;
+                    } catch (Exception $e) {
+                        error_log('Tax rate update error: ' . $e->getMessage());
+                    }
+                }
+            }
+            if ($updated > 0) {
+                $this->activityModel->log($this->session['user_id'], 'update', 'Tax', 'Updated tax rates');
+                $this->setFlashMessage('success', "Updated {$updated} tax rate(s) successfully.");
+                redirect('tax/settings');
+            }
+        }
+        
+        // Handle general settings update
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_tax_rates'])) {
             $data = [
                 'company_tin' => sanitize_input($_POST['company_tin'] ?? ''),
                 'company_registration_number' => sanitize_input($_POST['company_registration_number'] ?? ''),
@@ -120,9 +143,37 @@ class Tax extends Base_Controller {
             }
         }
         
+        try {
+            $taxTypes = $this->taxTypeModel->getAll();
+        } catch (Exception $e) {
+            error_log('Tax settings tax types error: ' . $e->getMessage());
+            $taxTypes = [];
+        }
+        
+        // Nigerian tax recommended rates
+        $recommendedRates = [
+            'VAT' => 7.5,
+            'WHT_DIV' => 10,
+            'WHT_INT' => 10,
+            'WHT_RENT' => 10,
+            'WHT_PROF' => 10,
+            'WHT_DIR' => 10,
+            'WHT_CONS' => 5,
+            'WHT_CONST' => 5,
+            'WHT_COMM' => 5,
+            'WHT_TECH' => 10,
+            'CIT' => 30,
+            'EDT' => 2.5,
+            'PAYE' => 0, // Progressive
+            'CGT' => 10,
+            'NITDA' => 1
+        ];
+        
         $data = [
             'page_title' => 'Tax Settings',
             'settings' => $this->taxSettingsModel->getSettings(),
+            'tax_types' => $taxTypes,
+            'recommended_rates' => $recommendedRates,
             'flash' => $this->getFlashMessage()
         ];
         

@@ -115,6 +115,18 @@ function runMigrations($pdo, $prefix = 'erp_') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
+        'settings' => "
+            CREATE TABLE IF NOT EXISTS `{$prefix}settings` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `setting_key` varchar(100) NOT NULL,
+                `setting_value` text DEFAULT NULL,
+                `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `setting_key` (`setting_key`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ",
+        
         'activity_log' => "
             CREATE TABLE IF NOT EXISTS `{$prefix}activity_log` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,

@@ -31,8 +31,43 @@ $route['profile'] = 'Profile/index';
 $route['profile/terminate-session/(:any)'] = 'Profile/terminateSession/$1';
 
 // Settings
-$route['settings'] = 'Settings/index';
-$route['settings/modules'] = 'Settings/modules';
+        $route['settings'] = 'Settings/index';
+        $route['settings/modules'] = 'Settings/modules';
+        
+        // Global Search
+        $route['search'] = 'Search/index';
+        $route['search/ajax'] = 'Search/ajax';
+        
+        // Backup & Restore
+        $route['settings/backup'] = 'Backup/index';
+        $route['settings/backup/create'] = 'Backup/create';
+        $route['settings/backup/download/(:any)'] = 'Backup/download/$1';
+        $route['settings/backup/restore'] = 'Backup/restore';
+        
+        // Import/Export
+        $route['import-export'] = 'Import_export/index';
+        $route['import-export/import'] = 'Import_export/import';
+        $route['import-export/process-import'] = 'Import_export/processImport';
+        $route['import-export/export'] = 'Import_export/export';
+        $route['import-export/download-template'] = 'Import_export/downloadTemplate';
+        
+        // System Settings
+        $route['settings/system'] = 'System_settings/index';
+        $route['settings/system/save'] = 'System_settings/save';
+        $route['settings/system/test-email'] = 'System_settings/testEmail';
+        $route['settings/system/test-sms'] = 'System_settings/testSMS';
+        
+        // Notifications
+        $route['notifications/settings'] = 'Notifications/settings';
+        $route['notifications/save-preferences'] = 'Notifications/savePreferences';
+        
+        // Report Builder
+        $route['report-builder'] = 'Report_builder/index';
+        $route['report-builder/create'] = 'Report_builder/create';
+        $route['report-builder/save'] = 'Report_builder/save';
+        $route['report-builder/view/(:num)'] = 'Report_builder/view/$1';
+        $route['report-builder/execute/(:num)'] = 'Report_builder/execute/$1';
+        $route['report-builder/export/(:num)/(:any)'] = 'Report_builder/export/$1/$2';
 
 // Activity Log
 $route['activity'] = 'Activity/index';
@@ -115,14 +150,31 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['tax/cit'] = 'Cit/index';
         $route['tax/cit/calculate'] = 'Cit/calculate';
         $route['tax/cit/view/(:num)'] = 'Cit/view/$1';
+        // Tax compliance routes - more specific routes first
+        $route['tax/compliance/list'] = 'Tax_compliance/list';
         $route['tax/compliance/create-deadline'] = 'Tax_compliance/createDeadline';
         $route['tax/compliance/mark-completed'] = 'Tax_compliance/markCompleted';
-        $route['tax/paye'] = 'Paye/index';
         $route['tax/compliance'] = 'Tax_compliance/index';
+        $route['tax/paye'] = 'Paye/index';
+        $route['tax/paye/calculate/(:num)'] = 'Paye/calculate/$1';
+        $route['tax/paye/view/(:num)'] = 'Paye/view/$1';
         $route['tax/reports'] = 'Tax_reports/index';
         $route['tax/reports/export'] = 'Tax_reports/export';
+        $route['tax/config'] = 'Tax_config/index';
+        $route['tax/config/create'] = 'Tax_config/create';
+        $route['tax/config/edit/(:num)'] = 'Tax_config/edit/$1';
+        $route['tax/config/delete/(:num)'] = 'Tax_config/delete/$1';
+        $route['tax/config/toggle/(:num)'] = 'Tax_config/toggleStatus/$1';
         $route['tax/payments'] = 'Tax_payments/index';
         $route['tax/payments/create'] = 'Tax_payments/create';
+        
+        // POS System
+        $route['pos'] = 'Pos/index';
+        $route['pos/process'] = 'Pos/processSale';
+        $route['pos/receipt/(:num)'] = 'Pos/receipt/$1';
+        $route['pos/terminals'] = 'Pos/terminals';
+        $route['pos/create-terminal'] = 'Pos/createTerminal';
+        $route['pos/reports'] = 'Pos/reports';
 
         // Financial Year Management
         $route['financial-years'] = 'Financial_years/index';

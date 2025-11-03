@@ -83,14 +83,19 @@ class User_model extends Base_Model {
     }
     
     public function getByRememberToken($token) {
-        $user = $this->db->fetchOne(
-            "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE remember_token = ? AND status = 'active'",
-            [$token]
-        );
-        if ($user) {
-            unset($user['password']);
+        try {
+            $user = $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE remember_token = ? AND status = 'active'",
+                [$token]
+            );
+            if ($user) {
+                unset($user['password']);
+            }
+            return $user;
+        } catch (Exception $e) {
+            error_log('User_model getByRememberToken error: ' . $e->getMessage());
+            return null;
         }
-        return $user;
     }
     
     public function getByPasswordResetToken($token) {

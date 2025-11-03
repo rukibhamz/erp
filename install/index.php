@@ -183,6 +183,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("Tax migrations warning: " . $e->getMessage());
             }
         }
+        
+        // Run POS migrations if file exists
+        if (file_exists(__DIR__ . '/migrations_pos.php')) {
+            require __DIR__ . '/migrations_pos.php';
+            try {
+                runPosMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("POS migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run performance migrations (indexes)
+        if (file_exists(__DIR__ . '/migrations_performance.php')) {
+            require __DIR__ . '/migrations_performance.php';
+            try {
+                runPerformanceMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Performance migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run security migrations
+        if (file_exists(__DIR__ . '/migrations_security.php')) {
+            require __DIR__ . '/migrations_security.php';
+            try {
+                runSecurityMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Security migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run audit migrations
+        if (file_exists(__DIR__ . '/migrations_audit.php')) {
+            require __DIR__ . '/migrations_audit.php';
+            try {
+                runAuditMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Audit migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run advanced permissions migrations
+        if (file_exists(__DIR__ . '/migrations_advanced_permissions.php')) {
+            require __DIR__ . '/migrations_advanced_permissions.php';
+            try {
+                runAdvancedPermissionsMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Advanced permissions migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run report builder migrations
+        if (file_exists(__DIR__ . '/migrations_report_builder.php')) {
+            require __DIR__ . '/migrations_report_builder.php';
+            try {
+                runReportBuilderMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Report builder migrations warning: " . $e->getMessage());
+            }
+        }
                 
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);
@@ -208,6 +268,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Also create config.installed.php for compatibility
                 file_put_contents($config_dir . '/config.installed.php', $config_content);
+                
+                // Set proper permissions on config files
+                chmod($config_file, 0644);
+                chmod($config_dir . '/config.installed.php', 0644);
                 
                 // Create .htaccess
                 createHtaccess();
@@ -245,14 +309,15 @@ function generateConfigFile($session) {
     $scriptPath = dirname(dirname($_SERVER['SCRIPT_NAME']));
     $baseUrl = rtrim($protocol . '://' . $host . $scriptPath, '/') . '/';
     
+    // Generate encryption key if not set
+    $encryption_key = bin2hex(random_bytes(32));
+    
     $config = "<?php\n";
-    $config .= "// Allow loading from index.php without BASEPATH check (during bootstrap)\n";
-    $config .= "if (!defined('BASEPATH')) {\n";
-    $config .= "    define('BASEPATH', dirname(__DIR__) . '/');\n";
-    $config .= "}\n\n";
+    $config .= "defined('BASEPATH') OR exit('No direct script access allowed');\n\n";
     $config .= "return [\n";
     $config .= "    'installed' => true,\n";
-    $config .= "    'base_url' => '" . addslashes($baseUrl) . "',\n";
+    $config .= "    'environment' => 'development', // Change to 'production' after deployment\n";
+    $config .= "    'base_url' => '$baseUrl',\n";
     $config .= "    'db' => [\n";
     $config .= "        'hostname' => '" . addslashes($session['db_host']) . "',\n";
     $config .= "        'username' => '" . addslashes($session['db_user']) . "',\n";
@@ -262,7 +327,7 @@ function generateConfigFile($session) {
     $config .= "        'charset' => 'utf8mb4',\n";
     $config .= "        'collation' => 'utf8mb4_unicode_ci'\n";
     $config .= "    ],\n";
-    $config .= "    'encryption_key' => '" . bin2hex(random_bytes(32)) . "'\n";
+    $config .= "    'encryption_key' => '$encryption_key'\n";
     $config .= "];\n";
     
     return $config;

@@ -7,8 +7,18 @@ class Database {
     private $config = [];
     
     private function __construct() {
-        $config = require BASEPATH . 'config/config.php';
-        $this->config = $config['db'];
+        // Load config - prefer config.installed.php if it exists
+        $configFile = BASEPATH . 'config/config.installed.php';
+        if (!file_exists($configFile)) {
+            $configFile = BASEPATH . 'config/config.php';
+        }
+        
+        if (!file_exists($configFile)) {
+            throw new Exception('Configuration file not found.');
+        }
+        
+        $config = require $configFile;
+        $this->config = $config['db'] ?? [];
         $this->connect();
     }
     
@@ -21,6 +31,10 @@ class Database {
     
     private function connect() {
         try {
+            if (empty($this->config['hostname']) || empty($this->config['database'])) {
+                throw new PDOException('Database configuration is incomplete.');
+            }
+            
             $dsn = "mysql:host={$this->config['hostname']};dbname={$this->config['database']};charset={$this->config['charset']}";
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -31,7 +45,8 @@ class Database {
             $this->connection = new PDO($dsn, $this->config['username'], $this->config['password'], $options);
         } catch (PDOException $e) {
             error_log('Database Connection Error: ' . $e->getMessage());
-            die('Database connection failed. Please check your configuration.');
+            $this->connection = null; // Don't die, just set connection to null
+            throw new Exception('Database connection failed: ' . $e->getMessage());
         }
     }
     
@@ -45,12 +60,15 @@ class Database {
     
     public function query($sql, $params = []) {
         try {
+            if (!$this->connection) {
+                throw new Exception('Database connection not available.');
+            }
             $stmt = $this->connection->prepare($sql);
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            error_log('Database Query Error: ' . $e->getMessage());
-            throw new Exception('Database query failed.');
+            error_log('Database Query Error: ' . $e->getMessage() . ' | SQL: ' . $sql);
+            throw new Exception('Database query failed: ' . $e->getMessage());
         }
     }
     
@@ -95,6 +113,22 @@ class Database {
         $table = $this->config['dbprefix'] . $table;
         $sql = "DELETE FROM `{$table}` WHERE {$where}";
         return $this->query($sql, $params)->rowCount();
+    }
+    
+    public function beginTransaction() {
+        return $this->connection->beginTransaction();
+    }
+    
+    public function commit() {
+        return $this->connection->commit();
+    }
+    
+    public function rollBack() {
+        return $this->connection->rollBack();
+    }
+    
+    public function execute($sql, $params = []) {
+        return $this->query($sql, $params);
     }
 }
 

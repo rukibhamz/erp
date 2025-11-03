@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= base_url('assets/css/main.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('assets/css/search.css') ?>" rel="stylesheet">
 </head>
 <body>
     <?php if (isset($current_user)): ?>
@@ -91,6 +92,12 @@
                         <a href="<?= base_url('tax') ?>" class="nav-link <?= strpos($current_url, 'tax') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-file-earmark-text"></i>
                             <span class="nav-text">Tax</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= base_url('pos') ?>" class="nav-link <?= strpos($current_url, 'pos') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-cash-register"></i>
+                            <span class="nav-text">POS</span>
                         </a>
                     </li>
                     <li class="nav-divider"></li>
@@ -200,10 +207,13 @@
     <nav class="top-navbar d-none d-lg-block">
         <div class="navbar-content">
             <div class="navbar-search">
-                <div class="search-box">
+                <form action="<?= base_url('search') ?>" method="GET" class="search-box">
                     <i class="bi bi-search"></i>
-                    <input type="text" placeholder="Search..." class="search-input">
-                </div>
+                    <input type="text" name="q" placeholder="Search across all modules..." 
+                           class="search-input" id="globalSearchInput" autocomplete="off">
+                    <input type="hidden" name="module" value="all">
+                </form>
+                <div id="searchResults" class="search-results-dropdown" style="display: none;"></div>
             </div>
             <div class="navbar-right">
                 <!-- Notifications -->

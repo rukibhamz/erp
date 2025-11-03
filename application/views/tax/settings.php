@@ -61,3 +61,114 @@ include(BASEPATH . 'views/tax/_nav.php');
         </form>
     </div>
 </div>
+
+<!-- Tax Rates Management -->
+<div class="card mt-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-percent"></i> Tax Rates Configuration</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="<?= base_url('tax/settings') ?>" id="taxRatesForm">
+            <input type="hidden" name="update_tax_rates" value="1">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Recommended rates are shown in parentheses. You can adjust rates as needed.
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Tax Type</th>
+                            <th>Code</th>
+                            <th>Authority</th>
+                            <th>Current Rate (%)</th>
+                            <th>Recommended Rate (%)</th>
+                            <th>New Rate (%)</th>
+                            <th>Calculation Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($tax_types ?? [])): ?>
+                            <?php foreach ($tax_types as $tax): ?>
+                                <?php
+                                $currentRate = floatval($tax['rate'] ?? 0);
+                                $recommendedRate = $recommended_rates[$tax['code'] ?? ''] ?? $currentRate;
+                                $isProgressive = ($tax['calculation_method'] ?? '') === 'progressive';
+                                ?>
+                                <tr>
+                                    <td><strong><?= htmlspecialchars($tax['name'] ?? '') ?></strong></td>
+                                    <td><code><?= htmlspecialchars($tax['code'] ?? '') ?></code></td>
+                                    <td><?= htmlspecialchars($tax['authority'] ?? '') ?></td>
+                                    <td>
+                                        <span class="badge bg-<?= abs($currentRate - $recommendedRate) < 0.01 ? 'success' : 'warning' ?>">
+                                            <?= number_format($currentRate, 2) ?>%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">
+                                            <?= $isProgressive ? 'Progressive' : number_format($recommendedRate, 2) . '%' ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if ($isProgressive): ?>
+                                            <span class="text-muted">Progressive (not editable)</span>
+                                        <?php else: ?>
+                                            <input type="number" 
+                                                   name="tax_rates[<?= $tax['id'] ?>]" 
+                                                   class="form-control form-control-sm" 
+                                                   value="<?= $currentRate ?>" 
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   max="100"
+                                                   style="width: 120px;">
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            <?= ucfirst($tax['calculation_method'] ?? 'percentage') ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">No tax types found.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <button type="submit" class="btn btn-dark" id="saveRatesBtn">
+                    <i class="bi bi-save"></i> Update Tax Rates
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('taxRatesForm')?.addEventListener('submit', function(e) {
+    const form = this;
+    const rates = form.querySelectorAll('input[name^="tax_rates"]');
+    let hasChanges = false;
+    
+    rates.forEach(input => {
+        if (input.value && parseFloat(input.value) >= 0) {
+            hasChanges = true;
+        }
+    });
+    
+    if (!hasChanges) {
+        e.preventDefault();
+        alert('No changes detected.');
+        return false;
+    }
+    
+    if (!confirm('Update tax rates? This will affect all future tax calculations.')) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>

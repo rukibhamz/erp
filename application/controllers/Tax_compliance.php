@@ -43,8 +43,27 @@ class Tax_compliance extends Base_Controller {
     }
     
     public function list() {
-        // Redirect to index (list is just a view parameter, not a separate method)
-        redirect('tax/compliance?view=list');
+        // Show list view
+        $view = $_GET['view'] ?? 'list';
+        
+        try {
+            $upcomingDeadlines = $this->taxDeadlineModel->getUpcoming(365);
+            $overdueDeadlines = $this->taxDeadlineModel->getOverdue();
+        } catch (Exception $e) {
+            error_log('Tax_compliance list error: ' . $e->getMessage());
+            $upcomingDeadlines = [];
+            $overdueDeadlines = [];
+        }
+        
+        $data = [
+            'page_title' => 'Tax Compliance - List',
+            'upcoming_deadlines' => $upcomingDeadlines,
+            'overdue_deadlines' => $overdueDeadlines,
+            'view' => $view,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('tax/compliance/list', $data);
     }
     
     public function createDeadline() {

@@ -260,10 +260,142 @@ class Tax_reports extends Base_Controller {
         $reportType = $_GET['type'] ?? 'summary';
         $startDate = $_GET['start_date'] ?? date('Y-01-01');
         $endDate = $_GET['end_date'] ?? date('Y-12-31');
-        $format = $_GET['format'] ?? 'pdf';
+        $format = $_GET['format'] ?? 'csv';
         
-        // TODO: Implement export functionality (PDF/Excel)
-        $this->setFlashMessage('info', 'Export functionality coming soon.');
-        redirect('tax/reports?type=' . $reportType . '&start_date=' . $startDate . '&end_date=' . $endDate);
+        try {
+            $filename = 'tax_' . $reportType . '_' . date('Y-m-d') . '.' . $format;
+            
+            if ($format === 'csv') {
+                $this->exportCSV($reportType, $startDate, $endDate, $filename);
+            } else {
+                $this->setFlashMessage('info', 'PDF/Excel export requires additional libraries. CSV export is available.');
+                redirect('tax/reports?type=' . $reportType . '&start_date=' . $startDate . '&end_date=' . $endDate);
+            }
+        } catch (Exception $e) {
+            error_log('Tax_reports export error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error exporting report: ' . $e->getMessage());
+            redirect('tax/reports?type=' . $reportType);
+        }
+    }
+    
+    private function exportCSV($reportType, $startDate, $endDate, $filename) {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['TAX REPORT: ' . strtoupper($reportType)]);
+        fputcsv($output, ['Period: ' . $startDate . ' to ' . $endDate]);
+        fputcsv($output, ['Generated: ' . date('Y-m-d H:i:s')]);
+        fputcsv($output, []);
+        
+        try {
+            switch ($reportType) {
+                case 'summary':
+                    $summary = $this->getSummaryReport($startDate, $endDate);
+                    fputcsv($output, ['Tax Summary']);
+                    fputcsv($output, ['VAT Payable', format_currency($summary['total_vat_payable'] ?? 0)]);
+                    fputcsv($output, ['WHT Remitted', format_currency($summary['total_wht_payable'] ?? 0)]);
+                    fputcsv($output, ['CIT Liability', format_currency($summary['total_cit_payable'] ?? 0)]);
+                    fputcsv($output, ['Total Payments', format_currency($summary['total_payments'] ?? 0)]);
+                    break;
+                    
+                case 'vat':
+                    $report = $this->getVATReport($startDate, $endDate);
+                    fputcsv($output, ['Return #', 'Period Start', 'Period End', 'Output VAT', 'Input VAT', 'VAT Payable', 'Status']);
+                    foreach ($report['vat_returns'] as $return) {
+                        fputcsv($output, [
+                            $return['return_number'] ?? '',
+                            $return['period_start'] ?? '',
+                            $return['period_end'] ?? '',
+                            number_format($return['output_vat'] ?? 0, 2),
+                            number_format($return['input_vat'] ?? 0, 2),
+                            number_format($return['vat_payable'] ?? 0, 2),
+                            ucfirst($return['status'] ?? '')
+                        ]);
+                    }
+                    break;
+                    
+                case 'wht':
+                    $report = $this->getWHTReport($startDate, $endDate);
+                    fputcsv($output, ['Return #', 'Period Start', 'Period End', 'Total WHT', 'Transactions', 'Status']);
+                    foreach ($report['wht_returns'] as $return) {
+                        fputcsv($output, [
+                            $return['return_number'] ?? '',
+                            $return['period_start'] ?? '',
+                            $return['period_end'] ?? '',
+                            number_format($return['total_wht'] ?? 0, 2),
+                            $return['transaction_count'] ?? 0,
+                            ucfirst($return['status'] ?? '')
+                        ]);
+                    }
+                    break;
+                    
+                case 'cit':
+                    $report = $this->getCITReport();
+                    fputcsv($output, ['Year', 'Profit Before Tax', 'Adjustments', 'Assessable Profit', 'CIT Amount', 'Status']);
+                    foreach ($report['cit_calculations'] as $calc) {
+                        fputcsv($output, [
+                            $calc['year'] ?? '',
+                            number_format($calc['profit_before_tax'] ?? 0, 2),
+                            number_format($calc['total_adjustments'] ?? 0, 2),
+                            number_format($calc['assessable_profit'] ?? 0, 2),
+                            number_format($calc['cit_amount'] ?? 0, 2),
+                            ucfirst($calc['status'] ?? '')
+                        ]);
+                    }
+                    break;
+                    
+                case 'payments':
+                    $report = $this->getPaymentsReport($startDate, $endDate);
+                    fputcsv($output, ['Date', 'Tax Type', 'Amount', 'Payment Method', 'Reference', 'Status']);
+                    foreach ($report['payments'] as $payment) {
+                        fputcsv($output, [
+                            $payment['payment_date'] ?? '',
+                            $payment['tax_type'] ?? '',
+                            number_format($payment['amount'] ?? 0, 2),
+                            ucfirst($payment['payment_method'] ?? ''),
+                            $payment['reference'] ?? '',
+                            ucfirst($payment['status'] ?? '')
+                        ]);
+                    }
+                    break;
+                    
+                case 'compliance':
+                    $report = $this->getComplianceReport();
+                    fputcsv($output, ['Compliance Report']);
+                    fputcsv($output, []);
+                    fputcsv($output, ['Overdue Deadlines']);
+                    fputcsv($output, ['Tax Type', 'Deadline Date', 'Period', 'Status']);
+                    foreach ($report['overdue_deadlines'] as $deadline) {
+                        fputcsv($output, [
+                            $deadline['tax_type'] ?? '',
+                            $deadline['deadline_date'] ?? '',
+                            $deadline['period_covered'] ?? '',
+                            ucfirst($deadline['status'] ?? '')
+                        ]);
+                    }
+                    fputcsv($output, []);
+                    fputcsv($output, ['Upcoming Deadlines']);
+                    fputcsv($output, ['Tax Type', 'Deadline Date', 'Period']);
+                    foreach ($report['upcoming_deadlines'] as $deadline) {
+                        fputcsv($output, [
+                            $deadline['tax_type'] ?? '',
+                            $deadline['deadline_date'] ?? '',
+                            $deadline['period_covered'] ?? ''
+                        ]);
+                    }
+                    break;
+                    
+                default:
+                    fputcsv($output, ['Report type not supported']);
+            }
+        } catch (Exception $e) {
+            fputcsv($output, ['Error generating report: ' . $e->getMessage()]);
+        }
+        
+        fclose($output);
+        exit;
     }
 }

@@ -11,10 +11,40 @@ class Router {
     }
     
     private function parseUrl() {
-        // Get URL from query string
+        // Get URL from query string first (set by .htaccess RewriteRule)
         $url = $_GET['url'] ?? '';
+        
+        // If url parameter is empty, extract from REQUEST_URI (fallback for non-rewrite scenarios)
+        if (empty($url) && !empty($_SERVER['REQUEST_URI'])) {
+            $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+            $scriptDir = dirname($scriptName);
+            
+            // Normalize paths
+            $requestUri = '/' . trim($requestUri, '/');
+            $scriptDir = '/' . trim($scriptDir, '/');
+            
+            // Remove query string if present
+            $requestUri = strtok($requestUri, '?');
+            
+            // Handle subdirectory installations (e.g., /erp/)
+            if ($scriptDir !== '/' && $scriptDir !== '/.' && strpos($requestUri, $scriptDir) === 0) {
+                // Remove the script directory from request URI
+                $url = substr($requestUri, strlen($scriptDir));
+            } elseif ($requestUri === '/' || $requestUri === $scriptDir . '/') {
+                // Root request
+                $url = '';
+            } else {
+                // Use the request URI as-is (minus leading slash)
+                $url = trim($requestUri, '/');
+            }
+        }
+        
+        // Sanitize and clean URL
         $url = trim($url, '/');
-        $url = filter_var($url, FILTER_SANITIZE_URL);
+        if (!empty($url)) {
+            $url = filter_var($url, FILTER_SANITIZE_URL);
+        }
         
         // Load routes
         $routes = require BASEPATH . 'config/routes.php';
@@ -25,6 +55,7 @@ class Router {
         }
         
         // If URL is empty, use default controller
+        // Default is Dashboard, but authentication will redirect to login if needed
         if (empty($url)) {
             if (isset($routes['default_controller'])) {
                 $default = explode('/', $routes['default_controller']);
@@ -41,11 +72,20 @@ class Router {
         $path = $url;
         
         // Check exact route matches first (case-insensitive)
-        $pathLower = strtolower($path);
+        // Sort routes by length (longest first) to match more specific routes first
+        $sortedRoutes = [];
         foreach ($routes as $pattern => $route) {
             if ($pattern === 'default_controller' || $pattern === '404_override') {
                 continue;
             }
+            $sortedRoutes[$pattern] = strlen($pattern);
+        }
+        arsort($sortedRoutes); // Sort by length descending
+        
+        $pathLower = strtolower($path);
+        foreach (array_keys($sortedRoutes) as $pattern) {
+            $route = $routes[$pattern];
+            // Exact match (case-insensitive)
             if (strtolower($pattern) === $pathLower) {
                 $routeParts = explode('/', $route);
                 $this->controller = $routeParts[0];
@@ -58,6 +98,8 @@ class Router {
         }
         
         // Check pattern routes (with parameters like (:num), (:any))
+        // Sort pattern routes by specificity (longest/most specific first)
+        $patternRoutes = [];
         foreach ($routes as $pattern => $route) {
             if ($pattern === 'default_controller' || $pattern === '404_override') {
                 continue;
@@ -67,6 +109,39 @@ class Router {
             if (strpos($pattern, '(') === false) {
                 continue;
             }
+            
+            // Calculate specificity score:
+            // 1. Length (longer = more specific)
+            // 2. Parameter type preference (:num before :any)
+            $specificity = strlen($pattern) * 1000; // Base score from length
+            
+            // Prefer (:num) over (:any) for better matching
+            // Count how many :num vs :any parameters exist
+            $numCount = substr_count($pattern, '(:num)');
+            $anyCount = substr_count($pattern, '(:any)');
+            
+            // Routes with :num are more specific than :any
+            if ($numCount > 0 && $anyCount === 0) {
+                $specificity += 100; // Bonus for :num only
+            } elseif ($anyCount > 0 && $numCount === 0) {
+                $specificity -= 50; // Penalty for :any only
+            }
+            // Mixed patterns get base score
+            
+            $patternRoutes[$pattern] = [
+                'route' => $route,
+                'specificity' => $specificity
+            ];
+        }
+        
+        // Sort by specificity (highest first)
+        uasort($patternRoutes, function($a, $b) {
+            return $b['specificity'] - $a['specificity'];
+        });
+        
+        // Process sorted pattern routes
+        foreach ($patternRoutes as $pattern => $routeData) {
+            $route = $routeData['route'];
             
             // Convert route pattern to regex
             $regexPattern = preg_quote($pattern, '#');

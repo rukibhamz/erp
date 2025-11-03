@@ -46,17 +46,40 @@ if (!isset($config['installed']) || $config['installed'] !== true) {
     die('Application not installed. Please run the installer.');
 }
 
-// Set error reporting (show errors during development)
-error_reporting(E_ALL);
-ini_set('display_errors', 1); // Set to 1 for debugging, 0 for production
-ini_set('log_errors', 1);
-ini_set('error_log', ROOTPATH . 'logs/error.log');
+// Set error reporting based on environment
+$environment = $config['environment'] ?? 'development';
+
+if ($environment === 'production') {
+    // Production: Hide errors from users, log everything
+    error_reporting(E_ALL);
+    ini_set('display_errors', 0);
+    ini_set('log_errors', 1);
+    ini_set('error_log', ROOTPATH . 'logs/error.log');
+} else {
+    // Development: Show errors for debugging
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+    ini_set('log_errors', 1);
+    ini_set('error_log', ROOTPATH . 'logs/error.log');
+}
 
 // Set timezone
 date_default_timezone_set('UTC');
 
-// Start session
+// Start session with secure configuration
 if (session_status() === PHP_SESSION_NONE) {
+    // Configure secure session settings
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_samesite', 'Strict');
+    ini_set('session.use_strict_mode', 1);
+    ini_set('session.gc_maxlifetime', 1800); // 30 minutes
+    
+    // Only set secure flag if using HTTPS
+    if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+        (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
+        ini_set('session.cookie_secure', 1);
+    }
+    
     session_start();
 }
 

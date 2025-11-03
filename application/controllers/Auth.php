@@ -32,11 +32,29 @@ class Auth extends Base_Controller {
                 $username = sanitize_input($_POST['username'] ?? '');
                 $password = $_POST['password'] ?? '';
                 $rememberMe = isset($_POST['remember_me']);
+                $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
                 
-                $result = $this->userModel->authenticate($username, $password, $rememberMe);
-                
-                if ($result['success']) {
+                // Rate limiting check
+                require_once BASEPATH . '../application/helpers/security_helper.php';
+                if (!checkRateLimit($username . '|' . $ipAddress, 5, 900)) {
+                    $this->setFlashMessage('danger', 'Too many login attempts. Please try again in 15 minutes.');
+                    // Log failed attempt
+                    if ($this->db) {
+                        $this->db->insert('security_log', [
+                            'user_id' => null,
+                            'ip_address' => $ipAddress,
+                            'action' => 'login_rate_limited',
+                            'details' => json_encode(['username' => $username])
+                        ]);
+                    }
+                } else {
+                    $result = $this->userModel->authenticate($username, $password, $rememberMe);
+                    
+                    if ($result['success']) {
                     $user = $result['user'];
+                    
+                    // Regenerate session ID to prevent session fixation
+                    session_regenerate_id(true);
                     
                     // Set session
                     $this->session['user_id'] = $user['id'];
@@ -46,6 +64,7 @@ class Auth extends Base_Controller {
                     $this->session['role'] = $user['role'];
                     $this->session['first_name'] = $user['first_name'] ?? '';
                     $this->session['last_name'] = $user['last_name'] ?? '';
+                    $this->session['last_activity'] = time(); // Track last activity for timeout
                     
                     // Set remember me cookie
                     if ($rememberMe && isset($user['remember_token'])) {
@@ -58,9 +77,19 @@ class Auth extends Base_Controller {
                     // Log activity
                     $this->activityModel->log($user['id'], 'login', 'Auth', 'User logged in successfully');
                     
-                    redirect('dashboard');
-                } else {
-                    $this->setFlashMessage('danger', $result['message'] ?? 'Invalid username or password.');
+                        redirect('dashboard');
+                    } else {
+                        // Log failed login attempt
+                        if ($this->db) {
+                            $this->db->insert('security_log', [
+                                'user_id' => null,
+                                'ip_address' => $ipAddress,
+                                'action' => 'login_failed',
+                                'details' => json_encode(['username' => $username, 'reason' => $result['message'] ?? 'Invalid credentials'])
+                            ]);
+                        }
+                        $this->setFlashMessage('danger', $result['message'] ?? 'Invalid username or password.');
+                    }
                 }
             }
         }
@@ -173,27 +202,39 @@ class Auth extends Base_Controller {
     }
     
     private function checkRememberMe() {
+        // Skip if already logged in
         if (isset($this->session['user_id'])) {
             return; // Already logged in
         }
         
+        // Skip if no remember token cookie
         if (!isset($_COOKIE['remember_token']) || empty($_COOKIE['remember_token'])) {
             return;
         }
         
-        $token = $_COOKIE['remember_token'];
-        $user = $this->userModel->getByRememberToken($token);
+        // Skip if models not loaded (database not available)
+        if (!$this->userModel || !$this->db) {
+            return;
+        }
         
-        if ($user) {
-            // Auto-login
-            $this->session['user_id'] = $user['id'];
-            $this->session['username'] = $user['username'];
-            $this->session['email'] = $user['email'];
-            $this->session['role'] = $user['role'] ?? 'user';
-            $this->session['first_name'] = $user['first_name'] ?? '';
-            $this->session['last_name'] = $user['last_name'] ?? '';
+        try {
+            $token = $_COOKIE['remember_token'];
+            $user = $this->userModel->getByRememberToken($token);
             
-            $this->storeSession($user['id']);
+            if ($user) {
+                // Auto-login
+                $this->session['user_id'] = $user['id'];
+                $this->session['username'] = $user['username'];
+                $this->session['email'] = $user['email'];
+                $this->session['role'] = $user['role'] ?? 'user';
+                $this->session['first_name'] = $user['first_name'] ?? '';
+                $this->session['last_name'] = $user['last_name'] ?? '';
+                
+                $this->storeSession($user['id']);
+            }
+        } catch (Exception $e) {
+            // Silently fail - don't break login page if remember me check fails
+            error_log('Remember me check failed: ' . $e->getMessage());
         }
     }
     

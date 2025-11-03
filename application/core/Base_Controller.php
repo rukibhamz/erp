@@ -12,14 +12,39 @@ class Base_Controller {
         $this->config = require BASEPATH . 'config/config.php';
         $this->session = &$_SESSION;
         
-        // Initialize database only if installed
+        // Load common helper
+        require_once BASEPATH . '../application/helpers/common_helper.php';
+        
+        // Load permission helper
+        require_once BASEPATH . '../application/helpers/permission_helper.php';
+        
+        // Initialize database only if installed and config is valid
         if (isset($this->config['installed']) && $this->config['installed'] === true) {
-            try {
-                $this->db = Database::getInstance();
-            } catch (Exception $e) {
-                // Database connection failed
-                error_log('Database connection failed: ' . $e->getMessage());
+            if (!empty($this->config['db']['hostname']) && !empty($this->config['db']['database'])) {
+                try {
+                    $this->db = Database::getInstance();
+                } catch (Exception $e) {
+                    // Database connection failed - don't die, allow public pages to work
+                    error_log('Database connection failed: ' . $e->getMessage());
+                    $this->db = null;
+                }
+            } else {
+                error_log('Database configuration incomplete.');
+                $this->db = null;
             }
+        }
+        
+        // Check session timeout (30 minutes inactivity)
+        if (isset($this->session['last_activity']) && 
+            (time() - $this->session['last_activity'] > 1800)) {
+            // Session expired
+            session_destroy();
+            redirect('login?timeout=1');
+        }
+        
+        // Update last activity timestamp
+        if (isset($this->session['user_id'])) {
+            $this->session['last_activity'] = time();
         }
         
         // Check authentication for protected pages
@@ -30,9 +55,14 @@ class Base_Controller {
         $publicControllers = ['Auth', 'Error404', 'Payment', 'Booking_wizard', 'Customer_portal'];
         $currentController = get_class($this);
         
+        // Always require authentication for non-public controllers
         if (!in_array($currentController, $publicControllers)) {
-            if (!isset($this->session['user_id'])) {
-                redirect('login');
+            // Check if user is authenticated
+            if (empty($this->session['user_id'])) {
+                // Check if we're trying to access login page (avoid redirect loop)
+                if ($currentController !== 'Auth') {
+                    redirect('login');
+                }
             }
         }
     }

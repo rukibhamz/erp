@@ -28,5 +28,25 @@ class Tax_type_model extends Base_Model {
             [$authority]
         );
     }
+    
+    public function getAll($limit = null, $offset = 0, $orderBy = null) {
+        try {
+            $orderBy = $orderBy ?: 'authority ASC, name ASC';
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`";
+            $sql .= " ORDER BY " . $orderBy;
+            
+            if ($limit) {
+                $sql .= " LIMIT " . intval($limit);
+                if ($offset > 0) {
+                    $sql .= " OFFSET " . intval($offset);
+                }
+            }
+            
+            return $this->db->fetchAll($sql);
+        } catch (Exception $e) {
+            error_log('Tax_type_model getAll error: ' . $e->getMessage());
+            return [];
+        }
+    }
 }
 

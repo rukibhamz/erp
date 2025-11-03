@@ -33,6 +33,27 @@ function runNotificationMigrations($pdo, $prefix = 'erp_') {
             KEY `related` (`related_module`, `related_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // Notification Preferences table
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `{$prefix}notification_preferences` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `user_id` int(11) DEFAULT NULL,
+            `customer_email` varchar(255) DEFAULT NULL,
+            `preference_type` enum('email','sms','push','in_app') NOT NULL,
+            `notification_type` varchar(50) DEFAULT NULL COMMENT 'Specific notification type or NULL for all',
+            `enabled` tinyint(1) DEFAULT 1,
+            `frequency` enum('instant','daily','weekly','never') DEFAULT 'instant',
+            `quiet_hours_start` time DEFAULT NULL,
+            `quiet_hours_end` time DEFAULT NULL,
+            `created_at` datetime NOT NULL,
+            `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `user_id` (`user_id`),
+            KEY `customer_email` (`customer_email`),
+            KEY `preference_type` (`preference_type`),
+            KEY `notification_type` (`notification_type`),
+            UNIQUE KEY `unique_preference` (`user_id`, `customer_email`, `preference_type`, `notification_type`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         // Email queue table (for batch email sending)
         $pdo->exec("CREATE TABLE IF NOT EXISTS `{$prefix}email_queue` (
             `id` int(11) NOT NULL AUTO_INCREMENT,

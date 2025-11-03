@@ -21,7 +21,8 @@ class Loader {
         if (file_exists($viewFile)) {
             require_once $viewFile;
         } else {
-            die("View {$view} not found.");
+            error_log("View file not found: {$viewFile}");
+            die("View {$view} not found. Path: {$viewFile}");
         }
     }
     
