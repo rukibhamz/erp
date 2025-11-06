@@ -78,6 +78,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
+                // Drop existing tables if they exist (for fresh install)
+                $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+                $tables = $pdo->query("SHOW TABLES LIKE '{$_SESSION['db_prefix']}%'")->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($tables as $table) {
+                    $pdo->exec("DROP TABLE IF EXISTS `{$table}`");
+                }
+                $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+                
                 // Run migrations
                 require __DIR__ . '/migrations.php';
                 runMigrations($pdo, $_SESSION['db_prefix']);

@@ -596,13 +596,21 @@ function runMigrations($pdo, $prefix = 'erp_') {
         ",
     ];
     
+    // Disable foreign key checks temporarily to avoid constraint issues during creation
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+    
     foreach ($migrations as $table => $sql) {
         try {
             $pdo->exec($sql);
         } catch (PDOException $e) {
+            // Re-enable foreign key checks before throwing error
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
             throw new Exception("Failed to create table {$table}: " . $e->getMessage());
         }
     }
+    
+    // Re-enable foreign key checks after all tables are created
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
     
     // Insert default permissions
     insertDefaultPermissions($pdo, $prefix);
