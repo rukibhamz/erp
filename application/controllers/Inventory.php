@@ -6,6 +6,7 @@ class Inventory extends Base_Controller {
     private $stockLevelModel;
     private $locationModel;
     private $transactionModel;
+    private $activityModel;
     
     public function __construct() {
         parent::__construct();
