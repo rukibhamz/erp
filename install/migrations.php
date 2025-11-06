@@ -601,27 +601,24 @@ function runMigrations($pdo, $prefix = 'erp_') {
     $pdo->exec("SET SESSION wait_timeout = 600");
     $pdo->exec("SET SESSION interactive_timeout = 600");
     
-    // Process tables in batches to avoid overwhelming MySQL
-    $batchSize = 10;
+    // Process tables with error handling and progress tracking
     $tables = array_keys($migrations);
     $totalTables = count($tables);
+    $created = 0;
     
-    for ($i = 0; $i < $totalTables; $i += $batchSize) {
-        $batch = array_slice($tables, $i, $batchSize);
-        
-        foreach ($batch as $table) {
-            try {
-                $pdo->exec($migrations[$table]);
-            } catch (PDOException $e) {
-                // Re-enable foreign key checks before throwing error
-                $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
-                throw new Exception("Failed to create table {$table}: " . $e->getMessage());
+    foreach ($tables as $index => $table) {
+        try {
+            $pdo->exec($migrations[$table]);
+            $created++;
+            
+            // Small delay every 5 tables to prevent MySQL overload
+            if (($index + 1) % 5 === 0 && ($index + 1) < $totalTables) {
+                usleep(50000); // 0.05 second delay
             }
-        }
-        
-        // Small delay between batches to prevent MySQL overload
-        if ($i + $batchSize < $totalTables) {
-            usleep(100000); // 0.1 second delay
+        } catch (PDOException $e) {
+            // Re-enable foreign key checks before throwing error
+            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+            throw new Exception("Failed to create table {$table}: " . $e->getMessage() . " (Created {$created}/{$totalTables} tables)");
         }
     }
     

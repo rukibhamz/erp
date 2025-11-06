@@ -69,6 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_password'] = $_POST['admin_password'] ?? '';
             $_SESSION['company_name'] = $_POST['company_name'] ?? '';
             
+            // Increase PHP execution time for long-running migrations
+            set_time_limit(600); // 10 minutes
+            ini_set('max_execution_time', 600);
+            ini_set('memory_limit', '512M');
+            
             // Create database tables and admin account
             try {
                 $pdo = new PDO(
@@ -80,30 +85,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Increase timeout for long-running migrations
                 $pdo->exec("SET SESSION wait_timeout = 600");
                 $pdo->exec("SET SESSION interactive_timeout = 600");
+                $pdo->exec("SET SESSION max_allowed_packet = 67108864"); // 64MB
                 
                 // Check if tables exist - only drop if this is a reinstall
                 $existingTables = $pdo->query("SHOW TABLES LIKE '{$_SESSION['db_prefix']}%'")->fetchAll(PDO::FETCH_COLUMN);
                 
                 if (!empty($existingTables)) {
-                    // Tables exist - drop them efficiently in one operation
+                    // Tables exist - drop them efficiently
                     $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-                    // Drop all tables at once using a single query (more efficient)
-                    $dropSql = "DROP TABLE IF EXISTS `" . implode("`, `", $existingTables) . "`";
-                    $pdo->exec($dropSql);
+                    // Drop tables individually but in a transaction-like manner
+                    foreach ($existingTables as $table) {
+                        try {
+                            $pdo->exec("DROP TABLE IF EXISTS `{$table}`");
+                        } catch (PDOException $e) {
+                            // Continue even if one table fails
+                            error_log("Failed to drop table {$table}: " . $e->getMessage());
+                        }
+                    }
                     $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
                 }
                 
                 // Run migrations
+                error_log("Starting main migrations...");
                 require __DIR__ . '/migrations.php';
                 runMigrations($pdo, $_SESSION['db_prefix']);
+                error_log("Main migrations completed successfully");
                 
                 // Run enhanced migrations if file exists
                 if (file_exists(__DIR__ . '/migrations_enhanced.php')) {
+                    error_log("Starting enhanced migrations...");
                     require __DIR__ . '/migrations_enhanced.php';
                     try {
                         runEnhancedMigrations($pdo, $_SESSION['db_prefix']);
+                        error_log("Enhanced migrations completed");
                     } catch (Exception $e) {
                         error_log("Enhanced migrations warning: " . $e->getMessage());
+                        // Don't fail installation for optional migrations
                     }
                 }
                 
@@ -283,44 +300,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
                 
                 // Create super admin user
+                error_log("Creating super admin user...");
+                if (empty($_SESSION['admin_username']) || empty($_SESSION['admin_email']) || empty($_SESSION['admin_password'])) {
+                    throw new Exception("Admin username, email, and password are required.");
+                }
+                
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);
+                if (!$password_hash) {
+                    throw new Exception("Failed to hash password. Please check PHP password hashing support.");
+                }
+                
                 $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}users (username, email, password, role, status, created_at) VALUES (?, ?, ?, 'super_admin', 'active', NOW())");
                 $stmt->execute([$_SESSION['admin_username'], $_SESSION['admin_email'], $password_hash]);
+                error_log("Super admin user created");
                 
                 // Assign all permissions to super admin (batch insert)
                 $adminId = $pdo->lastInsertId();
+                if (!$adminId) {
+                    throw new Exception("Failed to get admin user ID. User may not have been created.");
+                }
+                
+                error_log("Assigning permissions to admin user (ID: {$adminId})...");
                 // Use a single query instead of looping
                 $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
                 $stmt = $pdo->prepare("INSERT IGNORE INTO {$_SESSION['db_prefix']}user_permissions (user_id, permission_id, created_at) SELECT ?, id, NOW() FROM {$_SESSION['db_prefix']}permissions");
                 $stmt->execute([$adminId]);
                 $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+                error_log("Permissions assigned");
                 
                 // Create default company
+                error_log("Creating default company...");
+                if (empty($_SESSION['company_name'])) {
+                    $_SESSION['company_name'] = 'My Company'; // Default name
+                }
                 $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}companies (name, created_at) VALUES (?, NOW())");
                 $stmt->execute([$_SESSION['company_name']]);
+                error_log("Default company created");
                 
                 // Generate config file
+                error_log("Generating configuration files...");
                 $config_content = generateConfigFile($_SESSION);
-                $config_dir = dirname($config_file);
+                $config_dir = dirname(__DIR__) . '/application/config';
+                $config_file = $config_dir . '/config.php';
+                
                 if (!is_dir($config_dir)) {
-                    mkdir($config_dir, 0755, true);
+                    if (!mkdir($config_dir, 0755, true)) {
+                        throw new Exception("Failed to create config directory: {$config_dir}");
+                    }
                 }
-                file_put_contents($config_file, $config_content);
+                
+                if (!file_put_contents($config_file, $config_content)) {
+                    throw new Exception("Failed to write config file: {$config_file}");
+                }
                 
                 // Also create config.installed.php for compatibility
-                file_put_contents($config_dir . '/config.installed.php', $config_content);
+                $installed_config_file = $config_dir . '/config.installed.php';
+                if (!file_put_contents($installed_config_file, $config_content)) {
+                    throw new Exception("Failed to write installed config file: {$installed_config_file}");
+                }
                 
                 // Set proper permissions on config files
-                chmod($config_file, 0644);
-                chmod($config_dir . '/config.installed.php', 0644);
+                @chmod($config_file, 0644);
+                @chmod($installed_config_file, 0644);
+                error_log("Configuration files created");
                 
                 // Create .htaccess
+                error_log("Creating .htaccess file...");
                 createHtaccess();
+                error_log("Installation completed successfully");
                 
                 header('Location: ?step=' . STEP_COMPLETE);
                 exit;
             } catch (Exception $e) {
                 $_SESSION['install_error'] = $e->getMessage();
+                $_SESSION['install_error_trace'] = $e->getTraceAsString();
+                error_log("Installation Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            } catch (Error $e) {
+                $_SESSION['install_error'] = "Fatal Error: " . $e->getMessage();
+                $_SESSION['install_error_trace'] = $e->getTraceAsString();
+                error_log("Installation Fatal Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
             }
             break;
     }
@@ -658,9 +716,20 @@ $all_requirements_met = array_reduce($requirements, function($carry, $item) { re
                     
                     <?php if (isset($_SESSION['install_error'])): ?>
                         <div class="alert alert-danger">
-                            <i class="bi bi-exclamation-triangle-fill"></i> <?= htmlspecialchars($_SESSION['install_error']) ?>
+                            <h5><i class="bi bi-exclamation-triangle-fill"></i> Installation Error</h5>
+                            <p><strong><?= htmlspecialchars($_SESSION['install_error']) ?></strong></p>
+                            <?php if (isset($_SESSION['install_error_trace'])): ?>
+                                <details class="mt-2">
+                                    <summary>Technical Details (Click to expand)</summary>
+                                    <pre class="mt-2 p-2 bg-light" style="font-size: 0.85rem; overflow-x: auto;"><?= htmlspecialchars($_SESSION['install_error_trace']) ?></pre>
+                                </details>
+                            <?php endif; ?>
+                            <p class="mt-2 mb-0"><small>Please check your database connection, permissions, and server logs for more details.</small></p>
                         </div>
-                        <?php unset($_SESSION['install_error']); ?>
+                        <?php 
+                        unset($_SESSION['install_error']); 
+                        unset($_SESSION['install_error_trace']);
+                        ?>
                     <?php endif; ?>
                     
                     <form method="POST">
