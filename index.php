@@ -49,6 +49,12 @@ if (!isset($config['installed']) || $config['installed'] !== true) {
 // Set error reporting based on environment
 $environment = $config['environment'] ?? 'development';
 
+// Ensure logs directory exists
+$logsDir = ROOTPATH . 'logs';
+if (!is_dir($logsDir)) {
+    @mkdir($logsDir, 0755, true);
+}
+
 if ($environment === 'production') {
     // Production: Hide errors from users, log everything
     error_reporting(E_ALL);
@@ -108,10 +114,37 @@ try {
     $router = new Router();
     $router->dispatch();
 } catch (Exception $e) {
-    error_log($e->getMessage());
-    if (ini_get('display_errors')) {
-        die('<h1>Application Error</h1><p>' . htmlspecialchars($e->getMessage()) . '</p>');
+    $errorMessage = $e->getMessage();
+    $errorTrace = $e->getTraceAsString();
+    
+    // Log error
+    error_log("Application Error: " . $errorMessage . "\nTrace: " . $errorTrace);
+    
+    // Try to write to log file directly if ini_set failed
+    $logFile = ROOTPATH . 'logs/error.log';
+    if (is_writable($logFile) || (is_writable($logsDir) && !file_exists($logFile))) {
+        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - " . $errorMessage . "\n" . $errorTrace . "\n\n", FILE_APPEND);
+    }
+    
+    if (ini_get('display_errors') || $environment === 'development') {
+        die('<h1>Application Error</h1><p>' . htmlspecialchars($errorMessage) . '</p><pre>' . htmlspecialchars($errorTrace) . '</pre>');
     }
     die('<h1>Application Error</h1><p>An error occurred. Please check the logs.</p>');
+} catch (Error $e) {
+    $errorMessage = $e->getMessage();
+    $errorTrace = $e->getTraceAsString();
+    
+    // Log fatal error
+    error_log("Fatal Error: " . $errorMessage . "\nTrace: " . $errorTrace);
+    
+    $logFile = ROOTPATH . 'logs/error.log';
+    if (is_writable($logFile) || (is_writable($logsDir) && !file_exists($logFile))) {
+        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - FATAL: " . $errorMessage . "\n" . $errorTrace . "\n\n", FILE_APPEND);
+    }
+    
+    if (ini_get('display_errors') || $environment === 'development') {
+        die('<h1>Fatal Error</h1><p>' . htmlspecialchars($errorMessage) . '</p><pre>' . htmlspecialchars($errorTrace) . '</pre>');
+    }
+    die('<h1>Application Error</h1><p>A fatal error occurred. Please check the logs.</p>');
 }
 
