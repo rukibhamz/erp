@@ -1,4 +1,43 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', dirname(__DIR__) . '/logs/install_error.log');
+
+// Ensure logs directory exists
+$logs_dir = dirname(__DIR__) . '/logs';
+if (!is_dir($logs_dir)) {
+    @mkdir($logs_dir, 0755, true);
+}
+
+// Set up error handler to catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        $error_message = "Fatal Error: {$error['message']} in {$error['file']} on line {$error['line']}";
+        error_log($error_message);
+        
+        // If we're in the installer and not in output buffering, show error
+        if (strpos($_SERVER['REQUEST_URI'] ?? '', '/install/') !== false) {
+            echo "<!DOCTYPE html><html><head><title>Installation Error</title>";
+            echo "<style>body{font-family:Arial,sans-serif;padding:20px;background:#f5f5f5;}";
+            echo ".error{background:#fff;border-left:4px solid #dc3545;padding:20px;margin:20px 0;box-shadow:0 2px 4px rgba(0,0,0,0.1);}";
+            echo "h1{color:#dc3545;margin-top:0;}pre{background:#f8f9fa;padding:15px;border-radius:4px;overflow-x:auto;}</style></head><body>";
+            echo "<div class='error'><h1>Installation Error</h1>";
+            echo "<p><strong>{$error['message']}</strong></p>";
+            echo "<p><strong>File:</strong> {$error['file']}</p>";
+            echo "<p><strong>Line:</strong> {$error['line']}</p>";
+            echo "<details><summary>Stack Trace</summary><pre>";
+            debug_print_backtrace();
+            echo "</pre></details>";
+            echo "<p><small>Check <code>logs/install_error.log</code> for more details.</small></p>";
+            echo "</div></body></html>";
+        }
+    }
+});
+
 session_start();
 
 // Define installation steps
