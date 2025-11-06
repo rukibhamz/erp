@@ -101,6 +101,8 @@ class Users extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $data = [
                 'username' => sanitize_input($_POST['username'] ?? ''),
                 'email' => sanitize_input($_POST['email'] ?? ''),
@@ -159,6 +161,8 @@ class Users extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $permissionIds = isset($_POST['permissions']) ? array_map('intval', $_POST['permissions']) : [];
             $this->userPermissionModel->assignPermissions($id, $permissionIds);
             

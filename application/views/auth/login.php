@@ -64,6 +64,7 @@
             <?php endif; ?>
             
             <form method="POST" action="<?= base_url('login') ?>">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3">
                     <label for="username" class="form-label">Username or Email</label>
                     <input type="text" class="form-control" id="username" name="username" required autofocus value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">

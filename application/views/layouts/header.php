@@ -58,49 +58,50 @@
                         </a>
                     </li>
                     <li class="nav-divider"></li>
+                    <?php
+                    // Get active modules for navigation
+                    $activeModules = get_active_modules();
+                    $moduleRoutes = [
+                        'accounting' => ['accounting', 'accounts', 'cash', 'receivables', 'payables', 'payroll', 'ledger', 'reports'],
+                        'bookings' => ['bookings', 'facilities'],
+                        'properties' => ['properties', 'spaces', 'leases', 'rent-invoices'],
+                        'utilities' => ['utilities'],
+                        'inventory' => ['inventory'],
+                        'tax' => ['tax'],
+                        'pos' => ['pos']
+                    ];
+                    
+                    foreach ($activeModules as $module):
+                        $moduleKey = $module['module_key'];
+                        $moduleName = $module['display_name'];
+                        $moduleIcon = $module['icon'] ?? 'bi-puzzle';
+                        
+                        // Get routes for this module
+                        $routes = $moduleRoutes[$moduleKey] ?? [$moduleKey];
+                        $isActive = false;
+                        foreach ($routes as $route) {
+                            if (strpos($current_url, $route) === 0) {
+                                $isActive = true;
+                                break;
+                            }
+                        }
+                    ?>
                     <li class="nav-item">
-                        <a href="<?= base_url('accounting') ?>" class="nav-link <?= strpos($current_url, 'accounting') === 0 || strpos($current_url, 'accounts') === 0 || strpos($current_url, 'cash') === 0 || strpos($current_url, 'receivables') === 0 || strpos($current_url, 'payables') === 0 || strpos($current_url, 'payroll') === 0 || strpos($current_url, 'ledger') === 0 || strpos($current_url, 'reports') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-calculator"></i>
-                            <span class="nav-text">Accounting</span>
+                        <a href="<?= base_url($moduleKey) ?>" class="nav-link <?= $isActive ? 'active' : '' ?>">
+                            <i class="bi <?= htmlspecialchars($moduleIcon) ?>"></i>
+                            <span class="nav-text"><?= htmlspecialchars($moduleName) ?></span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="<?= base_url('bookings') ?>" class="nav-link <?= strpos($current_url, 'bookings') === 0 || strpos($current_url, 'facilities') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-calendar-check"></i>
-                            <span class="nav-text">Bookings</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= base_url('properties') ?>" class="nav-link <?= strpos($current_url, 'properties') === 0 || strpos($current_url, 'spaces') === 0 || strpos($current_url, 'leases') === 0 || strpos($current_url, 'rent-invoices') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-building"></i>
-                            <span class="nav-text">Properties</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= base_url('utilities') ?>" class="nav-link <?= strpos($current_url, 'utilities') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-lightning-charge"></i>
-                            <span class="nav-text">Utilities</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= base_url('inventory') ?>" class="nav-link <?= strpos($current_url, 'inventory') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-boxes"></i>
-                            <span class="nav-text">Inventory</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= base_url('tax') ?>" class="nav-link <?= strpos($current_url, 'tax') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-file-earmark-text"></i>
-                            <span class="nav-text">Tax</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= base_url('pos') ?>" class="nav-link <?= strpos($current_url, 'pos') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-cash-register"></i>
-                            <span class="nav-text">POS</span>
-                        </a>
-                    </li>
+                    <?php endforeach; ?>
                     <li class="nav-divider"></li>
+                    <?php if (isset($current_user) && $current_user['role'] === 'super_admin'): ?>
+                    <li class="nav-item">
+                        <a href="<?= base_url('modules') ?>" class="nav-link <?= strpos($current_url, 'modules') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-puzzle"></i>
+                            <span class="nav-text">Modules</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-gear"></i>

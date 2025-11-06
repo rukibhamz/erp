@@ -101,6 +101,7 @@ require_once BASEPATH . 'helpers/security_helper.php';
 require_once BASEPATH . 'helpers/common_helper.php';
 require_once BASEPATH . 'helpers/permission_helper.php';
 require_once BASEPATH . 'helpers/currency_helper.php';
+require_once BASEPATH . 'helpers/module_helper.php';
 
 // Initialize and run application
 try {

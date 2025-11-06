@@ -243,6 +243,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("Report builder migrations warning: " . $e->getMessage());
             }
         }
+        
+        // Run modules migrations
+        if (file_exists(__DIR__ . '/migrations_modules.php')) {
+            require __DIR__ . '/migrations_modules.php';
+            try {
+                $modulesMigration = migrations_modules($_SESSION['db_prefix']);
+                foreach ($modulesMigration['tables'] as $tableName => $sql) {
+                    $pdo->exec($sql);
+                }
+                foreach ($modulesMigration['inserts'] as $insertSql) {
+                    $pdo->exec($insertSql);
+                }
+            } catch (Exception $e) {
+                error_log("Modules migrations warning: " . $e->getMessage());
+            }
+        }
                 
                 // Create super admin user
                 $password_hash = password_hash($_SESSION['admin_password'], PASSWORD_BCRYPT);

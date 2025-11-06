@@ -71,6 +71,7 @@
             <?php endif; ?>
             
             <form method="POST" action="<?= base_url('reset-password?token=' . htmlspecialchars($token)) ?>" id="resetForm">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
                 
                 <div class="mb-3">

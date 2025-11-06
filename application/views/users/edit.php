@@ -15,6 +15,7 @@ $userPermissions = $userPermissions ?? [];
             </div>
             <div class="card-body">
                 <form method="POST" action="<?= base_url('users/edit/' . $user['id']) ?>">
+                    <?php echo csrf_field(); ?>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="username" class="form-label">Username <span class="text-danger">*</span></label>

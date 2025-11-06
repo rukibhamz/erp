@@ -376,6 +376,35 @@ function runMigrations($pdo, $prefix = 'erp_') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
+        'vendors' => "
+            CREATE TABLE IF NOT EXISTS `{$prefix}vendors` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `vendor_code` varchar(50) NOT NULL,
+                `company_name` varchar(255) NOT NULL,
+                `contact_name` varchar(255) DEFAULT NULL,
+                `email` varchar(100) DEFAULT NULL,
+                `phone` varchar(50) DEFAULT NULL,
+                `address` text DEFAULT NULL,
+                `city` varchar(100) DEFAULT NULL,
+                `state` varchar(100) DEFAULT NULL,
+                `zip_code` varchar(20) DEFAULT NULL,
+                `country` varchar(100) DEFAULT NULL,
+                `tax_id` varchar(100) DEFAULT NULL,
+                `credit_limit` decimal(15,2) DEFAULT 0.00,
+                `payment_terms` varchar(100) DEFAULT NULL,
+                `currency` varchar(10) DEFAULT 'USD',
+                `account_id` int(11) DEFAULT NULL,
+                `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+                `created_at` datetime NOT NULL,
+                `updated_at` datetime DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `vendor_code` (`vendor_code`),
+                KEY `account_id` (`account_id`),
+                KEY `status` (`status`),
+                CONSTRAINT `{$prefix}vendors_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `{$prefix}accounts` (`id`) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ",
+        
         'payments' => "
             CREATE TABLE IF NOT EXISTS `{$prefix}payments` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -410,35 +439,6 @@ function runMigrations($pdo, $prefix = 'erp_') {
                 CONSTRAINT `{$prefix}payments_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `{$prefix}customers` (`id`) ON DELETE SET NULL,
                 CONSTRAINT `{$prefix}payments_ibfk_4` FOREIGN KEY (`vendor_id`) REFERENCES `{$prefix}vendors` (`id`) ON DELETE SET NULL,
                 CONSTRAINT `{$prefix}payments_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `{$prefix}users` (`id`) ON DELETE SET NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        ",
-        
-        'vendors' => "
-            CREATE TABLE IF NOT EXISTS `{$prefix}vendors` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `vendor_code` varchar(50) NOT NULL,
-                `company_name` varchar(255) NOT NULL,
-                `contact_name` varchar(255) DEFAULT NULL,
-                `email` varchar(100) DEFAULT NULL,
-                `phone` varchar(50) DEFAULT NULL,
-                `address` text DEFAULT NULL,
-                `city` varchar(100) DEFAULT NULL,
-                `state` varchar(100) DEFAULT NULL,
-                `zip_code` varchar(20) DEFAULT NULL,
-                `country` varchar(100) DEFAULT NULL,
-                `tax_id` varchar(100) DEFAULT NULL,
-                `credit_limit` decimal(15,2) DEFAULT 0.00,
-                `payment_terms` varchar(100) DEFAULT NULL,
-                `currency` varchar(10) DEFAULT 'USD',
-                `account_id` int(11) DEFAULT NULL,
-                `status` enum('active','inactive') NOT NULL DEFAULT 'active',
-                `created_at` datetime NOT NULL,
-                `updated_at` datetime DEFAULT NULL,
-                PRIMARY KEY (`id`),
-                UNIQUE KEY `vendor_code` (`vendor_code`),
-                KEY `account_id` (`account_id`),
-                KEY `status` (`status`),
-                CONSTRAINT `{$prefix}vendors_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `{$prefix}accounts` (`id`) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         

@@ -18,6 +18,9 @@ class Base_Controller {
         // Load permission helper
         require_once BASEPATH . '../application/helpers/permission_helper.php';
         
+        // Load module helper
+        require_once BASEPATH . '../application/helpers/module_helper.php';
+        
         // Initialize database only if installed and config is valid
         if (isset($this->config['installed']) && $this->config['installed'] === true) {
             if (!empty($this->config['db']['hostname']) && !empty($this->config['db']['database'])) {
@@ -47,8 +50,92 @@ class Base_Controller {
             $this->session['last_activity'] = time();
         }
         
+        // Check module activation (unless super admin)
+        $this->checkModuleAccess();
+        
         // Check authentication for protected pages
         $this->checkAuth();
+    }
+    
+    protected function checkModuleAccess() {
+        // Super admin can access all modules
+        if (isset($this->session['role']) && $this->session['role'] === 'super_admin') {
+            return;
+        }
+        
+        // Map controllers to module keys
+        $controllerModuleMap = [
+            'Accounting' => 'accounting',
+            'Accounts' => 'accounting',
+            'Cash' => 'accounting',
+            'Receivables' => 'accounting',
+            'Payables' => 'accounting',
+            'Ledger' => 'accounting',
+            'Reports' => 'accounting',
+            'Budgets' => 'accounting',
+            'Financial_years' => 'accounting',
+            'Recurring' => 'accounting',
+            'Credit_notes' => 'accounting',
+            'Estimates' => 'accounting',
+            'Templates' => 'accounting',
+            'Banking' => 'accounting',
+            'Payroll' => 'accounting',
+            'Bookings' => 'bookings',
+            'Facilities' => 'bookings',
+            'Resource_management' => 'bookings',
+            'Booking_wizard' => 'bookings',
+            'Booking_reports' => 'bookings',
+            'Properties' => 'properties',
+            'Spaces' => 'properties',
+            'Leases' => 'properties',
+            'Tenants' => 'properties',
+            'Rent_invoices' => 'properties',
+            'Utilities' => 'utilities',
+            'Meters' => 'utilities',
+            'Meter_readings' => 'utilities',
+            'Utility_bills' => 'utilities',
+            'Utility_providers' => 'utilities',
+            'Utility_payments' => 'utilities',
+            'Utility_reports' => 'utilities',
+            'Utility_allocations' => 'utilities',
+            'Utility_alerts' => 'utilities',
+            'Tariffs' => 'utilities',
+            'Vendor_utility_bills' => 'utilities',
+            'Inventory' => 'inventory',
+            'Items' => 'inventory',
+            'Locations' => 'inventory',
+            'Stock_movements' => 'inventory',
+            'Suppliers' => 'inventory',
+            'Purchase_orders' => 'inventory',
+            'Goods_receipts' => 'inventory',
+            'Stock_adjustments' => 'inventory',
+            'Stock_takes' => 'inventory',
+            'Fixed_assets' => 'inventory',
+            'Inventory_reports' => 'inventory',
+            'Tax' => 'tax',
+            'Tax_compliance' => 'tax',
+            'Tax_config' => 'tax',
+            'Tax_reports' => 'tax',
+            'Vat' => 'tax',
+            'Paye' => 'tax',
+            'Cit' => 'tax',
+            'Wht' => 'tax',
+            'Tax_payments' => 'tax',
+            'Pos' => 'pos'
+        ];
+        
+        $currentController = get_class($this);
+        
+        // Check if controller is mapped to a module
+        if (isset($controllerModuleMap[$currentController])) {
+            $moduleKey = $controllerModuleMap[$currentController];
+            
+            // Check if module is active
+            if (!is_module_active($moduleKey)) {
+                $this->setFlashMessage('danger', 'This module is currently inactive. Please contact your administrator.');
+                redirect('dashboard');
+            }
+        }
     }
     
     protected function checkAuth() {

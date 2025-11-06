@@ -26,6 +26,8 @@ class Auth extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             if (!$this->userModel || !$this->activityModel) {
                 $this->setFlashMessage('danger', 'System not properly configured. Please run the installer.');
             } else {
@@ -125,6 +127,8 @@ class Auth extends Base_Controller {
     
     public function forgotPassword() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $email = sanitize_input($_POST['email'] ?? '');
             
             if (empty($email)) {
@@ -174,6 +178,8 @@ class Auth extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $password = $_POST['password'] ?? '';
             $confirmPassword = $_POST['confirm_password'] ?? '';
             

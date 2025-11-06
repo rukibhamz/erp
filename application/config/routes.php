@@ -32,6 +32,12 @@ $route['profile/terminate-session/(:any)'] = 'Profile/terminateSession/$1';
 
 // Settings
         $route['settings'] = 'Settings/index';
+        
+// Module Management (Super Admin Only)
+        $route['modules'] = 'Modules/index';
+        $route['modules/toggle'] = 'Modules/toggle';
+        $route['modules/updateName'] = 'Modules/updateName';
+        $route['modules/update'] = 'Modules/update';
         $route['settings/modules'] = 'Settings/modules';
         
         // Global Search

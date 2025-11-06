@@ -119,6 +119,7 @@ $activeTab = $active_tab ?? 'company';
         </div>
         <div class="card-body">
             <form method="POST" action="<?= base_url('settings/system/save') ?>">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="tab" value="email">
                 
                 <div class="alert alert-info">
@@ -195,6 +196,7 @@ $activeTab = $active_tab ?? 'company';
         </div>
         <div class="card-body">
             <form method="POST" action="<?= base_url('settings/system/save') ?>">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="tab" value="sms">
                 
                 <div class="alert alert-info">
@@ -262,6 +264,7 @@ $activeTab = $active_tab ?? 'company';
         </div>
         <div class="card-body">
             <form method="POST" action="<?= base_url('settings/system/save') ?>">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="tab" value="preferences">
                 
                 <div class="row g-3 mb-4">

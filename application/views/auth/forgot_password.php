@@ -64,6 +64,7 @@
             <?php endif; ?>
             
             <form method="POST" action="<?= base_url('forgot-password') ?>">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3">
                     <label for="email" class="form-label">Email Address</label>
                     <input type="email" class="form-control" id="email" name="email" required autofocus>

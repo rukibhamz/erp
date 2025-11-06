@@ -42,6 +42,7 @@ class System_settings extends Base_Controller {
     
     public function save() {
         $this->requirePermission('settings', 'update');
+        check_csrf(); // Validate CSRF token
         
         $tab = sanitize_input($_POST['tab'] ?? 'company');
         $prefix = $this->db->getPrefix();
