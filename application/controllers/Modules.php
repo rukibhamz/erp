@@ -8,8 +8,13 @@ class Modules extends Base_Controller {
     public function __construct() {
         parent::__construct();
         
+        // Ensure user is logged in
+        if (empty($this->session['user_id'])) {
+            redirect('login');
+        }
+        
         // Only super admin can access module management
-        if ($this->session['role'] !== 'super_admin') {
+        if (!isset($this->session['role']) || $this->session['role'] !== 'super_admin') {
             $this->setFlashMessage('danger', 'Access denied. Only super administrators can manage modules.');
             redirect('dashboard');
         }
