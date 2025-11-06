@@ -124,7 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Increase timeout for long-running migrations
                 $pdo->exec("SET SESSION wait_timeout = 600");
                 $pdo->exec("SET SESSION interactive_timeout = 600");
-                $pdo->exec("SET SESSION max_allowed_packet = 67108864"); // 64MB
+                // Note: max_allowed_packet is read-only at SESSION level, must be set at server/GLOBAL level
+                // If needed, ask your hosting provider to increase it, or set it in my.cnf
                 
                 // Check if tables exist - only drop if this is a reinstall
                 $existingTables = $pdo->query("SHOW TABLES LIKE '{$_SESSION['db_prefix']}%'")->fetchAll(PDO::FETCH_COLUMN);
