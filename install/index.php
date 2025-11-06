@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Run enhanced migrations if file exists
                 if (file_exists(__DIR__ . '/migrations_enhanced.php')) {
                     error_log("Starting enhanced migrations...");
-                    require __DIR__ . '/migrations_enhanced.php';
+                    require_once __DIR__ . '/migrations_enhanced.php';
                     try {
                         runEnhancedMigrations($pdo, $_SESSION['db_prefix']);
                         error_log("Enhanced migrations completed");
@@ -166,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
         // Run booking migrations if file exists
         if (file_exists(__DIR__ . '/migrations_booking.php')) {
-            require __DIR__ . '/migrations_booking.php';
+            require_once __DIR__ . '/migrations_booking.php';
             try {
                 runBookingMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run payment gateway migrations if file exists
         if (file_exists(__DIR__ . '/migrations_payment_gateways.php')) {
-            require __DIR__ . '/migrations_payment_gateways.php';
+            require_once __DIR__ . '/migrations_payment_gateways.php';
             try {
                 runPaymentGatewayMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run enhanced booking migrations if file exists
         if (file_exists(__DIR__ . '/migrations_booking_enhanced.php')) {
-            require __DIR__ . '/migrations_booking_enhanced.php';
+            require_once __DIR__ . '/migrations_booking_enhanced.php';
             try {
                 runBookingEnhancedMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -196,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run customer portal migrations if file exists
         if (file_exists(__DIR__ . '/migrations_customer_portal.php')) {
-            require __DIR__ . '/migrations_customer_portal.php';
+            require_once __DIR__ . '/migrations_customer_portal.php';
             try {
                 runCustomerPortalMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -206,7 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run notification migrations if file exists
         if (file_exists(__DIR__ . '/migrations_notifications.php')) {
-            require __DIR__ . '/migrations_notifications.php';
+            require_once __DIR__ . '/migrations_notifications.php';
             try {
                 runNotificationMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -216,7 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run property management migrations if file exists
         if (file_exists(__DIR__ . '/migrations_property_management.php')) {
-            require __DIR__ . '/migrations_property_management.php';
+            require_once __DIR__ . '/migrations_property_management.php';
             try {
                 runPropertyManagementMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -226,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run utilities migrations if file exists
         if (file_exists(__DIR__ . '/migrations_utilities.php')) {
-            require __DIR__ . '/migrations_utilities.php';
+            require_once __DIR__ . '/migrations_utilities.php';
             try {
                 runUtilitiesMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -236,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run inventory migrations if file exists
         if (file_exists(__DIR__ . '/migrations_inventory.php')) {
-            require __DIR__ . '/migrations_inventory.php';
+            require_once __DIR__ . '/migrations_inventory.php';
             try {
                 runInventoryMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -246,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run tax migrations if file exists
         if (file_exists(__DIR__ . '/migrations_tax.php')) {
-            require __DIR__ . '/migrations_tax.php';
+            require_once __DIR__ . '/migrations_tax.php';
             try {
                 runTaxMigrations($pdo, $_SESSION['db_prefix']);
                 // Insert default tax types
@@ -258,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run POS migrations if file exists
         if (file_exists(__DIR__ . '/migrations_pos.php')) {
-            require __DIR__ . '/migrations_pos.php';
+            require_once __DIR__ . '/migrations_pos.php';
             try {
                 runPosMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -268,7 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run performance migrations (indexes)
         if (file_exists(__DIR__ . '/migrations_performance.php')) {
-            require __DIR__ . '/migrations_performance.php';
+            require_once __DIR__ . '/migrations_performance.php';
             try {
                 runPerformanceMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -278,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run security migrations
         if (file_exists(__DIR__ . '/migrations_security.php')) {
-            require __DIR__ . '/migrations_security.php';
+            require_once __DIR__ . '/migrations_security.php';
             try {
                 runSecurityMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -288,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run audit migrations
         if (file_exists(__DIR__ . '/migrations_audit.php')) {
-            require __DIR__ . '/migrations_audit.php';
+            require_once __DIR__ . '/migrations_audit.php';
             try {
                 runAuditMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -298,7 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run advanced permissions migrations
         if (file_exists(__DIR__ . '/migrations_advanced_permissions.php')) {
-            require __DIR__ . '/migrations_advanced_permissions.php';
+            require_once __DIR__ . '/migrations_advanced_permissions.php';
             try {
                 runAdvancedPermissionsMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -308,7 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run report builder migrations
         if (file_exists(__DIR__ . '/migrations_report_builder.php')) {
-            require __DIR__ . '/migrations_report_builder.php';
+            require_once __DIR__ . '/migrations_report_builder.php';
             try {
                 runReportBuilderMigrations($pdo, $_SESSION['db_prefix']);
             } catch (Exception $e) {
@@ -318,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Run modules migrations
         if (file_exists(__DIR__ . '/migrations_modules.php')) {
-            require __DIR__ . '/migrations_modules.php';
+            require_once __DIR__ . '/migrations_modules.php';
             try {
                 $modulesMigration = migrations_modules($_SESSION['db_prefix']);
                 // Batch table creation with delays
