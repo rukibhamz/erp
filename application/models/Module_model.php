@@ -6,8 +6,9 @@ class Module_model extends Base_Model {
     
     /**
      * Get all modules
+     * Override parent method to add activeOnly filter
      */
-    public function getAll($activeOnly = false) {
+    public function getAll($limit = null, $offset = 0, $orderBy = null, $activeOnly = false) {
         try {
             $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`";
             
@@ -15,13 +16,29 @@ class Module_model extends Base_Model {
                 $sql .= " WHERE is_active = 1";
             }
             
-            $sql .= " ORDER BY sort_order ASC, display_name ASC";
+            // Use provided orderBy or default
+            if ($orderBy) {
+                $sql .= " ORDER BY {$orderBy}";
+            } else {
+                $sql .= " ORDER BY sort_order ASC, display_name ASC";
+            }
+            
+            if ($limit) {
+                $sql .= " LIMIT {$limit} OFFSET {$offset}";
+            }
             
             return $this->db->fetchAll($sql);
         } catch (Exception $e) {
             error_log('Module_model getAll error: ' . $e->getMessage());
             return [];
         }
+    }
+    
+    /**
+     * Get all modules (convenience method with activeOnly as first param)
+     */
+    public function getAllModules($activeOnly = false) {
+        return $this->getAll(null, 0, null, $activeOnly);
     }
     
     /**

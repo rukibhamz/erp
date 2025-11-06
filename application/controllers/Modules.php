@@ -22,7 +22,7 @@ class Modules extends Base_Controller {
      * List all modules
      */
     public function index() {
-        $modules = $this->moduleModel->getAll(false);
+        $modules = $this->moduleModel->getAll(null, 0, null, false);
         
         $data = [
             'page_title' => 'Module Management',
