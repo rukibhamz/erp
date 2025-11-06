@@ -6,29 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <h1 class="page-title mb-0">Create Journal Entry</h1>
 </div>
 
-<!-- Accounting Navigation -->
-<div class="accounting-nav mb-4">
-    <nav class="nav nav-pills nav-fill">
-        <a class="nav-link" href="<?= base_url('accounting') ?>">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-        <a class="nav-link" href="<?= base_url('accounts') ?>">
-            <i class="bi bi-diagram-3"></i> Chart of Accounts
-        </a>
-        <a class="nav-link" href="<?= base_url('cash') ?>">
-            <i class="bi bi-wallet2"></i> Cash Management
-        </a>
-        <a class="nav-link" href="<?= base_url('receivables') ?>">
-            <i class="bi bi-receipt"></i> Receivables
-        </a>
-        <a class="nav-link" href="<?= base_url('payables') ?>">
-            <i class="bi bi-file-earmark-medical"></i> Payables
-        </a>
-        <a class="nav-link active" href="<?= base_url('ledger') ?>">
-            <i class="bi bi-journal-text"></i> General Ledger
-        </a>
-    </nav>
-</div>
+<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
 <div class="row">
     <div class="col-lg-12">

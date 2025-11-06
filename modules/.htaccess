@@ -1,3 +1,5 @@
-# Modules directory
-# Place custom business modules here
+# Allow access to modules directory
+# This directory is for custom business modules (if needed in future)
+# Currently empty but accessible
 
+Options +Indexes
