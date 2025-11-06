@@ -77,14 +77,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['db_pass']
                 );
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                // Increase timeout for long-running migrations
+                $pdo->exec("SET SESSION wait_timeout = 600");
+                $pdo->exec("SET SESSION interactive_timeout = 600");
                 
-                // Drop existing tables if they exist (for fresh install)
-                $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-                $tables = $pdo->query("SHOW TABLES LIKE '{$_SESSION['db_prefix']}%'")->fetchAll(PDO::FETCH_COLUMN);
-                foreach ($tables as $table) {
-                    $pdo->exec("DROP TABLE IF EXISTS `{$table}`");
+                // Check if tables exist - only drop if this is a reinstall
+                $existingTables = $pdo->query("SHOW TABLES LIKE '{$_SESSION['db_prefix']}%'")->fetchAll(PDO::FETCH_COLUMN);
+                
+                if (!empty($existingTables)) {
+                    // Tables exist - drop them efficiently in one operation
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+                    // Drop all tables at once using a single query (more efficient)
+                    $dropSql = "DROP TABLE IF EXISTS `" . implode("`, `", $existingTables) . "`";
+                    $pdo->exec($dropSql);
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
                 }
-                $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
                 
                 // Run migrations
                 require __DIR__ . '/migrations.php';
@@ -257,11 +264,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             require __DIR__ . '/migrations_modules.php';
             try {
                 $modulesMigration = migrations_modules($_SESSION['db_prefix']);
+                // Batch table creation with delays
                 foreach ($modulesMigration['tables'] as $tableName => $sql) {
                     $pdo->exec($sql);
+                    usleep(50000); // 0.05 second delay between tables
                 }
-                foreach ($modulesMigration['inserts'] as $insertSql) {
-                    $pdo->exec($insertSql);
+                // Batch inserts more efficiently
+                if (!empty($modulesMigration['inserts'])) {
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+                    foreach ($modulesMigration['inserts'] as $insertSql) {
+                        $pdo->exec($insertSql);
+                    }
+                    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
                 }
             } catch (Exception $e) {
                 error_log("Modules migrations warning: " . $e->getMessage());
@@ -273,10 +287,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}users (username, email, password, role, status, created_at) VALUES (?, ?, ?, 'super_admin', 'active', NOW())");
                 $stmt->execute([$_SESSION['admin_username'], $_SESSION['admin_email'], $password_hash]);
                 
-                // Assign all permissions to super admin
+                // Assign all permissions to super admin (batch insert)
                 $adminId = $pdo->lastInsertId();
+                // Use a single query instead of looping
+                $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
                 $stmt = $pdo->prepare("INSERT IGNORE INTO {$_SESSION['db_prefix']}user_permissions (user_id, permission_id, created_at) SELECT ?, id, NOW() FROM {$_SESSION['db_prefix']}permissions");
                 $stmt->execute([$adminId]);
+                $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
                 
                 // Create default company
                 $stmt = $pdo->prepare("INSERT INTO {$_SESSION['db_prefix']}companies (name, created_at) VALUES (?, NOW())");

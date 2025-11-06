@@ -598,14 +598,30 @@ function runMigrations($pdo, $prefix = 'erp_') {
     
     // Disable foreign key checks temporarily to avoid constraint issues during creation
     $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
+    $pdo->exec("SET SESSION wait_timeout = 600");
+    $pdo->exec("SET SESSION interactive_timeout = 600");
     
-    foreach ($migrations as $table => $sql) {
-        try {
-            $pdo->exec($sql);
-        } catch (PDOException $e) {
-            // Re-enable foreign key checks before throwing error
-            $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
-            throw new Exception("Failed to create table {$table}: " . $e->getMessage());
+    // Process tables in batches to avoid overwhelming MySQL
+    $batchSize = 10;
+    $tables = array_keys($migrations);
+    $totalTables = count($tables);
+    
+    for ($i = 0; $i < $totalTables; $i += $batchSize) {
+        $batch = array_slice($tables, $i, $batchSize);
+        
+        foreach ($batch as $table) {
+            try {
+                $pdo->exec($migrations[$table]);
+            } catch (PDOException $e) {
+                // Re-enable foreign key checks before throwing error
+                $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+                throw new Exception("Failed to create table {$table}: " . $e->getMessage());
+            }
+        }
+        
+        // Small delay between batches to prevent MySQL overload
+        if ($i + $batchSize < $totalTables) {
+            usleep(100000); // 0.1 second delay
         }
     }
     
@@ -631,14 +647,37 @@ function insertDefaultPermissions($pdo, $prefix) {
     $modules = ['users', 'companies', 'settings', 'reports', 'modules'];
     $actions = ['create', 'read', 'update', 'delete'];
     
+    // Use batch insert instead of individual inserts for better performance
+    $values = [];
+    $params = [];
+    
     foreach ($modules as $module) {
         foreach ($actions as $action) {
-            try {
-                $stmt = $pdo->prepare("INSERT IGNORE INTO `{$prefix}permissions` (module, permission, description, created_at) VALUES (?, ?, ?, NOW())");
-                $description = ucfirst($action) . ' ' . ucfirst($module);
-                $stmt->execute([$module, $action, $description]);
-            } catch (PDOException $e) {
-                // Ignore duplicate errors
+            $values[] = "(?, ?, ?, NOW())";
+            $description = ucfirst($action) . ' ' . ucfirst($module);
+            $params[] = $module;
+            $params[] = $action;
+            $params[] = $description;
+        }
+    }
+    
+    if (!empty($values)) {
+        try {
+            $sql = "INSERT IGNORE INTO `{$prefix}permissions` (module, permission, description, created_at) VALUES " . implode(', ', $values);
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+        } catch (PDOException $e) {
+            // Fallback to individual inserts if batch fails
+            foreach ($modules as $module) {
+                foreach ($actions as $action) {
+                    try {
+                        $stmt = $pdo->prepare("INSERT IGNORE INTO `{$prefix}permissions` (module, permission, description, created_at) VALUES (?, ?, ?, NOW())");
+                        $description = ucfirst($action) . ' ' . ucfirst($module);
+                        $stmt->execute([$module, $action, $description]);
+                    } catch (PDOException $e) {
+                        // Ignore duplicate errors
+                    }
+                }
             }
         }
     }
