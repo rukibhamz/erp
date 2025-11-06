@@ -1,4 +1,12 @@
 <?php
+// Define BASEPATH for migration files (they check for this constant)
+if (!defined('BASEPATH')) {
+    define('BASEPATH', dirname(__DIR__) . '/application/');
+}
+if (!defined('ROOTPATH')) {
+    define('ROOTPATH', dirname(__DIR__) . '/');
+}
+
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
