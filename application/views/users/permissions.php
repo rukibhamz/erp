@@ -18,6 +18,7 @@ $userPermissions = $userPermissions ?? [];
             </div>
             <div class="card-body">
                 <form method="POST" action="<?= base_url('users/permissions/' . $user['id']) ?>">
+                    <?php echo csrf_field(); ?>
                     <?php if (!empty($modules)): ?>
                         <div class="table-responsive">
                             <table class="table table-bordered">
