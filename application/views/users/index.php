@@ -7,6 +7,9 @@ $page_title = $page_title ?? 'Users';
         <h1 class="page-title mb-0">Users</h1>
         <div class="d-flex gap-2">
             <?php if (isset($current_user['role']) && $current_user['role'] === 'super_admin'): ?>
+                <a href="<?= base_url('users/fix-manager-permissions') ?>" class="btn btn-outline-info" onclick="return confirm('This will assign create, read, update permissions for all modules (except tax) to all manager users. Continue?');">
+                    <i class="bi bi-tools"></i> Fix Manager Permissions
+                </a>
                 <a href="<?= base_url('users/fix-admin-permissions') ?>" class="btn btn-outline-warning" onclick="return confirm('This will assign all permissions to all admin users. Continue?');">
                     <i class="bi bi-tools"></i> Fix Admin Permissions
                 </a>

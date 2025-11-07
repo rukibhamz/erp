@@ -240,6 +240,42 @@ class Users extends Base_Controller {
         return $managerPermissions;
     }
     
+    /**
+     * Fix manager permissions - assign create, read, update for all modules except tax
+     * This is a utility method to fix existing manager users
+     */
+    public function fixManagerPermissions() {
+        // Only super admin can run this
+        if ($this->session['role'] !== 'super_admin') {
+            $this->setFlashMessage('danger', 'Only super administrators can run this utility.');
+            redirect('users');
+        }
+        
+        try {
+            // Get all manager users using the model
+            $allUsers = $this->userModel->getAll();
+            $managerUsers = array_filter($allUsers, function($user) {
+                return $user['role'] === 'manager';
+            });
+            
+            // Get manager permissions (create, read, update for all modules except tax)
+            $managerPermissions = $this->getManagerPermissions();
+            $permissionIds = array_column($managerPermissions, 'id');
+            
+            $fixed = 0;
+            foreach ($managerUsers as $manager) {
+                $this->userPermissionModel->assignPermissions($manager['id'], $permissionIds);
+                $fixed++;
+            }
+            
+            $this->setFlashMessage('success', "Fixed permissions for {$fixed} manager user(s).");
+            redirect('users');
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error fixing manager permissions: ' . $e->getMessage());
+            redirect('users');
+        }
+    }
+    
     public function fixAdminPermissions() {
         // Only super admin can run this
         if ($this->session['role'] !== 'super_admin') {

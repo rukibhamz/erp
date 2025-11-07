@@ -26,6 +26,7 @@ $route['users/edit/(:num)'] = 'Users/edit/$1';
 $route['users/permissions/(:num)'] = 'Users/permissions/$1';
 $route['users/delete/(:num)'] = 'Users/delete/$1';
 $route['users/fix-admin-permissions'] = 'Users/fixAdminPermissions';
+$route['users/fix-manager-permissions'] = 'Users/fixManagerPermissions';
 
 // Profile
 $route['profile'] = 'Profile/index';
