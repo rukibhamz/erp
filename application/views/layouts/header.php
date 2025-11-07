@@ -72,8 +72,8 @@
                     <?php endif; ?>
                     <li class="nav-divider"></li>
                     <?php
-                    // Get active modules for navigation
-                    $activeModules = get_active_modules();
+                    // Get modules user has permission to access (filters by permissions)
+                    $activeModules = get_user_accessible_modules();
                     $moduleRoutes = [
                         'accounting' => ['accounting', 'accounts', 'cash', 'receivables', 'payables', 'payroll', 'ledger', 'reports'],
                         'bookings' => ['bookings', 'facilities'],

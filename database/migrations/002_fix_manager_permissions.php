@@ -102,18 +102,21 @@ function fixManagerPermissions() {
         // Step 3: Add Accounting sub-module permissions to manager
         echo "Step 3: Adding Accounting sub-module permissions to manager...\n";
         $accountingSubModules = ['accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates'];
-        $stmt = $pdo->prepare("INSERT INTO `{$prefix}role_permissions` (role_id, permission_id, created_at)
-            SELECT r.id, p.id, NOW()
-            FROM `{$prefix}roles` r
-            CROSS JOIN `{$prefix}permissions` p
-            WHERE r.role_code = 'manager'
-            AND p.module IN ('" . implode("', '", $accountingSubModules) . "')
-            AND NOT EXISTS (
-                SELECT 1 FROM `{$prefix}role_permissions` rp
-                WHERE rp.role_id = r.id AND rp.permission_id = p.id
-            )");
-        $stmt->execute();
-        $accountingPerms = $stmt->rowCount();
+        $accountingPerms = 0;
+        foreach ($accountingSubModules as $subModule) {
+            $stmt = $pdo->prepare("INSERT INTO `{$prefix}role_permissions` (role_id, permission_id, created_at)
+                SELECT r.id, p.id, NOW()
+                FROM `{$prefix}roles` r
+                CROSS JOIN `{$prefix}permissions` p
+                WHERE r.role_code = 'manager'
+                AND p.module = ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM `{$prefix}role_permissions` rp
+                    WHERE rp.role_id = r.id AND rp.permission_id = p.id
+                )");
+            $stmt->execute([$subModule]);
+            $accountingPerms += $stmt->rowCount();
+        }
         echo "✓ Added {$accountingPerms} Accounting sub-module permissions to manager\n\n";
         
         // Step 4: Add POS permissions to manager
