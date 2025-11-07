@@ -27,7 +27,18 @@ class Permission_model extends Base_Model {
         return $this->db->fetchAll($sql, [$module]);
     }
     
-    public function getAll() {
+    /**
+     * Override parent getAll to provide default ordering
+     */
+    public function getAll($limit = null, $offset = 0, $orderBy = null) {
+        $orderBy = $orderBy ?: 'module ASC, permission ASC';
+        return parent::getAll($limit, $offset, $orderBy);
+    }
+    
+    /**
+     * Get all permissions (convenience method)
+     */
+    public function getAllPermissions() {
         $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` ORDER BY module, permission";
         return $this->db->fetchAll($sql);
     }

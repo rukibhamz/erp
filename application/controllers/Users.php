@@ -71,7 +71,7 @@ class Users extends Base_Controller {
                     $this->userPermissionModel->assignPermissions($userId, $permissionIds);
                 } elseif ($data['role'] === 'admin') {
                     // For admin role, assign all permissions by default
-                    $allPermissions = $this->permissionModel->getAll();
+                    $allPermissions = $this->permissionModel->getAllPermissions();
                     $permissionIds = array_column($allPermissions, 'id');
                     $this->userPermissionModel->assignPermissions($userId, $permissionIds);
                 }
