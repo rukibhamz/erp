@@ -44,11 +44,20 @@ function validate_csrf_token($token) {
     }
     
     if (!isset($_SESSION['csrf_token'])) {
-        return false;
+        // If no token exists, generate one (shouldn't happen, but handle gracefully)
+        error_log('CSRF validation: No token in session, generating new one');
+        generate_csrf_token();
+        return false; // Still fail validation, but token is now generated for next attempt
     }
     
     // Use hash_equals for timing attack prevention
-    return hash_equals($_SESSION['csrf_token'], $token);
+    $isValid = hash_equals($_SESSION['csrf_token'], $token);
+    
+    if (!$isValid) {
+        error_log('CSRF validation failed: Token mismatch. Session token exists: ' . (isset($_SESSION['csrf_token']) ? 'yes' : 'no'));
+    }
+    
+    return $isValid;
 }
 
 /**
@@ -68,7 +77,21 @@ function check_csrf() {
         return true; // Only validate POST requests
     }
     
+    // Ensure session is started
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
     $token = $_POST['csrf_token'] ?? '';
+    
+    // Debug: Log token validation attempt (remove in production)
+    if (empty($token)) {
+        error_log('CSRF check failed: No token provided. POST data: ' . json_encode($_POST));
+    } elseif (!isset($_SESSION['csrf_token'])) {
+        error_log('CSRF check failed: No token in session. Session keys: ' . json_encode(array_keys($_SESSION ?? [])));
+    } elseif (!validate_csrf_token($token)) {
+        error_log('CSRF check failed: Token mismatch. Expected: ' . substr($_SESSION['csrf_token'] ?? '', 0, 10) . '... Got: ' . substr($token, 0, 10) . '...');
+    }
     
     if (empty($token) || !validate_csrf_token($token)) {
         http_response_code(403);

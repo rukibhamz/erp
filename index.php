@@ -76,7 +76,7 @@ date_default_timezone_set('UTC');
 if (session_status() === PHP_SESSION_NONE) {
     // Configure secure session settings
     ini_set('session.cookie_httponly', 1);
-    ini_set('session.cookie_samesite', 'Strict');
+    ini_set('session.cookie_samesite', 'Lax'); // Changed from 'Strict' to 'Lax' for better compatibility
     ini_set('session.use_strict_mode', 1);
     ini_set('session.gc_maxlifetime', 1800); // 30 minutes
     

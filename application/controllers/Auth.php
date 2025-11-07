@@ -96,6 +96,10 @@ class Auth extends Base_Controller {
             }
         }
         
+        // Ensure CSRF token is generated for the login form
+        // This ensures the token exists when the form is displayed
+        generate_csrf_token();
+        
         $data['flash'] = $this->getFlashMessage();
         $this->loader->view('auth/login', $data);
     }
