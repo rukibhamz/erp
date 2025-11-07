@@ -241,6 +241,55 @@ class Users extends Base_Controller {
     }
     
     /**
+     * Ensure all business module permissions exist in the database
+     * This is a utility method to fix missing permissions for existing installations
+     * @return int Number of permissions created
+     */
+    private function ensureAllPermissionsExist() {
+        $businessModules = ['accounting', 'bookings', 'properties', 'utilities', 'inventory', 'tax', 'pos'];
+        $actions = ['create', 'read', 'update', 'delete'];
+        $created = 0;
+        
+        foreach ($businessModules as $module) {
+            foreach ($actions as $action) {
+                // Check if permission exists
+                $existing = $this->permissionModel->getByModule($module);
+                $exists = false;
+                foreach ($existing as $perm) {
+                    if ($perm['permission'] === $action) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                
+                // Insert if doesn't exist
+                if (!$exists) {
+                    try {
+                        $prefix = $this->db->getPrefix();
+                        $sql = "INSERT IGNORE INTO `{$prefix}permissions` (module, permission, description, created_at) VALUES (?, ?, ?, ?)";
+                        $stmt = $this->db->getConnection()->prepare($sql);
+                        $stmt->execute([
+                            $module,
+                            $action,
+                            ucfirst($action) . ' ' . ucfirst($module),
+                            date('Y-m-d H:i:s')
+                        ]);
+                        if ($stmt->rowCount() > 0) {
+                            $created++;
+                            error_log("Created permission: {$module}.{$action}");
+                        }
+                    } catch (Exception $e) {
+                        // Log but continue
+                        error_log("Permission insert warning for {$module}.{$action}: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+        
+        return $created;
+    }
+    
+    /**
      * Fix manager permissions - assign create, read, update for all modules except tax
      * This is a utility method to fix existing manager users
      */
@@ -252,6 +301,9 @@ class Users extends Base_Controller {
         }
         
         try {
+            // First, ensure all permissions exist in the database
+            $created = $this->ensureAllPermissionsExist();
+            
             // Get all manager users using the model
             $allUsers = $this->userModel->getAll();
             $managerUsers = array_filter($allUsers, function($user) {
@@ -262,15 +314,35 @@ class Users extends Base_Controller {
             $managerPermissions = $this->getManagerPermissions();
             $permissionIds = array_column($managerPermissions, 'id');
             
+            if (empty($permissionIds)) {
+                $this->setFlashMessage('warning', 'No manager permissions found. Please ensure permissions are created in the database.');
+                redirect('users');
+            }
+            
             $fixed = 0;
+            $messages = [];
             foreach ($managerUsers as $manager) {
                 $this->userPermissionModel->assignPermissions($manager['id'], $permissionIds);
                 $fixed++;
+                $messages[] = "Assigned " . count($permissionIds) . " permissions to manager: {$manager['username']} (ID: {$manager['id']})";
             }
             
-            $this->setFlashMessage('success', "Fixed permissions for {$fixed} manager user(s).");
+            $message = "Fixed permissions for {$fixed} manager user(s).";
+            if ($created > 0) {
+                $message .= " Created {$created} missing permission(s).";
+            }
+            $message .= " Total permissions assigned: " . count($permissionIds);
+            
+            // Log detailed messages
+            foreach ($messages as $msg) {
+                error_log($msg);
+            }
+            
+            $this->setFlashMessage('success', $message);
             redirect('users');
         } catch (Exception $e) {
+            error_log("Error fixing manager permissions: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
             $this->setFlashMessage('danger', 'Error fixing manager permissions: ' . $e->getMessage());
             redirect('users');
         }

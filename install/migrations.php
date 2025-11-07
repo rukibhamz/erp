@@ -641,7 +641,12 @@ function runMigrations($pdo, $prefix = 'erp_') {
 }
 
 function insertDefaultPermissions($pdo, $prefix) {
-    $modules = ['users', 'companies', 'settings', 'reports', 'modules'];
+    // Core modules
+    $coreModules = ['users', 'companies', 'settings', 'reports', 'modules'];
+    // Business modules
+    $businessModules = ['accounting', 'bookings', 'properties', 'utilities', 'inventory', 'tax', 'pos'];
+    // All modules
+    $modules = array_merge($coreModules, $businessModules);
     $actions = ['create', 'read', 'update', 'delete'];
     
     // Use batch insert instead of individual inserts for better performance

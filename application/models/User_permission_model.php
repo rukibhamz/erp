@@ -18,11 +18,31 @@ class User_permission_model extends Base_Model {
     }
     
     public function hasPermission($userId, $module, $permission) {
-        $sql = "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . $this->table . "` up
-                INNER JOIN `" . $this->db->getPrefix() . "permissions` p ON up.permission_id = p.id
-                WHERE up.user_id = ? AND p.module = ? AND p.permission = ?";
-        $result = $this->db->fetchOne($sql, [$userId, $module, $permission]);
-        return ($result['count'] ?? 0) > 0;
+        try {
+            $sql = "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . $this->table . "` up
+                    INNER JOIN `" . $this->db->getPrefix() . "permissions` p ON up.permission_id = p.id
+                    WHERE up.user_id = ? AND p.module = ? AND p.permission = ?";
+            $result = $this->db->fetchOne($sql, [$userId, $module, $permission]);
+            $hasPermission = ($result['count'] ?? 0) > 0;
+            
+            // Debug logging
+            if (!$hasPermission) {
+                error_log("Permission check: User {$userId}, Module: {$module}, Permission: {$permission}, Result: NO");
+                // Check if permission exists in permissions table
+                $permCheck = $this->db->fetchOne(
+                    "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "permissions` WHERE module = ? AND permission = ?",
+                    [$module, $permission]
+                );
+                if (($permCheck['count'] ?? 0) == 0) {
+                    error_log("WARNING: Permission '{$module}.{$permission}' does not exist in permissions table!");
+                }
+            }
+            
+            return $hasPermission;
+        } catch (Exception $e) {
+            error_log("Error checking permission: " . $e->getMessage());
+            return false;
+        }
     }
     
     public function assignPermissions($userId, $permissionIds) {

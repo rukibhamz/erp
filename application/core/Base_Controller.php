@@ -241,7 +241,14 @@ class Base_Controller {
         }
         
         $permissionModel = $this->loadModel('User_permission_model');
-        if (!$permissionModel->hasPermission($this->session['user_id'], $module, $permission)) {
+        
+        // Debug logging for permission checks
+        $hasPermission = $permissionModel->hasPermission($this->session['user_id'], $module, $permission);
+        
+        if (!$hasPermission) {
+            // Log the failed permission check for debugging
+            error_log("Permission check failed: User ID {$this->session['user_id']}, Role: {$this->session['role']}, Module: {$module}, Permission: {$permission}");
+            
             $this->setFlashMessage('danger', 'You do not have permission to perform this action.');
             redirect('dashboard');
         }
