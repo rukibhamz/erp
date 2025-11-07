@@ -21,9 +21,9 @@ class Users extends Base_Controller {
             'page_title' => 'Users',
             'users' => $this->userModel->getAll(null, 0, 'created_at DESC'),
             'flash' => $this->getFlashMessage(),
-            'canCreate' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'create') || $this->session['role'] === 'super_admin',
-            'canUpdate' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'update') || $this->session['role'] === 'super_admin',
-            'canDelete' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'delete') || $this->session['role'] === 'super_admin'
+            'canCreate' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'create') || ($this->session['role'] === 'super_admin' || $this->session['role'] === 'admin'),
+            'canUpdate' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'update') || ($this->session['role'] === 'super_admin' || $this->session['role'] === 'admin'),
+            'canDelete' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'delete') || ($this->session['role'] === 'super_admin' || $this->session['role'] === 'admin')
         ];
         
         $this->loadView('users/index', $data);
@@ -126,9 +126,15 @@ class Users extends Base_Controller {
             try {
                 $this->userModel->update($id, $data);
                 
-                // Update permissions if provided
+                // Update permissions
                 if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
+                    // If permissions are explicitly provided, use them
                     $permissionIds = array_map('intval', $_POST['permissions']);
+                    $this->userPermissionModel->assignPermissions($id, $permissionIds);
+                } elseif ($data['role'] === 'admin') {
+                    // If role is changed to admin, assign all permissions
+                    $allPermissions = $this->permissionModel->getAllPermissions();
+                    $permissionIds = array_column($allPermissions, 'id');
                     $this->userPermissionModel->assignPermissions($id, $permissionIds);
                 }
                 
@@ -190,6 +196,42 @@ class Users extends Base_Controller {
             'userPermissions' => $userPermissions
         ];
         $this->loadView('users/permissions', $data);
+    }
+    
+    /**
+     * Fix admin permissions - assign all permissions to all admin users
+     * This is a utility method to fix existing admin users
+     */
+    public function fixAdminPermissions() {
+        // Only super admin can run this
+        if ($this->session['role'] !== 'super_admin') {
+            $this->setFlashMessage('danger', 'Only super administrators can run this utility.');
+            redirect('users');
+        }
+        
+        try {
+            // Get all admin users using the model
+            $allUsers = $this->userModel->getAll();
+            $adminUsers = array_filter($allUsers, function($user) {
+                return $user['role'] === 'admin';
+            });
+            
+            // Get all permissions
+            $allPermissions = $this->permissionModel->getAllPermissions();
+            $permissionIds = array_column($allPermissions, 'id');
+            
+            $fixed = 0;
+            foreach ($adminUsers as $admin) {
+                $this->userPermissionModel->assignPermissions($admin['id'], $permissionIds);
+                $fixed++;
+            }
+            
+            $this->setFlashMessage('success', "Fixed permissions for {$fixed} admin user(s).");
+            redirect('users');
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error fixing admin permissions: ' . $e->getMessage());
+            redirect('users');
+        }
     }
     
     public function delete($id) {

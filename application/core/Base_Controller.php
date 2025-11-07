@@ -235,8 +235,8 @@ class Base_Controller {
             redirect('login');
         }
         
-        // Super admin bypass
-        if (isset($this->session['role']) && $this->session['role'] === 'super_admin') {
+        // Super admin and admin bypass
+        if (isset($this->session['role']) && ($this->session['role'] === 'super_admin' || $this->session['role'] === 'admin')) {
             return true;
         }
         

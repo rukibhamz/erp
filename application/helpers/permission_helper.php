@@ -10,8 +10,8 @@ function has_permission($module, $permission) {
         return false;
     }
     
-    // Super admin has all permissions
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin') {
+    // Super admin and admin have all permissions
+    if (isset($_SESSION['role']) && ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin')) {
         return true;
     }
     
@@ -75,8 +75,8 @@ function canAccessField($module, $tableName, $fieldName, $action = 'read') {
         return false;
     }
     
-    // Super admin has all permissions
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin') {
+    // Super admin and admin have all permissions
+    if (isset($_SESSION['role']) && ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin')) {
         return true;
     }
     
@@ -93,8 +93,8 @@ function canAccessRecord($module, $tableName, $recordId, $action = 'read') {
         return false;
     }
     
-    // Super admin has all permissions
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin') {
+    // Super admin and admin have all permissions
+    if (isset($_SESSION['role']) && ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin')) {
         return true;
     }
     
@@ -111,8 +111,8 @@ function filterFieldsByPermission($data, $module, $tableName) {
         return [];
     }
     
-    // Super admin sees all fields
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin') {
+    // Super admin and admin see all fields
+    if (isset($_SESSION['role']) && ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin')) {
         return $data;
     }
     

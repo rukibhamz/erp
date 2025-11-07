@@ -5,7 +5,16 @@ $page_title = $page_title ?? 'Users';
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Users</h1>
-        <a href="<?= base_url('users/create') ?>" class="btn btn-primary">Create User</a>
+        <div class="d-flex gap-2">
+            <?php if (isset($current_user['role']) && $current_user['role'] === 'super_admin'): ?>
+                <a href="<?= base_url('users/fix-admin-permissions') ?>" class="btn btn-outline-warning" onclick="return confirm('This will assign all permissions to all admin users. Continue?');">
+                    <i class="bi bi-tools"></i> Fix Admin Permissions
+                </a>
+            <?php endif; ?>
+            <?php if (isset($canCreate) && $canCreate): ?>
+                <a href="<?= base_url('users/create') ?>" class="btn btn-primary">Create User</a>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 
