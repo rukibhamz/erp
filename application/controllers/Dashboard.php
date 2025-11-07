@@ -265,10 +265,93 @@ class Dashboard extends Base_Controller {
     }
     
     private function managerDashboard() {
-        // Manager-specific dashboard with limited access
+        // Manager dashboard - similar to admin but without tax module access
+        // Initialize models with error handling
+        try {
+            $this->invoiceModel = $this->loadModel('Invoice_model');
+        } catch (Exception $e) {
+            $this->invoiceModel = null;
+            error_log('Dashboard Invoice_model load error: ' . $e->getMessage());
+        }
+        
+        try {
+            $this->bookingModel = $this->loadModel('Booking_model');
+        } catch (Exception $e) {
+            $this->bookingModel = null;
+            error_log('Dashboard Booking_model load error: ' . $e->getMessage());
+        }
+        
+        try {
+            $this->propertyModel = $this->loadModel('Property_model');
+        } catch (Exception $e) {
+            $this->propertyModel = null;
+        }
+        
+        try {
+            $this->transactionModel = $this->loadModel('Transaction_model');
+        } catch (Exception $e) {
+            $this->transactionModel = null;
+        }
+        
+        try {
+            $this->stockModel = $this->loadModel('Stock_level_model');
+        } catch (Exception $e) {
+            $this->stockModel = null;
+        }
+        
+        try {
+            $this->leaseModel = $this->loadModel('Lease_model');
+        } catch (Exception $e) {
+            $this->leaseModel = null;
+        }
+        
+        try {
+            $this->workOrderModel = $this->loadModel('Work_order_model');
+        } catch (Exception $e) {
+            $this->workOrderModel = null;
+        }
+        
+        try {
+            $this->cashAccountModel = $this->loadModel('Cash_account_model');
+        } catch (Exception $e) {
+            $this->cashAccountModel = null;
+        }
+        
+        // Get KPIs (excluding tax-related)
+        $kpis = $this->getSystemKPIs();
+        
+        // Get revenue trends
+        $revenueTrend = $this->getRevenueTrend();
+        
+        // Get booking trends
+        $bookingTrend = $this->getBookingTrend();
+        
+        // Get expense breakdown
+        $expenseBreakdown = $this->getExpenseBreakdown();
+        
+        // Get occupancy data
+        $occupancyData = $this->getOccupancyData();
+        
+        // Get quick stats
+        $quickStats = $this->getQuickStats();
+        
+        // Recent bookings
+        $recentBookings = $this->getRecentBookings(5);
+        
+        // Get module activity (excluding tax)
+        $moduleActivity = $this->getModuleActivity(['tax']);
+        
         $data = [
             'page_title' => 'Manager Dashboard',
             'user_role' => 'manager',
+            'kpis' => $kpis,
+            'revenue_trend' => $revenueTrend,
+            'booking_trend' => $bookingTrend,
+            'expense_breakdown' => $expenseBreakdown,
+            'occupancy_data' => $occupancyData,
+            'quick_stats' => $quickStats,
+            'recent_bookings' => $recentBookings,
+            'module_activity' => $moduleActivity,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -613,6 +696,53 @@ class Dashboard extends Base_Controller {
             ) ?? [];
         } catch (Exception $e) {
             error_log('Dashboard getUpcomingTaxDeadlines error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    private function getModuleActivity($excludeModules = []) {
+        if (!$this->db) return [];
+        try {
+            $moduleActivity = [];
+            $modules = [
+                'accounting' => ['invoices', 'payments', 'bills'],
+                'bookings' => ['bookings'],
+                'properties' => ['leases', 'spaces'],
+                'utilities' => ['utility_bills'],
+                'inventory' => ['items', 'stock_levels'],
+                'pos' => ['pos_transactions']
+            ];
+            
+            foreach ($modules as $module => $tables) {
+                if (in_array($module, $excludeModules)) {
+                    continue;
+                }
+                
+                $count = 0;
+                foreach ($tables as $table) {
+                    try {
+                        $result = $this->db->fetchOne(
+                            "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . $table . "` 
+                             WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)"
+                        );
+                        $count += intval($result['count'] ?? 0);
+                    } catch (Exception $e) {
+                        // Table might not exist, skip
+                        continue;
+                    }
+                }
+                
+                if ($count > 0) {
+                    $moduleActivity[] = [
+                        'module' => ucfirst($module),
+                        'count' => $count
+                    ];
+                }
+            }
+            
+            return $moduleActivity;
+        } catch (Exception $e) {
+            error_log('Dashboard getModuleActivity error: ' . $e->getMessage());
             return [];
         }
     }

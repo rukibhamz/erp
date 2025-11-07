@@ -54,12 +54,14 @@
                         </a>
                     </li>
                     <?php endif; ?>
+                    <?php if (!isset($current_user['role']) || $current_user['role'] !== 'manager'): ?>
                     <li class="nav-item">
                         <a href="<?= base_url('users') ?>" class="nav-link <?= strpos($current_url, 'users') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-people"></i>
                             <span class="nav-text">Users</span>
                         </a>
                     </li>
+                    <?php endif; ?>
                     <?php if (isset($current_user['role']) && $current_user['role'] === 'super_admin'): ?>
                     <li class="nav-item">
                         <a href="<?= base_url('activity') ?>" class="nav-link <?= strpos($current_url, 'activity') === 0 ? 'active' : '' ?>">
@@ -113,12 +115,14 @@
                         </a>
                     </li>
                     <?php endif; ?>
+                    <?php if (!isset($current_user['role']) || $current_user['role'] !== 'manager'): ?>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-gear"></i>
                             <span class="nav-text">Settings</span>
                         </a>
                     </li>
+                    <?php endif; ?>
                 </ul>
             </nav>
             
@@ -210,7 +214,9 @@
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="<?= base_url('profile') ?>"><i class="bi bi-person-circle me-2"></i> My Profile</a></li>
+                        <?php if (!isset($current_user['role']) || $current_user['role'] !== 'manager'): ?>
                         <li><a class="dropdown-item" href="<?= base_url('settings') ?>"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                        <?php endif; ?>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item text-danger" href="<?= base_url('logout') ?>"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
                     </ul>
@@ -310,7 +316,9 @@
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="<?= base_url('profile') ?>"><i class="bi bi-person-circle me-2"></i> My Profile</a></li>
+                        <?php if (!isset($current_user['role']) || $current_user['role'] !== 'manager'): ?>
                         <li><a class="dropdown-item" href="<?= base_url('settings') ?>"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                        <?php endif; ?>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item text-danger" href="<?= base_url('logout') ?>"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
                     </ul>

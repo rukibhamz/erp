@@ -74,6 +74,11 @@ class Users extends Base_Controller {
                     $allPermissions = $this->permissionModel->getAllPermissions();
                     $permissionIds = array_column($allPermissions, 'id');
                     $this->userPermissionModel->assignPermissions($userId, $permissionIds);
+                } elseif ($data['role'] === 'manager') {
+                    // For manager role, assign create, read, update for all modules except tax
+                    $managerPermissions = $this->getManagerPermissions();
+                    $permissionIds = array_column($managerPermissions, 'id');
+                    $this->userPermissionModel->assignPermissions($userId, $permissionIds);
                 }
                 
                 // Log activity
@@ -135,6 +140,11 @@ class Users extends Base_Controller {
                     // If role is changed to admin, assign all permissions
                     $allPermissions = $this->permissionModel->getAllPermissions();
                     $permissionIds = array_column($allPermissions, 'id');
+                    $this->userPermissionModel->assignPermissions($id, $permissionIds);
+                } elseif ($data['role'] === 'manager') {
+                    // If role is changed to manager, assign create, read, update for all modules except tax
+                    $managerPermissions = $this->getManagerPermissions();
+                    $permissionIds = array_column($managerPermissions, 'id');
                     $this->userPermissionModel->assignPermissions($id, $permissionIds);
                 }
                 
@@ -202,6 +212,34 @@ class Users extends Base_Controller {
      * Fix admin permissions - assign all permissions to all admin users
      * This is a utility method to fix existing admin users
      */
+    /**
+     * Get manager permissions - create, read, update for all modules except tax
+     */
+    private function getManagerPermissions() {
+        $allPermissions = $this->permissionModel->getAllPermissions();
+        $managerPermissions = [];
+        
+        // Modules to exclude from manager access
+        $excludedModules = ['tax', 'users', 'settings', 'companies', 'modules'];
+        
+        // Allowed actions for managers
+        $allowedActions = ['create', 'read', 'update'];
+        
+        foreach ($allPermissions as $permission) {
+            // Skip excluded modules
+            if (in_array($permission['module'], $excludedModules)) {
+                continue;
+            }
+            
+            // Only include create, read, update actions (exclude delete)
+            if (in_array($permission['permission'], $allowedActions)) {
+                $managerPermissions[] = $permission;
+            }
+        }
+        
+        return $managerPermissions;
+    }
+    
     public function fixAdminPermissions() {
         // Only super admin can run this
         if ($this->session['role'] !== 'super_admin') {
