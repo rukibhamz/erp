@@ -56,6 +56,25 @@ class User_permission_model extends Base_Model {
             // Check role-based permissions (role_permissions table via roles table)
             $hasRolePermission = false;
             if ($userRole) {
+                // First, check if role_permissions table exists
+                try {
+                    $tableExists = $this->db->fetchOne(
+                        "SELECT COUNT(*) as count FROM information_schema.tables 
+                         WHERE table_schema = DATABASE() 
+                         AND table_name = ?",
+                        ["{$prefix}role_permissions"]
+                    );
+                    
+                    if (($tableExists['count'] ?? 0) == 0) {
+                        error_log("CRITICAL: erp_role_permissions table does not exist! Permission system is broken.");
+                        error_log("Please run database/migrations/create_role_permissions_system.sql to fix this.");
+                        // Fall back to user-specific permissions only
+                        return $hasUserPermission;
+                    }
+                } catch (Exception $tableCheckException) {
+                    error_log("Warning: Could not check if role_permissions table exists: " . $tableCheckException->getMessage());
+                }
+                
                 // Map permission action names (read/write/delete vs create/read/update/delete)
                 $permissionAction = $permission;
                 if ($permission === 'create') {
@@ -65,18 +84,32 @@ class User_permission_model extends Base_Model {
                 }
                 
                 // Check role_permissions via roles table (using role_code)
-                $rolePermSql = "SELECT COUNT(*) as count 
-                               FROM `{$prefix}role_permissions` rp
-                               INNER JOIN `{$prefix}roles` r ON rp.role_id = r.id
-                               INNER JOIN `{$prefix}permissions` p ON rp.permission_id = p.id
-                               WHERE r.role_code = ? AND p.module = ? AND p.permission = ?";
-                $rolePermResult = $this->db->fetchOne($rolePermSql, [$userRole, $module, $permission]);
-                $hasRolePermission = ($rolePermResult['count'] ?? 0) > 0;
-                
-                // Also check with mapped permission action if different
-                if (!$hasRolePermission && $permissionAction !== $permission) {
-                    $rolePermResult = $this->db->fetchOne($rolePermSql, [$userRole, $module, $permissionAction]);
+                try {
+                    $rolePermSql = "SELECT COUNT(*) as count 
+                                   FROM `{$prefix}role_permissions` rp
+                                   INNER JOIN `{$prefix}roles` r ON rp.role_id = r.id
+                                   INNER JOIN `{$prefix}permissions` p ON rp.permission_id = p.id
+                                   WHERE r.role_code = ? AND p.module = ? AND p.permission = ?";
+                    $rolePermResult = $this->db->fetchOne($rolePermSql, [$userRole, $module, $permission]);
                     $hasRolePermission = ($rolePermResult['count'] ?? 0) > 0;
+                    
+                    // Also check with mapped permission action if different
+                    if (!$hasRolePermission && $permissionAction !== $permission) {
+                        $rolePermResult = $this->db->fetchOne($rolePermSql, [$userRole, $module, $permissionAction]);
+                        $hasRolePermission = ($rolePermResult['count'] ?? 0) > 0;
+                    }
+                } catch (Exception $rolePermException) {
+                    // Table might not exist or query failed
+                    $errorMsg = $rolePermException->getMessage();
+                    if (strpos($errorMsg, "doesn't exist") !== false || strpos($errorMsg, "Base table") !== false) {
+                        error_log("CRITICAL: erp_role_permissions table does not exist!");
+                        error_log("Error: " . $errorMsg);
+                        error_log("Please run database/migrations/create_role_permissions_system.sql to fix this.");
+                    } else {
+                        error_log("Error checking role permissions: " . $errorMsg);
+                    }
+                    // Fall back to user-specific permissions only
+                    $hasRolePermission = false;
                 }
             }
             
@@ -89,18 +122,22 @@ class User_permission_model extends Base_Model {
                 error_log("  - Role-based permission: " . ($hasRolePermission ? 'YES' : 'NO'));
                 error_log("  - Permission ID: {$permissionId}");
                 
-                // Log all permissions for this role for debugging
+                // Log all permissions for this role for debugging (only if table exists)
                 if ($userRole) {
-                    $allRolePerms = $this->db->fetchAll(
-                        "SELECT p.module, p.permission 
-                         FROM `{$prefix}role_permissions` rp
-                         INNER JOIN `{$prefix}roles` r ON rp.role_id = r.id
-                         INNER JOIN `{$prefix}permissions` p ON rp.permission_id = p.id
-                         WHERE r.role_code = ?
-                         ORDER BY p.module, p.permission",
-                        [$userRole]
-                    );
-                    error_log("  - All permissions for role '{$userRole}': " . json_encode($allRolePerms));
+                    try {
+                        $allRolePerms = $this->db->fetchAll(
+                            "SELECT p.module, p.permission 
+                             FROM `{$prefix}role_permissions` rp
+                             INNER JOIN `{$prefix}roles` r ON rp.role_id = r.id
+                             INNER JOIN `{$prefix}permissions` p ON rp.permission_id = p.id
+                             WHERE r.role_code = ?
+                             ORDER BY p.module, p.permission",
+                            [$userRole]
+                        );
+                        error_log("  - All permissions for role '{$userRole}': " . json_encode($allRolePerms));
+                    } catch (Exception $e) {
+                        error_log("  - Could not fetch role permissions (table may not exist): " . $e->getMessage());
+                    }
                 }
             } else {
                 // Log successful permission check for debugging
@@ -109,7 +146,15 @@ class User_permission_model extends Base_Model {
             
             return $hasPermission;
         } catch (Exception $e) {
-            error_log("Error checking permission: " . $e->getMessage());
+            $errorMsg = $e->getMessage();
+            error_log("Error checking permission: " . $errorMsg);
+            
+            // Check if it's a missing table error
+            if (strpos($errorMsg, "doesn't exist") !== false || strpos($errorMsg, "Base table") !== false) {
+                error_log("CRITICAL: Required permission table is missing!");
+                error_log("Please run database/migrations/create_role_permissions_system.sql to fix this.");
+            }
+            
             error_log("Stack trace: " . $e->getTraceAsString());
             return false;
         }
