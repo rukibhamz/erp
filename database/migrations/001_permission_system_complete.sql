@@ -177,6 +177,7 @@ AND NOT EXISTS (
 
 -- ============================================================================
 -- STEP 8: Assign ALL business module permissions to manager role
+-- (Note: Accounting sub-modules and POS are added in migration 002)
 -- ============================================================================
 INSERT INTO `erp_role_permissions` (`role_id`, `permission_id`, `created_at`)
 SELECT r.id, p.id, NOW()

@@ -47,7 +47,7 @@ The permission system uses **two types of permissions**:
 
 ## Quick Start
 
-### Step 1: Run Migration
+### Step 1: Run Base Migration
 
 **Option A: SQL Script (Recommended)**
 ```bash
@@ -59,7 +59,19 @@ mysql -u username -p database_name < database/migrations/001_permission_system_c
 php database/migrations/001_permission_system_complete.php
 ```
 
-### Step 2: Test the System
+### Step 2: Fix Manager Permissions (Accounting Sub-modules, Remove Tax, Add POS)
+
+**Option A: SQL Script**
+```bash
+mysql -u username -p database_name < database/migrations/002_fix_manager_permissions.sql
+```
+
+**Option B: PHP Script**
+```bash
+php database/migrations/002_fix_manager_permissions.php
+```
+
+### Step 3: Test the System
 ```bash
 php test_permission_system.php
 ```
@@ -217,19 +229,25 @@ WHERE u.id = 4;
 
 ## Role & Permission Matrix
 
-| Role | Accounting | Bookings | Properties | Inventory | Utilities | Settings | Dashboard | Notifications | Users | Companies | Reports | Modules |
-|------|-----------|----------|------------|-----------|------------|----------|-----------|---------------|-------|-----------|---------|---------|
-| **super_admin** | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All |
-| **admin** | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All |
-| **manager** | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ Read | ✅ All | ❌ | ❌ | ❌ | ❌ |
-| **staff** | ❌ | ✅ Read | ✅ Read | ❌ | ❌ | ❌ | ✅ Read | ✅ Read | ❌ | ❌ | ❌ | ❌ |
-| **user** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **accountant** | ✅ All | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Role | Accounting | Bookings | Properties | Inventory | Utilities | Settings | Dashboard | Notifications | Users | Companies | Reports | Modules | POS | Tax |
+|------|-----------|----------|------------|-----------|------------|----------|-----------|---------------|-------|-----------|---------|---------|-----|-----|
+| **super_admin** | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All |
+| **admin** | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All |
+| **manager** | ✅ All* | ✅ All | ✅ All | ✅ All | ✅ All | ✅ All | ✅ Read | ✅ All | ❌ | ❌ | ❌ | ❌ | ✅ All | ❌ |
+| **staff** | ❌ | ✅ Read | ✅ Read | ❌ | ❌ | ❌ | ✅ Read | ✅ Read | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **user** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **accountant** | ✅ All | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 **Legend:**
 - ✅ All = read, write, delete, create, update
+- ✅ All* = All permissions + Accounting sub-modules (accounts, cash, receivables, payables, ledger, estimates)
 - ✅ Read = read only
 - ❌ = No access
+
+**Note:** Manager role has:
+- ✅ All Accounting sub-modules: accounts, cash, receivables, payables, ledger, estimates
+- ✅ POS module access
+- ❌ Tax module access (removed)
 
 ---
 

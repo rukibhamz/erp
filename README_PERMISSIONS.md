@@ -4,7 +4,7 @@
 
 ## 🚀 Quick Start
 
-### 1. Run Migration
+### 1. Run Base Migration
 ```bash
 # SQL (Recommended)
 mysql -u username -p database_name < database/migrations/001_permission_system_complete.sql
@@ -13,15 +13,26 @@ mysql -u username -p database_name < database/migrations/001_permission_system_c
 php database/migrations/001_permission_system_complete.php
 ```
 
-### 2. Test All Roles
+### 2. Fix Manager Permissions (Accounting Sub-modules, Remove Tax, Add POS)
+```bash
+# SQL (Recommended)
+mysql -u username -p database_name < database/migrations/002_fix_manager_permissions.sql
+
+# OR PHP
+php database/migrations/002_fix_manager_permissions.php
+```
+
+### 3. Test All Roles
 ```bash
 php test_permission_system.php
 ```
 
 ## 📁 Files
 
-- **`database/migrations/001_permission_system_complete.sql`** - Complete SQL migration
-- **`database/migrations/001_permission_system_complete.php`** - Complete PHP migration  
+- **`database/migrations/001_permission_system_complete.sql`** - Base SQL migration
+- **`database/migrations/001_permission_system_complete.php`** - Base PHP migration
+- **`database/migrations/002_fix_manager_permissions.sql`** - Manager permissions fix (SQL)
+- **`database/migrations/002_fix_manager_permissions.php`** - Manager permissions fix (PHP)
 - **`test_permission_system.php`** - Comprehensive test script
 - **`PERMISSION_SYSTEM_COMPLETE_GUIDE.md`** - Complete documentation
 
@@ -39,10 +50,15 @@ php test_permission_system.php
 |------|------------|
 | **super_admin** | All permissions (50+) |
 | **admin** | All permissions (50+) |
-| **manager** | Business modules (40+) |
+| **manager** | Business modules + Accounting sub-modules + POS (70+) |
 | **staff** | Read-only (4) |
 | **user** | None |
 | **accountant** | Accounting only (5) |
+
+**Manager includes:**
+- ✅ All Accounting sub-modules: accounts, cash, receivables, payables, ledger, estimates
+- ✅ POS module
+- ❌ Tax module (removed)
 
 ## 📖 Full Documentation
 
