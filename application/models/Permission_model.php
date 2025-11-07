@@ -26,5 +26,10 @@ class Permission_model extends Base_Model {
         $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE module = ? ORDER BY permission";
         return $this->db->fetchAll($sql, [$module]);
     }
+    
+    public function getAll() {
+        $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` ORDER BY module, permission";
+        return $this->db->fetchAll($sql);
+    }
 }
 

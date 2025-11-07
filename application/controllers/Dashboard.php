@@ -34,8 +34,10 @@ class Dashboard extends Base_Controller {
         // Load role-specific dashboard
         switch ($userRole) {
             case 'super_admin':
-            case 'admin':
                 $this->superAdminDashboard();
+                break;
+            case 'admin':
+                $this->adminDashboard();
                 break;
             case 'manager':
                 $this->managerDashboard();
@@ -156,6 +158,110 @@ class Dashboard extends Base_Controller {
         ];
         
         $this->loadView('dashboard/super_admin', $data);
+    }
+    
+    private function adminDashboard() {
+        // Admin dashboard - similar to super admin but without companies and activity log
+        // Initialize models with error handling
+        try {
+            $this->invoiceModel = $this->loadModel('Invoice_model');
+        } catch (Exception $e) {
+            $this->invoiceModel = null;
+            error_log('Dashboard Invoice_model load error: ' . $e->getMessage());
+        }
+        
+        try {
+            $this->bookingModel = $this->loadModel('Booking_model');
+        } catch (Exception $e) {
+            $this->bookingModel = null;
+            error_log('Dashboard Booking_model load error: ' . $e->getMessage());
+        }
+        
+        try {
+            $this->propertyModel = $this->loadModel('Property_model');
+        } catch (Exception $e) {
+            $this->propertyModel = null;
+        }
+        
+        try {
+            $this->transactionModel = $this->loadModel('Transaction_model');
+        } catch (Exception $e) {
+            $this->transactionModel = null;
+        }
+        
+        try {
+            $this->stockModel = $this->loadModel('Stock_level_model');
+        } catch (Exception $e) {
+            $this->stockModel = null;
+        }
+        
+        try {
+            $this->taxModel = $this->loadModel('Tax_type_model');
+        } catch (Exception $e) {
+            $this->taxModel = null;
+        }
+        
+        try {
+            $this->leaseModel = $this->loadModel('Lease_model');
+        } catch (Exception $e) {
+            $this->leaseModel = null;
+        }
+        
+        try {
+            $this->workOrderModel = $this->loadModel('Work_order_model');
+        } catch (Exception $e) {
+            $this->workOrderModel = null;
+        }
+        
+        try {
+            $this->cashAccountModel = $this->loadModel('Cash_account_model');
+        } catch (Exception $e) {
+            $this->cashAccountModel = null;
+        }
+        
+        // Get KPIs
+        $kpis = $this->getSystemKPIs();
+        
+        // Get revenue trends
+        $revenueTrend = $this->getRevenueTrend();
+        
+        // Get booking trends
+        $bookingTrend = $this->getBookingTrend();
+        
+        // Get expense breakdown
+        $expenseBreakdown = $this->getExpenseBreakdown();
+        
+        // Get occupancy data
+        $occupancyData = $this->getOccupancyData();
+        
+        // Get tax liability
+        $taxLiability = $this->getTaxLiability();
+        
+        // Get quick stats
+        $quickStats = $this->getQuickStats();
+        
+        // Recent bookings, payments
+        $recentBookings = $this->getRecentBookings(5);
+        $recentPayments = $this->getRecentPayments(5);
+        $systemAlerts = $this->getSystemAlerts();
+        
+        $data = [
+            'page_title' => 'Dashboard',
+            'user_role' => 'admin',
+            'kpis' => $kpis,
+            'revenue_trend' => $revenueTrend,
+            'booking_trend' => $bookingTrend,
+            'expense_breakdown' => $expenseBreakdown,
+            'occupancy_data' => $occupancyData,
+            'tax_liability' => $taxLiability,
+            'quick_stats' => $quickStats,
+            'recent_bookings' => $recentBookings,
+            'recent_payments' => $recentPayments,
+            'system_alerts' => $systemAlerts,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('dashboard/admin', $data);
     }
     
     private function managerDashboard() {

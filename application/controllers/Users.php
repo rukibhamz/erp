@@ -64,9 +64,15 @@ class Users extends Base_Controller {
             try {
                 $userId = $this->userModel->create($data);
                 
-                // Assign permissions if provided
+                // Assign permissions
                 if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
+                    // If permissions are explicitly provided, use them
                     $permissionIds = array_map('intval', $_POST['permissions']);
+                    $this->userPermissionModel->assignPermissions($userId, $permissionIds);
+                } elseif ($data['role'] === 'admin') {
+                    // For admin role, assign all permissions by default
+                    $allPermissions = $this->permissionModel->getAll();
+                    $permissionIds = array_column($allPermissions, 'id');
                     $this->userPermissionModel->assignPermissions($userId, $permissionIds);
                 }
                 
