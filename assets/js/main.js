@@ -100,3 +100,56 @@ const ERP = {
     }
 };
 
+// Theme Switcher Functionality
+(function() {
+    // Get current theme from localStorage or default to light
+    function getTheme() {
+        return localStorage.getItem('theme') || 'light';
+    }
+    
+    // Set theme
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        updateThemeIcons(theme);
+    }
+    
+    // Update theme icons
+    function updateThemeIcons(theme) {
+        const themeIcon = document.getElementById('themeIcon');
+        const themeIconMobile = document.getElementById('themeIconMobile');
+        
+        if (themeIcon) {
+            themeIcon.className = theme === 'dark' ? 'bi bi-moon' : 'bi bi-sun';
+        }
+        if (themeIconMobile) {
+            themeIconMobile.className = theme === 'dark' ? 'bi bi-moon' : 'bi bi-sun';
+        }
+    }
+    
+    // Toggle theme
+    function toggleTheme() {
+        const currentTheme = getTheme();
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+    }
+    
+    // Initialize theme on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const theme = getTheme();
+        setTheme(theme);
+        
+        // Add event listeners to theme toggle buttons
+        const themeToggle = document.getElementById('themeToggle');
+        const themeToggleMobile = document.getElementById('themeToggleMobile');
+        
+        if (themeToggle) {
+            themeToggle.addEventListener('click', toggleTheme);
+        }
+        
+        if (themeToggleMobile) {
+            themeToggleMobile.addEventListener('click', toggleTheme);
+        }
+    });
+})();
+

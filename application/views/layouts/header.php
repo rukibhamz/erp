@@ -11,6 +11,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= base_url('assets/css/main.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/search.css') ?>" rel="stylesheet">
+    <script>
+        // Initialize theme before page loads to prevent flash
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 <body>
     <?php if (isset($current_user)): ?>
@@ -125,6 +132,10 @@
                 Business ERP
             </a>
             <div class="topbar-right">
+                <!-- Theme Switcher -->
+                <button class="topbar-icon-btn" type="button" id="themeToggleMobile" title="Toggle theme">
+                    <i class="bi bi-sun" id="themeIconMobile"></i>
+                </button>
                 <!-- Notifications -->
                 <div class="nav-item-dropdown">
                     <button class="topbar-icon-btn" type="button" data-bs-toggle="dropdown" id="notificationsDropdown">
@@ -217,6 +228,12 @@
                 <div id="searchResults" class="search-results-dropdown" style="display: none;"></div>
             </div>
             <div class="navbar-right">
+                <!-- Theme Switcher -->
+                <div class="nav-item-dropdown">
+                    <button class="nav-icon-btn" type="button" id="themeToggle" title="Toggle theme">
+                        <i class="bi bi-sun" id="themeIcon"></i>
+                    </button>
+                </div>
                 <!-- Notifications -->
                 <div class="nav-item-dropdown">
                     <button class="nav-icon-btn" type="button" data-bs-toggle="dropdown" id="notificationsDropdownDesktop">

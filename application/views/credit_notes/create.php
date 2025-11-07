@@ -1,4 +1,6 @@
-<?php $this->load->view('layouts/header', $data); ?>
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+?>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -198,5 +200,4 @@ function calculateTotals() {
 }
 </script>
 
-<?php $this->load->view('layouts/footer'); ?>
 
