@@ -12,10 +12,24 @@
     <link href="<?= base_url('assets/css/main.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/search.css') ?>" rel="stylesheet">
     <script>
-        // Initialize theme before page loads to prevent flash
+        // Initialize dark mode before page loads to prevent flash
         (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
+            const darkMode = localStorage.getItem('darkMode') || localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            let shouldEnableDark = false;
+            if (darkMode === 'dark') {
+                shouldEnableDark = true;
+            } else if (!darkMode && prefersDark) {
+                shouldEnableDark = true;
+            }
+            
+            if (shouldEnableDark) {
+                document.documentElement.classList.add('dark-mode');
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
         })();
     </script>
 </head>
@@ -140,9 +154,10 @@
                 Business ERP
             </a>
             <div class="topbar-right">
-                <!-- Theme Switcher -->
-                <button class="topbar-icon-btn" type="button" id="themeToggleMobile" title="Toggle theme">
-                    <i class="bi bi-sun" id="themeIconMobile"></i>
+                <!-- Dark Mode Toggle -->
+                <button class="topbar-icon-btn dark-mode-toggle-icon" type="button" data-dark-mode-toggle id="themeToggleMobile" title="Toggle dark mode" aria-label="Toggle dark mode">
+                    <i class="bi bi-sun-fill dark-mode-off" id="themeIconMobile"></i>
+                    <i class="bi bi-moon-fill dark-mode-on" style="display: none;"></i>
                 </button>
                 <!-- Notifications -->
                 <div class="nav-item-dropdown">
@@ -238,10 +253,11 @@
                 <div id="searchResults" class="search-results-dropdown" style="display: none;"></div>
             </div>
             <div class="navbar-right">
-                <!-- Theme Switcher -->
+                <!-- Dark Mode Toggle -->
                 <div class="nav-item-dropdown">
-                    <button class="nav-icon-btn" type="button" id="themeToggle" title="Toggle theme">
-                        <i class="bi bi-sun" id="themeIcon"></i>
+                    <button class="nav-icon-btn dark-mode-toggle-icon" type="button" data-dark-mode-toggle id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+                        <i class="bi bi-sun-fill dark-mode-off" id="themeIcon"></i>
+                        <i class="bi bi-moon-fill dark-mode-on" style="display: none;"></i>
                     </button>
                 </div>
                 <!-- Notifications -->
