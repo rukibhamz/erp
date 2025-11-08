@@ -24,24 +24,24 @@ include 'application/views/layouts/header.php';
             <div id="module-list" class="module-list">
                 <?php foreach ($modules as $module): ?>
                 <div class="module-item" 
-                     data-module-code="<?= htmlspecialchars($module['module_code']) ?>"
-                     data-order="<?= htmlspecialchars($module['display_order']) ?>">
+                     data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
+                     data-order="<?= htmlspecialchars($module['display_order'] ?? '0') ?>">
                     <div class="module-item-drag">
                         <i class="bi bi-grip-vertical"></i>
                     </div>
                     <div class="module-item-icon">
                         <i class="<?= htmlspecialchars($module['icon_class'] ?? 'bi bi-circle') ?>" 
-                           id="icon-<?= htmlspecialchars($module['module_code']) ?>"></i>
+                           id="icon-<?= htmlspecialchars($module['module_code'] ?? '') ?>"></i>
                     </div>
                     <div class="module-item-content">
                         <div class="module-item-label">
-                            <strong><?= htmlspecialchars($module['display_label']) ?></strong>
-                            <span class="text-muted">(<?= htmlspecialchars($module['module_code']) ?>)</span>
+                            <strong><?= htmlspecialchars($module['display_label'] ?? $module['default_label'] ?? $module['module_code'] ?? '') ?></strong>
+                            <span class="text-muted">(<?= htmlspecialchars($module['module_code'] ?? '') ?>)</span>
                         </div>
-                        <?php if (!empty($module['custom_label']) && $module['custom_label'] !== $module['default_label']): ?>
+                        <?php if (!empty($module['custom_label']) && $module['custom_label'] !== ($module['default_label'] ?? '')): ?>
                         <div class="module-item-meta">
                             <span class="badge badge-info">Customized</span>
-                            <span class="text-muted">Default: <?= htmlspecialchars($module['default_label']) ?></span>
+                            <span class="text-muted">Default: <?= htmlspecialchars($module['default_label'] ?? '') ?></span>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -50,14 +50,14 @@ include 'application/views/layouts/header.php';
                         <label class="toggle-switch" title="Toggle Visibility">
                             <input type="checkbox" 
                                    class="visibility-toggle"
-                                   data-module-code="<?= htmlspecialchars($module['module_code']) ?>"
-                                   <?= $module['is_active'] ? 'checked' : '' ?>>
+                                   data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
+                                   <?= ($module['is_active'] ?? 1) ? 'checked' : '' ?>>
                             <span class="toggle-slider"></span>
                         </label>
                         <!-- Edit Button -->
                         <button class="btn btn-sm btn-ghost edit-module"
-                                data-module-code="<?= htmlspecialchars($module['module_code']) ?>"
-                                data-default-label="<?= htmlspecialchars($module['default_label']) ?>"
+                                data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
+                                data-default-label="<?= htmlspecialchars($module['default_label'] ?? '') ?>"
                                 data-custom-label="<?= htmlspecialchars($module['custom_label'] ?? '') ?>"
                                 data-icon-class="<?= htmlspecialchars($module['icon_class'] ?? '') ?>">
                             <i class="bi bi-pencil"></i>
@@ -65,7 +65,7 @@ include 'application/views/layouts/header.php';
                         <!-- Reset Button -->
                         <?php if (!empty($module['custom_label'])): ?>
                         <button class="btn btn-sm btn-ghost reset-module"
-                                data-module-code="<?= htmlspecialchars($module['module_code']) ?>"
+                                data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
                                 title="Reset to default">
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </button>
@@ -98,11 +98,11 @@ include 'application/views/layouts/header.php';
                     <tbody>
                         <?php foreach ($history as $change): ?>
                         <tr>
-                            <td><code><?= htmlspecialchars($change['module_code']) ?></code></td>
-                            <td><?= htmlspecialchars($change['default_label']) ?></td>
-                            <td><strong><?= htmlspecialchars($change['custom_label']) ?></strong></td>
+                            <td><code><?= htmlspecialchars($change['module_code'] ?? '') ?></code></td>
+                            <td><?= htmlspecialchars($change['default_label'] ?? '') ?></td>
+                            <td><strong><?= htmlspecialchars($change['custom_label'] ?? '') ?></strong></td>
                             <td><?= htmlspecialchars($change['updated_by_name'] ?? 'Unknown') ?></td>
-                            <td><?= date('M d, Y H:i', strtotime($change['updated_at'])) ?></td>
+                            <td><?= !empty($change['updated_at']) ? date('M d, Y H:i', strtotime($change['updated_at'])) : '' ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

@@ -22,9 +22,31 @@ class Module_customization extends Base_Controller {
      * Display module customization page
      */
     public function index() {
+        // Get all labels (keyed by module_code)
+        $labels = $this->moduleLabelModel->getAllLabels(false); // Get all, including inactive
+        
+        // Convert to indexed array for the view
+        $modules = [];
+        foreach ($labels as $moduleCode => $label) {
+            $modules[] = [
+                'module_code' => $moduleCode,
+                'default_label' => $label['default_label'] ?? ucfirst($moduleCode),
+                'custom_label' => $label['custom_label'] ?? null,
+                'display_label' => $label['display_label'] ?? $label['default_label'] ?? ucfirst($moduleCode),
+                'icon_class' => $label['icon_class'] ?? 'bi bi-circle',
+                'display_order' => $label['display_order'] ?? 999,
+                'is_active' => $label['is_active'] ?? 1
+            ];
+        }
+        
+        // Sort by display_order
+        usort($modules, function($a, $b) {
+            return ($a['display_order'] ?? 999) <=> ($b['display_order'] ?? 999);
+        });
+        
         $data = [
             'title' => 'Module Customization',
-            'modules' => $this->moduleLabelModel->getAllLabels(false), // Get all, including inactive
+            'modules' => $modules,
             'history' => $this->moduleLabelModel->getChangeHistory(20)
         ];
         $this->loadView('module_customization/index', $data);
