@@ -175,6 +175,43 @@ function runCompletePermissionMigration() {
             // Modules
             ['modules', 'read', 'View modules'],
             ['modules', 'write', 'Create/edit modules'],
+            // Accounting Sub-modules
+            ['accounts', 'read', 'View chart of accounts'],
+            ['accounts', 'write', 'Create/edit accounts'],
+            ['accounts', 'delete', 'Delete accounts'],
+            ['accounts', 'create', 'Create accounts'],
+            ['accounts', 'update', 'Update accounts'],
+            ['cash', 'read', 'View cash management'],
+            ['cash', 'write', 'Create/edit cash transactions'],
+            ['cash', 'delete', 'Delete cash transactions'],
+            ['cash', 'create', 'Create cash transactions'],
+            ['cash', 'update', 'Update cash transactions'],
+            ['receivables', 'read', 'View receivables'],
+            ['receivables', 'write', 'Create/edit receivables'],
+            ['receivables', 'delete', 'Delete receivables'],
+            ['receivables', 'create', 'Create receivables'],
+            ['receivables', 'update', 'Update receivables'],
+            ['payables', 'read', 'View payables'],
+            ['payables', 'write', 'Create/edit payables'],
+            ['payables', 'delete', 'Delete payables'],
+            ['payables', 'create', 'Create payables'],
+            ['payables', 'update', 'Update payables'],
+            ['ledger', 'read', 'View general ledger'],
+            ['ledger', 'write', 'Create/edit ledger entries'],
+            ['ledger', 'delete', 'Delete ledger entries'],
+            ['ledger', 'create', 'Create ledger entries'],
+            ['ledger', 'update', 'Update ledger entries'],
+            ['estimates', 'read', 'View estimates'],
+            ['estimates', 'write', 'Create/edit estimates'],
+            ['estimates', 'delete', 'Delete estimates'],
+            ['estimates', 'create', 'Create estimates'],
+            ['estimates', 'update', 'Update estimates'],
+            // POS Module
+            ['pos', 'read', 'View POS'],
+            ['pos', 'write', 'Create/edit POS transactions'],
+            ['pos', 'delete', 'Delete POS transactions'],
+            ['pos', 'create', 'Create POS transactions'],
+            ['pos', 'update', 'Update POS transactions'],
         ];
         
         $permissionsInserted = 0;
@@ -219,14 +256,27 @@ function runCompletePermissionMigration() {
         $adminPerms = $stmt->rowCount();
         echo "✓ Assigned {$adminPerms} permissions to admin role\n\n";
         
-        // Step 8: Assign business module permissions to manager
+        // Step 8: Assign business module permissions to manager (including accounting sub-modules and POS, excluding tax)
         echo "Step 8: Assigning business module permissions to manager role...\n";
+        // First, remove tax permissions from manager (if any exist)
+        $stmt = $pdo->prepare("DELETE rp FROM `{$prefix}role_permissions` rp
+            JOIN `{$prefix}roles` r ON rp.role_id = r.id
+            JOIN `{$prefix}permissions` p ON rp.permission_id = p.id
+            WHERE r.role_code = 'manager'
+            AND p.module = 'tax'");
+        $stmt->execute();
+        $deletedTax = $stmt->rowCount();
+        if ($deletedTax > 0) {
+            echo "✓ Removed {$deletedTax} tax permissions from manager role\n";
+        }
+        
+        // Assign all business module permissions (excluding tax)
         $stmt = $pdo->prepare("INSERT INTO `{$prefix}role_permissions` (role_id, permission_id, created_at)
             SELECT r.id, p.id, NOW()
             FROM `{$prefix}roles` r
             CROSS JOIN `{$prefix}permissions` p
             WHERE r.role_code = 'manager'
-            AND p.module IN ('accounting', 'bookings', 'properties', 'inventory', 'utilities', 'settings', 'dashboard', 'notifications')
+            AND p.module IN ('accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates', 'pos', 'bookings', 'properties', 'inventory', 'utilities', 'settings', 'dashboard', 'notifications')
             AND NOT EXISTS (
                 SELECT 1 FROM `{$prefix}role_permissions` rp
                 WHERE rp.role_id = r.id AND rp.permission_id = p.id
@@ -235,22 +285,58 @@ function runCompletePermissionMigration() {
         $managerPerms = $stmt->rowCount();
         echo "✓ Assigned {$managerPerms} permissions to manager role\n\n";
         
-        // Step 9: Assign read permissions to staff
-        echo "Step 9: Assigning read permissions to staff role...\n";
+        // Step 9: Assign permissions to staff (POS, Bookings, Inventory, Utilities with read, update, create)
+        echo "Step 9: Assigning permissions to staff role...\n";
+        // Remove any existing staff permissions first (clean slate)
+        $stmt = $pdo->prepare("DELETE rp FROM `{$prefix}role_permissions` rp
+            JOIN `{$prefix}roles` r ON rp.role_id = r.id
+            WHERE r.role_code = 'staff'");
+        $stmt->execute();
+        
+        // Grant read and update permissions for POS, Bookings, Inventory, Utilities, Dashboard, Notifications
+        $modules = ['pos', 'bookings', 'inventory', 'utilities', 'dashboard', 'notifications'];
+        $permissions = ['read', 'update'];
         $stmt = $pdo->prepare("INSERT INTO `{$prefix}role_permissions` (role_id, permission_id, created_at)
             SELECT r.id, p.id, NOW()
             FROM `{$prefix}roles` r
             CROSS JOIN `{$prefix}permissions` p
             WHERE r.role_code = 'staff'
-            AND p.permission = 'read'
-            AND p.module IN ('dashboard', 'notifications', 'bookings', 'properties')
+            AND p.module = ?
+            AND p.permission = ?
             AND NOT EXISTS (
                 SELECT 1 FROM `{$prefix}role_permissions` rp
                 WHERE rp.role_id = r.id AND rp.permission_id = p.id
             )");
-        $stmt->execute();
-        $staffPerms = $stmt->rowCount();
-        echo "✓ Assigned {$staffPerms} permissions to staff role\n\n";
+        
+        $added = 0;
+        foreach ($modules as $module) {
+            foreach ($permissions as $permission) {
+                $stmt->execute([$module, $permission]);
+                $added += $stmt->rowCount();
+            }
+        }
+        echo "✓ Added {$added} read/update permissions to staff role\n";
+        
+        // Grant create permissions for POS, Bookings, Inventory, Utilities
+        $createModules = ['pos', 'bookings', 'inventory', 'utilities'];
+        $stmt = $pdo->prepare("INSERT INTO `{$prefix}role_permissions` (role_id, permission_id, created_at)
+            SELECT r.id, p.id, NOW()
+            FROM `{$prefix}roles` r
+            CROSS JOIN `{$prefix}permissions` p
+            WHERE r.role_code = 'staff'
+            AND p.module = ?
+            AND p.permission = 'create'
+            AND NOT EXISTS (
+                SELECT 1 FROM `{$prefix}role_permissions` rp
+                WHERE rp.role_id = r.id AND rp.permission_id = p.id
+            )");
+        
+        $createAdded = 0;
+        foreach ($createModules as $module) {
+            $stmt->execute([$module]);
+            $createAdded += $stmt->rowCount();
+        }
+        echo "✓ Added {$createAdded} create permissions to staff role\n\n";
         
         // Step 10: Assign accounting permissions to accountant
         echo "Step 10: Assigning accounting permissions to accountant role...\n";

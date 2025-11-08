@@ -4,7 +4,7 @@
 
 ## 🚀 Quick Start
 
-### 1. Run Base Migration
+### Single Migration (All-in-One)
 ```bash
 # SQL (Recommended)
 mysql -u username -p database_name < database/migrations/001_permission_system_complete.sql
@@ -13,28 +13,29 @@ mysql -u username -p database_name < database/migrations/001_permission_system_c
 php database/migrations/001_permission_system_complete.php
 ```
 
-### 2. Fix Manager Permissions (Accounting Sub-modules, Remove Tax, Add POS)
-```bash
-# SQL (Recommended)
-mysql -u username -p database_name < database/migrations/002_fix_manager_permissions.sql
+**That's it!** This single migration includes:
+- ✅ All permission tables
+- ✅ All roles and permissions
+- ✅ Manager permissions (Accounting sub-modules, POS, no Tax)
+- ✅ Staff permissions (POS, Bookings, Inventory, Utilities)
 
-# OR PHP
-php database/migrations/002_fix_manager_permissions.php
-```
-
-### 3. Test All Roles
+### Test All Roles
 ```bash
 php test_permission_system.php
 ```
 
 ## 📁 Files
 
-- **`database/migrations/001_permission_system_complete.sql`** - Base SQL migration
-- **`database/migrations/001_permission_system_complete.php`** - Base PHP migration
-- **`database/migrations/002_fix_manager_permissions.sql`** - Manager permissions fix (SQL)
-- **`database/migrations/002_fix_manager_permissions.php`** - Manager permissions fix (PHP)
+- **`database/migrations/001_permission_system_complete.sql`** - **ALL-IN-ONE SQL migration** (includes everything)
+- **`database/migrations/001_permission_system_complete.php`** - **ALL-IN-ONE PHP migration** (includes everything)
+- **`database/migrations/002_fix_manager_permissions.sql`** - Legacy: Manager permissions fix (now merged into 001)
+- **`database/migrations/002_fix_manager_permissions.php`** - Legacy: Manager permissions fix (now merged into 001)
+- **`database/migrations/003_fix_staff_permissions.sql`** - Legacy: Staff permissions fix (now merged into 001)
+- **`database/migrations/003_fix_staff_permissions.php`** - Legacy: Staff permissions fix (now merged into 001)
 - **`test_permission_system.php`** - Comprehensive test script
 - **`PERMISSION_SYSTEM_COMPLETE_GUIDE.md`** - Complete documentation
+
+> **Note:** For new installations, you only need to run `001_permission_system_complete.sql` or `.php`. The other migration files are kept for reference or if you need to apply fixes separately.
 
 ## ✅ What It Does
 
@@ -51,7 +52,7 @@ php test_permission_system.php
 | **super_admin** | All permissions (50+) |
 | **admin** | All permissions (50+) |
 | **manager** | Business modules + Accounting sub-modules + POS (70+) |
-| **staff** | Read-only (4) |
+| **staff** | POS, Bookings, Inventory, Utilities (read, update, create) (20+) |
 | **user** | None |
 | **accountant** | Accounting only (5) |
 
@@ -59,6 +60,13 @@ php test_permission_system.php
 - ✅ All Accounting sub-modules: accounts, cash, receivables, payables, ledger, estimates
 - ✅ POS module
 - ❌ Tax module (removed)
+
+**Staff includes:**
+- ✅ POS module (read, update, create)
+- ✅ Bookings module (read, update, create)
+- ✅ Inventory module (read, update, create)
+- ✅ Utilities module (read, update, create)
+- ✅ Dashboard & Notifications (read)
 
 ## 📖 Full Documentation
 

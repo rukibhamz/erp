@@ -359,10 +359,116 @@ class Dashboard extends Base_Controller {
     }
     
     private function staffDashboard() {
+        // Load models for staff dashboard
+        try {
+            $this->bookingModel = $this->loadModel('Booking_model');
+        } catch (Exception $e) {
+            $this->bookingModel = null;
+        }
+        
+        try {
+            $this->stockModel = $this->loadModel('Stock_model');
+        } catch (Exception $e) {
+            $this->stockModel = null;
+        }
+        
+        // Get today's date
+        $today = date('Y-m-d');
+        $thisWeekStart = date('Y-m-d', strtotime('monday this week'));
+        $thisWeekEnd = date('Y-m-d', strtotime('sunday this week'));
+        
+        // Get today's bookings
+        $todayBookings = [];
+        if ($this->bookingModel) {
+            try {
+                $todayBookings = $this->bookingModel->getByDateRange($today, $today);
+            } catch (Exception $e) {
+                error_log('Staff dashboard getTodayBookings error: ' . $e->getMessage());
+            }
+        }
+        
+        // Get this week's bookings
+        $weekBookings = [];
+        if ($this->bookingModel) {
+            try {
+                $weekBookings = $this->bookingModel->getByDateRange($thisWeekStart, $thisWeekEnd);
+            } catch (Exception $e) {
+                error_log('Staff dashboard getWeekBookings error: ' . $e->getMessage());
+            }
+        }
+        
+        // Get recent bookings
+        $recentBookings = $this->getRecentBookings(5);
+        
+        // Get low stock items
+        $lowStockItems = [];
+        if ($this->stockModel && method_exists($this->stockModel, 'getLowStock')) {
+            try {
+                $lowStockItems = $this->stockModel->getLowStock(10);
+            } catch (Exception $e) {
+                error_log('Staff dashboard getLowStock error: ' . $e->getMessage());
+            }
+        } else if ($this->db) {
+            try {
+                $lowStockItems = $this->db->fetchAll(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "stock` 
+                     WHERE quantity <= reorder_level 
+                     AND status = 'active'
+                     ORDER BY quantity ASC 
+                     LIMIT 10"
+                ) ?? [];
+            } catch (Exception $e) {
+                error_log('Staff dashboard getLowStock error: ' . $e->getMessage());
+            }
+        }
+        
+        // Get recent POS transactions
+        $recentPOSTransactions = [];
+        if ($this->db) {
+            try {
+                $recentPOSTransactions = $this->db->fetchAll(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "pos_transactions` 
+                     ORDER BY created_at DESC 
+                     LIMIT 10"
+                ) ?? [];
+            } catch (Exception $e) {
+                // Table might not exist, that's okay
+            }
+        }
+        
+        // Calculate stats
+        $stats = [
+            'today_bookings' => count($todayBookings),
+            'week_bookings' => count($weekBookings),
+            'low_stock_count' => count($lowStockItems),
+            'pending_bookings' => 0
+        ];
+        
+        // Count pending bookings
+        if ($this->bookingModel) {
+            try {
+                $pendingResult = $this->db->fetchOne(
+                    "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "bookings` 
+                     WHERE status IN ('pending', 'confirmed') 
+                     AND booking_date >= ?",
+                    [$today]
+                );
+                $stats['pending_bookings'] = intval($pendingResult['count'] ?? 0);
+            } catch (Exception $e) {
+                error_log('Staff dashboard getPendingBookings error: ' . $e->getMessage());
+            }
+        }
+        
         // Staff task-oriented dashboard
         $data = [
             'page_title' => 'My Dashboard',
             'user_role' => 'staff',
+            'stats' => $stats,
+            'today_bookings' => $todayBookings,
+            'week_bookings' => $weekBookings,
+            'recent_bookings' => $recentBookings,
+            'low_stock_items' => $lowStockItems,
+            'recent_pos_transactions' => $recentPOSTransactions,
             'flash' => $this->getFlashMessage()
         ];
         

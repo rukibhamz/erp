@@ -1,8 +1,10 @@
 -- ============================================================================
--- COMPLETE PERMISSION SYSTEM MIGRATION
+-- COMPLETE PERMISSION SYSTEM MIGRATION (ALL-IN-ONE)
 -- ============================================================================
 -- This is the COMPLETE migration for the permission system
 -- Creates all tables, seeds all data, and assigns permissions to all roles
+-- Includes: Manager permissions (Accounting sub-modules, POS, no Tax)
+-- Includes: Staff permissions (POS, Bookings, Inventory, Utilities)
 -- IDEMPOTENT - Safe to run multiple times
 -- ============================================================================
 -- Usage: mysql -u username -p database_name < database/migrations/001_permission_system_complete.sql
@@ -147,7 +149,51 @@ INSERT IGNORE INTO `erp_permissions` (`module`, `permission`, `description`, `cr
 
 -- Modules module
 ('modules', 'read', 'View modules', NOW()),
-('modules', 'write', 'Create/edit modules', NOW());
+('modules', 'write', 'Create/edit modules', NOW()),
+
+-- Accounting Sub-modules
+('accounts', 'read', 'View chart of accounts', NOW()),
+('accounts', 'write', 'Create/edit accounts', NOW()),
+('accounts', 'delete', 'Delete accounts', NOW()),
+('accounts', 'create', 'Create accounts', NOW()),
+('accounts', 'update', 'Update accounts', NOW()),
+
+('cash', 'read', 'View cash management', NOW()),
+('cash', 'write', 'Create/edit cash transactions', NOW()),
+('cash', 'delete', 'Delete cash transactions', NOW()),
+('cash', 'create', 'Create cash transactions', NOW()),
+('cash', 'update', 'Update cash transactions', NOW()),
+
+('receivables', 'read', 'View receivables', NOW()),
+('receivables', 'write', 'Create/edit receivables', NOW()),
+('receivables', 'delete', 'Delete receivables', NOW()),
+('receivables', 'create', 'Create receivables', NOW()),
+('receivables', 'update', 'Update receivables', NOW()),
+
+('payables', 'read', 'View payables', NOW()),
+('payables', 'write', 'Create/edit payables', NOW()),
+('payables', 'delete', 'Delete payables', NOW()),
+('payables', 'create', 'Create payables', NOW()),
+('payables', 'update', 'Update payables', NOW()),
+
+('ledger', 'read', 'View general ledger', NOW()),
+('ledger', 'write', 'Create/edit ledger entries', NOW()),
+('ledger', 'delete', 'Delete ledger entries', NOW()),
+('ledger', 'create', 'Create ledger entries', NOW()),
+('ledger', 'update', 'Update ledger entries', NOW()),
+
+('estimates', 'read', 'View estimates', NOW()),
+('estimates', 'write', 'Create/edit estimates', NOW()),
+('estimates', 'delete', 'Delete estimates', NOW()),
+('estimates', 'create', 'Create estimates', NOW()),
+('estimates', 'update', 'Update estimates', NOW()),
+
+-- POS Module
+('pos', 'read', 'View POS', NOW()),
+('pos', 'write', 'Create/edit POS transactions', NOW()),
+('pos', 'delete', 'Delete POS transactions', NOW()),
+('pos', 'create', 'Create POS transactions', NOW()),
+('pos', 'update', 'Update POS transactions', NOW());
 
 -- ============================================================================
 -- STEP 6: Assign ALL permissions to super_admin role
@@ -177,29 +223,59 @@ AND NOT EXISTS (
 
 -- ============================================================================
 -- STEP 8: Assign ALL business module permissions to manager role
--- (Note: Accounting sub-modules and POS are added in migration 002)
+-- Includes: Accounting, Accounting sub-modules, POS, Bookings, Properties, Inventory, Utilities
+-- Excludes: Tax module
 -- ============================================================================
+-- First, remove tax permissions from manager (if any exist)
+DELETE rp FROM `erp_role_permissions` rp
+JOIN `erp_roles` r ON rp.role_id = r.id
+JOIN `erp_permissions` p ON rp.permission_id = p.id
+WHERE r.role_code = 'manager'
+AND p.module = 'tax';
+
+-- Assign all business module permissions (excluding tax)
 INSERT INTO `erp_role_permissions` (`role_id`, `permission_id`, `created_at`)
 SELECT r.id, p.id, NOW()
 FROM `erp_roles` r
 CROSS JOIN `erp_permissions` p
 WHERE r.role_code = 'manager'
-AND p.module IN ('accounting', 'bookings', 'properties', 'inventory', 'utilities', 'settings', 'dashboard', 'notifications')
+AND p.module IN ('accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates', 'pos', 'bookings', 'properties', 'inventory', 'utilities', 'settings', 'dashboard', 'notifications')
 AND NOT EXISTS (
     SELECT 1 FROM `erp_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
 );
 
 -- ============================================================================
--- STEP 9: Assign read permissions to staff role (basic access)
+-- STEP 9: Assign permissions to staff role
+-- Staff has read, update, and create permissions for: POS, Bookings, Inventory, Utilities
+-- Staff has read permission for: Dashboard, Notifications
 -- ============================================================================
+-- Remove any existing staff permissions first (clean slate)
+DELETE rp FROM `erp_role_permissions` rp
+JOIN `erp_roles` r ON rp.role_id = r.id
+WHERE r.role_code = 'staff';
+
+-- Grant read and update permissions for POS, Bookings, Inventory, Utilities, Dashboard, Notifications
 INSERT INTO `erp_role_permissions` (`role_id`, `permission_id`, `created_at`)
 SELECT r.id, p.id, NOW()
 FROM `erp_roles` r
 CROSS JOIN `erp_permissions` p
 WHERE r.role_code = 'staff'
-AND p.permission = 'read'
-AND p.module IN ('dashboard', 'notifications', 'bookings', 'properties')
+AND p.module IN ('pos', 'bookings', 'inventory', 'utilities', 'dashboard', 'notifications')
+AND p.permission IN ('read', 'update')
+AND NOT EXISTS (
+    SELECT 1 FROM `erp_role_permissions` rp
+    WHERE rp.role_id = r.id AND rp.permission_id = p.id
+);
+
+-- Grant create permissions for POS, Bookings, Inventory, Utilities
+INSERT INTO `erp_role_permissions` (`role_id`, `permission_id`, `created_at`)
+SELECT r.id, p.id, NOW()
+FROM `erp_roles` r
+CROSS JOIN `erp_permissions` p
+WHERE r.role_code = 'staff'
+AND p.module IN ('pos', 'bookings', 'inventory', 'utilities')
+AND p.permission = 'create'
 AND NOT EXISTS (
     SELECT 1 FROM `erp_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id
@@ -221,6 +297,14 @@ AND NOT EXISTS (
 
 -- ============================================================================
 -- VERIFICATION QUERIES (Run these to verify)
+-- ============================================================================
+-- This migration includes:
+-- ✅ All permission tables (erp_permissions, erp_roles, erp_role_permissions)
+-- ✅ All roles (super_admin, admin, manager, staff, user, accountant)
+-- ✅ All permissions for all modules including Accounting sub-modules and POS
+-- ✅ Manager: All business modules + Accounting sub-modules + POS (Tax excluded)
+-- ✅ Staff: POS, Bookings, Inventory, Utilities (read, update, create)
+-- ✅ Accountant: All accounting permissions
 -- ============================================================================
 
 -- Check all tables exist
