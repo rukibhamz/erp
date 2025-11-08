@@ -25,8 +25,20 @@
     --gray-800: #1f2937;
     --gray-900: #111827;
     
+    /* Background colors - switchable for dark mode */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+    
     /* Typography */
     --font-poppins: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    
+    /* Transitions for smooth theme switching */
+    --transition-theme: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 * {
@@ -34,13 +46,27 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Optimized transitions - only apply to elements that need theme switching */
+html, body,
+.sidebar, .top-navbar, .topbar, footer,
+.card, .card-header, .card-body,
+.stat-card,
+.form-control, .form-select, .search-input,
+.dropdown-menu, .dropdown-item,
+.nav-link, .nav-item,
+.btn, .badge,
+.table, .table thead th, .table tbody td {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
 body {
     font-family: var(--font-poppins);
-    color: var(--gray-800);
-    background: var(--gray-50);
+    color: var(--text-primary);
+    background: var(--bg-secondary);
     font-size: 15px;
     line-height: 1.6;
     font-weight: 400;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Typography */
@@ -67,12 +93,12 @@ h4 { font-size: 1.125rem; font-weight: 600; }
     top: 0;
     height: 100vh;
     width: 260px;
-    background: white;
-    border-right: 1px solid var(--gray-200);
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     z-index: 1000;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -213,12 +239,13 @@ h4 { font-size: 1.125rem; font-weight: 600; }
     left: 260px;
     right: 0;
     height: 70px;
-    background: white;
-    border-bottom: 1px solid var(--gray-200);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
     z-index: 999;
     display: flex;
     align-items: center;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .navbar-content {
@@ -261,7 +288,7 @@ h4 { font-size: 1.125rem; font-weight: 600; }
 .search-input:focus {
     outline: none;
     border-color: var(--primary);
-    background: white;
+    background: var(--bg-primary);
     box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -386,13 +413,14 @@ h4 { font-size: 1.125rem; font-weight: 600; }
     left: 0;
     right: 0;
     height: 64px;
-    background: white;
-    border-bottom: 1px solid var(--gray-200);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
     padding: 0 1rem;
     align-items: center;
     justify-content: space-between;
     z-index: 999;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .topbar-right {
@@ -519,8 +547,9 @@ h4 { font-size: 1.125rem; font-weight: 600; }
 footer {
     margin-top: auto;
     padding: 2rem 0;
-    background: white;
-    border-top: 1px solid var(--gray-200);
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 footer .container-fluid {
@@ -657,11 +686,11 @@ footer .container-fluid {
 
 /* Cards - Clean and minimal */
 .card {
-    background: white;
-    border: 1px solid var(--gray-200);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s ease;
+    transition: box-shadow 0.2s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .card:hover {
@@ -670,12 +699,13 @@ footer .container-fluid {
 }
 
 .card-header {
-    background: white;
-    border-bottom: 1px solid var(--gray-200);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
     padding: 1rem 1.25rem;
     font-weight: 600;
     font-size: 0.9375rem;
-    color: var(--gray-900);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 .card-body {
@@ -766,12 +796,13 @@ footer .container-fluid {
 
 .form-control,
 .form-select {
-    border: 1.5px solid var(--gray-300);
+    border: 1.5px solid var(--border-color);
     border-radius: 6px;
     padding: 0.625rem 0.875rem;
     font-size: 0.9375rem;
-    transition: all 0.15s ease;
-    color: var(--gray-800);
+    transition: all 0.15s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    color: var(--text-primary);
+    background: var(--bg-primary);
     font-family: var(--font-poppins);
 }
 
@@ -857,11 +888,11 @@ footer .container-fluid {
 
 /* Dashboard Stats Cards */
 .stat-card {
-    background: white;
-    border: 1px solid var(--gray-200);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1.25rem;
-    transition: all 0.2s ease;
+    transition: all 0.2s ease, background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .stat-card:hover {
@@ -1284,8 +1315,9 @@ footer .container-fluid {
 .card,
 .card-body,
 .card-header:not(.bg-dark) {
-    background: white;
-    color: var(--gray-800);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Ensure all text in cards is dark unless on dark background */
@@ -1347,20 +1379,29 @@ footer .container-fluid {
     --gray-700: #e5e7eb;
     --gray-800: #f3f4f6;
     --gray-900: #f9fafb;
+    
+    /* Dark mode background colors */
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-tertiary: #374151;
+    --text-primary: #f3f4f6;
+    --text-secondary: #e5e7eb;
+    --text-muted: #9ca3af;
+    --border-color: #374151;
 }
 
 [data-theme="dark"] body {
-    background: var(--gray-50);
-    color: var(--gray-800);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .sidebar {
-    background: var(--gray-100);
-    border-right-color: var(--gray-200);
+    background: var(--bg-primary);
+    border-right-color: var(--border-color);
 }
 
 [data-theme="dark"] .sidebar-header {
-    border-bottom-color: var(--gray-200);
+    border-bottom-color: var(--border-color);
 }
 
 [data-theme="dark"] .nav-link {
@@ -1380,19 +1421,19 @@ footer .container-fluid {
 
 [data-theme="dark"] .top-navbar,
 [data-theme="dark"] .topbar {
-    background: var(--gray-100);
-    border-bottom-color: var(--gray-200);
+    background: var(--bg-primary);
+    border-bottom-color: var(--border-color);
 }
 
 [data-theme="dark"] .card {
-    background: var(--gray-100);
-    border-color: var(--gray-200);
+    background: var(--bg-primary);
+    border-color: var(--border-color);
 }
 
 [data-theme="dark"] .card-header {
-    background: var(--gray-100);
-    border-bottom-color: var(--gray-200);
-    color: var(--gray-800);
+    background: var(--bg-primary);
+    border-bottom-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .card-header.bg-dark {
@@ -1421,16 +1462,16 @@ footer .container-fluid {
 
 [data-theme="dark"] .form-control,
 [data-theme="dark"] .form-select {
-    background: var(--gray-100);
-    border-color: var(--gray-300);
-    color: var(--gray-800);
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .form-control:focus,
 [data-theme="dark"] .form-select:focus {
-    background: var(--gray-100);
+    background: var(--bg-primary);
     border-color: var(--primary);
-    color: var(--gray-800);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .form-control::placeholder {
@@ -1438,19 +1479,20 @@ footer .container-fluid {
 }
 
 [data-theme="dark"] .search-input {
-    background: var(--gray-200);
-    border-color: var(--gray-300);
-    color: var(--gray-800);
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .search-input:focus {
-    background: var(--gray-100);
+    background: var(--bg-primary);
     border-color: var(--primary);
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .dropdown-menu {
-    background: var(--gray-100);
-    border-color: var(--gray-200);
+    background: var(--bg-primary);
+    border-color: var(--border-color);
 }
 
 [data-theme="dark"] .dropdown-item {
@@ -1513,13 +1555,13 @@ footer .container-fluid {
 }
 
 [data-theme="dark"] .stat-card {
-    background: var(--gray-100);
-    border-color: var(--gray-200);
+    background: var(--bg-primary);
+    border-color: var(--border-color);
 }
 
 [data-theme="dark"] footer {
-    background: var(--gray-100);
-    border-top-color: var(--gray-200);
+    background: var(--bg-primary);
+    border-top-color: var(--border-color);
 }
 
 [data-theme="dark"] .alert-success {
@@ -1545,10 +1587,38 @@ footer .container-fluid {
 /* Theme toggle icon animation */
 #themeIcon,
 #themeIconMobile {
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, color 0.3s ease;
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] #themeIcon,
 [data-theme="dark"] #themeIconMobile {
     transform: rotate(180deg);
+    color: var(--text-primary);
+}
+
+/* Smooth theme transition */
+.theme-transitioning * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Ensure buttons maintain proper colors in dark mode */
+[data-theme="dark"] .btn-primary {
+    background: var(--primary) !important;
+    color: var(--gray-900) !important;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    background: var(--gray-800) !important;
+    color: var(--primary) !important;
+}
+
+[data-theme="dark"] .btn-outline-primary {
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+    background: var(--primary) !important;
+    color: var(--gray-900) !important;
 }

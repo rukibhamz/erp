@@ -100,18 +100,25 @@ const ERP = {
     }
 };
 
-// Theme Switcher Functionality
+// Theme Switcher Functionality - Enhanced with smooth transitions
 (function() {
     // Get current theme from localStorage or default to light
     function getTheme() {
         return localStorage.getItem('theme') || 'light';
     }
     
-    // Set theme
+    // Set theme with smooth transition
     function setTheme(theme) {
+        // Add transition class for smooth switching
+        document.documentElement.classList.add('theme-transitioning');
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
         updateThemeIcons(theme);
+        
+        // Remove transition class after animation
+        setTimeout(() => {
+            document.documentElement.classList.remove('theme-transitioning');
+        }, 300);
     }
     
     // Update theme icons
@@ -120,19 +127,40 @@ const ERP = {
         const themeIconMobile = document.getElementById('themeIconMobile');
         
         if (themeIcon) {
-            themeIcon.className = theme === 'dark' ? 'bi bi-moon' : 'bi bi-sun';
+            themeIcon.className = theme === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+            themeIcon.style.transition = 'transform 0.3s ease, color 0.3s ease';
         }
         if (themeIconMobile) {
-            themeIconMobile.className = theme === 'dark' ? 'bi bi-moon' : 'bi bi-sun';
+            themeIconMobile.className = theme === 'dark' ? 'bi bi-moon-fill' : 'bi bi-sun-fill';
+            themeIconMobile.style.transition = 'transform 0.3s ease, color 0.3s ease';
         }
     }
     
     // Toggle theme
-    function toggleTheme() {
+    function toggleTheme(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         const currentTheme = getTheme();
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         setTheme(newTheme);
+        
+        // Add visual feedback
+        const button = e ? e.currentTarget : null;
+        if (button) {
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                button.style.transform = '';
+            }, 150);
+        }
     }
+    
+    // Initialize theme immediately (before DOMContentLoaded to prevent flash)
+    (function initTheme() {
+        const theme = getTheme();
+        document.documentElement.setAttribute('data-theme', theme);
+    })();
     
     // Initialize theme on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -145,10 +173,22 @@ const ERP = {
         
         if (themeToggle) {
             themeToggle.addEventListener('click', toggleTheme);
+            // Update icon on load
+            updateThemeIcons(theme);
         }
         
         if (themeToggleMobile) {
             themeToggleMobile.addEventListener('click', toggleTheme);
+            // Update icon on load
+            updateThemeIcons(theme);
+        }
+    });
+    
+    // Listen for theme changes from other tabs/windows
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'theme') {
+            const newTheme = e.newValue || 'light';
+            setTheme(newTheme);
         }
     });
 })();
