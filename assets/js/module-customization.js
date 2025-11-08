@@ -5,7 +5,31 @@
 
 // Global variables
 let currentEditingModule = null;
-const BASE_URL = window.location.origin + (window.location.pathname.split('/').slice(0, -1).join('/') || '');
+
+// Get base URL from a data attribute or construct it
+function getBaseUrl() {
+    // Try to get from data attribute first
+    const baseUrlElement = document.querySelector('[data-base-url]');
+    if (baseUrlElement) {
+        let url = baseUrlElement.getAttribute('data-base-url');
+        // Ensure trailing slash
+        if (!url.endsWith('/')) {
+            url += '/';
+        }
+        return url;
+    }
+    
+    // Fallback: construct from current location
+    const pathParts = window.location.pathname.split('/').filter(p => p);
+    // Remove the last part (module_customization)
+    if (pathParts.length > 0 && pathParts[pathParts.length - 1] === 'module_customization') {
+        pathParts.pop();
+    }
+    const basePath = pathParts.length > 0 ? '/' + pathParts.join('/') + '/' : '/';
+    return window.location.origin + basePath;
+}
+
+const BASE_URL = getBaseUrl();
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -86,7 +110,7 @@ function saveModuleOrder() {
         orders[moduleCode] = index + 1;
     });
 
-    fetch(BASE_URL + '/module_customization/updateOrder', {
+    fetch(BASE_URL + 'module_customization/updateOrder', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -118,7 +142,7 @@ function initializeVisibilityToggles() {
             const moduleCode = this.dataset.moduleCode;
             const isActive = this.checked;
 
-            fetch(BASE_URL + '/module_customization/toggleVisibility', {
+            fetch(BASE_URL + 'module_customization/toggleVisibility', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
@@ -203,7 +227,7 @@ function saveModuleEdit() {
     }
 
     // Update label
-    fetch(BASE_URL + '/module_customization/updateLabel', {
+    fetch(BASE_URL + 'module_customization/updateLabel', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -213,30 +237,40 @@ function saveModuleEdit() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Update icon if changed
-            if (iconClass) {
-                return fetch(BASE_URL + '/module_customization/updateIcon', {
+            // Update icon if provided (optional)
+            if (iconClass && iconClass.trim() !== '') {
+                return fetch(BASE_URL + 'module_customization/updateIcon', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `module_code=${encodeURIComponent(moduleCode)}&icon_class=${encodeURIComponent(iconClass)}`
+                    body: `module_code=${encodeURIComponent(moduleCode)}&icon_class=${encodeURIComponent(iconClass.trim())}`
+                })
+                .then(response => response.json())
+                .then(iconData => {
+                    if (!iconData.success) {
+                        console.warn('Icon update failed:', iconData.error);
+                    }
+                    return { success: true };
+                })
+                .catch(error => {
+                    console.warn('Icon update error:', error);
+                    return { success: true }; // Don't fail the whole operation if icon update fails
                 });
             }
-            return { json: () => Promise.resolve({ success: true }) };
+            return Promise.resolve({ success: true });
         } else {
-            throw new Error(data.error);
+            throw new Error(data.error || 'Failed to update module label');
         }
     })
-    .then(response => response.json())
     .then(data => {
-        if (data.success) {
+        if (data && data.success) {
             showMessage('Module updated successfully', 'success');
             closeEditModal();
             // Reload page to show changes
             setTimeout(() => location.reload(), 1000);
         } else {
-            throw new Error(data.error || 'Failed to update module');
+            throw new Error('Failed to update module');
         }
     })
     .catch(error => {
@@ -256,7 +290,7 @@ function initializeResetButtons() {
             const moduleCode = this.dataset.moduleCode;
             
             if (confirm('Are you sure you want to reset this module label to default?')) {
-                fetch(BASE_URL + '/module_customization/resetLabel', {
+                fetch(BASE_URL + 'module_customization/resetLabel', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'

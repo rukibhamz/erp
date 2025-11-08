@@ -113,12 +113,6 @@
                     <li class="nav-divider"></li>
                     <?php if (isset($current_user) && $current_user['role'] === 'super_admin'): ?>
                     <li class="nav-item">
-                        <a href="<?= base_url('modules') ?>" class="nav-link <?= strpos($current_url, 'modules') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-puzzle"></i>
-                            <span class="nav-text"><?= get_module_name('modules') ?></span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="<?= base_url('module_customization') ?>" class="nav-link <?= strpos($current_url, 'module_customization') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-palette"></i>
                             <span class="nav-text">Customize Modules</span>

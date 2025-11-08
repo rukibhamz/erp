@@ -2,6 +2,7 @@
 $page_title = $title ?? 'Module Customization';
 include 'application/views/layouts/header.php';
 ?>
+<div data-base-url="<?= base_url() ?>" style="display: none;"></div>
 
 <div class="container-fluid py-4">
     <div class="page-header mb-4">

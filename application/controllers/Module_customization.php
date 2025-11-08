@@ -247,10 +247,22 @@ class Module_customization extends Base_Controller {
             }
             
             $moduleCode = $_POST['module_code'] ?? '';
-            $iconClass = $_POST['icon_class'] ?? '';
+            $iconClass = trim($_POST['icon_class'] ?? '');
             
-            if (empty($moduleCode) || empty($iconClass)) {
-                throw new Exception('Missing required parameters');
+            if (empty($moduleCode)) {
+                throw new Exception('Module code is required');
+            }
+            
+            // Icon class is optional - if not provided, skip update
+            if (empty($iconClass)) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'No icon class provided, skipping icon update',
+                    'data' => [
+                        'module_code' => $moduleCode
+                    ]
+                ]);
+                return;
             }
             
             $userId = $_SESSION['user_id'] ?? null;
