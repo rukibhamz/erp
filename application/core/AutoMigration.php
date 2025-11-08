@@ -93,7 +93,7 @@ class AutoMigration {
      */
     private function ensureMigrationsTable() {
         try {
-            $this->db->query("CREATE TABLE IF NOT EXISTS `{$this->prefix}migrations` (
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}migrations` (
                 `id` INT(11) NOT NULL AUTO_INCREMENT,
                 `migration` VARCHAR(255) NOT NULL,
                 `batch` INT(11) NOT NULL DEFAULT 1,
