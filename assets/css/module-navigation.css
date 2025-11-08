@@ -85,3 +85,10 @@
     opacity: 0.8;
 }
 
+/* Notification Dot */
+.notification-dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+}
+

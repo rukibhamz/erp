@@ -15,7 +15,7 @@
                 performSearch(query);
             }, 300);
         } else {
-            resultsDropdown.style.display = 'none';
+            resultsDropdown.classList.add('d-none');
         }
     });
     
@@ -28,7 +28,7 @@
     // Hide dropdown when clicking outside
     document.addEventListener('click', function(e) {
         if (!searchInput.contains(e.target) && !resultsDropdown.contains(e.target)) {
-            resultsDropdown.style.display = 'none';
+            resultsDropdown.classList.add('d-none');
         }
     });
     
@@ -39,12 +39,12 @@
                 if (data.success && data.results.length > 0) {
                     displayResults(data.results, query);
                 } else {
-                    resultsDropdown.style.display = 'none';
+                    resultsDropdown.classList.add('d-none');
                 }
             })
             .catch(error => {
                 console.error('Search error:', error);
-                resultsDropdown.style.display = 'none';
+                resultsDropdown.classList.add('d-none');
             });
     }
     
@@ -93,7 +93,7 @@
         html += '</div>';
         
         resultsDropdown.innerHTML = html;
-        resultsDropdown.style.display = 'block';
+        resultsDropdown.classList.remove('d-none');
     }
     
     function getItemTitle(type, item) {

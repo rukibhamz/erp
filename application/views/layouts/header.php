@@ -181,7 +181,7 @@
                                                     <small class="text-muted"><?= timeAgo($notification['created_at']) ?></small>
                                                 </div>
                                                 <?php if (!$notification['is_read']): ?>
-                                                    <span class="badge bg-primary rounded-circle" style="width: 8px; height: 8px;"></span>
+                                                    <span class="badge bg-primary rounded-circle notification-dot"></span>
                                                 <?php endif; ?>
                                             </div>
                                         </a>
@@ -241,7 +241,7 @@
                            class="search-input" id="globalSearchInput" autocomplete="off">
                     <input type="hidden" name="module" value="all">
                 </form>
-                <div id="searchResults" class="search-results-dropdown" style="display: none;"></div>
+                <div id="searchResults" class="search-results-dropdown d-none"></div>
             </div>
             <div class="navbar-right">
                 <!-- Notifications -->
@@ -275,7 +275,7 @@
                                                     <small class="text-muted"><?= timeAgo($notification['created_at']) ?></small>
                                                 </div>
                                                 <?php if (!$notification['is_read']): ?>
-                                                    <span class="badge bg-primary rounded-circle" style="width: 8px; height: 8px;"></span>
+                                                    <span class="badge bg-primary rounded-circle notification-dot"></span>
                                                 <?php endif; ?>
                                             </div>
                                         </a>

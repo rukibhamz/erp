@@ -114,7 +114,7 @@ include 'application/views/layouts/header.php';
 </div>
 
 <!-- Edit Module Modal -->
-<div id="edit-module-modal" class="modal" style="display: none;">
+<div id="edit-module-modal" class="modal d-none">
     <div class="modal-overlay" onclick="closeEditModal()"></div>
     <div class="modal-content">
         <div class="modal-header">

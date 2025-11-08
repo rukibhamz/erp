@@ -175,14 +175,14 @@ function openEditModal(moduleCode, defaultLabel, customLabel, iconClass) {
     document.getElementById('edit-icon-class').value = iconClass || '';
     document.getElementById('edit-icon-preview').className = iconClass || 'bi bi-circle';
 
-    document.getElementById('edit-module-modal').style.display = 'flex';
+    document.getElementById('edit-module-modal').classList.remove('d-none');
 }
 
 /**
  * Close the edit modal
  */
 function closeEditModal() {
-    document.getElementById('edit-module-modal').style.display = 'none';
+    document.getElementById('edit-module-modal').classList.add('d-none');
     currentEditingModule = null;
 }
 
