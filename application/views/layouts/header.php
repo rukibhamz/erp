@@ -11,6 +11,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= base_url('assets/css/main.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/search.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('assets/css/design-system.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('assets/css/responsive.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('assets/css/navigation.css') ?>" rel="stylesheet">
     <script>
         // Initialize theme before page loads to prevent flash
         (function() {
@@ -111,15 +114,21 @@
                     <li class="nav-item">
                         <a href="<?= base_url('modules') ?>" class="nav-link <?= strpos($current_url, 'modules') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-puzzle"></i>
-                            <span class="nav-text">Modules</span>
+                            <span class="nav-text"><?= get_module_name('modules') ?></span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= base_url('module_customization') ?>" class="nav-link <?= strpos($current_url, 'module_customization') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-palette"></i>
+                            <span class="nav-text">Customize Modules</span>
                         </a>
                     </li>
                     <?php endif; ?>
                     <?php if (!isset($current_user['role']) || $current_user['role'] !== 'manager'): ?>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-gear"></i>
-                            <span class="nav-text">Settings</span>
+                            <i class="bi <?= get_module_icon('settings') ?>"></i>
+                            <span class="nav-text"><?= get_module_name('settings') ?></span>
                         </a>
                     </li>
                     <?php endif; ?>

@@ -42,19 +42,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <style>
 .property-nav {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
+    background: var(--bg-secondary, #f8f9fa);
+    padding: var(--space-md, 1rem);
+    border-radius: var(--radius-lg, 0.5rem);
 }
 
 .property-nav .nav-link {
-    color: #495057;
-    border: 1px solid #dee2e6;
+    color: var(--text-secondary, #495057);
+    border: 1px solid var(--border-color, #dee2e6);
 }
 
 .property-nav .nav-link:hover {
-    background-color: #e9ecef;
-    color: #000;
+    background-color: var(--bg-hover, #e9ecef);
+    color: var(--text-primary, #000);
 }
 
 .property-nav .nav-link.active {
