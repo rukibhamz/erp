@@ -4,8 +4,7 @@ include 'application/views/layouts/header.php';
 ?>
 <div data-base-url="<?= base_url() ?>" style="display: none;"></div>
 
-<div class="container-fluid py-4">
-    <div class="page-header mb-4">
+<div class="page-header mb-4">
         <h1 class="page-title">Module Customization</h1>
         <p class="page-description">
             Customize module names, icons, and visibility. Changes will be visible to all users.
@@ -119,7 +118,6 @@ include 'application/views/layouts/header.php';
         </div>
     </div>
     <?php endif; ?>
-</div>
 
 <!-- Edit Module Modal -->
 <div id="edit-module-modal" class="modal d-none">
