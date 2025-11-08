@@ -14,6 +14,44 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================================================
+-- PART 0: MODULE LABELS SYSTEM (For Customization)
+-- ============================================================================
+
+-- Create erp_module_labels table for custom module naming
+CREATE TABLE IF NOT EXISTS `erp_module_labels` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `module_code` VARCHAR(50) NOT NULL COMMENT 'Internal code name (accounting, bookings, etc)',
+  `default_label` VARCHAR(100) NOT NULL COMMENT 'Default display name',
+  `custom_label` VARCHAR(100) DEFAULT NULL COMMENT 'Custom label set by super admin',
+  `icon_class` VARCHAR(50) DEFAULT NULL COMMENT 'Icon class for the module',
+  `display_order` INT(11) DEFAULT 0 COMMENT 'Order in navigation',
+  `is_active` TINYINT(1) DEFAULT 1 COMMENT 'Whether module is visible',
+  `updated_by` INT(11) DEFAULT NULL COMMENT 'User who last updated',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_module_code` (`module_code`),
+  KEY `idx_display_order` (`display_order`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed default module labels
+INSERT INTO erp_module_labels (module_code, default_label, icon_class, display_order, is_active) VALUES
+('dashboard', 'Dashboard', 'icon-home', 1, 1),
+('accounting', 'Accounting', 'icon-calculator', 2, 1),
+('bookings', 'Bookings', 'icon-calendar', 3, 1),
+('properties', 'Properties', 'icon-building', 4, 1),
+('inventory', 'Inventory', 'icon-package', 5, 1),
+('utilities', 'Utilities', 'icon-zap', 6, 1),
+('reports', 'Reports', 'icon-bar-chart', 7, 1),
+('settings', 'Settings', 'icon-settings', 8, 1),
+('users', 'User Management', 'icon-users', 9, 1),
+('notifications', 'Notifications', 'icon-bell', 10, 1),
+('pos', 'Point of Sale', 'icon-shopping-cart', 11, 1),
+('tax', 'Tax Management', 'icon-file-text', 12, 1)
+ON DUPLICATE KEY UPDATE default_label = VALUES(default_label);
+
+-- ============================================================================
 -- PART 1: PERMISSION SYSTEM
 -- ============================================================================
 
