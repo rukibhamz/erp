@@ -42,6 +42,10 @@ $route['profile/terminate-session/(:any)'] = 'Profile/terminateSession/$1';
         $route['modules/update'] = 'Modules/update';
         $route['settings/modules'] = 'Settings/modules';
         
+        // Module Customization (Super Admin Only)
+        $route['module_customization'] = 'Module_customization/index';
+        $route['module-customization'] = 'Module_customization/index';
+        
         // Global Search
         $route['search'] = 'Search/index';
         $route['search/ajax'] = 'Search/ajax';

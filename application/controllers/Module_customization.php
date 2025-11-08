@@ -1,4 +1,6 @@
 <?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
 /**
  * Module Customization Controller
  * Allows Super Admin to customize module labels and appearance

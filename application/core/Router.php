@@ -204,10 +204,23 @@ class Router {
         
         require_once $controllerFile;
         
+        // Try exact match first, then case-insensitive match
         if (!class_exists($controllerName)) {
-            die("Controller {$controllerName} not found.");
+            // Try case-insensitive class lookup
+            $classes = get_declared_classes();
+            foreach ($classes as $class) {
+                if (strtolower($class) === strtolower($controllerName)) {
+                    $controllerName = $class;
+                    break;
+                }
+            }
+            
+            if (!class_exists($controllerName)) {
+                die("Controller {$this->controller} not found.");
+            }
         }
         
+        // Use the actual class name (may have been corrected by case-insensitive lookup)
         $controller = new $controllerName();
         
         if (!method_exists($controller, $this->method)) {
