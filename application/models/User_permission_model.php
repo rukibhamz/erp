@@ -67,9 +67,10 @@ class User_permission_model extends Base_Model {
                     
                     if (($tableExists['count'] ?? 0) == 0) {
                         error_log("CRITICAL: erp_role_permissions table does not exist! Permission system is broken.");
-                        error_log("Please run database/migrations/create_role_permissions_system.sql to fix this.");
-                        // Fall back to user-specific permissions only
-                        return $hasUserPermission;
+                        error_log("Please run database/migrations/001_permission_system_complete.sql to fix this.");
+                        // Security-first: Deny access when permission system is incomplete
+                        // This prevents unauthorized access if tables are missing
+                        return false;
                     }
                 } catch (Exception $tableCheckException) {
                     error_log("Warning: Could not check if role_permissions table exists: " . $tableCheckException->getMessage());
@@ -104,7 +105,9 @@ class User_permission_model extends Base_Model {
                     if (strpos($errorMsg, "doesn't exist") !== false || strpos($errorMsg, "Base table") !== false) {
                         error_log("CRITICAL: erp_role_permissions table does not exist!");
                         error_log("Error: " . $errorMsg);
-                        error_log("Please run database/migrations/create_role_permissions_system.sql to fix this.");
+                        error_log("Please run database/migrations/001_permission_system_complete.sql to fix this.");
+                        // Security-first: Deny access when permission system is incomplete
+                        return false;
                     } else {
                         error_log("Error checking role permissions: " . $errorMsg);
                     }
@@ -152,7 +155,7 @@ class User_permission_model extends Base_Model {
             // Check if it's a missing table error
             if (strpos($errorMsg, "doesn't exist") !== false || strpos($errorMsg, "Base table") !== false) {
                 error_log("CRITICAL: Required permission table is missing!");
-                error_log("Please run database/migrations/create_role_permissions_system.sql to fix this.");
+                error_log("Please run database/migrations/001_permission_system_complete.sql to fix this.");
             }
             
             error_log("Stack trace: " . $e->getTraceAsString());

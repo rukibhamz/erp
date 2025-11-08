@@ -53,63 +53,41 @@ class Dashboard extends Base_Controller {
         }
     }
     
+    /**
+     * Initialize dashboard models with error handling
+     * Refactored to reduce duplication across dashboard methods
+     */
+    private function initializeDashboardModels($includeTax = true) {
+        $models = [
+            'invoiceModel' => 'Invoice_model',
+            'bookingModel' => 'Booking_model',
+            'propertyModel' => 'Property_model',
+            'transactionModel' => 'Transaction_model',
+            'stockModel' => 'Stock_level_model',
+            'leaseModel' => 'Lease_model',
+            'workOrderModel' => 'Work_order_model',
+            'cashAccountModel' => 'Cash_account_model',
+        ];
+        
+        if ($includeTax) {
+            $models['taxModel'] = 'Tax_type_model';
+        }
+        
+        foreach ($models as $property => $modelName) {
+            try {
+                $this->$property = $this->loadModel($modelName);
+            } catch (Exception $e) {
+                $this->$property = null;
+                if (in_array($property, ['invoiceModel', 'bookingModel'])) {
+                    error_log("Dashboard {$modelName} load error: " . $e->getMessage());
+                }
+            }
+        }
+    }
+    
     private function superAdminDashboard() {
         // Initialize models with error handling
-        try {
-            $this->invoiceModel = $this->loadModel('Invoice_model');
-        } catch (Exception $e) {
-            $this->invoiceModel = null;
-            error_log('Dashboard Invoice_model load error: ' . $e->getMessage());
-        }
-        
-        try {
-            $this->bookingModel = $this->loadModel('Booking_model');
-        } catch (Exception $e) {
-            $this->bookingModel = null;
-            error_log('Dashboard Booking_model load error: ' . $e->getMessage());
-        }
-        
-        try {
-            $this->propertyModel = $this->loadModel('Property_model');
-        } catch (Exception $e) {
-            $this->propertyModel = null;
-        }
-        
-        try {
-            $this->transactionModel = $this->loadModel('Transaction_model');
-        } catch (Exception $e) {
-            $this->transactionModel = null;
-        }
-        
-        try {
-            $this->stockModel = $this->loadModel('Stock_level_model');
-        } catch (Exception $e) {
-            $this->stockModel = null;
-        }
-        
-        try {
-            $this->taxModel = $this->loadModel('Tax_type_model');
-        } catch (Exception $e) {
-            $this->taxModel = null;
-        }
-        
-        try {
-            $this->leaseModel = $this->loadModel('Lease_model');
-        } catch (Exception $e) {
-            $this->leaseModel = null;
-        }
-        
-        try {
-            $this->workOrderModel = $this->loadModel('Work_order_model');
-        } catch (Exception $e) {
-            $this->workOrderModel = null;
-        }
-        
-        try {
-            $this->cashAccountModel = $this->loadModel('Cash_account_model');
-        } catch (Exception $e) {
-            $this->cashAccountModel = null;
-        }
+        $this->initializeDashboardModels(true);
         
         // Get KPIs
         $kpis = $this->getSystemKPIs();
@@ -163,61 +141,7 @@ class Dashboard extends Base_Controller {
     private function adminDashboard() {
         // Admin dashboard - similar to super admin but without companies and activity log
         // Initialize models with error handling
-        try {
-            $this->invoiceModel = $this->loadModel('Invoice_model');
-        } catch (Exception $e) {
-            $this->invoiceModel = null;
-            error_log('Dashboard Invoice_model load error: ' . $e->getMessage());
-        }
-        
-        try {
-            $this->bookingModel = $this->loadModel('Booking_model');
-        } catch (Exception $e) {
-            $this->bookingModel = null;
-            error_log('Dashboard Booking_model load error: ' . $e->getMessage());
-        }
-        
-        try {
-            $this->propertyModel = $this->loadModel('Property_model');
-        } catch (Exception $e) {
-            $this->propertyModel = null;
-        }
-        
-        try {
-            $this->transactionModel = $this->loadModel('Transaction_model');
-        } catch (Exception $e) {
-            $this->transactionModel = null;
-        }
-        
-        try {
-            $this->stockModel = $this->loadModel('Stock_level_model');
-        } catch (Exception $e) {
-            $this->stockModel = null;
-        }
-        
-        try {
-            $this->taxModel = $this->loadModel('Tax_type_model');
-        } catch (Exception $e) {
-            $this->taxModel = null;
-        }
-        
-        try {
-            $this->leaseModel = $this->loadModel('Lease_model');
-        } catch (Exception $e) {
-            $this->leaseModel = null;
-        }
-        
-        try {
-            $this->workOrderModel = $this->loadModel('Work_order_model');
-        } catch (Exception $e) {
-            $this->workOrderModel = null;
-        }
-        
-        try {
-            $this->cashAccountModel = $this->loadModel('Cash_account_model');
-        } catch (Exception $e) {
-            $this->cashAccountModel = null;
-        }
+        $this->initializeDashboardModels(true);
         
         // Get KPIs
         $kpis = $this->getSystemKPIs();
@@ -266,59 +190,12 @@ class Dashboard extends Base_Controller {
     
     private function managerDashboard() {
         // Manager dashboard - similar to admin but without tax module access
-        // Initialize models with error handling
-        try {
-            $this->invoiceModel = $this->loadModel('Invoice_model');
-        } catch (Exception $e) {
-            $this->invoiceModel = null;
-            error_log('Dashboard Invoice_model load error: ' . $e->getMessage());
-        }
+        // Initialize models with error handling (exclude tax)
+        $this->initializeDashboardModels(false);
         
-        try {
-            $this->bookingModel = $this->loadModel('Booking_model');
-        } catch (Exception $e) {
-            $this->bookingModel = null;
-            error_log('Dashboard Booking_model load error: ' . $e->getMessage());
-        }
-        
-        try {
-            $this->propertyModel = $this->loadModel('Property_model');
-        } catch (Exception $e) {
-            $this->propertyModel = null;
-        }
-        
-        try {
-            $this->transactionModel = $this->loadModel('Transaction_model');
-        } catch (Exception $e) {
-            $this->transactionModel = null;
-        }
-        
-        try {
-            $this->stockModel = $this->loadModel('Stock_level_model');
-        } catch (Exception $e) {
-            $this->stockModel = null;
-        }
-        
-        try {
-            $this->leaseModel = $this->loadModel('Lease_model');
-        } catch (Exception $e) {
-            $this->leaseModel = null;
-        }
-        
-        try {
-            $this->workOrderModel = $this->loadModel('Work_order_model');
-        } catch (Exception $e) {
-            $this->workOrderModel = null;
-        }
-        
-        try {
-            $this->cashAccountModel = $this->loadModel('Cash_account_model');
-        } catch (Exception $e) {
-            $this->cashAccountModel = null;
-        }
-        
-        // Get KPIs (excluding tax-related)
-        $kpis = $this->getSystemKPIs();
+        // Get KPIs (excluding tax-related) - use manager-specific function
+        // Note: Managers should not have access to tax data, so we use getManagerKPIs()
+        $kpis = $this->getManagerKPIs();
         
         // Get revenue trends
         $revenueTrend = $this->getRevenueTrend();
@@ -503,9 +380,36 @@ class Dashboard extends Base_Controller {
             'bookings_completed' => $this->getBookingCount('completed'),
             'occupancy_rate' => $this->getOccupancyRate(),
             'outstanding_receivables' => $this->getOutstandingReceivables(),
-            'cash_balance' => $this->getCashBalance(),
-            'inventory_value' => $this->getInventoryValue(),
+            'cash_balance' => $this->extractValue($this->getCashBalance()),
+            'inventory_value' => $this->extractValue($this->getInventoryValue()),
             'active_users' => $this->userModel->count() ?? 0
+        ];
+    }
+    
+    /**
+     * Get KPIs for manager role (excludes tax-related data)
+     * Managers should not have access to tax information
+     */
+    private function getManagerKPIs() {
+        $today = date('Y-m-d');
+        $weekStart = date('Y-m-d', strtotime('monday this week'));
+        $monthStart = date('Y-m-01');
+        $yearStart = date('Y-01-01');
+        
+        return [
+            'revenue_today' => $this->getRevenueForPeriod($today, $today),
+            'revenue_week' => $this->getRevenueForPeriod($weekStart, $today),
+            'revenue_month' => $this->getRevenueForPeriod($monthStart, $today),
+            'revenue_year' => $this->getRevenueForPeriod($yearStart, $today),
+            'bookings_confirmed' => $this->getBookingCount('confirmed'),
+            'bookings_pending' => $this->getBookingCount('pending'),
+            'bookings_completed' => $this->getBookingCount('completed'),
+            'occupancy_rate' => $this->getOccupancyRate(),
+            'outstanding_receivables' => $this->getOutstandingReceivables(),
+            'cash_balance' => $this->extractValue($this->getCashBalance()),
+            'inventory_value' => $this->extractValue($this->getInventoryValue()),
+            'active_users' => $this->userModel->count() ?? 0
+            // Note: tax_liability is intentionally excluded for managers
         ];
     }
     
@@ -573,55 +477,181 @@ class Dashboard extends Base_Controller {
         }
     }
     
+    /**
+     * Helper method to create error response for dashboard data
+     * Returns array with 'error' flag so frontend can distinguish errors from zero values
+     */
+    private function createErrorResponse($message, $defaultValue = 0) {
+        error_log('Dashboard error: ' . $message);
+        return [
+            'value' => $defaultValue,
+            'error' => true,
+            'message' => $message
+        ];
+    }
+    
+    /**
+     * Helper method to create success response for dashboard data
+     */
+    private function createSuccessResponse($value) {
+        return [
+            'value' => $value,
+            'error' => false
+        ];
+    }
+    
+    /**
+     * Extract value from response (handles both old format and new error-aware format)
+     * For backward compatibility during transition
+     */
+    private function extractValue($response) {
+        if (is_array($response) && isset($response['value'])) {
+            return $response['value'];
+        }
+        return $response; // Old format - just return the value
+    }
+    
     private function getCashBalance() {
-        if (!$this->db || !$this->cashAccountModel) return 0;
+        if (!$this->db || !$this->cashAccountModel) {
+            return $this->createErrorResponse('Database or cash account model not available', 0);
+        }
         try {
             $result = $this->db->fetchOne(
                 "SELECT SUM(current_balance) as total FROM `" . $this->db->getPrefix() . "cash_accounts` 
                  WHERE status = 'active'"
             );
-            return floatval($result['total'] ?? 0);
+            $value = floatval($result['total'] ?? 0);
+            return $this->createSuccessResponse($value);
         } catch (Exception $e) {
-            error_log('Dashboard getCashBalance error: ' . $e->getMessage());
-            return 0;
+            return $this->createErrorResponse('Failed to load cash balance: ' . $e->getMessage(), 0);
         }
     }
     
     private function getInventoryValue() {
-        if (!$this->db || !$this->stockModel) return 0;
+        if (!$this->db || !$this->stockModel) {
+            return $this->createErrorResponse('Database or model not available', 0);
+        }
         try {
+            // Fixed: Only sum active stock levels, handle NULL unit_cost
             $result = $this->db->fetchOne(
-                "SELECT SUM(quantity * unit_cost) as total FROM `" . $this->db->getPrefix() . "stock_levels`"
+                "SELECT SUM(quantity * COALESCE(unit_cost, 0)) as total 
+                 FROM `" . $this->db->getPrefix() . "stock_levels`
+                 WHERE status = 'active'"
             );
-            return floatval($result['total'] ?? 0);
+            $value = floatval($result['total'] ?? 0);
+            return $this->createSuccessResponse($value);
         } catch (Exception $e) {
-            error_log('Dashboard getInventoryValue error: ' . $e->getMessage());
-            return 0;
+            return $this->createErrorResponse('Failed to load inventory value: ' . $e->getMessage(), 0);
         }
     }
     
     private function getRevenueTrend() {
-        $months = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $date = date('Y-m', strtotime("-{$i} months"));
-            $months[] = [
-                'month' => date('M Y', strtotime($date . '-01')),
-                'revenue' => $this->getRevenueForPeriod($date . '-01', date('Y-m-t', strtotime($date . '-01')))
-            ];
+        if (!$this->db || !$this->invoiceModel) {
+            return [];
         }
-        return $months;
+        try {
+            // Fixed: N+1 query problem - fetch all 12 months in a single query
+            $startDate = date('Y-m-01', strtotime('-11 months'));
+            $endDate = date('Y-m-t');
+            
+            $result = $this->db->fetchAll(
+                "SELECT 
+                    DATE_FORMAT(invoice_date, '%Y-%m') as month_key,
+                    DATE_FORMAT(invoice_date, '%M %Y') as month_label,
+                    SUM(total_amount) as revenue
+                 FROM `" . $this->db->getPrefix() . "invoices`
+                 WHERE invoice_date >= ? 
+                 AND invoice_date <= ?
+                 AND status = 'paid'
+                 GROUP BY DATE_FORMAT(invoice_date, '%Y-%m')
+                 ORDER BY month_key ASC",
+                [$startDate, $endDate]
+            );
+            
+            // Create array with all 12 months, filling in zeros for months with no data
+            $months = [];
+            $dataByMonth = [];
+            foreach ($result as $row) {
+                $dataByMonth[$row['month_key']] = [
+                    'month' => $row['month_label'],
+                    'revenue' => floatval($row['revenue'] ?? 0)
+                ];
+            }
+            
+            // Fill in all 12 months
+            for ($i = 11; $i >= 0; $i--) {
+                $date = date('Y-m', strtotime("-{$i} months"));
+                $monthLabel = date('M Y', strtotime($date . '-01'));
+                
+                if (isset($dataByMonth[$date])) {
+                    $months[] = $dataByMonth[$date];
+                } else {
+                    $months[] = [
+                        'month' => $monthLabel,
+                        'revenue' => 0
+                    ];
+                }
+            }
+            
+            return $months;
+        } catch (Exception $e) {
+            error_log('Dashboard getRevenueTrend error: ' . $e->getMessage());
+            return [];
+        }
     }
     
     private function getBookingTrend() {
-        $months = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $date = date('Y-m', strtotime("-{$i} months"));
-            $months[] = [
-                'month' => date('M Y', strtotime($date . '-01')),
-                'count' => $this->getBookingCountForMonth($date)
-            ];
+        if (!$this->db || !$this->bookingModel) {
+            return [];
         }
-        return $months;
+        try {
+            // Fixed: N+1 query problem - fetch all 12 months in a single query
+            $startDate = date('Y-m-01', strtotime('-11 months'));
+            $endDate = date('Y-m-t');
+            
+            $result = $this->db->fetchAll(
+                "SELECT 
+                    DATE_FORMAT(booking_date, '%Y-%m') as month_key,
+                    DATE_FORMAT(booking_date, '%M %Y') as month_label,
+                    COUNT(*) as count
+                 FROM `" . $this->db->getPrefix() . "bookings`
+                 WHERE booking_date >= ?
+                 AND booking_date <= ?
+                 GROUP BY DATE_FORMAT(booking_date, '%Y-%m')
+                 ORDER BY month_key ASC",
+                [$startDate, $endDate]
+            );
+            
+            // Create array with all 12 months, filling in zeros for months with no data
+            $months = [];
+            $dataByMonth = [];
+            foreach ($result as $row) {
+                $dataByMonth[$row['month_key']] = [
+                    'month' => $row['month_label'],
+                    'count' => intval($row['count'] ?? 0)
+                ];
+            }
+            
+            // Fill in all 12 months
+            for ($i = 11; $i >= 0; $i--) {
+                $date = date('Y-m', strtotime("-{$i} months"));
+                $monthLabel = date('M Y', strtotime($date . '-01'));
+                
+                if (isset($dataByMonth[$date])) {
+                    $months[] = $dataByMonth[$date];
+                } else {
+                    $months[] = [
+                        'month' => $monthLabel,
+                        'count' => 0
+                    ];
+                }
+            }
+            
+            return $months;
+        } catch (Exception $e) {
+            error_log('Dashboard getBookingTrend error: ' . $e->getMessage());
+            return [];
+        }
     }
     
     private function getBookingCountForMonth($month) {
@@ -644,12 +674,15 @@ class Dashboard extends Base_Controller {
             return [];
         }
         try {
+            // Fixed: Use 'debit' column instead of non-existent 'amount' column
+            // The transactions table uses 'debit' and 'credit' columns, not 'amount'
             $result = $this->db->fetchAll(
-                "SELECT a.account_name, SUM(t.amount) as total 
+                "SELECT a.account_name, SUM(t.debit) as total 
                  FROM `" . $this->db->getPrefix() . "transactions` t
                  JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE a.account_type = 'Expenses' AND DATE(t.date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-                 AND t.type = 'debit'
+                 WHERE a.account_type = 'Expenses' 
+                 AND DATE(t.transaction_date) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                 AND t.transaction_type IN ('payment', 'bill', 'expense')
                  GROUP BY a.id, a.account_name
                  ORDER BY total DESC
                  LIMIT 10"
@@ -760,12 +793,16 @@ class Dashboard extends Base_Controller {
     private function getLowStockItems() {
         if (!$this->db || !$this->stockModel) return [];
         try {
+            // Fixed: Use item_name instead of name, and handle missing item_code
             return $this->db->fetchAll(
-                "SELECT s.*, i.name, i.item_code 
+                "SELECT s.*, i.item_name, i.sku, i.name, 
+                        COALESCE(s.reorder_point, s.reorder_level, i.reorder_point, i.reorder_level, 0) as reorder_level
                  FROM `" . $this->db->getPrefix() . "stock_levels` s
                  JOIN `" . $this->db->getPrefix() . "items` i ON s.item_id = i.id
-                 WHERE s.quantity <= s.reorder_point AND s.quantity > 0
-                 ORDER BY (s.quantity / s.reorder_point) ASC
+                 WHERE s.quantity <= COALESCE(s.reorder_point, s.reorder_level, i.reorder_point, i.reorder_level, 0)
+                 AND s.quantity > 0
+                 AND s.status = 'active'
+                 ORDER BY (s.quantity / GREATEST(COALESCE(s.reorder_point, s.reorder_level, i.reorder_point, i.reorder_level, 1), 1)) ASC
                  LIMIT 10"
             ) ?? [];
         } catch (Exception $e) {
@@ -816,7 +853,7 @@ class Dashboard extends Base_Controller {
                 'properties' => ['leases', 'spaces'],
                 'utilities' => ['utility_bills'],
                 'inventory' => ['items', 'stock_levels'],
-                'pos' => ['pos_transactions']
+                'pos' => ['pos_sales'] // Fixed: Use pos_sales instead of pos_transactions
             ];
             
             foreach ($modules as $module => $tables) {
@@ -856,10 +893,13 @@ class Dashboard extends Base_Controller {
     private function getRecentBookings($limit = 5) {
         if (!$this->db || !$this->bookingModel) return [];
         try {
+            // Fixed: Use parameterized query for LIMIT to prevent SQL injection
+            // Note: MySQL doesn't support LIMIT as a parameter, so we validate strictly
+            $limit = max(1, min(100, intval($limit))); // Ensure limit is between 1 and 100
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . "bookings` 
                  ORDER BY created_at DESC
-                 LIMIT " . intval($limit)
+                 LIMIT " . $limit
             ) ?? [];
         } catch (Exception $e) {
             error_log('Dashboard getRecentBookings error: ' . $e->getMessage());
@@ -870,13 +910,15 @@ class Dashboard extends Base_Controller {
     private function getRecentPayments($limit = 5) {
         if (!$this->db) return [];
         try {
+            // Fixed: Validate limit to prevent SQL injection
+            $limit = max(1, min(100, intval($limit))); // Ensure limit is between 1 and 100
             return $this->db->fetchAll(
                 "SELECT p.*, i.invoice_number, c.name as customer_name
                  FROM `" . $this->db->getPrefix() . "payments` p
                  LEFT JOIN `" . $this->db->getPrefix() . "invoices` i ON p.invoice_id = i.id
                  LEFT JOIN `" . $this->db->getPrefix() . "customers` c ON i.customer_id = c.id
                  ORDER BY p.payment_date DESC
-                 LIMIT " . intval($limit)
+                 LIMIT " . $limit
             ) ?? [];
         } catch (Exception $e) {
             error_log('Dashboard getRecentPayments error: ' . $e->getMessage());

@@ -50,6 +50,7 @@ A modern, installable PHP business management application built with MVC archite
 
 4. **After installation**:
    - Delete the `install` directory for security
+   - **Run database migrations** (see Database Migrations section below)
    - Log in with your administrator credentials
 
 ## Directory Structure
@@ -85,14 +86,41 @@ A modern, installable PHP business management application built with MVC archite
 - `/companies` - Company management
 - `/settings` - Settings
 
+## Database Migrations
+
+**IMPORTANT:** After installation, you must run the complete system migration to create all required tables and set up the permission system.
+
+### Quick Start (New Installations)
+
+**Run ONE migration file for everything:**
+
+```bash
+# SQL (Recommended)
+mysql -u username -p database_name < database/migrations/000_complete_system_migration.sql
+
+# OR PHP
+php database/migrations/000_complete_system_migration.php
+```
+
+**That's it!** This single migration includes:
+- ✅ Permission system (tables, roles, permissions)
+- ✅ Business module tables (spaces, stock_levels, items, leases, work_orders, tax_deadlines, utility_bills)
+- ✅ Role-based permission assignments
+
+**See `INSTALLATION_GUIDE.md` for complete installation instructions.**
+
 ## Database Tables
 
-The installer automatically creates the following tables:
+The installer automatically creates the following core tables:
 
 - `users` - User accounts
 - `companies` - Company information
 - `modules_settings` - Module configuration
 - `activity_log` - User activity tracking
+
+**Additional tables** are created by running migrations:
+- Permission system tables (`erp_permissions`, `erp_roles`, `erp_role_permissions`)
+- Business module tables (`erp_spaces`, `erp_stock_levels`, `erp_items`, `erp_leases`, `erp_work_orders`, `erp_tax_deadlines`, `erp_utility_bills`)
 
 ## Security Features
 
