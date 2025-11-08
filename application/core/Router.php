@@ -174,8 +174,12 @@ class Router {
         }
         
         // No route match, use direct controller/method parsing
+        // Handle underscore controllers (e.g., tax_compliance -> Tax_compliance)
         if (isset($urlParts[0]) && !empty($urlParts[0])) {
-            $this->controller = ucfirst($urlParts[0]);
+            // Convert tax_compliance to Tax_compliance (preserve underscores)
+            $parts = explode('_', $urlParts[0]);
+            $parts = array_map('ucfirst', $parts);
+            $this->controller = implode('_', $parts);
         }
         
         if (isset($urlParts[1]) && !empty($urlParts[1])) {
@@ -188,7 +192,9 @@ class Router {
     }
     
     public function dispatch() {
-        $controllerFile = BASEPATH . 'controllers/' . $this->controller . '.php';
+        // Handle underscore controllers (e.g., Tax_compliance)
+        $controllerName = $this->controller;
+        $controllerFile = BASEPATH . 'controllers/' . $controllerName . '.php';
         
         if (!file_exists($controllerFile)) {
             $this->controller = 'Error404';
@@ -198,14 +204,14 @@ class Router {
         
         require_once $controllerFile;
         
-        if (!class_exists($this->controller)) {
-            die("Controller {$this->controller} not found.");
+        if (!class_exists($controllerName)) {
+            die("Controller {$controllerName} not found.");
         }
         
-        $controller = new $this->controller();
+        $controller = new $controllerName();
         
         if (!method_exists($controller, $this->method)) {
-            die("Method {$this->method} not found in {$this->controller}.");
+            die("Method {$this->method} not found in {$controllerName}.");
         }
         
         call_user_func_array([$controller, $this->method], $this->params);

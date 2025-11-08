@@ -1,0 +1,87 @@
+/**
+ * Module Navigation Styles
+ * Shared styles for tax-nav, property-nav, utilities-nav, etc.
+ * Uses design system variables for consistency
+ */
+
+/* Base Module Navigation */
+.module-nav,
+.property-nav,
+.tax-nav,
+.utilities-nav {
+    background: var(--bg-secondary, #f8f9fa);
+    padding: var(--space-md, 1rem);
+    border-radius: var(--radius-lg, 0.5rem);
+    margin-bottom: var(--space-lg, 1.5rem);
+}
+
+.module-nav .nav-link,
+.property-nav .nav-link,
+.tax-nav .nav-link,
+.utilities-nav .nav-link {
+    color: var(--text-secondary, #495057);
+    border: 1px solid var(--border-color, #dee2e6);
+    transition: all var(--transition-base, 200ms);
+}
+
+.module-nav .nav-link:hover,
+.property-nav .nav-link:hover,
+.tax-nav .nav-link:hover,
+.utilities-nav .nav-link:hover {
+    background-color: var(--bg-hover, #e9ecef);
+    color: var(--text-primary, #000);
+}
+
+.module-nav .nav-link.active,
+.property-nav .nav-link.active,
+.tax-nav .nav-link.active,
+.utilities-nav .nav-link.active {
+    background-color: var(--color-primary, #0066cc);
+    color: var(--text-inverse, #fff);
+    border-color: var(--color-primary, #0066cc);
+}
+
+.module-nav .nav-link i,
+.property-nav .nav-link i,
+.tax-nav .nav-link i,
+.utilities-nav .nav-link i {
+    margin-right: var(--space-sm, 0.5rem);
+}
+
+/* Calendar Styles */
+.calendar-table {
+    width: 100%;
+}
+
+.calendar-day {
+    min-height: 100px;
+    vertical-align: top;
+    padding: var(--space-xs, 0.25rem);
+    position: relative;
+}
+
+.calendar-day.empty {
+    background-color: var(--bg-secondary, #f8f9fa);
+}
+
+.day-number {
+    font-weight: var(--font-weight-semibold, 600);
+    margin-bottom: var(--space-xs, 0.25rem);
+}
+
+.booking-item {
+    font-size: var(--font-size-xs, 0.75rem);
+    padding: var(--space-xs, 0.25rem) var(--space-sm, 0.5rem);
+    margin: var(--space-xs, 0.25rem) 0;
+    border-radius: var(--radius-sm, 0.25rem);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity var(--transition-base, 200ms);
+}
+
+.booking-item:hover {
+    opacity: 0.8;
+}
+

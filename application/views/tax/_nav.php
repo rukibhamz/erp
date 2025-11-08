@@ -52,31 +52,4 @@ $is_settings = isset($uri_segments[1]) && $uri_segments[1] === 'settings';
     </nav>
 </div>
 
-<style>
-.tax-nav {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
-}
-
-.tax-nav .nav-link {
-    color: #495057;
-    border: 1px solid #dee2e6;
-}
-
-.tax-nav .nav-link:hover {
-    background-color: #e9ecef;
-    color: #000;
-}
-
-.tax-nav .nav-link.active {
-    background-color: #000;
-    color: #fff;
-    border-color: #000;
-}
-
-.tax-nav .nav-link i {
-    margin-right: 0.5rem;
-}
-</style>
 

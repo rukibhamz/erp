@@ -150,35 +150,4 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<style>
-.calendar-table {
-    width: 100%;
-}
-.calendar-day {
-    min-height: 100px;
-    vertical-align: top;
-    padding: 5px;
-    position: relative;
-}
-.calendar-day.empty {
-    background-color: #f8f9fa;
-}
-.day-number {
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-.booking-item {
-    font-size: 0.75rem;
-    padding: 2px 5px;
-    margin: 2px 0;
-    border-radius: 3px;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.booking-item:hover {
-    opacity: 0.8;
-}
-</style>
 

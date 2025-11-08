@@ -132,7 +132,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
                 <?php else: ?>
                     <div class="text-center py-4">
-                        <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                        <i class="bi bi-calendar-x text-muted display-1"></i>
                         <p class="text-muted mt-2">No bookings scheduled for today</p>
                         <a href="<?= base_url('bookings/create') ?>" class="btn btn-primary btn-sm mt-2">
                             <i class="bi bi-plus-circle"></i> Create Booking
@@ -153,7 +153,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="row g-2">
                     <div class="col-md-6">
                         <a href="<?= base_url('pos') ?>" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-3">
-                            <i class="bi bi-cash-register me-2" style="font-size: 1.5rem;"></i>
+                            <i class="bi bi-cash-register me-2 fs-4"></i>
                             <div class="text-start">
                                 <div class="fw-bold">POS</div>
                                 <small class="text-muted">Point of Sale</small>
@@ -162,7 +162,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div class="col-md-6">
                         <a href="<?= base_url('bookings/create') ?>" class="btn btn-outline-success w-100 d-flex align-items-center justify-content-center py-3">
-                            <i class="bi bi-calendar-plus me-2" style="font-size: 1.5rem;"></i>
+                            <i class="bi bi-calendar-plus me-2 fs-4"></i>
                             <div class="text-start">
                                 <div class="fw-bold">New Booking</div>
                                 <small class="text-muted">Create booking</small>
@@ -171,7 +171,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div class="col-md-6">
                         <a href="<?= base_url('inventory') ?>" class="btn btn-outline-info w-100 d-flex align-items-center justify-content-center py-3">
-                            <i class="bi bi-box-seam me-2" style="font-size: 1.5rem;"></i>
+                            <i class="bi bi-box-seam me-2 fs-4"></i>
                             <div class="text-start">
                                 <div class="fw-bold">Inventory</div>
                                 <small class="text-muted">Manage stock</small>
@@ -180,7 +180,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div class="col-md-6">
                         <a href="<?= base_url('utilities') ?>" class="btn btn-outline-warning w-100 d-flex align-items-center justify-content-center py-3">
-                            <i class="bi bi-tools me-2" style="font-size: 1.5rem;"></i>
+                            <i class="bi bi-tools me-2 fs-4"></i>
                             <div class="text-start">
                                 <div class="fw-bold">Utilities</div>
                                 <small class="text-muted">Utilities & Services</small>
@@ -280,7 +280,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                 <?php else: ?>
                     <div class="text-center py-4">
-                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <i class="bi bi-inbox text-muted display-1"></i>
                         <p class="text-muted mt-2">No recent bookings</p>
                     </div>
                 <?php endif; ?>
@@ -302,7 +302,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <a href="<?= base_url('pos') ?>" class="text-decoration-none">
                             <div class="card border-primary h-100">
                                 <div class="card-body text-center">
-                                    <i class="bi bi-cash-register text-primary" style="font-size: 2.5rem;"></i>
+                                    <i class="bi bi-cash-register text-primary display-4"></i>
                                     <h6 class="mt-3 mb-0">POS</h6>
                                     <small class="text-muted">Point of Sale</small>
                                 </div>
@@ -313,7 +313,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <a href="<?= base_url('bookings') ?>" class="text-decoration-none">
                             <div class="card border-success h-100">
                                 <div class="card-body text-center">
-                                    <i class="bi bi-calendar-check text-success" style="font-size: 2.5rem;"></i>
+                                    <i class="bi bi-calendar-check text-success display-4"></i>
                                     <h6 class="mt-3 mb-0">Bookings</h6>
                                     <small class="text-muted">Manage bookings</small>
                                 </div>
@@ -324,7 +324,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <a href="<?= base_url('inventory') ?>" class="text-decoration-none">
                             <div class="card border-info h-100">
                                 <div class="card-body text-center">
-                                    <i class="bi bi-box-seam text-info" style="font-size: 2.5rem;"></i>
+                                    <i class="bi bi-box-seam text-info display-4"></i>
                                     <h6 class="mt-3 mb-0">Inventory</h6>
                                     <small class="text-muted">Stock management</small>
                                 </div>
@@ -335,7 +335,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <a href="<?= base_url('utilities') ?>" class="text-decoration-none">
                             <div class="card border-warning h-100">
                                 <div class="card-body text-center">
-                                    <i class="bi bi-tools text-warning" style="font-size: 2.5rem;"></i>
+                                    <i class="bi bi-tools text-warning display-4"></i>
                                     <h6 class="mt-3 mb-0">Utilities</h6>
                                     <small class="text-muted">Utilities & services</small>
                                 </div>

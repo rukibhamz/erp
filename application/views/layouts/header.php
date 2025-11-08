@@ -14,6 +14,7 @@
     <link href="<?= base_url('assets/css/design-system.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/responsive.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/navigation.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('assets/css/module-navigation.css') ?>" rel="stylesheet">
     <script>
         // Initialize theme before page loads to prevent flash
         (function() {

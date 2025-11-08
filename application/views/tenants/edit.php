@@ -32,33 +32,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </nav>
 </div>
 
-<style>
-.property-nav {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
-}
-
-.property-nav .nav-link {
-    color: #495057;
-    border: 1px solid #dee2e6;
-}
-
-.property-nav .nav-link:hover {
-    background-color: #e9ecef;
-    color: #000;
-}
-
-.property-nav .nav-link.active {
-    background-color: #000;
-    color: #fff;
-    border-color: #000;
-}
-
-.property-nav .nav-link i {
-    margin-right: 0.5rem;
-}
-</style>
 
 <?php if ($flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">

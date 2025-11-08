@@ -49,7 +49,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="card item-card" onclick="addToCart(<?= $item['id'] ?>, '<?= htmlspecialchars(addslashes($item['name'])) ?>', <?= $item['selling_price'] ?? 0 ?>)">
                                     <div class="card-body text-center p-2">
                                         <div class="fw-bold small"><?= htmlspecialchars(substr($item['name'], 0, 20)) ?></div>
-                                        <div class="text-muted" style="font-size: 0.75rem;"><?= htmlspecialchars($item['item_code'] ?? '') ?></div>
+                                        <div class="text-muted small"><?= htmlspecialchars($item['item_code'] ?? '') ?></div>
                                         <div class="text-primary fw-bold mt-1"><?= format_currency($item['selling_price'] ?? 0) ?></div>
                                     </div>
                                 </div>
