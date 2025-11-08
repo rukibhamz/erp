@@ -244,18 +244,18 @@ class Module_label_model {
      */
     private function getDefaultLabels() {
         return [
-            'dashboard' => ['module_code' => 'dashboard', 'display_label' => 'Dashboard', 'icon_class' => 'icon-home', 'is_active' => 1, 'display_order' => 1],
-            'accounting' => ['module_code' => 'accounting', 'display_label' => 'Accounting', 'icon_class' => 'icon-calculator', 'is_active' => 1, 'display_order' => 2],
-            'bookings' => ['module_code' => 'bookings', 'display_label' => 'Bookings', 'icon_class' => 'icon-calendar', 'is_active' => 1, 'display_order' => 3],
-            'properties' => ['module_code' => 'properties', 'display_label' => 'Properties', 'icon_class' => 'icon-building', 'is_active' => 1, 'display_order' => 4],
-            'inventory' => ['module_code' => 'inventory', 'display_label' => 'Inventory', 'icon_class' => 'icon-package', 'is_active' => 1, 'display_order' => 5],
-            'utilities' => ['module_code' => 'utilities', 'display_label' => 'Utilities', 'icon_class' => 'icon-zap', 'is_active' => 1, 'display_order' => 6],
-            'reports' => ['module_code' => 'reports', 'display_label' => 'Reports', 'icon_class' => 'icon-bar-chart', 'is_active' => 1, 'display_order' => 7],
-            'settings' => ['module_code' => 'settings', 'display_label' => 'Settings', 'icon_class' => 'icon-settings', 'is_active' => 1, 'display_order' => 8],
-            'users' => ['module_code' => 'users', 'display_label' => 'User Management', 'icon_class' => 'icon-users', 'is_active' => 1, 'display_order' => 9],
-            'notifications' => ['module_code' => 'notifications', 'display_label' => 'Notifications', 'icon_class' => 'icon-bell', 'is_active' => 1, 'display_order' => 10],
-            'pos' => ['module_code' => 'pos', 'display_label' => 'Point of Sale', 'icon_class' => 'icon-shopping-cart', 'is_active' => 1, 'display_order' => 11],
-            'tax' => ['module_code' => 'tax', 'display_label' => 'Tax Management', 'icon_class' => 'icon-file-text', 'is_active' => 1, 'display_order' => 12]
+            'dashboard' => ['module_code' => 'dashboard', 'display_label' => 'Dashboard', 'icon_class' => 'bi-speedometer2', 'is_active' => 1, 'display_order' => 1],
+            'accounting' => ['module_code' => 'accounting', 'display_label' => 'Accounting', 'icon_class' => 'bi-calculator', 'is_active' => 1, 'display_order' => 2],
+            'bookings' => ['module_code' => 'bookings', 'display_label' => 'Bookings', 'icon_class' => 'bi-calendar', 'is_active' => 1, 'display_order' => 3],
+            'properties' => ['module_code' => 'properties', 'display_label' => 'Properties', 'icon_class' => 'bi-building', 'is_active' => 1, 'display_order' => 4],
+            'inventory' => ['module_code' => 'inventory', 'display_label' => 'Inventory', 'icon_class' => 'bi-box-seam', 'is_active' => 1, 'display_order' => 5],
+            'utilities' => ['module_code' => 'utilities', 'display_label' => 'Utilities', 'icon_class' => 'bi-lightning', 'is_active' => 1, 'display_order' => 6],
+            'reports' => ['module_code' => 'reports', 'display_label' => 'Reports', 'icon_class' => 'bi-bar-chart', 'is_active' => 1, 'display_order' => 7],
+            'settings' => ['module_code' => 'settings', 'display_label' => 'Settings', 'icon_class' => 'bi-gear', 'is_active' => 1, 'display_order' => 8],
+            'users' => ['module_code' => 'users', 'display_label' => 'User Management', 'icon_class' => 'bi-people', 'is_active' => 1, 'display_order' => 9],
+            'notifications' => ['module_code' => 'notifications', 'display_label' => 'Notifications', 'icon_class' => 'bi-bell', 'is_active' => 1, 'display_order' => 10],
+            'pos' => ['module_code' => 'pos', 'display_label' => 'Point of Sale', 'icon_class' => 'bi-cart', 'is_active' => 1, 'display_order' => 11],
+            'tax' => ['module_code' => 'tax', 'display_label' => 'Tax Management', 'icon_class' => 'bi-file-text', 'is_active' => 1, 'display_order' => 12]
         ];
     }
     

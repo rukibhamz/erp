@@ -31,7 +31,14 @@ include 'application/views/layouts/header.php';
                         <i class="bi bi-grip-vertical"></i>
                     </div>
                     <div class="module-item-icon">
-                        <i class="<?= htmlspecialchars($module['icon_class'] ?? 'bi bi-circle') ?>" 
+                        <?php 
+                        $iconClass = $module['icon_class'] ?? 'bi-circle';
+                        // Ensure icon has 'bi' prefix
+                        if (strpos($iconClass, 'bi-') !== 0 && strpos($iconClass, 'bi ') !== 0) {
+                            $iconClass = str_replace('icon-', 'bi-', $iconClass);
+                        }
+                        ?>
+                        <i class="bi <?= htmlspecialchars($iconClass) ?>" 
                            id="icon-<?= htmlspecialchars($module['module_code'] ?? '') ?>"></i>
                     </div>
                     <div class="module-item-content">

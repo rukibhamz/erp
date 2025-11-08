@@ -31,13 +31,18 @@ function getBaseUrl() {
 
 const BASE_URL = getBaseUrl();
 
+// Debug: Log BASE_URL for troubleshooting
+console.log('Module Customization - BASE_URL:', BASE_URL);
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Module Customization - Initializing...');
     initializeDragAndDrop();
     initializeVisibilityToggles();
     initializeEditButtons();
     initializeResetButtons();
     initializeIconPreview();
+    console.log('Module Customization - Initialized');
 });
 
 /**
@@ -142,27 +147,37 @@ function initializeVisibilityToggles() {
             const moduleCode = this.dataset.moduleCode;
             const isActive = this.checked;
 
-            fetch(BASE_URL + 'module_customization/toggleVisibility', {
+            const url = BASE_URL + 'module_customization/toggleVisibility';
+            console.log('Toggle Visibility - URL:', url, 'Module:', moduleCode, 'Active:', isActive);
+            
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
                 body: `module_code=${encodeURIComponent(moduleCode)}&is_active=${isActive ? 1 : 0}`
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Toggle Visibility - Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Toggle Visibility - Response data:', data);
                 if (data.success) {
                     showMessage(`Module ${isActive ? 'enabled' : 'disabled'} successfully`, 'success');
                 } else {
                     // Revert toggle on error
                     this.checked = !isActive;
-                    showMessage('Failed to update visibility: ' + data.error, 'danger');
+                    showMessage('Failed to update visibility: ' + (data.error || 'Unknown error'), 'danger');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Toggle Visibility - Error:', error);
                 this.checked = !isActive;
-                showMessage('An error occurred while updating visibility', 'danger');
+                showMessage('An error occurred while updating visibility: ' + error.message, 'danger');
             });
         });
     });
@@ -227,14 +242,23 @@ function saveModuleEdit() {
     }
 
     // Update label
-    fetch(BASE_URL + 'module_customization/updateLabel', {
+    const url = BASE_URL + 'module_customization/updateLabel';
+    console.log('Update Label - URL:', url, 'Module:', moduleCode, 'Label:', customLabel);
+    
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: `module_code=${encodeURIComponent(moduleCode)}&custom_label=${encodeURIComponent(customLabel)}`
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Update Label - Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Update icon if provided (optional)

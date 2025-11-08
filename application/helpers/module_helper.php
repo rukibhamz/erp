@@ -58,14 +58,25 @@ function get_module_icon($moduleKey) {
         $moduleLabelModel = new Module_label_model();
         $labels = $moduleLabelModel->getAllLabels(true);
         if (isset($labels[$moduleKey]['icon_class']) && !empty($labels[$moduleKey]['icon_class'])) {
-            return $labels[$moduleKey]['icon_class'];
+            $icon = $labels[$moduleKey]['icon_class'];
+            // Ensure icon has 'bi' prefix if not already present
+            if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
+                // If it's an old format like 'icon-home', convert to 'bi-home'
+                $icon = str_replace('icon-', 'bi-', $icon);
+            }
+            return $icon;
         }
         
         // Fallback to Module_model
         require_once BASEPATH . 'models/Module_model.php';
         $moduleModel = new Module_model();
         $module = $moduleModel->getByKey($moduleKey);
-        return $module && isset($module['icon']) ? $module['icon'] : 'bi-puzzle';
+        $icon = $module && isset($module['icon']) ? $module['icon'] : 'bi-puzzle';
+        // Ensure icon has 'bi' prefix
+        if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
+            $icon = str_replace('icon-', 'bi-', $icon);
+        }
+        return $icon;
     } catch (Exception $e) {
         error_log('Module helper get_module_icon error: ' . $e->getMessage());
         return 'bi-puzzle';
@@ -137,7 +148,19 @@ function get_user_accessible_modules() {
                 // Use custom label and icon if available
                 if (isset($moduleLabels[$moduleKey])) {
                     $module['display_name'] = $moduleLabels[$moduleKey]['display_label'];
-                    $module['icon'] = $moduleLabels[$moduleKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
+                    $icon = $moduleLabels[$moduleKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
+                    // Ensure icon has 'bi' prefix
+                    if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
+                        $icon = str_replace('icon-', 'bi-', $icon);
+                    }
+                    $module['icon'] = $icon;
+                } else {
+                    // Ensure default icon has 'bi' prefix
+                    $icon = $module['icon'] ?? 'bi-puzzle';
+                    if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
+                        $icon = str_replace('icon-', 'bi-', $icon);
+                    }
+                    $module['icon'] = $icon;
                 }
                 $accessibleModules[] = $module;
                 continue;
@@ -151,7 +174,19 @@ function get_user_accessible_modules() {
                 // Use custom label and icon if available
                 if (isset($moduleLabels[$moduleKey])) {
                     $module['display_name'] = $moduleLabels[$moduleKey]['display_label'];
-                    $module['icon'] = $moduleLabels[$moduleKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
+                    $icon = $moduleLabels[$moduleKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
+                    // Ensure icon has 'bi' prefix
+                    if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
+                        $icon = str_replace('icon-', 'bi-', $icon);
+                    }
+                    $module['icon'] = $icon;
+                } else {
+                    // Ensure default icon has 'bi' prefix
+                    $icon = $module['icon'] ?? 'bi-puzzle';
+                    if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
+                        $icon = str_replace('icon-', 'bi-', $icon);
+                    }
+                    $module['icon'] = $icon;
                 }
                 $accessibleModules[] = $module;
             }

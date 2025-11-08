@@ -35,20 +35,20 @@ CREATE TABLE IF NOT EXISTS `erp_module_labels` (
   KEY `idx_is_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Seed default module labels
+-- Seed default module labels (using Bootstrap Icons format)
 INSERT INTO erp_module_labels (module_code, default_label, icon_class, display_order, is_active) VALUES
-('dashboard', 'Dashboard', 'icon-home', 1, 1),
-('accounting', 'Accounting', 'icon-calculator', 2, 1),
-('bookings', 'Bookings', 'icon-calendar', 3, 1),
-('properties', 'Properties', 'icon-building', 4, 1),
-('inventory', 'Inventory', 'icon-package', 5, 1),
-('utilities', 'Utilities', 'icon-zap', 6, 1),
-('reports', 'Reports', 'icon-bar-chart', 7, 1),
-('settings', 'Settings', 'icon-settings', 8, 1),
-('users', 'User Management', 'icon-users', 9, 1),
-('notifications', 'Notifications', 'icon-bell', 10, 1),
-('pos', 'Point of Sale', 'icon-shopping-cart', 11, 1),
-('tax', 'Tax Management', 'icon-file-text', 12, 1)
+('dashboard', 'Dashboard', 'bi-speedometer2', 1, 1),
+('accounting', 'Accounting', 'bi-calculator', 2, 1),
+('bookings', 'Bookings', 'bi-calendar', 3, 1),
+('properties', 'Properties', 'bi-building', 4, 1),
+('inventory', 'Inventory', 'bi-box-seam', 5, 1),
+('utilities', 'Utilities', 'bi-lightning', 6, 1),
+('reports', 'Reports', 'bi-bar-chart', 7, 1),
+('settings', 'Settings', 'bi-gear', 8, 1),
+('users', 'User Management', 'bi-people', 9, 1),
+('notifications', 'Notifications', 'bi-bell', 10, 1),
+('pos', 'Point of Sale', 'bi-cart', 11, 1),
+('tax', 'Tax Management', 'bi-file-text', 12, 1)
 ON DUPLICATE KEY UPDATE default_label = VALUES(default_label);
 
 -- ============================================================================
