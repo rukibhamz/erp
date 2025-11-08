@@ -140,10 +140,6 @@
                 Business ERP
             </a>
             <div class="topbar-right">
-                <!-- Theme Switcher -->
-                <button class="topbar-icon-btn" type="button" id="themeToggleMobile" title="Toggle theme">
-                    <i class="bi bi-sun" id="themeIconMobile"></i>
-                </button>
                 <!-- Notifications -->
                 <div class="nav-item-dropdown">
                     <button class="topbar-icon-btn" type="button" data-bs-toggle="dropdown" id="notificationsDropdown">
@@ -238,12 +234,6 @@
                 <div id="searchResults" class="search-results-dropdown" style="display: none;"></div>
             </div>
             <div class="navbar-right">
-                <!-- Theme Switcher -->
-                <div class="nav-item-dropdown">
-                    <button class="nav-icon-btn" type="button" id="themeToggle" title="Toggle theme">
-                        <i class="bi bi-sun" id="themeIcon"></i>
-                    </button>
-                </div>
                 <!-- Notifications -->
                 <div class="nav-item-dropdown">
                     <button class="nav-icon-btn" type="button" data-bs-toggle="dropdown" id="notificationsDropdownDesktop">
