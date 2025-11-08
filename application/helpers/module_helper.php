@@ -128,7 +128,7 @@ function get_user_accessible_modules() {
             $moduleKey = $module['module_key'];
             
             // Check if module is visible in module_labels (is_active = 1)
-            if (isset($moduleLabels[$moduleKey]) && !$moduleLabels[$moduleKey]['is_active']) {
+            if (isset($moduleLabels[$moduleKey]) && isset($moduleLabels[$moduleKey]['is_active']) && !$moduleLabels[$moduleKey]['is_active']) {
                 continue; // Skip hidden modules
             }
             
@@ -159,8 +159,10 @@ function get_user_accessible_modules() {
         
         // Sort by display_order from module_labels
         usort($accessibleModules, function($a, $b) use ($moduleLabels) {
-            $orderA = isset($moduleLabels[$a['module_key']]) ? $moduleLabels[$a['module_key']]['display_order'] : 999;
-            $orderB = isset($moduleLabels[$b['module_key']]) ? $moduleLabels[$b['module_key']]['display_order'] : 999;
+            $orderA = isset($moduleLabels[$a['module_key']]) && isset($moduleLabels[$a['module_key']]['display_order']) 
+                ? $moduleLabels[$a['module_key']]['display_order'] : 999;
+            $orderB = isset($moduleLabels[$b['module_key']]) && isset($moduleLabels[$b['module_key']]['display_order']) 
+                ? $moduleLabels[$b['module_key']]['display_order'] : 999;
             return $orderA <=> $orderB;
         });
         
