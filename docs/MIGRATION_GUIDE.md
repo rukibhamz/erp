@@ -7,77 +7,73 @@ This guide explains how to run database migrations for the ERP system. Migration
 
 ### For New Installations
 
-Run migrations in order:
+**Run ONE migration file for everything:**
 
 ```bash
-# 1. Permission System (CRITICAL - Must run first)
-mysql -u username -p database_name < database/migrations/001_permission_system_complete.sql
+# SQL (Recommended)
+mysql -u username -p database_name < database/migrations/000_complete_system_migration.sql
 
-# 2. Business Module Tables
-mysql -u username -p database_name < database/migrations/004_create_business_module_tables.sql
+# OR PHP Migration Runner
+php database/migrations/migrate.php up
 ```
 
-Or using PHP:
-
-```bash
-# 1. Permission System
-php database/migrations/001_permission_system_complete.php
-
-# 2. Business Module Tables
-php database/migrations/004_create_business_module_tables.php
-```
+**That's it!** This single migration includes:
+- ✅ Permission system (tables, roles, permissions)
+- ✅ Business module tables (7 tables)
+- ✅ Role-based permission assignments
 
 ## Migration Files
 
-### 001_permission_system_complete.sql / .php
-**Purpose:** Creates the complete permission system
+### 000_complete_system_migration.sql (RECOMMENDED FOR NEW INSTALLS)
+**Purpose:** Complete system migration (ALL-IN-ONE)
 **Includes:**
-- Permission tables (`erp_permissions`, `erp_roles`, `erp_role_permissions`)
-- All system roles (super_admin, admin, manager, staff, user, accountant)
-- All module permissions
-- Role-based permission assignments
-- Manager permissions (Accounting sub-modules, POS, no Tax)
-- Staff permissions (POS, Bookings, Inventory, Utilities)
+- ✅ Permission system (tables, roles, permissions)
+- ✅ Business module tables (7 tables)
+- ✅ Role-based permission assignments
+- ✅ Manager permissions (Accounting sub-modules, POS, no Tax)
+- ✅ Staff permissions (POS, Bookings, Inventory, Utilities)
 
 **When to Run:**
 - New installations (required)
-- If permission system is broken
 - After database reset
+- If system is completely broken
 
 **Idempotent:** Yes - Safe to run multiple times
 
-### 004_create_business_module_tables.sql / .php
-**Purpose:** Creates missing business module tables
-**Includes:**
-- `erp_spaces` - Property spaces/units
-- `erp_stock_levels` - Inventory stock levels
-- `erp_items` - Inventory items master
-- `erp_leases` - Property leases
-- `erp_work_orders` - Maintenance work orders
-- `erp_tax_deadlines` - Tax compliance deadlines
-- `erp_utility_bills` - Utility bills
+**Usage:**
+```bash
+mysql -u username -p database_name < database/migrations/000_complete_system_migration.sql
+```
 
-**When to Run:**
-- New installations
-- If dashboard shows "Table not found" errors
-- After database reset
+### Legacy Migration Files (For Reference Only)
+- `001_permission_system_complete.sql` - Legacy (merged into 000)
+- `004_create_business_module_tables.sql` - Legacy (merged into 000)
 
-**Idempotent:** Yes - Safe to run multiple times
+**Note:** For new installations, use `000_complete_system_migration.sql` only.
 
 ## Running Migrations
 
-### Method 1: SQL Files (Recommended)
+### Method 1: SQL File (Recommended for New Installs)
 
 ```bash
-# Single migration
-mysql -u your_username -p your_database < database/migrations/001_permission_system_complete.sql
-
-# Multiple migrations
-mysql -u your_username -p your_database < database/migrations/001_permission_system_complete.sql
-mysql -u your_username -p your_database < database/migrations/004_create_business_module_tables.sql
+# Single complete migration
+mysql -u your_username -p your_database < database/migrations/000_complete_system_migration.sql
 ```
 
-### Method 2: PHP Scripts
+### Method 2: Migration Runner (Recommended for Existing Installs)
+
+```bash
+# Check status
+php database/migrations/migrate.php status
+
+# Run all pending migrations
+php database/migrations/migrate.php up
+
+# Rollback last batch (manual process)
+php database/migrations/migrate.php down
+```
+
+### Method 3: Legacy PHP Scripts (If Needed)
 
 ```bash
 # From project root
@@ -134,10 +130,13 @@ ORDER BY r.role_code;
 
 ## Migration Order
 
-**Critical:** Always run migrations in this order:
+**For New Installations:**
+1. Run installer (`/install/`)
+2. Run `000_complete_system_migration.sql` - Complete system setup
 
-1. `001_permission_system_complete.sql` - Foundation tables
-2. `004_create_business_module_tables.sql` - Business module tables
+**For Existing Installations:**
+- Use migration runner: `php database/migrations/migrate.php up`
+- Migrations are tracked in `erp_migrations` table
 
 ## Production Deployment
 

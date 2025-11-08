@@ -88,26 +88,34 @@ A modern, installable PHP business management application built with MVC archite
 
 ## Database Migrations
 
-**IMPORTANT:** After installation, you must run the complete system migration to create all required tables and set up the permission system.
+**✅ AUTOMATIC MIGRATIONS:** Migrations run automatically on application startup! No manual steps required.
 
-### Quick Start (New Installations)
+### How It Works
 
-**Run ONE migration file for everything:**
+1. **After Installation:** User logs in or visits any page
+2. **Automatic Check:** System checks for pending migrations
+3. **Auto-Execution:** Migrations run automatically in background
+4. **Seamless Experience:** User continues normally - no interruption
 
-```bash
-# SQL (Recommended)
-mysql -u username -p database_name < database/migrations/000_complete_system_migration.sql
+### What Gets Migrated Automatically
 
-# OR PHP
-php database/migrations/000_complete_system_migration.php
-```
-
-**That's it!** This single migration includes:
 - ✅ Permission system (tables, roles, permissions)
-- ✅ Business module tables (spaces, stock_levels, items, leases, work_orders, tax_deadlines, utility_bills)
+- ✅ Business module tables (7 tables)
 - ✅ Role-based permission assignments
 
-**See `INSTALLATION_GUIDE.md` for complete installation instructions.**
+### Manual Option (If Needed)
+
+If you prefer to run migrations manually:
+
+```bash
+# SQL
+mysql -u username -p database_name < database/migrations/000_complete_system_migration.sql
+
+# OR Migration Runner
+php database/migrations/migrate.php up
+```
+
+**See `docs/AUTO_MIGRATION_GUIDE.md` for details on automatic migrations.**
 
 ## Database Tables
 

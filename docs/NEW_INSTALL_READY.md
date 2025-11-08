@@ -65,8 +65,8 @@ AND table_name IN ('erp_permissions', 'erp_roles', 'erp_role_permissions',
 
 ### New Files
 - `database/migrations/000_complete_system_migration.sql` - **MAIN MIGRATION**
-- `INSTALLATION_GUIDE.md` - Complete installation guide
-- `AUDIT_FIXES_FINAL_SUMMARY.md` - Detailed fix summary
+- `docs/INSTALLATION_GUIDE.md` - Complete installation guide
+- `docs/AUDIT_FIXES_FINAL_SUMMARY.md` - Detailed fix summary
 
 ### Modified Files
 - `application/controllers/Dashboard.php` - Refactored, all fixes applied

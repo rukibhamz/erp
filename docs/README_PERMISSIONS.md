@@ -1,6 +1,6 @@
 # Permission System - Quick Start
 
-> **For complete documentation, see:** `PERMISSION_SYSTEM_COMPLETE_GUIDE.md`
+> **For complete documentation, see:** `PERMISSION_SYSTEM.md` (single source of truth)
 
 ## 🚀 Quick Start
 
@@ -33,7 +33,7 @@ php test_permission_system.php
 - **`database/migrations/003_fix_staff_permissions.sql`** - Legacy: Staff permissions fix (now merged into 001)
 - **`database/migrations/003_fix_staff_permissions.php`** - Legacy: Staff permissions fix (now merged into 001)
 - **`test_permission_system.php`** - Comprehensive test script
-- **`PERMISSION_SYSTEM_COMPLETE_GUIDE.md`** - Complete documentation
+- **`PERMISSION_SYSTEM.md`** - Complete documentation (single source of truth)
 
 > **Note:** For new installations, you only need to run `001_permission_system_complete.sql` or `.php`. The other migration files are kept for reference or if you need to apply fixes separately.
 
@@ -70,7 +70,7 @@ php test_permission_system.php
 
 ## 📖 Full Documentation
 
-See **`PERMISSION_SYSTEM_COMPLETE_GUIDE.md`** for:
+See **`PERMISSION_SYSTEM.md`** for:
 - Complete migration instructions
 - Troubleshooting guide
 - Role permission matrix

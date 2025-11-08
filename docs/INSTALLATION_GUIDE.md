@@ -24,7 +24,17 @@ php database/migrations/000_complete_system_migration.php
 2. Follow the installation wizard
 3. Complete database setup and create admin account
 
-### Step 2: Run the Complete Migration
+### Step 2: Migration Runs Automatically! ✅
+**No manual steps needed!** The migration runs automatically when you first access the application after installation.
+
+**What happens:**
+1. User logs in or visits any page
+2. System automatically checks for pending migrations
+3. Migration runs in the background (if needed)
+4. User continues normally - no interruption
+
+**Manual Option (if needed):**
+If you prefer to run manually:
 ```bash
 mysql -u your_username -p your_database < database/migrations/000_complete_system_migration.sql
 ```
@@ -100,5 +110,5 @@ rm -rf install/
 
 ---
 
-**For detailed migration information, see:** `MIGRATION_GUIDE.md`
+**For detailed migration information, see:** `docs/MIGRATION_GUIDE.md`
 

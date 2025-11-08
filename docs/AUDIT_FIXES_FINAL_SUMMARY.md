@@ -35,11 +35,11 @@
 - `database/migrations/004_create_business_module_tables.php`
 
 ### Documentation
-- `MIGRATION_GUIDE.md` - Comprehensive migration guide
-- `AUDIT_FIX_PLAN.md` - Detailed fix plan
-- `AUDIT_FIXES_COMPLETED.md` - Completed fixes tracking
-- `AUDIT_FIXES_PROGRESS.md` - Progress report
-- `AUDIT_FIXES_FINAL_SUMMARY.md` - This file
+- `docs/MIGRATION_GUIDE.md` - Comprehensive migration guide
+- `docs/AUDIT_FIX_PLAN.md` - Detailed fix plan
+- `docs/AUDIT_FIXES_COMPLETED.md` - Completed fixes tracking
+- `docs/AUDIT_FIXES_PROGRESS.md` - Progress report
+- `docs/AUDIT_FIXES_FINAL_SUMMARY.md` - This file
 
 ---
 
@@ -193,8 +193,8 @@ AND table_name IN ('erp_spaces', 'erp_stock_levels', 'erp_items',
 ## 📚 Documentation
 
 - **`MIGRATION_GUIDE.md`** - Complete migration instructions
-- **`README_PERMISSIONS.md`** - Permission system quick reference
-- **`PERMISSION_SYSTEM_COMPLETE_GUIDE.md`** - Detailed permission guide
+- **`docs/README_PERMISSIONS.md`** - Permission system quick reference
+- **`docs/PERMISSION_SYSTEM.md`** - Detailed permission guide (single source of truth)
 - **`README.md`** - Updated with migration section
 
 ---

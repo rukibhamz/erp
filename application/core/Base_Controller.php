@@ -25,6 +25,11 @@ class Base_Controller {
         if (isset($this->config['installed']) && $this->config['installed'] === true) {
             if (!empty($this->config['db']['hostname']) && !empty($this->config['db']['database'])) {
                 try {
+                    // Run automatic migrations before initializing database
+                    // This ensures all required tables exist before the application uses them
+                    require_once __DIR__ . '/AutoMigration.php';
+                    new AutoMigration();
+                    
                     $this->db = Database::getInstance();
                 } catch (Exception $e) {
                     // Database connection failed - don't die, allow public pages to work
