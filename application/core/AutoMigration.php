@@ -81,7 +81,28 @@ class AutoMigration {
         $migrationFile = __DIR__ . '/../../database/migrations/000_complete_system_migration.sql';
         
         // Check if main migration needs to run
-        if (!in_array('000_complete_system_migration.sql', $executed)) {
+        // Also check if critical tables exist (for cases where migration was run before table was added)
+        $needsMigration = !in_array('000_complete_system_migration.sql', $executed);
+        
+        // Check if critical tables exist (e.g., tax_types was added later)
+        if (!$needsMigration) {
+            try {
+                $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}tax_types'");
+                $tableExists = $stmt->rowCount() > 0;
+                
+                if (!$tableExists && file_exists($migrationFile)) {
+                    // Table doesn't exist but migration was marked as executed
+                    // Re-run migration to create missing tables (idempotent, safe)
+                    error_log("AutoMigration: tax_types table missing, re-running migration to create it");
+                    $needsMigration = true;
+                }
+            } catch (Exception $e) {
+                // If check fails, assume migration needed
+                error_log("AutoMigration: Error checking tables: " . $e->getMessage());
+            }
+        }
+        
+        if ($needsMigration) {
             if (file_exists($migrationFile)) {
                 $this->executeMigration($migrationFile, '000_complete_system_migration.sql');
             }

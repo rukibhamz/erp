@@ -77,24 +77,16 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                             </td>
                             <td>
                                 <?php if ($isAdmin): ?>
-                                    <form method="POST" action="<?= base_url('tax/config/updateRate') ?>" class="d-inline" id="form_<?= htmlspecialchars($code) ?>">
-                                        <input type="hidden" name="tax_id" value="<?= $taxId ?>">
-                                        <input type="hidden" name="tax_code" value="<?= htmlspecialchars($code) ?>">
-                                        <div class="input-group input-group-sm" style="width: 200px;">
-                                            <input type="number" 
-                                                   name="tax_rate" 
-                                                   class="form-control" 
-                                                   value="<?= number_format($currentRate, 2, '.', '') ?>" 
-                                                   step="0.01" 
-                                                   min="0" 
-                                                   max="100"
-                                                   id="rate_<?= htmlspecialchars($code) ?>"
-                                                   <?= $code === 'PAYE' ? 'readonly title="PAYE is progressive - rate calculated based on income brackets"' : '' ?>>
-                                            <button type="submit" class="btn btn-dark" title="Update <?= htmlspecialchars($code) ?> rate">
-                                                <i class="bi bi-save"></i> Update
-                                            </button>
-                                        </div>
-                                    </form>
+                                    <input type="number" 
+                                           name="tax_rate_<?= htmlspecialchars($code) ?>" 
+                                           class="form-control form-control-sm" 
+                                           value="<?= number_format($currentRate, 2, '.', '') ?>" 
+                                           step="0.01" 
+                                           min="0" 
+                                           max="100"
+                                           id="rate_<?= htmlspecialchars($code) ?>"
+                                           style="width: 120px;"
+                                           <?= $code === 'PAYE' ? 'readonly title="PAYE is progressive - rate calculated based on income brackets"' : '' ?>>
                                 <?php else: ?>
                                     <span class="text-muted"><?= number_format($currentRate, 2) ?>%</span>
                                 <?php endif; ?>
@@ -108,10 +100,28 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($isAdmin && $taxId > 0): ?>
-                                    <a href="<?= base_url('tax/config/edit/' . $taxId) ?>" class="btn btn-sm btn-outline-dark" title="Edit Tax Details">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
+                                <?php if ($isAdmin): ?>
+                                    <div class="btn-group btn-group-sm">
+                                        <form method="POST" action="<?= base_url('tax/config/updateRate') ?>" class="d-inline" id="form_<?= htmlspecialchars($code) ?>">
+                                            <input type="hidden" name="tax_id" value="<?= $taxId ?>">
+                                            <input type="hidden" name="tax_code" value="<?= htmlspecialchars($code) ?>">
+                                            <input type="hidden" name="tax_rate" id="hidden_rate_<?= htmlspecialchars($code) ?>" value="<?= number_format($currentRate, 2, '.', '') ?>">
+                                            <button type="submit" class="btn btn-dark" title="Update <?= htmlspecialchars($code) ?> rate" onclick="document.getElementById('hidden_rate_<?= htmlspecialchars($code) ?>').value = document.getElementById('rate_<?= htmlspecialchars($code) ?>').value;">
+                                                <i class="bi bi-save"></i> Update
+                                            </button>
+                                        </form>
+                                        <?php if ($taxId > 0): ?>
+                                            <a href="<?= base_url('tax/config/edit/' . $taxId) ?>" class="btn btn-outline-dark" title="Edit Tax Details">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <?php if ($taxId > 0): ?>
+                                        <a href="<?= base_url('tax/config/edit/' . $taxId) ?>" class="btn btn-sm btn-outline-dark" title="View Tax Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -128,7 +138,14 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
 document.querySelectorAll('form[id^="form_"]').forEach(function(form) {
     form.addEventListener('submit', function(e) {
         const code = form.querySelector('input[name="tax_code"]').value;
-        const rate = parseFloat(form.querySelector('input[name="tax_rate"]').value);
+        const rateInput = document.getElementById('rate_' + code);
+        const rate = parseFloat(rateInput ? rateInput.value : form.querySelector('input[name="tax_rate"]').value);
+        
+        // Update hidden field with current input value
+        const hiddenField = form.querySelector('input[name="tax_rate"]');
+        if (hiddenField && rateInput) {
+            hiddenField.value = rateInput.value;
+        }
         
         if (!confirm('Update ' + code + ' rate to ' + rate.toFixed(2) + '%?')) {
             e.preventDefault();
