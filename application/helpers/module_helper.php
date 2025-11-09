@@ -209,5 +209,33 @@ function get_user_accessible_modules() {
     }
 }
 
+/**
+ * Generate a back button link
+ * 
+ * @param string $url The URL to go back to (defaults to module root)
+ * @param string $text Button text (defaults to "Back")
+ * @param string $class Additional CSS classes
+ * @return string HTML for back button
+ */
+function back_button($url = null, $text = 'Back', $class = '') {
+    if ($url === null) {
+        // Try to determine module from current URL
+        $currentUrl = $_GET['url'] ?? '';
+        $segments = explode('/', trim($currentUrl, '/'));
+        if (!empty($segments)) {
+            $url = base_url($segments[0]);
+        } else {
+            $url = base_url('dashboard');
+        }
+    } else {
+        $url = base_url($url);
+    }
+    
+    $classes = 'btn btn-outline-secondary ' . $class;
+    return '<a href="' . htmlspecialchars($url) . '" class="' . trim($classes) . '">
+        <i class="bi bi-arrow-left"></i> ' . htmlspecialchars($text) . '
+    </a>';
+}
+
 
 

@@ -7,7 +7,6 @@ class Tax_reports extends Base_Controller {
     private $citCalculationModel;
     private $taxPaymentModel;
     private $taxFilingModel;
-    private $taxDeadlineModel;
     private $taxTypeModel;
     
     public function __construct() {
@@ -18,7 +17,7 @@ class Tax_reports extends Base_Controller {
         $this->citCalculationModel = $this->loadModel('Cit_calculation_model');
         $this->taxPaymentModel = $this->loadModel('Tax_payment_model');
         $this->taxFilingModel = $this->loadModel('Tax_filing_model');
-        $this->taxDeadlineModel = $this->loadModel('Tax_deadline_model');
+        // Tax deadline model removed - compliance module deleted
         $this->taxTypeModel = $this->loadModel('Tax_type_model');
     }
     
@@ -54,7 +53,11 @@ class Tax_reports extends Base_Controller {
                     $data = array_merge($data, $this->getPaymentsReport($startDate, $endDate));
                     break;
                 case 'compliance':
-                    $data = array_merge($data, $this->getComplianceReport());
+                    // Compliance module removed - return empty data
+                    $data['compliance_rate'] = 100;
+                    $data['upcoming_deadlines'] = [];
+                    $data['overdue_deadlines'] = [];
+                    $data['overdue_filings'] = [];
                     break;
                 default:
                     $data = array_merge($data, $this->getSummaryReport($startDate, $endDate));
@@ -110,9 +113,9 @@ class Tax_reports extends Base_Controller {
             );
             $totalPayments = array_sum(array_column($payments, 'amount'));
             
-            // Compliance
-            $upcomingDeadlines = $this->taxDeadlineModel->getUpcoming(90);
-            $overdueDeadlines = $this->taxDeadlineModel->getOverdue();
+            // Compliance module removed - no deadlines
+            $upcomingDeadlines = [];
+            $overdueDeadlines = [];
             
             return [
                 'total_vat_payable' => $totalVATPayable,
@@ -232,26 +235,13 @@ class Tax_reports extends Base_Controller {
     }
     
     private function getComplianceReport() {
-        try {
-            $upcoming = $this->taxDeadlineModel->getUpcoming(90);
-            $overdue = $this->taxDeadlineModel->getOverdue();
-            $overdueFilings = $this->taxFilingModel->getOverdueFilings();
-            
-            return [
-                'upcoming_deadlines' => $upcoming,
-                'overdue_deadlines' => $overdue,
-                'overdue_filings' => $overdueFilings,
-                'compliance_rate' => count($upcoming) > 0 ? round((count($upcoming) / (count($upcoming) + count($overdue))) * 100) : 100
-            ];
-        } catch (Exception $e) {
-            error_log('Tax_reports getComplianceReport error: ' . $e->getMessage());
-            return [
-                'upcoming_deadlines' => [],
-                'overdue_deadlines' => [],
-                'overdue_filings' => [],
-                'compliance_rate' => 100
-            ];
-        }
+        // Compliance module removed - return empty data
+        return [
+            'upcoming_deadlines' => [],
+            'overdue_deadlines' => [],
+            'overdue_filings' => [],
+            'compliance_rate' => 100
+        ];
     }
     
     public function export() {
@@ -363,29 +353,11 @@ class Tax_reports extends Base_Controller {
                     break;
                     
                 case 'compliance':
-                    $report = $this->getComplianceReport();
-                    fputcsv($output, ['Compliance Report']);
+                    // Compliance module removed
+                    fputcsv($output, ['Compliance Report - Module Removed']);
                     fputcsv($output, []);
                     fputcsv($output, ['Overdue Deadlines']);
-                    fputcsv($output, ['Tax Type', 'Deadline Date', 'Period', 'Status']);
-                    foreach ($report['overdue_deadlines'] as $deadline) {
-                        fputcsv($output, [
-                            $deadline['tax_type'] ?? '',
-                            $deadline['deadline_date'] ?? '',
-                            $deadline['period_covered'] ?? '',
-                            ucfirst($deadline['status'] ?? '')
-                        ]);
-                    }
-                    fputcsv($output, []);
-                    fputcsv($output, ['Upcoming Deadlines']);
-                    fputcsv($output, ['Tax Type', 'Deadline Date', 'Period']);
-                    foreach ($report['upcoming_deadlines'] as $deadline) {
-                        fputcsv($output, [
-                            $deadline['tax_type'] ?? '',
-                            $deadline['deadline_date'] ?? '',
-                            $deadline['period_covered'] ?? ''
-                        ]);
-                    }
+                    fputcsv($output, ['This module has been removed from the system.']);
                     break;
                     
                 default:

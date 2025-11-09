@@ -958,15 +958,7 @@ class Dashboard extends Base_Controller {
             error_log('Dashboard getSystemAlerts overdue invoices error: ' . $e->getMessage());
         }
         
-        // Upcoming tax deadlines
-        $upcomingDeadlines = count($this->getUpcomingTaxDeadlines(7));
-        if ($upcomingDeadlines > 0) {
-            $alerts[] = [
-                'type' => 'info',
-                'message' => $upcomingDeadlines . ' tax deadlines approaching',
-                'link' => base_url('tax/compliance')
-            ];
-        }
+        // Tax compliance module removed - no alerts for deadlines
         
         return $alerts;
     }

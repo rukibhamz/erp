@@ -9,6 +9,9 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Tax Configuration</h1>
+        <div class="d-flex gap-2">
+            <?= back_button('tax', 'Back to Tax') ?>
+        </div>
     </div>
 </div>
 

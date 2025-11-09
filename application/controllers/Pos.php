@@ -12,7 +12,7 @@ class Pos extends Base_Controller {
     private $invoiceModel;
     private $stockModel;
     private $activityModel;
-    private $taxModel;
+    private $taxTypeModel;
     
     public function __construct() {
         parent::__construct();
@@ -27,7 +27,7 @@ class Pos extends Base_Controller {
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->stockModel = $this->loadModel('Stock_level_model');
         $this->activityModel = $this->loadModel('Activity_model');
-        $this->taxModel = $this->loadModel('Tax_model');
+        $this->taxTypeModel = $this->loadModel('Tax_type_model'); // Use Tax_type_model for erp_tax_types table
     }
     
     public function index() {
@@ -53,16 +53,16 @@ class Pos extends Base_Controller {
             $items = [];
         }
         
-        // Get default VAT rate
+        // Get default VAT rate from erp_tax_types table
         $defaultVatRate = 7.5; // Default fallback
         try {
-            $vatTax = $this->taxModel->getByCode('VAT');
-            if ($vatTax) {
+            $vatTax = $this->taxTypeModel->getByCode('VAT');
+            if ($vatTax && isset($vatTax['rate'])) {
                 $defaultVatRate = floatval($vatTax['rate']);
             } else {
                 // Try to get first active tax as fallback
-                $activeTaxes = $this->taxModel->getActive();
-                if (!empty($activeTaxes)) {
+                $activeTaxes = $this->taxTypeModel->getAllActive();
+                if (!empty($activeTaxes) && isset($activeTaxes[0]['rate'])) {
                     $defaultVatRate = floatval($activeTaxes[0]['rate']);
                 }
             }
@@ -136,15 +136,15 @@ class Pos extends Base_Controller {
             $taxAmount = 0;
             $saleItems = [];
             
-            // Get default VAT rate if not provided per item
+            // Get default VAT rate from erp_tax_types table
             $defaultVatRate = 7.5;
             try {
-                $vatTax = $this->taxModel->getByCode('VAT');
-                if ($vatTax) {
+                $vatTax = $this->taxTypeModel->getByCode('VAT');
+                if ($vatTax && isset($vatTax['rate'])) {
                     $defaultVatRate = floatval($vatTax['rate']);
                 } else {
-                    $activeTaxes = $this->taxModel->getActive();
-                    if (!empty($activeTaxes)) {
+                    $activeTaxes = $this->taxTypeModel->getAllActive();
+                    if (!empty($activeTaxes) && isset($activeTaxes[0]['rate'])) {
                         $defaultVatRate = floatval($activeTaxes[0]['rate']);
                     }
                 }

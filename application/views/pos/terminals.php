@@ -5,9 +5,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">POS Terminals</h1>
-        <button class="btn btn-dark" onclick="showCreateModal()">
-            <i class="bi bi-plus-circle"></i> Create Terminal
-        </button>
+        <div class="d-flex gap-2">
+            <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>
+                <button class="btn btn-dark" onclick="showCreateModal()">
+                    <i class="bi bi-plus-circle"></i> Create Terminal
+                </button>
+            <?php endif; ?>
+            <?= back_button('pos', 'Back to POS') ?>
+        </div>
     </div>
 </div>
 

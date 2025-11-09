@@ -157,11 +157,6 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['tax/cit'] = 'Cit/index';
         $route['tax/cit/calculate'] = 'Cit/calculate';
         $route['tax/cit/view/(:num)'] = 'Cit/view/$1';
-        // Tax compliance routes - more specific routes first
-        $route['tax/compliance/list'] = 'Tax_compliance/list';
-        $route['tax/compliance/create-deadline'] = 'Tax_compliance/createDeadline';
-        $route['tax/compliance/mark-completed'] = 'Tax_compliance/markCompleted';
-        $route['tax/compliance'] = 'Tax_compliance/index';
         $route['tax/paye'] = 'Paye/index';
         $route['tax/paye/calculate/(:num)'] = 'Paye/calculate/$1';
         $route['tax/paye/view/(:num)'] = 'Paye/view/$1';

@@ -9,7 +9,6 @@ class Tax extends Base_Controller {
     private $citCalculationModel;
     private $taxPaymentModel;
     private $taxFilingModel;
-    private $taxDeadlineModel;
     private $activityModel;
     
     public function __construct() {
@@ -22,7 +21,7 @@ class Tax extends Base_Controller {
         $this->citCalculationModel = $this->loadModel('Cit_calculation_model');
         $this->taxPaymentModel = $this->loadModel('Tax_payment_model');
         $this->taxFilingModel = $this->loadModel('Tax_filing_model');
-        $this->taxDeadlineModel = $this->loadModel('Tax_deadline_model');
+        // Tax deadline model removed - compliance module deleted
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
@@ -33,9 +32,9 @@ class Tax extends Base_Controller {
             // Get recent VAT returns
             $vatReturns = $this->vatReturnModel->getRecentReturns(5);
             
-            // Get upcoming deadlines
-            $upcomingDeadlines = $this->taxDeadlineModel->getUpcoming(30);
-            $overdueDeadlines = $this->taxDeadlineModel->getOverdue();
+            // Tax compliance module removed - set defaults
+            $upcomingDeadlines = [];
+            $overdueDeadlines = [];
             
             // Calculate tax liabilities
             $totalVATPayable = 0;
@@ -68,7 +67,7 @@ class Tax extends Base_Controller {
             $totalWHTPayable = 0;
             $totalCITPayable = 0;
             $totalPAYEPayable = 0;
-            $complianceScore = 100;
+            $complianceScore = 100; // Default score since compliance module removed
         }
         
         $data = [

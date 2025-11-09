@@ -10,7 +10,6 @@ $is_wht = isset($uri_segments[1]) && $uri_segments[1] === 'wht';
 $is_cit = isset($uri_segments[1]) && $uri_segments[1] === 'cit';
 $is_paye = isset($uri_segments[1]) && $uri_segments[1] === 'paye';
 $is_payments = isset($uri_segments[1]) && $uri_segments[1] === 'payments';
-$is_compliance = isset($uri_segments[1]) && $uri_segments[1] === 'compliance';
 $is_reports = isset($uri_segments[1]) && $uri_segments[1] === 'reports';
 $is_config = isset($uri_segments[1]) && $uri_segments[1] === 'config';
 $is_settings = isset($uri_segments[1]) && $uri_segments[1] === 'settings';
@@ -36,9 +35,6 @@ $is_settings = isset($uri_segments[1]) && $uri_segments[1] === 'settings';
         </a>
         <a class="nav-link <?= $is_payments ? 'active' : '' ?>" href="<?= base_url('tax/payments') ?>">
             <i class="bi bi-cash-coin"></i> Payments
-        </a>
-        <a class="nav-link <?= $is_compliance ? 'active' : '' ?>" href="<?= base_url('tax/compliance') ?>">
-            <i class="bi bi-calendar-event"></i> Compliance
         </a>
         <a class="nav-link <?= $is_reports ? 'active' : '' ?>" href="<?= base_url('tax/reports') ?>">
             <i class="bi bi-graph-up"></i> Reports
