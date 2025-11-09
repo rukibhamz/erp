@@ -226,7 +226,7 @@
     </div>
     
     <!-- Top Navbar (Desktop) -->
-    <nav class="top-navbar d-none d-lg-block">
+    <nav class="top-navbar d-lg-block">
         <div class="navbar-content">
             <div class="navbar-search">
                 <form action="<?= base_url('search') ?>" method="GET" class="search-box">

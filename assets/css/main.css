@@ -241,7 +241,7 @@ h4 { font-size: 1.125rem; font-weight: 600; }
     height: 70px;
     background: var(--bg-primary);
     border-bottom: 1px solid var(--border-color);
-    z-index: 999;
+    z-index: 1000;
     align-items: center;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -249,8 +249,17 @@ h4 { font-size: 1.125rem; font-weight: 600; }
 
 /* Ensure top-navbar is visible on large screens (Bootstrap d-lg-block) */
 @media (min-width: 992px) {
-    .top-navbar {
+    .top-navbar.d-lg-block {
         display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+/* Hide top-navbar on mobile/tablet */
+@media (max-width: 991.98px) {
+    .top-navbar.d-lg-block {
+        display: none !important;
     }
 }
 
@@ -1069,7 +1078,11 @@ select:focus {
         padding-top: 64px;
     }
     
-    /* Top navbar hidden on tablet, topbar shown */
+    /* Top navbar hidden on tablet/mobile, topbar shown */
+    .top-navbar.d-lg-block {
+        display: none !important;
+    }
+    
     .topbar {
         display: flex !important;
     }

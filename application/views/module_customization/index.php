@@ -1,6 +1,7 @@
 <?php
+// Note: Header is already included by loadView() in Base_Controller
+// This view only contains the page content
 $page_title = $title ?? 'Module Customization';
-include 'application/views/layouts/header.php';
 ?>
 <div data-base-url="<?= base_url() ?>" style="display: none;"></div>
 
@@ -179,5 +180,8 @@ include 'application/views/layouts/header.php';
 <link href="<?= base_url('assets/css/module-customization.css') ?>" rel="stylesheet">
 <script src="<?= base_url('assets/js/module-customization.js') ?>"></script>
 
-<?php include 'application/views/layouts/footer.php'; ?>
+<?php
+// Note: Footer is already included by loadView() in Base_Controller
+// No need to include it again
+?>
 
