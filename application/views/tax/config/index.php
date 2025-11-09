@@ -113,11 +113,6 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                                                 <i class="bi bi-save"></i> Update
                                             </button>
                                         </form>
-                                        <?php if ($taxId > 0): ?>
-                                            <a href="<?= base_url('tax/config/edit/' . $taxId) ?>" class="btn btn-outline-dark" title="Edit Tax Details">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                        <?php endif; ?>
                                     </div>
                                 <?php else: ?>
                                     <?php if ($taxId > 0): ?>

@@ -127,28 +127,39 @@ function get_user_accessible_modules() {
         $modulePermissionMap = [
             'accounting' => 'accounting',
             'bookings' => 'bookings',
-            'properties' => 'properties',
+            'locations' => 'locations', // Locations (formerly Properties)
+            'properties' => 'locations', // Legacy: properties maps to locations permissions
             'utilities' => 'utilities',
             'inventory' => 'inventory',
             'tax' => 'tax',
             'pos' => 'pos',
             'settings' => 'settings',
+            'entities' => 'entities', // Entities (formerly Companies)
+        ];
+        
+        // Map legacy module keys to new module keys for label lookup
+        $moduleLabelMap = [
+            'properties' => 'locations', // Legacy properties -> locations label
+            'companies' => 'entities', // Legacy companies -> entities label
         ];
         
         foreach ($allModules as $module) {
             $moduleKey = $module['module_key'];
             
+            // Map legacy module keys to new ones for label lookup
+            $labelKey = $moduleLabelMap[$moduleKey] ?? $moduleKey;
+            
             // Check if module is visible in module_labels (is_active = 1)
-            if (isset($moduleLabels[$moduleKey]) && isset($moduleLabels[$moduleKey]['is_active']) && !$moduleLabels[$moduleKey]['is_active']) {
+            if (isset($moduleLabels[$labelKey]) && isset($moduleLabels[$labelKey]['is_active']) && !$moduleLabels[$labelKey]['is_active']) {
                 continue; // Skip hidden modules
             }
             
             // Super admin and admin can see all visible modules
             if (isset($_SESSION['role']) && ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin')) {
-                // Use custom label and icon if available
-                if (isset($moduleLabels[$moduleKey])) {
-                    $module['display_name'] = $moduleLabels[$moduleKey]['display_label'];
-                    $icon = $moduleLabels[$moduleKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
+                // Use custom label and icon if available (use labelKey for lookup)
+                if (isset($moduleLabels[$labelKey])) {
+                    $module['display_name'] = $moduleLabels[$labelKey]['display_label'];
+                    $icon = $moduleLabels[$labelKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
                     // Ensure icon has 'bi' prefix
                     if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
                         $icon = str_replace('icon-', 'bi-', $icon);
@@ -171,10 +182,10 @@ function get_user_accessible_modules() {
             $hasPermission = $permissionModel->hasPermission($_SESSION['user_id'], $permissionModule, 'read');
             
             if ($hasPermission) {
-                // Use custom label and icon if available
-                if (isset($moduleLabels[$moduleKey])) {
-                    $module['display_name'] = $moduleLabels[$moduleKey]['display_label'];
-                    $icon = $moduleLabels[$moduleKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
+                // Use custom label and icon if available (use labelKey for lookup)
+                if (isset($moduleLabels[$labelKey])) {
+                    $module['display_name'] = $moduleLabels[$labelKey]['display_label'];
+                    $icon = $moduleLabels[$labelKey]['icon_class'] ?? $module['icon'] ?? 'bi-puzzle';
                     // Ensure icon has 'bi' prefix
                     if (strpos($icon, 'bi-') !== 0 && strpos($icon, 'bi ') !== 0) {
                         $icon = str_replace('icon-', 'bi-', $icon);
@@ -192,12 +203,14 @@ function get_user_accessible_modules() {
             }
         }
         
-        // Sort by display_order from module_labels
-        usort($accessibleModules, function($a, $b) use ($moduleLabels) {
-            $orderA = isset($moduleLabels[$a['module_key']]) && isset($moduleLabels[$a['module_key']]['display_order']) 
-                ? $moduleLabels[$a['module_key']]['display_order'] : 999;
-            $orderB = isset($moduleLabels[$b['module_key']]) && isset($moduleLabels[$b['module_key']]['display_order']) 
-                ? $moduleLabels[$b['module_key']]['display_order'] : 999;
+        // Sort by display_order from module_labels (use labelKey for lookup)
+        usort($accessibleModules, function($a, $b) use ($moduleLabels, $moduleLabelMap) {
+            $labelKeyA = $moduleLabelMap[$a['module_key']] ?? $a['module_key'];
+            $labelKeyB = $moduleLabelMap[$b['module_key']] ?? $b['module_key'];
+            $orderA = isset($moduleLabels[$labelKeyA]) && isset($moduleLabels[$labelKeyA]['display_order']) 
+                ? $moduleLabels[$labelKeyA]['display_order'] : 999;
+            $orderB = isset($moduleLabels[$labelKeyB]) && isset($moduleLabels[$labelKeyB]['display_order']) 
+                ? $moduleLabels[$labelKeyB]['display_order'] : 999;
             return $orderA <=> $orderB;
         });
         

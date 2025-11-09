@@ -52,9 +52,9 @@
                     </li>
                     <?php if (isset($current_user['role']) && $current_user['role'] === 'super_admin'): ?>
                     <li class="nav-item">
-                        <a href="<?= base_url('companies') ?>" class="nav-link <?= strpos($current_url, 'companies') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-building"></i>
-                            <span class="nav-text">Companies</span>
+                        <a href="<?= base_url('entities') ?>" class="nav-link <?= (strpos($current_url, 'entities') === 0 || strpos($current_url, 'companies') === 0) ? 'active' : '' ?>">
+                            <i class="bi <?= get_module_icon('entities') ?>"></i>
+                            <span class="nav-text"><?= get_module_name('entities') ?></span>
                         </a>
                     </li>
                     <?php endif; ?>
@@ -81,7 +81,8 @@
                     $moduleRoutes = [
                         'accounting' => ['accounting', 'accounts', 'cash', 'receivables', 'payables', 'payroll', 'ledger', 'reports'],
                         'bookings' => ['bookings', 'facilities'],
-                        'properties' => ['properties', 'spaces', 'leases', 'rent-invoices'],
+                        'locations' => ['locations', 'properties', 'spaces', 'leases', 'rent-invoices'], // Locations (formerly Properties)
+                        'properties' => ['locations', 'properties', 'spaces', 'leases', 'rent-invoices'], // Legacy compatibility
                         'utilities' => ['utilities'],
                         'inventory' => ['inventory'],
                         'tax' => ['tax'],

@@ -25,9 +25,31 @@ class Module_customization extends Base_Controller {
         // Get all labels (keyed by module_code)
         $labels = $this->moduleLabelModel->getAllLabels(false); // Get all, including inactive
         
+        // Filter out legacy duplicates (keep only 'locations' and 'entities', exclude 'properties' and 'companies')
+        $legacyModules = ['properties', 'companies']; // Legacy modules to exclude
+        
         // Convert to indexed array for the view
         $modules = [];
+        $seenModules = []; // Track to prevent duplicates
+        
         foreach ($labels as $moduleCode => $label) {
+            // Skip legacy modules if we have the new ones
+            if (in_array($moduleCode, $legacyModules)) {
+                // Only include if the new equivalent doesn't exist
+                if ($moduleCode === 'properties' && isset($labels['locations'])) {
+                    continue; // Skip 'properties' if 'locations' exists
+                }
+                if ($moduleCode === 'companies' && isset($labels['entities'])) {
+                    continue; // Skip 'companies' if 'entities' exists
+                }
+            }
+            
+            // Prevent duplicates
+            if (isset($seenModules[$moduleCode])) {
+                continue;
+            }
+            $seenModules[$moduleCode] = true;
+            
             $modules[] = [
                 'module_code' => $moduleCode,
                 'default_label' => $label['default_label'] ?? ucfirst($moduleCode),
