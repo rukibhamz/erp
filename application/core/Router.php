@@ -44,6 +44,8 @@ class Router {
         $url = trim($url, '/');
         if (!empty($url)) {
             $url = filter_var($url, FILTER_SANITIZE_URL);
+            // Remove any double slashes that might have been introduced
+            $url = preg_replace('#/+#', '/', $url);
         }
         
         // Load routes
@@ -71,6 +73,49 @@ class Router {
         $urlParts = explode('/', $url);
         $path = $url;
         
+        // SPECIAL CASE: Handle tax/compliance routes BEFORE route matching
+        // This ensures tax/compliance/* routes are handled correctly
+        if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'tax' && strtolower($urlParts[1]) === 'compliance') {
+            // Check if there's an exact route match first
+            $pathLower = strtolower($path);
+            $exactRoute = null;
+            foreach ($routes as $pattern => $route) {
+                if ($pattern === 'default_controller' || $pattern === '404_override') {
+                    continue;
+                }
+                $patternLower = strtolower($pattern);
+                $patternClean = rtrim($patternLower, '/');
+                $pathClean = rtrim($pathLower, '/');
+                if ($patternLower === $pathLower || $patternClean === $pathClean) {
+                    $exactRoute = $route;
+                    break;
+                }
+            }
+            
+            if ($exactRoute) {
+                // Use the route definition
+                $routeParts = explode('/', $exactRoute);
+                $this->controller = $routeParts[0];
+                $this->method = $routeParts[1] ?? 'index';
+                if (count($routeParts) > 2) {
+                    $this->params = array_slice($routeParts, 2);
+                }
+                return;
+            } else {
+                // Fallback: map directly to Tax_compliance controller
+                $this->controller = 'Tax_compliance';
+                if (isset($urlParts[2]) && !empty($urlParts[2])) {
+                    $this->method = $urlParts[2];
+                } else {
+                    $this->method = 'index';
+                }
+                if (count($urlParts) > 3) {
+                    $this->params = array_slice($urlParts, 3);
+                }
+                return;
+            }
+        }
+        
         // Check exact route matches first (case-insensitive)
         // Sort routes by length (longest first) to match more specific routes first
         $sortedRoutes = [];
@@ -87,7 +132,10 @@ class Router {
             $route = $routes[$pattern];
             // Exact match (case-insensitive)
             $patternLower = strtolower($pattern);
-            if ($patternLower === $pathLower) {
+            // Also check with trailing slash removed for both
+            $patternClean = rtrim($patternLower, '/');
+            $pathClean = rtrim($pathLower, '/');
+            if ($patternLower === $pathLower || $patternClean === $pathClean) {
                 $routeParts = explode('/', $route);
                 $this->controller = $routeParts[0];
                 $this->method = $routeParts[1] ?? 'index';
@@ -176,9 +224,9 @@ class Router {
         
         // No route match, use direct controller/method parsing
         // Handle underscore controllers (e.g., tax_compliance -> Tax_compliance)
-        // Special handling for tax/compliance routes
-        if (count($urlParts) >= 2 && $urlParts[0] === 'tax' && $urlParts[1] === 'compliance') {
-            // Handle tax/compliance routes
+        // Special handling for tax/compliance routes (MUST be before general tax parsing)
+        if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'tax' && strtolower($urlParts[1]) === 'compliance') {
+            // Handle tax/compliance routes - map to Tax_compliance controller
             $this->controller = 'Tax_compliance';
             if (isset($urlParts[2]) && !empty($urlParts[2])) {
                 $this->method = $urlParts[2];
