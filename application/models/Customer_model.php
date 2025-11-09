@@ -57,5 +57,23 @@ class Customer_model extends Base_Model {
             return [];
         }
     }
+    
+    /**
+     * Get customer by customer_code
+     * @param string $code Customer code
+     * @return array|false Customer data or false if not found
+     */
+    public function getByCode($code) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE customer_code = ?",
+                [$code]
+            );
+        } catch (Exception $e) {
+            error_log('Customer_model getByCode error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
 

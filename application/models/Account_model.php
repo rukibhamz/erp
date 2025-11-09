@@ -167,6 +167,24 @@ class Account_model extends Base_Model {
         }
     }
     
+    /**
+     * Get account by account_code
+     * @param string $code Account code
+     * @return array|false Account data or false if not found
+     */
+    public function getByCode($code) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE account_code = ? AND status = 'active'",
+                [$code]
+            );
+        } catch (Exception $e) {
+            error_log('Account_model getByCode error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
     public function setDefaultAccount($accountId) {
         try {
             // First, unset any existing default for this account type

@@ -58,12 +58,20 @@ class Pos extends Base_Controller {
             $walkInCustomer = $this->customerModel->getByCode('WALK-IN');
             if (!$walkInCustomer) {
                 // Create walk-in customer if doesn't exist
-                $walkInCustomer = $this->customerModel->create([
+                $customerId = $this->customerModel->create([
                     'customer_code' => 'WALK-IN',
-                    'name' => 'Walk-in Customer',
-                    'type' => 'retail',
-                    'status' => 'active'
+                    'company_name' => 'Walk-in Customer',
+                    'contact_name' => 'Walk-in Customer',
+                    'email' => '',
+                    'phone' => '',
+                    'status' => 'active',
+                    'created_at' => date('Y-m-d H:i:s')
                 ]);
+                if ($customerId) {
+                    $walkInCustomer = $this->customerModel->getById($customerId);
+                } else {
+                    $walkInCustomer = null;
+                }
             }
         } catch (Exception $e) {
             error_log('POS walk-in customer error: ' . $e->getMessage());
@@ -127,8 +135,8 @@ class Pos extends Base_Controller {
                 
                 $saleItems[] = [
                     'item_id' => $item['id'],
-                    'item_name' => $item['name'],
-                    'item_code' => $item['item_code'],
+                    'item_name' => $item['item_name'] ?? $item['name'] ?? '',
+                    'item_code' => $item['sku'] ?? $item['item_code'] ?? '',
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'discount_amount' => $itemDiscount,
@@ -235,32 +243,47 @@ class Pos extends Base_Controller {
             if ($cashAccountId && $salesAccountId) {
                 // Debit Cash, Credit Sales Revenue
                 $this->transactionModel->create([
+                    'transaction_number' => 'POS-' . $saleId . '-CASH',
+                    'transaction_date' => date('Y-m-d'),
+                    'transaction_type' => 'pos_sale',
+                    'reference_id' => $saleId,
+                    'reference_type' => 'pos_sale',
                     'account_id' => $cashAccountId,
-                    'type' => 'debit',
-                    'amount' => $totalAmount,
                     'description' => 'POS Sale #' . $saleId,
-                    'reference' => 'POS-' . $saleId,
-                    'date' => date('Y-m-d')
+                    'debit' => $totalAmount,
+                    'credit' => 0,
+                    'status' => 'posted',
+                    'created_by' => $this->session['user_id']
                 ]);
                 
                 $this->transactionModel->create([
+                    'transaction_number' => 'POS-' . $saleId . '-REV',
+                    'transaction_date' => date('Y-m-d'),
+                    'transaction_type' => 'pos_sale',
+                    'reference_id' => $saleId,
+                    'reference_type' => 'pos_sale',
                     'account_id' => $salesAccountId,
-                    'type' => 'credit',
-                    'amount' => $totalAmount - $taxAmount,
                     'description' => 'POS Sale #' . $saleId,
-                    'reference' => 'POS-' . $saleId,
-                    'date' => date('Y-m-d')
+                    'debit' => 0,
+                    'credit' => $totalAmount - $taxAmount,
+                    'status' => 'posted',
+                    'created_by' => $this->session['user_id']
                 ]);
                 
                 // If tax, create tax liability entry
                 if ($taxAmount > 0 && $taxAccountId) {
                     $this->transactionModel->create([
+                        'transaction_number' => 'POS-' . $saleId . '-TAX',
+                        'transaction_date' => date('Y-m-d'),
+                        'transaction_type' => 'pos_sale',
+                        'reference_id' => $saleId,
+                        'reference_type' => 'pos_sale',
                         'account_id' => $taxAccountId,
-                        'type' => 'credit',
-                        'amount' => $taxAmount,
                         'description' => 'VAT on POS Sale #' . $saleId,
-                        'reference' => 'POS-' . $saleId,
-                        'date' => date('Y-m-d')
+                        'debit' => 0,
+                        'credit' => $taxAmount,
+                        'status' => 'posted',
+                        'created_by' => $this->session['user_id']
                     ]);
                 }
             }
@@ -270,6 +293,21 @@ class Pos extends Base_Controller {
             if (empty($customerId)) {
                 try {
                     $walkInCustomer = $this->customerModel->getByCode('WALK-IN');
+                    // If walk-in customer doesn't exist, create it
+                    if (!$walkInCustomer) {
+                        $customerId = $this->customerModel->create([
+                            'customer_code' => 'WALK-IN',
+                            'company_name' => 'Walk-in Customer',
+                            'contact_name' => 'Walk-in Customer',
+                            'email' => '',
+                            'phone' => '',
+                            'status' => 'active',
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                        if ($customerId) {
+                            $walkInCustomer = $this->customerModel->getById($customerId);
+                        }
+                    }
                 } catch (Exception $e) {
                     error_log('POS walk-in customer fetch error: ' . $e->getMessage());
                 }
