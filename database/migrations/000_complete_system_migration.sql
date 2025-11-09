@@ -40,7 +40,8 @@ INSERT INTO erp_module_labels (module_code, default_label, icon_class, display_o
 ('dashboard', 'Dashboard', 'bi-speedometer2', 1, 1),
 ('accounting', 'Accounting', 'bi-calculator', 2, 1),
 ('bookings', 'Bookings', 'bi-calendar', 3, 1),
-('properties', 'Properties', 'bi-building', 4, 1),
+('locations', 'Locations', 'bi-building', 4, 1), -- Locations (formerly Properties)
+('properties', 'Properties', 'bi-building', 4, 1), -- Legacy compatibility
 ('inventory', 'Inventory', 'bi-box-seam', 5, 1),
 ('utilities', 'Utilities', 'bi-lightning', 6, 1),
 ('reports', 'Reports', 'bi-bar-chart', 7, 1),
@@ -48,7 +49,8 @@ INSERT INTO erp_module_labels (module_code, default_label, icon_class, display_o
 ('users', 'User Management', 'bi-people', 9, 1),
 ('notifications', 'Notifications', 'bi-bell', 10, 1),
 ('pos', 'Point of Sale', 'bi-cart', 11, 1),
-('tax', 'Tax Management', 'bi-file-text', 12, 1)
+('tax', 'Tax Management', 'bi-file-text', 12, 1),
+('entities', 'Entities', 'bi-diagram-3', 13, 1) -- Entities (formerly Companies)
 ON DUPLICATE KEY UPDATE default_label = VALUES(default_label);
 
 -- ============================================================================
@@ -131,7 +133,14 @@ INSERT IGNORE INTO `erp_permissions` (`module`, `permission`, `description`, `cr
 ('bookings', 'create', 'Create bookings', NOW()),
 ('bookings', 'update', 'Update bookings', NOW()),
 
--- Properties module
+-- Locations module (formerly Properties)
+('locations', 'read', 'View locations', NOW()),
+('locations', 'write', 'Create/edit locations', NOW()),
+('locations', 'delete', 'Delete locations', NOW()),
+('locations', 'create', 'Create locations', NOW()),
+('locations', 'update', 'Update locations', NOW()),
+
+-- Properties module (legacy compatibility)
 ('properties', 'read', 'View properties', NOW()),
 ('properties', 'write', 'Create/edit properties', NOW()),
 ('properties', 'delete', 'Delete properties', NOW()),
@@ -174,7 +183,14 @@ INSERT IGNORE INTO `erp_permissions` (`module`, `permission`, `description`, `cr
 ('users', 'create', 'Create users', NOW()),
 ('users', 'update', 'Update users', NOW()),
 
--- Companies module
+-- Entities module (formerly Companies)
+('entities', 'read', 'View entities', NOW()),
+('entities', 'write', 'Create/edit entities', NOW()),
+('entities', 'delete', 'Delete entities', NOW()),
+('entities', 'create', 'Create entities', NOW()),
+('entities', 'update', 'Update entities', NOW()),
+
+-- Companies module (legacy compatibility)
 ('companies', 'read', 'View companies', NOW()),
 ('companies', 'write', 'Create/edit companies', NOW()),
 ('companies', 'delete', 'Delete companies', NOW()),
@@ -272,7 +288,7 @@ SELECT r.id, p.id, NOW()
 FROM `erp_roles` r
 CROSS JOIN `erp_permissions` p
 WHERE r.role_code = 'manager'
-AND p.module IN ('accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates', 'pos', 'bookings', 'properties', 'inventory', 'utilities', 'settings', 'dashboard', 'notifications')
+AND p.module IN ('accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates', 'pos', 'bookings', 'locations', 'properties', 'inventory', 'utilities', 'settings', 'dashboard', 'notifications')
 AND NOT EXISTS (
     SELECT 1 FROM `erp_role_permissions` rp
     WHERE rp.role_id = r.id AND rp.permission_id = p.id

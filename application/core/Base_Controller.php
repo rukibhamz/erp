@@ -94,11 +94,12 @@ class Base_Controller {
             'Resource_management' => 'bookings',
             'Booking_wizard' => 'bookings',
             'Booking_reports' => 'bookings',
-            'Properties' => 'properties',
-            'Spaces' => 'properties',
-            'Leases' => 'properties',
-            'Tenants' => 'properties',
-            'Rent_invoices' => 'properties',
+            'Locations' => 'locations', // Locations (formerly Properties)
+            'Properties' => 'locations', // Legacy mapping for backward compatibility
+            'Spaces' => 'locations', // Spaces belong to locations
+            'Leases' => 'locations', // Leases belong to locations
+            'Tenants' => 'locations', // Tenants belong to locations
+            'Rent_invoices' => 'locations', // Rent invoices belong to locations
             'Utilities' => 'utilities',
             'Meters' => 'utilities',
             'Meter_readings' => 'utilities',

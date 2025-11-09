@@ -2,26 +2,24 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Location_model extends Base_Model {
-    protected $table = 'locations';
+    protected $table = 'properties'; // Keep old table name for backward compatibility
     
-    public function getNextLocationCode($prefix = 'LOC') {
+    public function getNextPropertyCode() {
         try {
-            $year = date('Y');
             $lastCode = $this->db->fetchOne(
-                "SELECT location_code FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE location_code LIKE '{$prefix}-{$year}-%' 
+                "SELECT property_code FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE property_code LIKE 'PROP-%' 
                  ORDER BY id DESC LIMIT 1"
             );
             
             if ($lastCode) {
-                $parts = explode('-', $lastCode['location_code']);
-                $number = intval($parts[2] ?? 0) + 1;
-                return "{$prefix}-{$year}-" . str_pad($number, 4, '0', STR_PAD_LEFT);
+                $number = intval(substr($lastCode['property_code'], 5)) + 1;
+                return 'PROP-' . str_pad($number, 4, '0', STR_PAD_LEFT);
             }
-            return "{$prefix}-{$year}-0001";
+            return 'PROP-0001';
         } catch (Exception $e) {
-            error_log('Location_model getNextLocationCode error: ' . $e->getMessage());
-            return $prefix . '-' . date('Y') . '-0001';
+            error_log('Location_model getNextPropertyCode error: ' . $e->getMessage());
+            return 'PROP-0001';
         }
     }
     
@@ -29,8 +27,8 @@ class Location_model extends Base_Model {
         try {
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE is_active = 1 
-                 ORDER BY location_name"
+                 WHERE status = 'operational' 
+                 ORDER BY property_name"
             );
         } catch (Exception $e) {
             error_log('Location_model getActive error: ' . $e->getMessage());
@@ -38,40 +36,47 @@ class Location_model extends Base_Model {
         }
     }
     
-    public function getHierarchy($parentId = null) {
+    public function getWithSpaces($locationId) {
         try {
-            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                    WHERE is_active = 1";
-            
-            $params = [];
-            if ($parentId === null) {
-                $sql .= " AND parent_id IS NULL";
-            } else {
-                $sql .= " AND parent_id = ?";
-                $params[] = $parentId;
+            $location = $this->getById($locationId);
+            if (!$location) {
+                return false;
             }
             
-            $sql .= " ORDER BY location_name";
+            // Load spaces for this location using direct query
+            $location['spaces'] = $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . "spaces` 
+                 WHERE property_id = ? 
+                 ORDER BY space_number, space_name",
+                [$locationId]
+            );
             
-            return $this->db->fetchAll($sql, $params);
+            return $location;
         } catch (Exception $e) {
-            error_log('Location_model getHierarchy error: ' . $e->getMessage());
-            return [];
+            error_log('Location_model getWithSpaces error: ' . $e->getMessage());
+            return false;
         }
     }
     
-    public function getChildren($parentId) {
+    public function getBookableSpaces($locationId = null) {
         try {
-            return $this->db->fetchAll(
-                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE parent_id = ? AND is_active = 1
-                 ORDER BY location_name",
-                [$parentId]
-            );
+            $sql = "SELECT s.*, p.property_name, p.property_code 
+                    FROM `" . $this->db->getPrefix() . "spaces` s
+                    JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                    WHERE s.is_bookable = 1 AND s.operational_status = 'active'";
+            $params = [];
+            
+            if ($locationId) {
+                $sql .= " AND s.property_id = ?";
+                $params[] = $locationId;
+            }
+            
+            $sql .= " ORDER BY p.property_name, s.space_name";
+            
+            return $this->db->fetchAll($sql, $params);
         } catch (Exception $e) {
-            error_log('Location_model getChildren error: ' . $e->getMessage());
+            error_log('Location_model getBookableSpaces error: ' . $e->getMessage());
             return [];
         }
     }
 }
-

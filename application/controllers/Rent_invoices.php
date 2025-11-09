@@ -12,7 +12,7 @@ class Rent_invoices extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('properties', 'read');
+        $this->requirePermission('locations', 'read');
         $this->rentInvoiceModel = $this->loadModel('Rent_invoice_model');
         $this->leaseModel = $this->loadModel('Lease_model');
         $this->rentPaymentModel = $this->loadModel('Rent_payment_model');
@@ -54,7 +54,7 @@ class Rent_invoices extends Base_Controller {
      * Generate rent invoice for a lease
      */
     public function generate($leaseId, $periodStart = null, $periodEnd = null) {
-        $this->requirePermission('properties', 'create');
+        $this->requirePermission('locations', 'create');
         
         try {
             $lease = $this->leaseModel->getWithDetails($leaseId);
@@ -137,7 +137,7 @@ class Rent_invoices extends Base_Controller {
      * Auto-generate monthly invoices for all active leases
      */
     public function autoGenerate() {
-        $this->requirePermission('properties', 'create');
+        $this->requirePermission('locations', 'create');
         
         try {
             $activeLeases = $this->leaseModel->getActive();
@@ -208,7 +208,7 @@ class Rent_invoices extends Base_Controller {
      * Record rent payment
      */
     public function recordPayment() {
-        $this->requirePermission('properties', 'update');
+        $this->requirePermission('locations', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $invoiceId = intval($_POST['invoice_id'] ?? 0);

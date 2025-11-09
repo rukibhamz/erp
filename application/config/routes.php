@@ -14,10 +14,14 @@ $route['reset-password'] = 'Auth/resetPassword';
 // Dashboard
 $route['dashboard'] = 'Dashboard/index';
 
-// Companies
-$route['companies'] = 'Companies/index';
-$route['companies/create'] = 'Companies/create';
-$route['companies/edit/(:num)'] = 'Companies/edit/$1';
+// Entities (formerly Companies)
+$route['entities'] = 'Entities/index';
+$route['entities/create'] = 'Entities/create';
+$route['entities/edit/(:num)'] = 'Entities/edit/$1';
+// Legacy routes for backward compatibility
+$route['companies'] = 'Entities/index';
+$route['companies/create'] = 'Entities/create';
+$route['companies/edit/(:num)'] = 'Entities/edit/$1';
 
 // Users
 $route['users'] = 'Users/index';
@@ -275,11 +279,16 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['notifications/mark-all-read'] = 'Notifications/markAllRead';
         $route['notifications/settings'] = 'Notifications/settings';
         
-        // Property Management
-        $route['properties'] = 'Properties/index';
-        $route['properties/create'] = 'Properties/create';
-        $route['properties/view/(:num)'] = 'Properties/view/$1';
-        $route['properties/edit/(:num)'] = 'Properties/edit/$1';
+        // Location Management (formerly Property Management)
+        $route['locations'] = 'Locations/index';
+        $route['locations/create'] = 'Locations/create';
+        $route['locations/view/(:num)'] = 'Locations/view/$1';
+        $route['locations/edit/(:num)'] = 'Locations/edit/$1';
+        // Legacy routes for backward compatibility
+        $route['properties'] = 'Locations/index';
+        $route['properties/create'] = 'Locations/create';
+        $route['properties/view/(:num)'] = 'Locations/view/$1';
+        $route['properties/edit/(:num)'] = 'Locations/edit/$1';
         $route['spaces'] = 'Spaces/index';
         $route['spaces/(:num)'] = 'Spaces/index/$1';
         $route['spaces/create'] = 'Spaces/create';

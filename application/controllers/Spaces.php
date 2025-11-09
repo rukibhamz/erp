@@ -3,16 +3,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Spaces extends Base_Controller {
     private $spaceModel;
-    private $propertyModel;
+    private $locationModel; // Location_model (formerly Property_model)
     private $facilityModel;
     private $bookableConfigModel;
     private $activityModel;
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('properties', 'read');
+        $this->requirePermission('locations', 'read');
         $this->spaceModel = $this->loadModel('Space_model');
-        $this->propertyModel = $this->loadModel('Property_model');
+        $this->locationModel = $this->loadModel('Location_model');
         $this->facilityModel = $this->loadModel('Facility_model');
         $this->activityModel = $this->loadModel('Activity_model');
         
@@ -28,24 +28,26 @@ class Spaces extends Base_Controller {
             
             if ($propertyId) {
                 $spaces = $this->spaceModel->getByProperty($propertyId);
-                $property = $this->propertyModel->getById($propertyId);
+                $location = $this->locationModel->getById($propertyId);
             } else {
                 $spaces = [];
-                $property = null;
+                $location = null;
             }
             
-            $properties = $this->propertyModel->getAll();
+            $locations = $this->locationModel->getAll();
         } catch (Exception $e) {
             $spaces = [];
-            $property = null;
-            $properties = [];
+            $location = null;
+            $locations = [];
         }
         
         $data = [
             'page_title' => 'Spaces',
             'spaces' => $spaces,
-            'property' => $property,
-            'properties' => $properties,
+            'location' => $location,
+            'property' => $location, // Legacy compatibility
+            'locations' => $locations,
+            'properties' => $locations, // Legacy compatibility
             'selected_property_id' => $propertyId,
             'flash' => $this->getFlashMessage()
         ];
@@ -54,7 +56,7 @@ class Spaces extends Base_Controller {
     }
     
     public function create($propertyId = null) {
-        $this->requirePermission('properties', 'create');
+        $this->requirePermission('locations', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $propertyId = intval($_POST['property_id'] ?? 0);
@@ -106,7 +108,8 @@ class Spaces extends Base_Controller {
         }
         
         try {
-            $properties = $this->propertyModel->getAll();
+            $locations = $this->locationModel->getAll();
+            $properties = $locations; // Legacy compatibility
         } catch (Exception $e) {
             $properties = [];
         }
@@ -146,7 +149,7 @@ class Spaces extends Base_Controller {
     }
     
     public function edit($id) {
-        $this->requirePermission('properties', 'update');
+        $this->requirePermission('locations', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $amenities = [];
@@ -207,7 +210,8 @@ class Spaces extends Base_Controller {
             
             $space['photos'] = $this->spaceModel->getPhotos($id);
             $space['bookable_config'] = $this->spaceModel->getBookableConfig($id);
-            $properties = $this->propertyModel->getAll();
+            $locations = $this->locationModel->getAll();
+            $properties = $locations; // Legacy compatibility
         } catch (Exception $e) {
             $this->setFlashMessage('danger', 'Error loading space.');
             redirect('spaces');
@@ -227,7 +231,7 @@ class Spaces extends Base_Controller {
      * Sync space to booking module
      */
     public function syncToBooking($id) {
-        $this->requirePermission('properties', 'update');
+        $this->requirePermission('locations', 'update');
         
         try {
             $facilityId = $this->spaceModel->syncToBookingModule($id);

@@ -12,7 +12,7 @@ class Leases extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('properties', 'read');
+        $this->requirePermission('locations', 'read');
         $this->leaseModel = $this->loadModel('Lease_model');
         $this->spaceModel = $this->loadModel('Space_model');
         $this->tenantModel = $this->loadModel('Tenant_model');
@@ -48,7 +48,7 @@ class Leases extends Base_Controller {
     }
     
     public function create() {
-        $this->requirePermission('properties', 'create');
+        $this->requirePermission('locations', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $spaceId = intval($_POST['space_id'] ?? 0);

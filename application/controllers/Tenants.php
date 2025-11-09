@@ -8,7 +8,7 @@ class Tenants extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('properties', 'read');
+        $this->requirePermission('locations', 'read');
         $this->tenantModel = $this->loadModel('Tenant_model');
         $this->leaseModel = $this->loadModel('Lease_model');
         $this->activityModel = $this->loadModel('Activity_model');
@@ -31,7 +31,7 @@ class Tenants extends Base_Controller {
     }
     
     public function create() {
-        $this->requirePermission('properties', 'create');
+        $this->requirePermission('locations', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [
@@ -131,7 +131,7 @@ class Tenants extends Base_Controller {
     }
     
     public function edit($id) {
-        $this->requirePermission('properties', 'update');
+        $this->requirePermission('locations', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [

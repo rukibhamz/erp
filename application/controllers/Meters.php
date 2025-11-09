@@ -4,7 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Meters extends Base_Controller {
     private $meterModel;
     private $utilityTypeModel;
-    private $propertyModel;
+    private $locationModel; // Location_model (formerly Property_model)
     private $spaceModel;
     private $tenantModel;
     private $activityModel;
@@ -14,7 +14,7 @@ class Meters extends Base_Controller {
         $this->requirePermission('utilities', 'read');
         $this->meterModel = $this->loadModel('Meter_model');
         $this->utilityTypeModel = $this->loadModel('Utility_type_model');
-        $this->propertyModel = $this->loadModel('Property_model');
+        $this->locationModel = $this->loadModel('Location_model');
         $this->spaceModel = $this->loadModel('Space_model');
         $this->tenantModel = $this->loadModel('Tenant_model');
         $this->activityModel = $this->loadModel('Activity_model');
@@ -34,7 +34,8 @@ class Meters extends Base_Controller {
             }
             
             $utilityTypes = $this->utilityTypeModel->getActive();
-            $properties = $this->propertyModel->getAll();
+            $locations = $this->locationModel->getAll();
+            $properties = $locations; // Legacy compatibility
         } catch (Exception $e) {
             $meters = [];
             $utilityTypes = [];
@@ -101,7 +102,8 @@ class Meters extends Base_Controller {
         
         try {
             $utilityTypes = $this->utilityTypeModel->getActive();
-            $properties = $this->propertyModel->getAll();
+            $locations = $this->locationModel->getAll();
+            $properties = $locations; // Legacy compatibility
             $spaces = [];
             $tenants = $this->tenantModel->getActive();
             try {
@@ -205,7 +207,8 @@ class Meters extends Base_Controller {
             }
             
             $utilityTypes = $this->utilityTypeModel->getActive();
-            $properties = $this->propertyModel->getAll();
+            $locations = $this->locationModel->getAll();
+            $properties = $locations; // Legacy compatibility
             try {
                 $spaces = $meter['property_id'] ? $this->spaceModel->getByProperty($meter['property_id']) : [];
             } catch (Exception $e) {

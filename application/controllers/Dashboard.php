@@ -3,7 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Dashboard extends Base_Controller {
     private $userModel;
-    private $companyModel;
+    private $entityModel; // Entity_model (formerly Company_model)
     private $activityModel;
     private $invoiceModel;
     private $bookingModel;
@@ -18,7 +18,7 @@ class Dashboard extends Base_Controller {
     public function __construct() {
         parent::__construct();
         $this->userModel = $this->loadModel('User_model');
-        $this->companyModel = $this->loadModel('Company_model');
+        $this->entityModel = $this->loadModel('Entity_model');
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
@@ -356,7 +356,8 @@ class Dashboard extends Base_Controller {
         $data = [
             'page_title' => 'Dashboard',
             'total_users' => $this->userModel->count(),
-            'total_companies' => $this->companyModel->count(),
+            'total_entities' => $this->entityModel->count(),
+            'total_companies' => $this->entityModel->count(), // Legacy compatibility
             'recent_activities' => $this->activityModel->getRecent(10),
             'flash' => $this->getFlashMessage()
         ];

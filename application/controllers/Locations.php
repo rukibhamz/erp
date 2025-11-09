@@ -3,34 +3,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Locations extends Base_Controller {
     private $locationModel;
-    private $stockLevelModel;
+    private $spaceModel;
     private $activityModel;
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('inventory', 'read');
+        $this->requirePermission('locations', 'read');
         $this->locationModel = $this->loadModel('Location_model');
-        $this->stockLevelModel = $this->loadModel('Stock_level_model');
+        $this->spaceModel = $this->loadModel('Space_model');
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
     public function index() {
         try {
-            $locations = $this->locationModel->getActive();
-            
-            // Get stock counts for each location
-            foreach ($locations as &$location) {
-                try {
-                    $stockLevels = $this->stockLevelModel->getByLocation($location['id']);
-                    $location['item_count'] = count($stockLevels);
-                    $location['total_qty'] = array_sum(array_column($stockLevels, 'quantity'));
-                } catch (Exception $e) {
-                    $location['item_count'] = 0;
-                    $location['total_qty'] = 0;
-                }
-            }
-            unset($location);
-            
+            $locations = $this->locationModel->getAll();
         } catch (Exception $e) {
             $locations = [];
         }
@@ -41,54 +27,151 @@ class Locations extends Base_Controller {
             'flash' => $this->getFlashMessage()
         ];
         
-        $this->loadView('inventory/locations/index', $data);
+        $this->loadView('locations/index', $data);
     }
     
     public function create() {
-        $this->requirePermission('inventory', 'create');
+        $this->requirePermission('locations', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [
-                'location_code' => sanitize_input($_POST['location_code'] ?? ''),
-                'location_name' => sanitize_input($_POST['location_name'] ?? ''),
-                'location_type' => sanitize_input($_POST['location_type'] ?? 'warehouse'),
-                'parent_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
+                'property_code' => sanitize_input($_POST['property_code'] ?? ''),
+                'property_name' => sanitize_input($_POST['property_name'] ?? ''),
+                'property_type' => sanitize_input($_POST['property_type'] ?? 'multi_purpose'),
                 'address' => sanitize_input($_POST['address'] ?? ''),
-                'capacity' => !empty($_POST['capacity']) ? floatval($_POST['capacity']) : null,
-                'barcode' => sanitize_input($_POST['barcode'] ?? ''),
-                'is_active' => !empty($_POST['is_active']) ? 1 : 0,
+                'city' => sanitize_input($_POST['city'] ?? ''),
+                'state' => sanitize_input($_POST['state'] ?? ''),
+                'country' => sanitize_input($_POST['country'] ?? ''),
+                'postal_code' => sanitize_input($_POST['postal_code'] ?? ''),
+                'gps_latitude' => !empty($_POST['gps_latitude']) ? floatval($_POST['gps_latitude']) : null,
+                'gps_longitude' => !empty($_POST['gps_longitude']) ? floatval($_POST['gps_longitude']) : null,
+                'land_area' => !empty($_POST['land_area']) ? floatval($_POST['land_area']) : null,
+                'built_area' => !empty($_POST['built_area']) ? floatval($_POST['built_area']) : null,
+                'year_built' => !empty($_POST['year_built']) ? intval($_POST['year_built']) : null,
+                'year_acquired' => !empty($_POST['year_acquired']) ? intval($_POST['year_acquired']) : null,
+                'property_value' => !empty($_POST['property_value']) ? floatval($_POST['property_value']) : null,
+                'manager_id' => !empty($_POST['manager_id']) ? intval($_POST['manager_id']) : null,
+                'status' => sanitize_input($_POST['status'] ?? 'operational'),
+                'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            // Auto-generate location code if empty (leave blank to auto-generate)
-            if (is_empty_or_whitespace($data['location_code'])) {
-                $data['location_code'] = $this->locationModel->getNextLocationCode();
+            // Auto-generate property code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['property_code'])) {
+                $data['property_code'] = $this->locationModel->getNextPropertyCode();
             }
             
             $locationId = $this->locationModel->create($data);
             
             if ($locationId) {
-                $this->activityModel->log($this->session['user_id'], 'create', 'Locations', 'Created location: ' . $data['location_name']);
+                $this->activityModel->log($this->session['user_id'], 'create', 'Locations', 'Created location: ' . $data['property_name']);
                 $this->setFlashMessage('success', 'Location created successfully.');
-                redirect('inventory/locations');
+                redirect('locations/view/' . $locationId);
             } else {
                 $this->setFlashMessage('danger', 'Failed to create location.');
             }
         }
         
+        // Load users for manager selection
+        $userModel = $this->loadModel('User_model');
         try {
-            $parentLocations = $this->locationModel->getActive();
+            $allUsers = $userModel->getAll();
+            $managers = array_filter($allUsers, function($user) {
+                return in_array($user['role'], ['manager', 'admin', 'super_admin']);
+            });
         } catch (Exception $e) {
-            $parentLocations = [];
+            $managers = [];
         }
         
         $data = [
             'page_title' => 'Create Location',
-            'parent_locations' => $parentLocations,
+            'managers' => $managers,
             'flash' => $this->getFlashMessage()
         ];
         
-        $this->loadView('inventory/locations/create', $data);
+        $this->loadView('locations/create', $data);
+    }
+    
+    public function view($id) {
+        try {
+            $location = $this->locationModel->getWithSpaces($id);
+            if (!$location) {
+                $this->setFlashMessage('danger', 'Location not found.');
+                redirect('locations');
+            }
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading location.');
+            redirect('locations');
+        }
+        
+        $data = [
+            'page_title' => 'Location: ' . $location['property_name'],
+            'location' => $location,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('locations/view', $data);
+    }
+    
+    public function edit($id) {
+        $this->requirePermission('locations', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'property_name' => sanitize_input($_POST['property_name'] ?? ''),
+                'property_type' => sanitize_input($_POST['property_type'] ?? 'multi_purpose'),
+                'address' => sanitize_input($_POST['address'] ?? ''),
+                'city' => sanitize_input($_POST['city'] ?? ''),
+                'state' => sanitize_input($_POST['state'] ?? ''),
+                'country' => sanitize_input($_POST['country'] ?? ''),
+                'postal_code' => sanitize_input($_POST['postal_code'] ?? ''),
+                'gps_latitude' => !empty($_POST['gps_latitude']) ? floatval($_POST['gps_latitude']) : null,
+                'gps_longitude' => !empty($_POST['gps_longitude']) ? floatval($_POST['gps_longitude']) : null,
+                'land_area' => !empty($_POST['land_area']) ? floatval($_POST['land_area']) : null,
+                'built_area' => !empty($_POST['built_area']) ? floatval($_POST['built_area']) : null,
+                'year_built' => !empty($_POST['year_built']) ? intval($_POST['year_built']) : null,
+                'year_acquired' => !empty($_POST['year_acquired']) ? intval($_POST['year_acquired']) : null,
+                'property_value' => !empty($_POST['property_value']) ? floatval($_POST['property_value']) : null,
+                'manager_id' => !empty($_POST['manager_id']) ? intval($_POST['manager_id']) : null,
+                'status' => sanitize_input($_POST['status'] ?? 'operational'),
+                'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            if ($this->locationModel->update($id, $data)) {
+                $this->activityModel->log($this->session['user_id'], 'update', 'Locations', 'Updated location: ' . $data['property_name']);
+                $this->setFlashMessage('success', 'Location updated successfully.');
+                redirect('locations/view/' . $id);
+            } else {
+                $this->setFlashMessage('danger', 'Failed to update location.');
+            }
+        }
+        
+        try {
+            $location = $this->locationModel->getById($id);
+            if (!$location) {
+                $this->setFlashMessage('danger', 'Location not found.');
+                redirect('locations');
+            }
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading location.');
+            redirect('locations');
+        }
+        
+        $userModel = $this->loadModel('User_model');
+        try {
+            $managers = $userModel->getByRole(['manager', 'admin', 'super_admin']);
+        } catch (Exception $e) {
+            $managers = [];
+        }
+        
+        $data = [
+            'page_title' => 'Edit Location',
+            'location' => $location,
+            'managers' => $managers,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('locations/edit', $data);
     }
 }
-

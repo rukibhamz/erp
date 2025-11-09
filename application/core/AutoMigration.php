@@ -84,21 +84,66 @@ class AutoMigration {
         // Also check if critical tables exist (for cases where migration was run before table was added)
         $needsMigration = !in_array('000_complete_system_migration.sql', $executed);
         
-        // Check if critical tables exist (e.g., tax_types was added later)
+        // Check if critical tables and data exist (for cases where migration was run before updates were added)
         if (!$needsMigration) {
             try {
+                // Check for tax_types table (added in previous update)
                 $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}tax_types'");
-                $tableExists = $stmt->rowCount() > 0;
+                $taxTypesExists = $stmt->rowCount() > 0;
                 
-                if (!$tableExists && file_exists($migrationFile)) {
-                    // Table doesn't exist but migration was marked as executed
-                    // Re-run migration to create missing tables (idempotent, safe)
-                    error_log("AutoMigration: tax_types table missing, re-running migration to create it");
+                // Check for entities and locations module labels (added in this update)
+                $entitiesLabelExists = false;
+                $locationsLabelExists = false;
+                $entitiesPermsExist = false;
+                $locationsPermsExist = false;
+                
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'entities'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $entitiesLabelExists = ($result['cnt'] ?? 0) > 0;
+                } catch (Exception $e) {
+                    // Table might not exist yet
+                }
+                
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'locations'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $locationsLabelExists = ($result['cnt'] ?? 0) > 0;
+                } catch (Exception $e) {
+                    // Table might not exist yet
+                }
+                
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}permissions` WHERE module = 'entities'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $entitiesPermsExist = ($result['cnt'] ?? 0) > 0;
+                } catch (Exception $e) {
+                    // Table might not exist yet
+                }
+                
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}permissions` WHERE module = 'locations'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $locationsPermsExist = ($result['cnt'] ?? 0) > 0;
+                } catch (Exception $e) {
+                    // Table might not exist yet
+                }
+                
+                // Re-run migration if any critical updates are missing
+                if (!$taxTypesExists || !$entitiesLabelExists || !$locationsLabelExists || !$entitiesPermsExist || !$locationsPermsExist) {
+                    $missing = [];
+                    if (!$taxTypesExists) $missing[] = 'tax_types table';
+                    if (!$entitiesLabelExists) $missing[] = 'entities module label';
+                    if (!$locationsLabelExists) $missing[] = 'locations module label';
+                    if (!$entitiesPermsExist) $missing[] = 'entities permissions';
+                    if (!$locationsPermsExist) $missing[] = 'locations permissions';
+                    
+                    error_log("AutoMigration: Missing updates detected (" . implode(', ', $missing) . "), re-running migration to apply them");
                     $needsMigration = true;
                 }
             } catch (Exception $e) {
                 // If check fails, assume migration needed
-                error_log("AutoMigration: Error checking tables: " . $e->getMessage());
+                error_log("AutoMigration: Error checking for updates: " . $e->getMessage());
             }
         }
         
