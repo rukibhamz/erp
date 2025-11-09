@@ -48,9 +48,9 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                         $mainTaxes = ['VAT' => 'Value Added Tax', 'WHT' => 'Withholding Tax', 'CIT' => 'Company Income Tax', 'PAYE' => 'Pay As You Earn'];
                         $taxesFound = [];
                         
-                        // Find existing taxes
+                        // Find existing taxes - map by code (case-insensitive)
                         foreach ($tax_types ?? [] as $tax) {
-                            $code = strtoupper($tax['code'] ?? '');
+                            $code = strtoupper(trim($tax['code'] ?? ''));
                             if (isset($mainTaxes[$code])) {
                                 $taxesFound[$code] = $tax;
                             }
@@ -59,9 +59,10 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                         // Display all 4 taxes (create placeholders if missing)
                         foreach ($mainTaxes as $code => $name): 
                             $tax = $taxesFound[$code] ?? null;
+                            // Get current rate from database - this is the actual current value
                             $currentRate = $tax ? floatval($tax['rate'] ?? 0) : 0;
-                            $taxId = $tax ? intval($tax['id']) : 0;
-                            $isActive = $tax ? ($tax['is_active'] ?? 0) : 0;
+                            $taxId = $tax ? intval($tax['id'] ?? 0) : 0;
+                            $isActive = $tax ? (intval($tax['is_active'] ?? 0) == 1) : false;
                         ?>
                             <tr>
                                 <td>
@@ -69,17 +70,20 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                                 </td>
                                 <td><code><?= htmlspecialchars($code) ?></code></td>
                                 <td>
+                                    <!-- Current Rate - shows actual database value -->
                                     <span class="badge bg-<?= $currentRate > 0 ? 'success' : 'secondary' ?>">
                                         <?= number_format($currentRate, 2) ?>%
                                     </span>
                                 </td>
                                 <td>
                                     <?php if ($isAdmin): ?>
-                                        <input type="hidden" name="tax_ids[<?= $code ?>]" value="<?= $taxId ?>">
+                                        <!-- Hidden field to pass tax ID for mapping -->
+                                        <input type="hidden" name="tax_ids[<?= htmlspecialchars($code) ?>]" value="<?= $taxId ?>">
+                                        <!-- New Rate input - will update the current rate when saved -->
                                         <input type="number" 
-                                               name="tax_rates[<?= $code ?>]" 
+                                               name="tax_rates[<?= htmlspecialchars($code) ?>]" 
                                                class="form-control form-control-sm" 
-                                               value="<?= $currentRate ?>" 
+                                               value="<?= number_format($currentRate, 2, '.', '') ?>" 
                                                step="0.01" 
                                                min="0" 
                                                max="100"

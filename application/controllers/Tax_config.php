@@ -115,30 +115,71 @@ class Tax_config extends Base_Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $updated = 0;
             $errors = [];
+            $updatedTaxes = [];
             
             if (isset($_POST['tax_rates']) && is_array($_POST['tax_rates'])) {
                 foreach ($_POST['tax_rates'] as $code => $rate) {
-                    $taxId = intval($_POST['tax_ids'][$code] ?? 0);
+                    $code = strtoupper(trim($code));
                     $rate = floatval($rate);
                     
+                    // Skip PAYE if it's progressive (rate should remain 0)
+                    if ($code === 'PAYE') {
+                        continue; // PAYE is progressive, don't update rate
+                    }
+                    
+                    // Get tax ID from form, or find by code
+                    $taxId = intval($_POST['tax_ids'][$code] ?? 0);
+                    
+                    // If no ID provided, try to find by code
+                    if ($taxId <= 0) {
+                        $existingTax = $this->taxTypeModel->getByCode($code);
+                        if ($existingTax) {
+                            $taxId = intval($existingTax['id']);
+                        }
+                    }
+                    
                     if ($taxId > 0) {
-                        // Update existing tax
+                        // Update existing tax by ID
                         try {
-                            if ($this->taxTypeModel->update($taxId, ['rate' => $rate, 'updated_at' => date('Y-m-d H:i:s')])) {
-                                $updated++;
+                            $currentTax = $this->taxTypeModel->getById($taxId);
+                            if ($currentTax) {
+                                $currentRate = floatval($currentTax['rate'] ?? 0);
+                                
+                                // Always update the rate (even if same value, to ensure it's saved)
+                                $updateData = [
+                                    'rate' => $rate,
+                                    'updated_at' => date('Y-m-d H:i:s')
+                                ];
+                                
+                                // Update using model's update method
+                                $result = $this->taxTypeModel->update($taxId, $updateData);
+                                
+                                // Update returns rowCount (0 or more), which is fine even if rate didn't change
+                                // rowCount can be 0 if value is same, but that's still success
+                                if ($result !== false) {
+                                    $updated++;
+                                    $updatedTaxes[] = $code;
+                                    error_log("Tax rate updated: {$code} (ID: {$taxId}) from {$currentRate}% to {$rate}%");
+                                } else {
+                                    $errors[] = "Failed to update {$code}";
+                                    error_log("Tax rate update returned false for {$code} (ID: {$taxId})");
+                                }
+                            } else {
+                                $errors[] = "Tax {$code} not found (ID: {$taxId})";
+                                error_log("Tax not found for ID {$taxId} (code: {$code})");
                             }
                         } catch (Exception $e) {
-                            error_log("Tax rate update error for {$code}: " . $e->getMessage());
-                            $errors[] = "Failed to update {$code}";
+                            error_log("Tax rate update error for {$code} (ID: {$taxId}): " . $e->getMessage());
+                            $errors[] = "Failed to update {$code}: " . $e->getMessage();
                         }
                     } else {
-                        // Create new tax if it doesn't exist
+                        // Tax doesn't exist, create it
                         try {
                             $taxData = [
-                                'code' => strtoupper($code),
+                                'code' => $code,
                                 'name' => $this->getTaxName($code),
                                 'rate' => $rate,
-                                'calculation_method' => $code === 'PAYE' ? 'progressive' : 'percentage',
+                                'calculation_method' => 'percentage',
                                 'authority' => 'FIRS',
                                 'filing_frequency' => $code === 'CIT' ? 'annually' : 'monthly',
                                 'description' => $this->getTaxDescription($code),
@@ -147,22 +188,28 @@ class Tax_config extends Base_Controller {
                                 'created_at' => date('Y-m-d H:i:s')
                             ];
                             
-                            if ($this->taxTypeModel->create($taxData)) {
+                            $newTaxId = $this->taxTypeModel->create($taxData);
+                            if ($newTaxId) {
                                 $updated++;
+                                $updatedTaxes[] = $code;
+                                error_log("Tax created: {$code} with rate {$rate}%");
+                            } else {
+                                $errors[] = "Failed to create {$code}";
+                                error_log("Tax creation returned false for {$code}");
                             }
                         } catch (Exception $e) {
                             error_log("Tax creation error for {$code}: " . $e->getMessage());
-                            $errors[] = "Failed to create {$code}";
+                            $errors[] = "Failed to create {$code}: " . $e->getMessage();
                         }
                     }
                 }
             }
             
             if ($updated > 0) {
-                $this->activityModel->log($this->session['user_id'], 'update', 'Tax', 'Updated tax rates');
-                $this->setFlashMessage('success', "Updated {$updated} tax rate(s) successfully.");
+                $this->activityModel->log($this->session['user_id'], 'update', 'Tax', 'Updated tax rates: ' . implode(', ', $updatedTaxes));
+                $this->setFlashMessage('success', "Updated {$updated} tax rate(s) successfully: " . implode(', ', $updatedTaxes));
             } else if (!empty($errors)) {
-                $this->setFlashMessage('danger', implode(', ', $errors));
+                $this->setFlashMessage('danger', implode('; ', $errors));
             } else {
                 $this->setFlashMessage('info', 'No changes detected.');
             }
