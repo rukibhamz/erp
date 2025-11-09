@@ -10,6 +10,7 @@ $is_cash = isset($uri_segments[0]) && $uri_segments[0] === 'cash';
 $is_receivables = isset($uri_segments[0]) && $uri_segments[0] === 'receivables';
 $is_payables = isset($uri_segments[0]) && $uri_segments[0] === 'payables';
 $is_payroll = isset($uri_segments[0]) && $uri_segments[0] === 'payroll';
+$is_employees = isset($uri_segments[0]) && $uri_segments[0] === 'employees';
 $is_ledger = isset($uri_segments[0]) && $uri_segments[0] === 'ledger';
 ?>
 
@@ -32,7 +33,10 @@ $is_ledger = isset($uri_segments[0]) && $uri_segments[0] === 'ledger';
             <i class="bi bi-file-earmark-medical"></i> Payables
         </a>
         <a class="nav-link <?= $is_payroll ? 'active' : '' ?>" href="<?= base_url('payroll') ?>">
-            <i class="bi bi-people"></i> Payroll
+            <i class="bi bi-cash-stack"></i> Payroll
+        </a>
+        <a class="nav-link <?= $is_employees ? 'active' : '' ?>" href="<?= base_url('employees') ?>">
+            <i class="bi bi-people"></i> Employees
         </a>
         <a class="nav-link <?= $is_ledger ? 'active' : '' ?>" href="<?= base_url('ledger') ?>">
             <i class="bi bi-journal-text"></i> General Ledger

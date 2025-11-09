@@ -88,6 +88,7 @@ class Base_Controller {
             'Templates' => 'accounting',
             'Banking' => 'accounting',
             'Payroll' => 'accounting',
+            'Employees' => 'accounting', // Employees module linked to payroll/accounting
             'Bookings' => 'bookings',
             'Facilities' => 'bookings',
             'Resource_management' => 'bookings',

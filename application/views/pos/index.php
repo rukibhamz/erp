@@ -13,6 +13,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </option>
                 <?php endforeach; ?>
             </select>
+            <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>
+                <a href="<?= base_url('pos/terminals') ?>" class="btn btn-dark btn-sm">
+                    <i class="bi bi-gear"></i> Manage Terminals
+                </a>
+            <?php endif; ?>
             <a href="<?= base_url('pos/reports') ?>" class="btn btn-outline-dark btn-sm">
                 <i class="bi bi-graph-up"></i> Reports
             </a>

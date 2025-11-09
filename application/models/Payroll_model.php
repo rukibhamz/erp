@@ -95,5 +95,22 @@ class Payroll_model extends Base_Model {
             return [];
         }
     }
+    
+    public function getByEmployee($employeeId) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT ps.*, pr.period, pr.status as run_status, pr.processed_date
+                 FROM `" . $this->db->getPrefix() . "payslips` ps
+                 JOIN `" . $this->db->getPrefix() . "payroll_runs` pr ON ps.payroll_run_id = pr.id
+                 WHERE ps.employee_id = ?
+                 ORDER BY pr.processed_date DESC, pr.period DESC
+                 LIMIT 50",
+                [$employeeId]
+            );
+        } catch (Exception $e) {
+            error_log('Payroll_model getByEmployee error: ' . $e->getMessage());
+            return [];
+        }
+    }
 }
 

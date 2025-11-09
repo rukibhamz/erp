@@ -143,6 +143,12 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['payroll/process'] = 'Payroll/processPayroll';
         $route['payroll/view/(:num)'] = 'Payroll/view/$1';
         $route['payroll/post/(:num)'] = 'Payroll/postPayroll/$1';
+        
+        // Employees (standalone module linked to Payroll)
+        $route['employees'] = 'Employees/index';
+        $route['employees/create'] = 'Employees/create';
+        $route['employees/edit/(:num)'] = 'Employees/edit/$1';
+        $route['employees/view/(:num)'] = 'Employees/view/$1';
 
         // Tax Management
         $route['tax'] = 'Tax/index';
