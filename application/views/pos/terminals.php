@@ -49,9 +49,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('pos?terminal=' . $terminal['id']) ?>" class="btn btn-sm btn-dark">
-                                        <i class="bi bi-cash-register"></i> Open POS
-                                    </a>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="<?= base_url('pos?terminal=' . $terminal['id']) ?>" class="btn btn-dark" title="Open POS">
+                                            <i class="bi bi-cash-register"></i> Open POS
+                                        </a>
+                                        <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>
+                                            <a href="<?= base_url('pos/reports?terminal_id=' . $terminal['id']) ?>" class="btn btn-outline-dark" title="View Reports">
+                                                <i class="bi bi-bar-chart"></i> Reports
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

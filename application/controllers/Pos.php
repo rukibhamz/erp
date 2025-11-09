@@ -399,7 +399,12 @@ class Pos extends Base_Controller {
     }
     
     public function terminals() {
-        $this->requirePermission('pos', 'manage');
+        // Allow admin and super_admin to manage terminals (they have all permissions)
+        // For other roles, require 'pos.manage' permission
+        $userRole = $this->session['role'] ?? '';
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
+            $this->requirePermission('pos', 'manage');
+        }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['terminal_code'])) {
             $terminalCodeInput = sanitize_input($_POST['terminal_code'] ?? '');

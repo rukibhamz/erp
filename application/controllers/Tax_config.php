@@ -16,31 +16,179 @@ class Tax_config extends Base_Controller {
         $this->requirePermission('tax', 'read');
         
         try {
-            $taxTypes = $this->taxTypeModel->getAll();
+            // Ensure default taxes exist
+            $this->ensureDefaultTaxes();
             
-            // Group by authority
-            $grouped = [];
-            foreach ($taxTypes as $tax) {
-                $authority = $tax['authority'] ?? 'Other';
-                if (!isset($grouped[$authority])) {
-                    $grouped[$authority] = [];
-                }
-                $grouped[$authority][] = $tax;
-            }
+            // Get all tax types
+            $taxTypes = $this->taxTypeModel->getAll();
         } catch (Exception $e) {
             error_log('Tax_config index error: ' . $e->getMessage());
             $taxTypes = [];
-            $grouped = [];
         }
         
         $data = [
             'page_title' => 'Tax Configuration',
             'tax_types' => $taxTypes,
-            'grouped_taxes' => $grouped,
             'flash' => $this->getFlashMessage()
         ];
         
         $this->loadView('tax/config/index', $data);
+    }
+    
+    /**
+     * Ensure default taxes (VAT, WHT, CIT, PAYE) exist in the database
+     */
+    private function ensureDefaultTaxes() {
+        $defaultTaxes = [
+            [
+                'code' => 'VAT',
+                'name' => 'Value Added Tax',
+                'rate' => 7.5,
+                'calculation_method' => 'percentage',
+                'authority' => 'FIRS',
+                'filing_frequency' => 'monthly',
+                'description' => 'Value Added Tax (VAT) on goods and services',
+                'is_active' => 1,
+                'tax_inclusive' => 0
+            ],
+            [
+                'code' => 'WHT',
+                'name' => 'Withholding Tax',
+                'rate' => 10.0,
+                'calculation_method' => 'percentage',
+                'authority' => 'FIRS',
+                'filing_frequency' => 'monthly',
+                'description' => 'Withholding Tax on payments',
+                'is_active' => 1,
+                'tax_inclusive' => 0
+            ],
+            [
+                'code' => 'CIT',
+                'name' => 'Company Income Tax',
+                'rate' => 30.0,
+                'calculation_method' => 'percentage',
+                'authority' => 'FIRS',
+                'filing_frequency' => 'annually',
+                'description' => 'Company Income Tax on corporate profits',
+                'is_active' => 1,
+                'tax_inclusive' => 0
+            ],
+            [
+                'code' => 'PAYE',
+                'name' => 'Pay As You Earn',
+                'rate' => 0, // Progressive - rate is 0
+                'calculation_method' => 'progressive',
+                'authority' => 'FIRS',
+                'filing_frequency' => 'monthly',
+                'description' => 'Pay As You Earn - Progressive tax on employee income',
+                'is_active' => 1,
+                'tax_inclusive' => 0
+            ]
+        ];
+        
+        foreach ($defaultTaxes as $taxData) {
+            try {
+                $existing = $this->taxTypeModel->getByCode($taxData['code']);
+                if (!$existing) {
+                    // Create if doesn't exist
+                    $taxData['created_at'] = date('Y-m-d H:i:s');
+                    $this->taxTypeModel->create($taxData);
+                    error_log("Created default tax: {$taxData['code']}");
+                }
+            } catch (Exception $e) {
+                error_log("Error ensuring tax {$taxData['code']}: " . $e->getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Update tax rates (admin/super_admin only)
+     */
+    public function updateRates() {
+        // Only admin and super_admin can update rates
+        $userRole = $this->session['role'] ?? '';
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
+            $this->setFlashMessage('danger', 'Only administrators can update tax rates.');
+            redirect('tax/config');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $updated = 0;
+            $errors = [];
+            
+            if (isset($_POST['tax_rates']) && is_array($_POST['tax_rates'])) {
+                foreach ($_POST['tax_rates'] as $code => $rate) {
+                    $taxId = intval($_POST['tax_ids'][$code] ?? 0);
+                    $rate = floatval($rate);
+                    
+                    if ($taxId > 0) {
+                        // Update existing tax
+                        try {
+                            if ($this->taxTypeModel->update($taxId, ['rate' => $rate, 'updated_at' => date('Y-m-d H:i:s')])) {
+                                $updated++;
+                            }
+                        } catch (Exception $e) {
+                            error_log("Tax rate update error for {$code}: " . $e->getMessage());
+                            $errors[] = "Failed to update {$code}";
+                        }
+                    } else {
+                        // Create new tax if it doesn't exist
+                        try {
+                            $taxData = [
+                                'code' => strtoupper($code),
+                                'name' => $this->getTaxName($code),
+                                'rate' => $rate,
+                                'calculation_method' => $code === 'PAYE' ? 'progressive' : 'percentage',
+                                'authority' => 'FIRS',
+                                'filing_frequency' => $code === 'CIT' ? 'annually' : 'monthly',
+                                'description' => $this->getTaxDescription($code),
+                                'is_active' => 1,
+                                'tax_inclusive' => 0,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ];
+                            
+                            if ($this->taxTypeModel->create($taxData)) {
+                                $updated++;
+                            }
+                        } catch (Exception $e) {
+                            error_log("Tax creation error for {$code}: " . $e->getMessage());
+                            $errors[] = "Failed to create {$code}";
+                        }
+                    }
+                }
+            }
+            
+            if ($updated > 0) {
+                $this->activityModel->log($this->session['user_id'], 'update', 'Tax', 'Updated tax rates');
+                $this->setFlashMessage('success', "Updated {$updated} tax rate(s) successfully.");
+            } else if (!empty($errors)) {
+                $this->setFlashMessage('danger', implode(', ', $errors));
+            } else {
+                $this->setFlashMessage('info', 'No changes detected.');
+            }
+        }
+        
+        redirect('tax/config');
+    }
+    
+    private function getTaxName($code) {
+        $names = [
+            'VAT' => 'Value Added Tax',
+            'WHT' => 'Withholding Tax',
+            'CIT' => 'Company Income Tax',
+            'PAYE' => 'Pay As You Earn'
+        ];
+        return $names[$code] ?? ucfirst($code);
+    }
+    
+    private function getTaxDescription($code) {
+        $descriptions = [
+            'VAT' => 'Value Added Tax (VAT) on goods and services',
+            'WHT' => 'Withholding Tax on payments',
+            'CIT' => 'Company Income Tax on corporate profits',
+            'PAYE' => 'Pay As You Earn - Progressive tax on employee income'
+        ];
+        return $descriptions[$code] ?? '';
     }
     
     public function create() {

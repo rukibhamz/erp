@@ -15,7 +15,7 @@ class Tax_type_model extends Base_Model {
     public function getByCode($code) {
         return $this->db->fetchOne(
             "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-             WHERE code = ? AND is_active = 1",
+             WHERE code = ?",
             [$code]
         );
     }

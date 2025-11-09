@@ -1,14 +1,14 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 include(BASEPATH . 'views/tax/_nav.php');
+
+// Check if user is admin or super_admin
+$isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
 ?>
 
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Tax Configuration</h1>
-        <a href="<?= base_url('tax/config/create') ?>" class="btn btn-dark">
-            <i class="bi bi-plus-circle"></i> Create Tax Type
-        </a>
     </div>
 </div>
 
@@ -19,167 +19,108 @@ include(BASEPATH . 'views/tax/_nav.php');
     </div>
 <?php endif; ?>
 
-<!-- Summary Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Total Tax Types</h6>
-                <h4 class="mb-0"><?= count($tax_types ?? []) ?></h4>
-            </div>
-        </div>
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-percent"></i> Tax Rates Configuration</h5>
     </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Active Taxes</h6>
-                <h4 class="mb-0 text-success">
-                    <?= count(array_filter($tax_types ?? [], function($t) { return $t['is_active'] == 1; })) ?>
-                </h4>
+    <div class="card-body">
+        <?php if (!$isAdmin): ?>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Only Administrators can modify tax rates.
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">FIRS Taxes</h6>
-                <h4 class="mb-0">
-                    <?= count(array_filter($tax_types ?? [], function($t) { return ($t['authority'] ?? '') === 'FIRS'; })) ?>
-                </h4>
+        <?php endif; ?>
+        
+        <form method="POST" action="<?= base_url('tax/config/updateRates') ?>" id="taxRatesForm">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Tax Type</th>
+                            <th>Code</th>
+                            <th>Current Rate (%)</th>
+                            <th>New Rate (%)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        // Define the 4 main taxes
+                        $mainTaxes = ['VAT' => 'Value Added Tax', 'WHT' => 'Withholding Tax', 'CIT' => 'Company Income Tax', 'PAYE' => 'Pay As You Earn'];
+                        $taxesFound = [];
+                        
+                        // Find existing taxes
+                        foreach ($tax_types ?? [] as $tax) {
+                            $code = strtoupper($tax['code'] ?? '');
+                            if (isset($mainTaxes[$code])) {
+                                $taxesFound[$code] = $tax;
+                            }
+                        }
+                        
+                        // Display all 4 taxes (create placeholders if missing)
+                        foreach ($mainTaxes as $code => $name): 
+                            $tax = $taxesFound[$code] ?? null;
+                            $currentRate = $tax ? floatval($tax['rate'] ?? 0) : 0;
+                            $taxId = $tax ? intval($tax['id']) : 0;
+                            $isActive = $tax ? ($tax['is_active'] ?? 0) : 0;
+                        ?>
+                            <tr>
+                                <td>
+                                    <strong><?= htmlspecialchars($name) ?></strong>
+                                </td>
+                                <td><code><?= htmlspecialchars($code) ?></code></td>
+                                <td>
+                                    <span class="badge bg-<?= $currentRate > 0 ? 'success' : 'secondary' ?>">
+                                        <?= number_format($currentRate, 2) ?>%
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php if ($isAdmin): ?>
+                                        <input type="hidden" name="tax_ids[<?= $code ?>]" value="<?= $taxId ?>">
+                                        <input type="number" 
+                                               name="tax_rates[<?= $code ?>]" 
+                                               class="form-control form-control-sm" 
+                                               value="<?= $currentRate ?>" 
+                                               step="0.01" 
+                                               min="0" 
+                                               max="100"
+                                               style="width: 120px;"
+                                               <?= $code === 'PAYE' ? 'readonly title="PAYE is progressive - rate calculated based on income brackets"' : '' ?>>
+                                    <?php else: ?>
+                                        <span class="text-muted"><?= number_format($currentRate, 2) ?>%</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="badge bg-<?= $isActive ? 'success' : 'secondary' ?>">
+                                        <?= $isActive ? 'Active' : 'Inactive' ?>
+                                    </span>
+                                    <?php if (!$tax): ?>
+                                        <small class="text-danger d-block">Not configured</small>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">State Taxes</h6>
-                <h4 class="mb-0">
-                    <?= count(array_filter($tax_types ?? [], function($t) { return ($t['authority'] ?? '') === 'State'; })) ?>
-                </h4>
-            </div>
-        </div>
+            
+            <?php if ($isAdmin): ?>
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <button type="submit" class="btn btn-dark" id="saveRatesBtn">
+                        <i class="bi bi-save"></i> Update Tax Rates
+                    </button>
+                </div>
+            <?php endif; ?>
+        </form>
     </div>
 </div>
 
-<!-- Tax Types by Authority -->
-<?php if (!empty($grouped_taxes ?? [])): ?>
-    <?php foreach ($grouped_taxes as $authority => $taxes): ?>
-        <div class="card mb-4">
-            <div class="card-header bg-dark text-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-building"></i> <?= htmlspecialchars($authority) ?> 
-                    <span class="badge bg-light text-dark ms-2"><?= count($taxes) ?></span>
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Code</th>
-                                <th>Rate</th>
-                                <th>Calculation Method</th>
-                                <th>Filing Frequency</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($taxes as $tax): ?>
-                                <tr>
-                                    <td>
-                                        <strong><?= htmlspecialchars($tax['name']) ?></strong>
-                                        <?php if (!empty($tax['description'])): ?>
-                                            <br><small class="text-muted"><?= htmlspecialchars($tax['description']) ?></small>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><code><?= htmlspecialchars($tax['code']) ?></code></td>
-                                    <td>
-                                        <?php if (($tax['calculation_method'] ?? '') === 'progressive'): ?>
-                                            <span class="text-muted">Progressive</span>
-                                        <?php else: ?>
-                                            <strong><?= number_format($tax['rate'] ?? 0, 2) ?>%</strong>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">
-                                            <?= ucfirst(str_replace('_', ' ', $tax['calculation_method'] ?? 'percentage')) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            <?= ucfirst($tax['filing_frequency'] ?? 'monthly') ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm <?= $tax['is_active'] ? 'btn-success' : 'btn-secondary' ?>" 
-                                                onclick="toggleStatus(<?= $tax['id'] ?>)">
-                                            <?= $tax['is_active'] ? 'Active' : 'Inactive' ?>
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="<?= base_url('tax/config/edit/' . $tax['id']) ?>" 
-                                               class="btn btn-outline-dark" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <button class="btn btn-outline-danger" 
-                                                    onclick="deleteTax(<?= $tax['id'] ?>, '<?= htmlspecialchars(addslashes($tax['name'])) ?>')" 
-                                                    title="Delete">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    <?php endforeach; ?>
-<?php else: ?>
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="bi bi-sliders" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No tax types configured.</p>
-            <a href="<?= base_url('tax/config/create') ?>" class="btn btn-dark mt-2">
-                <i class="bi bi-plus-circle"></i> Create First Tax Type
-            </a>
-        </div>
-    </div>
-<?php endif; ?>
-
+<?php if ($isAdmin): ?>
 <script>
-function toggleStatus(id) {
-    fetch('<?= base_url('tax/config/toggle') ?>/' + id, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'ajax=1'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Error: ' + (data.message || 'Failed to update status'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error updating status');
-    });
-}
-
-function deleteTax(id, name) {
-    if (confirm('Deactivate tax type "' + name + '"?\n\nNote: Tax types in use cannot be deleted and will be deactivated instead.')) {
-        window.location.href = '<?= base_url('tax/config/delete') ?>/' + id;
+document.getElementById('taxRatesForm')?.addEventListener('submit', function(e) {
+    if (!confirm('Update tax rates? This will affect all future tax calculations.')) {
+        e.preventDefault();
+        return false;
     }
-}
+});
 </script>
-
-
-
+<?php endif; ?>

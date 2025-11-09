@@ -168,6 +168,7 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['tax/reports'] = 'Tax_reports/index';
         $route['tax/reports/export'] = 'Tax_reports/export';
         $route['tax/config'] = 'Tax_config/index';
+        $route['tax/config/updateRates'] = 'Tax_config/updateRates';
         $route['tax/config/create'] = 'Tax_config/create';
         $route['tax/config/edit/(:num)'] = 'Tax_config/edit/$1';
         $route['tax/config/delete/(:num)'] = 'Tax_config/delete/$1';
