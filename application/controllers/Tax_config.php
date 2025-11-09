@@ -102,7 +102,109 @@ class Tax_config extends Base_Controller {
     }
     
     /**
-     * Update tax rates (admin/super_admin only)
+     * Update individual tax rate (admin/super_admin only)
+     */
+    public function updateRate() {
+        // Only admin and super_admin can update rates
+        $userRole = $this->session['role'] ?? '';
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
+            $this->setFlashMessage('danger', 'Only administrators can update tax rates.');
+            redirect('tax/config');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $taxId = intval($_POST['tax_id'] ?? 0);
+            $taxCode = strtoupper(trim($_POST['tax_code'] ?? ''));
+            $rate = floatval($_POST['tax_rate'] ?? 0);
+            
+            // Skip PAYE if it's progressive (rate should remain 0)
+            if ($taxCode === 'PAYE') {
+                $this->setFlashMessage('info', 'PAYE is progressive - rate cannot be updated.');
+                redirect('tax/config');
+            }
+            
+            // Validate rate
+            if ($rate < 0 || $rate > 100) {
+                $this->setFlashMessage('danger', 'Tax rate must be between 0 and 100.');
+                redirect('tax/config');
+            }
+            
+            // Get tax ID from form, or find by code
+            if ($taxId <= 0 && !empty($taxCode)) {
+                $existingTax = $this->taxTypeModel->getByCode($taxCode);
+                if ($existingTax) {
+                    $taxId = intval($existingTax['id']);
+                }
+            }
+            
+            if ($taxId > 0) {
+                // Update existing tax by ID
+                try {
+                    $currentTax = $this->taxTypeModel->getById($taxId);
+                    if ($currentTax) {
+                        $currentRate = floatval($currentTax['rate'] ?? 0);
+                        
+                        // Update the rate
+                        $updateData = [
+                            'rate' => $rate,
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                        
+                        // Update using model's update method
+                        $result = $this->taxTypeModel->update($taxId, $updateData);
+                        
+                        // Update returns rowCount (0 or more), which is fine even if rate didn't change
+                        if ($result !== false) {
+                            $this->activityModel->log($this->session['user_id'], 'update', 'Tax', "Updated {$taxCode} rate from {$currentRate}% to {$rate}%");
+                            $this->setFlashMessage('success', "{$taxCode} rate updated from " . number_format($currentRate, 2) . "% to " . number_format($rate, 2) . "%");
+                        } else {
+                            $this->setFlashMessage('danger', "Failed to update {$taxCode} rate");
+                            error_log("Tax rate update returned false for {$taxCode} (ID: {$taxId})");
+                        }
+                    } else {
+                        $this->setFlashMessage('danger', "Tax {$taxCode} not found (ID: {$taxId})");
+                        error_log("Tax not found for ID {$taxId} (code: {$taxCode})");
+                    }
+                } catch (Exception $e) {
+                    error_log("Tax rate update error for {$taxCode} (ID: {$taxId}): " . $e->getMessage());
+                    $this->setFlashMessage('danger', "Failed to update {$taxCode}: " . $e->getMessage());
+                }
+            } else {
+                // Tax doesn't exist, create it
+                try {
+                    $taxData = [
+                        'code' => $taxCode,
+                        'name' => $this->getTaxName($taxCode),
+                        'rate' => $rate,
+                        'calculation_method' => 'percentage',
+                        'authority' => 'FIRS',
+                        'filing_frequency' => $taxCode === 'CIT' ? 'annually' : 'monthly',
+                        'description' => $this->getTaxDescription($taxCode),
+                        'is_active' => 1,
+                        'tax_inclusive' => 0,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ];
+                    
+                    $newTaxId = $this->taxTypeModel->create($taxData);
+                    if ($newTaxId) {
+                        $this->activityModel->log($this->session['user_id'], 'create', 'Tax', "Created {$taxCode} with rate {$rate}%");
+                        $this->setFlashMessage('success', "{$taxCode} created with rate " . number_format($rate, 2) . "%");
+                    } else {
+                        $this->setFlashMessage('danger', "Failed to create {$taxCode}");
+                        error_log("Tax creation returned false for {$taxCode}");
+                    }
+                } catch (Exception $e) {
+                    error_log("Tax creation error for {$taxCode}: " . $e->getMessage());
+                    $this->setFlashMessage('danger', "Failed to create {$taxCode}: " . $e->getMessage());
+                }
+            }
+        }
+        
+        redirect('tax/config');
+    }
+    
+    /**
+     * Update tax rates (admin/super_admin only) - DEPRECATED: Use updateRate() instead
      */
     public function updateRates() {
         // Only admin and super_admin can update rates

@@ -502,6 +502,35 @@ CREATE TABLE IF NOT EXISTS `erp_work_orders` (
     KEY `idx_assigned_to` (`assigned_to`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- TAX TYPES TABLE (for tax configuration)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `erp_tax_types` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `code` VARCHAR(50) NOT NULL UNIQUE COMMENT 'Tax code (VAT, WHT, CIT, PAYE)',
+    `name` VARCHAR(255) NOT NULL COMMENT 'Tax name',
+    `rate` DECIMAL(10,2) DEFAULT 0 COMMENT 'Tax rate percentage',
+    `calculation_method` ENUM('percentage', 'fixed', 'progressive') DEFAULT 'percentage',
+    `authority` VARCHAR(100) DEFAULT 'FIRS' COMMENT 'Tax authority',
+    `filing_frequency` ENUM('monthly', 'quarterly', 'annually') DEFAULT 'monthly',
+    `description` TEXT DEFAULT NULL,
+    `is_active` TINYINT(1) DEFAULT 1,
+    `tax_inclusive` TINYINT(1) DEFAULT 0 COMMENT 'Whether tax is included in price',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_code` (`code`),
+    KEY `idx_is_active` (`is_active`),
+    KEY `idx_authority` (`authority`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed default tax types
+INSERT INTO `erp_tax_types` (`code`, `name`, `rate`, `calculation_method`, `authority`, `filing_frequency`, `description`, `is_active`, `tax_inclusive`, `created_at`) VALUES
+('VAT', 'Value Added Tax', 7.5, 'percentage', 'FIRS', 'monthly', 'Value Added Tax (VAT) on goods and services', 1, 0, NOW()),
+('WHT', 'Withholding Tax', 10.0, 'percentage', 'FIRS', 'monthly', 'Withholding Tax on payments', 1, 0, NOW()),
+('CIT', 'Company Income Tax', 30.0, 'percentage', 'FIRS', 'annually', 'Company Income Tax on corporate profits', 1, 0, NOW()),
+('PAYE', 'Pay As You Earn', 0, 'progressive', 'FIRS', 'monthly', 'Pay As You Earn - Progressive tax on employee income', 1, 0, NOW())
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
 -- TAX DEADLINES TABLE (for tax compliance tracking)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS `erp_tax_deadlines` (

@@ -6,7 +6,7 @@ include(__DIR__ . '/../_nav.php');
 
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
-        <h1 class="page-title mb-0">Tax Compliance - List View</h1>
+        <h1 class="page-title mb-0">Tax Compliance - Deadlines</h1>
         <div class="d-flex gap-2">
             <a href="<?= base_url('tax/compliance') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-calendar"></i> Calendar View
@@ -38,6 +38,7 @@ include(__DIR__ . '/../_nav.php');
                         <tr>
                             <th>Tax Type</th>
                             <th>Deadline Date</th>
+                            <th>Deadline Type</th>
                             <th>Period</th>
                             <th>Days Overdue</th>
                             <th>Status</th>
@@ -47,24 +48,30 @@ include(__DIR__ . '/../_nav.php');
                     <tbody>
                         <?php foreach ($overdue_deadlines as $deadline): ?>
                             <?php
-                            $daysOverdue = floor((time() - strtotime($deadline['deadline_date'])) / 86400);
+                            $deadlineDate = strtotime($deadline['deadline_date'] ?? '');
+                            $daysOverdue = $deadlineDate ? floor((time() - $deadlineDate) / 86400) : 0;
                             $urgent = $daysOverdue > 30;
                             ?>
                             <tr class="<?= $urgent ? 'table-danger' : '' ?>">
-                                <td><strong><?= htmlspecialchars($deadline['tax_type']) ?></strong></td>
-                                <td><?= date('M d, Y', strtotime($deadline['deadline_date'])) ?></td>
+                                <td><strong><?= htmlspecialchars($deadline['tax_type'] ?? 'N/A') ?></strong></td>
+                                <td><?= $deadlineDate ? date('M d, Y', $deadlineDate) : 'N/A' ?></td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        <?= ucfirst(htmlspecialchars($deadline['deadline_type'] ?? 'filing')) ?>
+                                    </span>
+                                </td>
                                 <td><?= htmlspecialchars($deadline['period_covered'] ?? '-') ?></td>
                                 <td>
                                     <span class="badge bg-danger"><?= $daysOverdue ?> days</span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-<?= $deadline['status'] === 'completed' ? 'success' : 'secondary' ?>">
-                                        <?= ucfirst($deadline['status']) ?>
+                                    <span class="badge bg-<?= ($deadline['status'] ?? '') === 'completed' ? 'success' : 'secondary' ?>">
+                                        <?= ucfirst($deadline['status'] ?? 'upcoming') ?>
                                     </span>
                                 </td>
                                 <td>
-                                    <?php if ($deadline['status'] !== 'completed'): ?>
-                                        <button class="btn btn-sm btn-success" onclick="markCompleted(<?= $deadline['id'] ?>)">
+                                    <?php if (($deadline['status'] ?? '') !== 'completed'): ?>
+                                        <button class="btn btn-sm btn-success" onclick="markCompleted(<?= intval($deadline['id'] ?? 0) ?>)">
                                             <i class="bi bi-check-circle"></i> Mark Complete
                                         </button>
                                     <?php endif; ?>
@@ -85,7 +92,7 @@ include(__DIR__ . '/../_nav.php');
     </div>
     <div class="card-body">
         <?php if (empty($upcoming_deadlines ?? [])): ?>
-            <p class="text-muted mb-0">No upcoming deadlines.</p>
+            <p class="text-muted mb-0">No upcoming deadlines scheduled.</p>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table table-hover">
@@ -93,6 +100,7 @@ include(__DIR__ . '/../_nav.php');
                         <tr>
                             <th>Tax Type</th>
                             <th>Deadline Date</th>
+                            <th>Deadline Type</th>
                             <th>Period</th>
                             <th>Days Remaining</th>
                             <th>Status</th>
@@ -102,11 +110,17 @@ include(__DIR__ . '/../_nav.php');
                     <tbody>
                         <?php foreach ($upcoming_deadlines as $deadline): ?>
                             <?php
-                            $daysRemaining = ceil((strtotime($deadline['deadline_date']) - time()) / 86400);
+                            $deadlineDate = strtotime($deadline['deadline_date'] ?? '');
+                            $daysRemaining = $deadlineDate ? ceil(($deadlineDate - time()) / 86400) : 0;
                             ?>
                             <tr class="<?= $daysRemaining <= 7 ? 'table-warning' : '' ?>">
-                                <td><strong><?= htmlspecialchars($deadline['tax_type']) ?></strong></td>
-                                <td><?= date('M d, Y', strtotime($deadline['deadline_date'])) ?></td>
+                                <td><strong><?= htmlspecialchars($deadline['tax_type'] ?? 'N/A') ?></strong></td>
+                                <td><?= $deadlineDate ? date('M d, Y', $deadlineDate) : 'N/A' ?></td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        <?= ucfirst(htmlspecialchars($deadline['deadline_type'] ?? 'filing')) ?>
+                                    </span>
+                                </td>
                                 <td><?= htmlspecialchars($deadline['period_covered'] ?? '-') ?></td>
                                 <td>
                                     <span class="badge bg-<?= $daysRemaining <= 7 ? 'danger' : ($daysRemaining <= 14 ? 'warning' : 'info') ?>">
@@ -115,12 +129,12 @@ include(__DIR__ . '/../_nav.php');
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary">
-                                        <?= ucfirst($deadline['status']) ?>
+                                        <?= ucfirst($deadline['status'] ?? 'upcoming') ?>
                                     </span>
                                 </td>
                                 <td>
-                                    <?php if ($deadline['status'] !== 'completed'): ?>
-                                        <button class="btn btn-sm btn-success" onclick="markCompleted(<?= $deadline['id'] ?>)">
+                                    <?php if (($deadline['status'] ?? '') !== 'completed'): ?>
+                                        <button class="btn btn-sm btn-success" onclick="markCompleted(<?= intval($deadline['id'] ?? 0) ?>)">
                                             <i class="bi bi-check-circle"></i> Mark Complete
                                         </button>
                                     <?php endif; ?>
@@ -136,6 +150,11 @@ include(__DIR__ . '/../_nav.php');
 
 <script>
 function markCompleted(deadlineId) {
+    if (!deadlineId || deadlineId <= 0) {
+        alert('Invalid deadline ID');
+        return;
+    }
+    
     if (confirm('Mark this deadline as completed?')) {
         fetch('<?= base_url('tax/compliance/mark-completed') ?>', {
             method: 'POST',
@@ -159,5 +178,4 @@ function markCompleted(deadlineId) {
     }
 }
 </script>
-
 
