@@ -78,7 +78,12 @@ class Module_customization extends Base_Controller {
      * Update a module label via AJAX
      */
     public function updateLabel() {
+        // Prevent any output before JSON
+        if (ob_get_level()) {
+            ob_clean();
+        }
         header('Content-Type: application/json');
+        
         try {
             // Validate request
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -86,7 +91,7 @@ class Module_customization extends Base_Controller {
             }
             
             $moduleCode = $_POST['module_code'] ?? '';
-            $customLabel = $_POST['custom_label'] ?? '';
+            $customLabel = trim($_POST['custom_label'] ?? '');
             
             if (empty($moduleCode)) {
                 throw new Exception('Module code is required');
@@ -124,13 +129,19 @@ class Module_customization extends Base_Controller {
                 'error' => $e->getMessage()
             ]);
         }
+        exit; // Prevent any further output
     }
     
     /**
      * Reset a module label to default via AJAX
      */
     public function resetLabel() {
+        // Prevent any output before JSON
+        if (ob_get_level()) {
+            ob_clean();
+        }
         header('Content-Type: application/json');
+        
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid request method');
@@ -170,20 +181,26 @@ class Module_customization extends Base_Controller {
                 'error' => $e->getMessage()
             ]);
         }
+        exit; // Prevent any further output
     }
     
     /**
      * Toggle module visibility via AJAX
      */
     public function toggleVisibility() {
+        // Prevent any output before JSON
+        if (ob_get_level()) {
+            ob_clean();
+        }
         header('Content-Type: application/json');
+        
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid request method');
             }
             
             $moduleCode = $_POST['module_code'] ?? '';
-            $isActive = isset($_POST['is_active']) ? (bool)$_POST['is_active'] : null;
+            $isActive = isset($_POST['is_active']) ? (intval($_POST['is_active']) == 1) : null;
             
             if (empty($moduleCode) || $isActive === null) {
                 throw new Exception('Missing required parameters');
@@ -215,13 +232,19 @@ class Module_customization extends Base_Controller {
                 'error' => $e->getMessage()
             ]);
         }
+        exit; // Prevent any further output
     }
     
     /**
      * Update module display order via AJAX (for drag-and-drop)
      */
     public function updateOrder() {
+        // Prevent any output before JSON
+        if (ob_get_level()) {
+            ob_clean();
+        }
         header('Content-Type: application/json');
+        
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid request method');
@@ -256,13 +279,19 @@ class Module_customization extends Base_Controller {
                 'error' => $e->getMessage()
             ]);
         }
+        exit; // Prevent any further output
     }
     
     /**
      * Update module icon via AJAX
      */
     public function updateIcon() {
+        // Prevent any output before JSON
+        if (ob_get_level()) {
+            ob_clean();
+        }
         header('Content-Type: application/json');
+        
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid request method');
@@ -284,7 +313,7 @@ class Module_customization extends Base_Controller {
                         'module_code' => $moduleCode
                     ]
                 ]);
-                return;
+                exit;
             }
             
             $userId = $_SESSION['user_id'] ?? null;
@@ -313,6 +342,7 @@ class Module_customization extends Base_Controller {
                 'error' => $e->getMessage()
             ]);
         }
+        exit; // Prevent any further output
     }
 }
 

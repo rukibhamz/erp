@@ -207,21 +207,47 @@ function initializeEditButtons() {
 function openEditModal(moduleCode, defaultLabel, customLabel, iconClass) {
     currentEditingModule = moduleCode;
 
-    document.getElementById('edit-module-code').value = moduleCode;
-    document.getElementById('edit-module-code-display').value = moduleCode;
-    document.getElementById('edit-default-label').value = defaultLabel;
-    document.getElementById('edit-custom-label').value = customLabel || defaultLabel;
-    document.getElementById('edit-icon-class').value = iconClass || '';
-    document.getElementById('edit-icon-preview').className = iconClass || 'bi bi-circle';
+    const modal = document.getElementById('edit-module-modal');
+    if (!modal) {
+        console.error('Edit modal not found');
+        return;
+    }
 
-    document.getElementById('edit-module-modal').classList.remove('d-none');
+    const codeInput = document.getElementById('edit-module-code');
+    const codeDisplay = document.getElementById('edit-module-code-display');
+    const defaultLabelInput = document.getElementById('edit-default-label');
+    const customLabelInput = document.getElementById('edit-custom-label');
+    const iconClassInput = document.getElementById('edit-icon-class');
+    const iconPreview = document.getElementById('edit-icon-preview');
+
+    if (codeInput) codeInput.value = moduleCode || '';
+    if (codeDisplay) codeDisplay.value = moduleCode || '';
+    if (defaultLabelInput) defaultLabelInput.value = defaultLabel || '';
+    if (customLabelInput) customLabelInput.value = customLabel || defaultLabel || '';
+    if (iconClassInput) iconClassInput.value = iconClass || '';
+    if (iconPreview) {
+        // Ensure icon has 'bi' prefix
+        let icon = iconClass || 'bi-circle';
+        if (icon.indexOf('bi-') === -1 && icon.indexOf('bi ') === -1) {
+            icon = icon.replace('icon-', 'bi-');
+        }
+        iconPreview.className = 'bi ' + icon;
+    }
+
+    // Show modal - remove d-none and set display to flex
+    modal.classList.remove('d-none');
+    modal.style.display = 'flex';
 }
 
 /**
  * Close the edit modal
  */
 function closeEditModal() {
-    document.getElementById('edit-module-modal').classList.add('d-none');
+    const modal = document.getElementById('edit-module-modal');
+    if (modal) {
+        modal.classList.add('d-none');
+        modal.style.display = 'none';
+    }
     currentEditingModule = null;
 }
 
