@@ -110,7 +110,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Tax</label>
+                        <label class="form-label">VAT (<?= number_format($default_vat_rate ?? 7.5, 2) ?>%)</label>
                         <div class="h5 mb-0 text-muted" id="cartTax"><?= format_currency(0) ?></div>
                     </div>
                     <hr>
@@ -162,7 +162,7 @@ function addToCart(itemId, itemName, price) {
             item_name: itemName,
             quantity: 1,
             price: price,
-            tax_rate: 7.5 // Default VAT
+            tax_rate: <?= $default_vat_rate ?? 7.5 ?> // Auto VAT rate
         });
     }
     updateCart();
@@ -230,8 +230,21 @@ function updateCart() {
             discountAmount = subtotal * (discount / 100);
         }
         
-        const tax = subtotal * 0.075; // 7.5% VAT
-        const total = subtotal - discountAmount + tax;
+        // Calculate VAT automatically from cart items (before discount)
+        let tax = 0;
+        cart.forEach(item => {
+            const lineTotal = item.price * item.quantity;
+            const lineTax = lineTotal * ((item.tax_rate || <?= $default_vat_rate ?? 7.5 ?>) / 100);
+            tax += lineTax;
+        });
+        
+        // Apply discount to subtotal, then recalculate VAT on discounted amount
+        const discountedSubtotal = subtotal - discountAmount;
+        // Recalculate VAT on discounted amount (standard practice)
+        const vatRate = <?= $default_vat_rate ?? 7.5 ?> / 100;
+        tax = discountedSubtotal * vatRate;
+        
+        const total = discountedSubtotal + tax;
         
         document.getElementById('cartSubtotal').textContent = formatCurrency(subtotal);
         document.getElementById('cartTax').textContent = formatCurrency(tax);

@@ -53,6 +53,23 @@ class Pos extends Base_Controller {
             $items = [];
         }
         
+        // Get default VAT rate
+        $defaultVatRate = 7.5; // Default fallback
+        try {
+            $vatTax = $this->taxModel->getByCode('VAT');
+            if ($vatTax) {
+                $defaultVatRate = floatval($vatTax['rate']);
+            } else {
+                // Try to get first active tax as fallback
+                $activeTaxes = $this->taxModel->getActive();
+                if (!empty($activeTaxes)) {
+                    $defaultVatRate = floatval($activeTaxes[0]['rate']);
+                }
+            }
+        } catch (Exception $e) {
+            error_log('POS VAT rate error: ' . $e->getMessage());
+        }
+        
         // Get walk-in customer
         try {
             $walkInCustomer = $this->customerModel->getByCode('WALK-IN');
@@ -86,6 +103,7 @@ class Pos extends Base_Controller {
             'session' => $session,
             'items' => $items,
             'walk_in_customer' => $walkInCustomer,
+            'default_vat_rate' => $defaultVatRate,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -118,6 +136,22 @@ class Pos extends Base_Controller {
             $taxAmount = 0;
             $saleItems = [];
             
+            // Get default VAT rate if not provided per item
+            $defaultVatRate = 7.5;
+            try {
+                $vatTax = $this->taxModel->getByCode('VAT');
+                if ($vatTax) {
+                    $defaultVatRate = floatval($vatTax['rate']);
+                } else {
+                    $activeTaxes = $this->taxModel->getActive();
+                    if (!empty($activeTaxes)) {
+                        $defaultVatRate = floatval($activeTaxes[0]['rate']);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('POS VAT rate error: ' . $e->getMessage());
+            }
+            
             foreach ($items as $itemData) {
                 $item = $this->itemModel->getById($itemData['item_id']);
                 if (!$item) continue;
@@ -125,7 +159,9 @@ class Pos extends Base_Controller {
                 $quantity = floatval($itemData['quantity'] ?? 1);
                 $unitPrice = floatval($itemData['price'] ?? $item['selling_price'] ?? 0);
                 $itemDiscount = floatval($itemData['discount'] ?? 0);
-                $itemTaxRate = floatval($itemData['tax_rate'] ?? 0);
+                
+                // Use tax_rate from item data, or default VAT rate, or 0
+                $itemTaxRate = floatval($itemData['tax_rate'] ?? $defaultVatRate);
                 
                 $lineTotal = ($unitPrice * $quantity) - $itemDiscount;
                 $lineTax = $lineTotal * ($itemTaxRate / 100);
@@ -150,8 +186,14 @@ class Pos extends Base_Controller {
             if ($discountType === 'percentage') {
                 $discountAmount = $subtotal * ($discountAmount / 100);
             }
-            $subtotal -= $discountAmount;
-            $totalAmount = $subtotal + $taxAmount;
+            
+            // Apply discount to subtotal first
+            $discountedSubtotal = $subtotal - $discountAmount;
+            
+            // Recalculate VAT on discounted amount (standard practice)
+            $taxAmount = $discountedSubtotal * ($defaultVatRate / 100);
+            
+            $totalAmount = $discountedSubtotal + $taxAmount;
             
             $changeAmount = max(0, $amountPaid - $totalAmount);
             
