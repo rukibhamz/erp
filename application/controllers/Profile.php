@@ -51,6 +51,34 @@ class Profile extends Base_Controller {
             'email' => sanitize_input($_POST['email'] ?? '')
         ];
         
+        // Validate email format
+        if (!empty($data['email']) && !validate_email($data['email'])) {
+            $this->setFlashMessage('danger', 'Invalid email address.');
+            return;
+        }
+        
+        // Validate phone if provided
+        if (!empty($data['phone']) && !validate_phone($data['phone'])) {
+            $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+            return;
+        }
+        
+        // Sanitize phone
+        if (!empty($data['phone'])) {
+            $data['phone'] = sanitize_phone($data['phone']);
+        }
+        
+        // Validate names if provided
+        if (!empty($data['first_name']) && !validate_name($data['first_name'])) {
+            $this->setFlashMessage('danger', 'Invalid first name.');
+            return;
+        }
+        
+        if (!empty($data['last_name']) && !validate_name($data['last_name'])) {
+            $this->setFlashMessage('danger', 'Invalid last name.');
+            return;
+        }
+        
         // Check if email is already taken by another user
         $existingUser = $this->userModel->getByEmail($data['email']);
         if ($existingUser && $existingUser['id'] != $userId) {

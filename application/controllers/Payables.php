@@ -67,7 +67,25 @@ class Payables extends Base_Controller {
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
             
-            if (empty($data['vendor_code'])) {
+            // Validate email
+            if (!empty($data['email']) && !validate_email($data['email'])) {
+                $this->setFlashMessage('danger', 'Invalid email address.');
+                redirect('payables/vendors/create');
+            }
+            
+            // Validate phone
+            if (!empty($data['phone']) && !validate_phone($data['phone'])) {
+                $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+                redirect('payables/vendors/create');
+            }
+            
+            // Sanitize phone
+            if (!empty($data['phone'])) {
+                $data['phone'] = sanitize_phone($data['phone']);
+            }
+            
+            // Auto-generate vendor code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['vendor_code'])) {
                 $data['vendor_code'] = $this->vendorModel->getNextVendorCode();
             }
             

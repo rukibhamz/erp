@@ -68,7 +68,25 @@ class Receivables extends Base_Controller {
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
             
-            if (empty($data['customer_code'])) {
+            // Validate email
+            if (!empty($data['email']) && !validate_email($data['email'])) {
+                $this->setFlashMessage('danger', 'Invalid email address.');
+                redirect('receivables/customers/create');
+            }
+            
+            // Validate phone
+            if (!empty($data['phone']) && !validate_phone($data['phone'])) {
+                $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+                redirect('receivables/customers/create');
+            }
+            
+            // Sanitize phone
+            if (!empty($data['phone'])) {
+                $data['phone'] = sanitize_phone($data['phone']);
+            }
+            
+            // Auto-generate customer code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['customer_code'])) {
                 $data['customer_code'] = $this->customerModel->getNextCustomerCode();
             }
             
@@ -481,6 +499,133 @@ class Receivables extends Base_Controller {
         ];
         
         $this->loadView('receivables/aging', $data);
+    }
+    
+    public function payments() {
+        $this->requirePermission('receivables', 'read');
+        
+        try {
+            $payments = $this->paymentModel->getByType('receipt');
+        } catch (Exception $e) {
+            $payments = [];
+        }
+        
+        $data = [
+            'page_title' => 'Receivables Payments',
+            'payments' => $payments,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('receivables/payments', $data);
+    }
+    
+    public function createPayment() {
+        $this->requirePermission('receivables', 'create');
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $amount = floatval($_POST['amount'] ?? 0);
+            $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
+            $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'cash');
+            $customerId = intval($_POST['customer_id'] ?? 0);
+            $cashAccountId = intval($_POST['cash_account_id'] ?? 0);
+            $notes = sanitize_input($_POST['notes'] ?? '');
+            
+            if ($amount <= 0) {
+                $this->setFlashMessage('danger', 'Invalid payment amount.');
+                redirect('receivables/payments/create');
+            }
+            
+            $customer = $this->customerModel->getById($customerId);
+            $cashAccount = $this->cashAccountModel->getById($cashAccountId);
+            
+            if (!$customer) {
+                $this->setFlashMessage('danger', 'Customer not found.');
+                redirect('receivables/payments/create');
+            }
+            
+            if (!$cashAccount) {
+                $this->setFlashMessage('danger', 'Cash account not found.');
+                redirect('receivables/payments/create');
+            }
+            
+            // Create payment
+            $paymentData = [
+                'payment_number' => $this->paymentModel->getNextPaymentNumber('receipt'),
+                'payment_date' => $paymentDate,
+                'payment_type' => 'receipt',
+                'customer_id' => $customerId,
+                'account_id' => $cashAccount['account_id'],
+                'amount' => $amount,
+                'payment_method' => $paymentMethod,
+                'notes' => $notes,
+                'status' => 'posted',
+                'created_by' => $this->session['user_id']
+            ];
+            
+            $paymentId = $this->paymentModel->create($paymentData);
+            
+            if ($paymentId) {
+                // Create transactions
+                if ($customer && $customer['account_id']) {
+                    $this->transactionModel->create([
+                        'transaction_number' => $paymentData['payment_number'] . '-AR',
+                        'transaction_date' => $paymentDate,
+                        'transaction_type' => 'receipt',
+                        'reference_id' => $paymentId,
+                        'reference_type' => 'payment',
+                        'account_id' => $customer['account_id'],
+                        'description' => 'Payment received from ' . $customer['customer_name'],
+                        'debit' => 0,
+                        'credit' => $amount,
+                        'status' => 'posted',
+                        'created_by' => $this->session['user_id']
+                    ]);
+                    
+                    $this->accountModel->updateBalance($customer['account_id'], $amount, 'credit');
+                }
+                
+                // Debit cash account
+                $this->transactionModel->create([
+                    'transaction_number' => $paymentData['payment_number'] . '-CASH',
+                    'transaction_date' => $paymentDate,
+                    'transaction_type' => 'receipt',
+                    'reference_id' => $paymentId,
+                    'reference_type' => 'payment',
+                    'account_id' => $cashAccount['account_id'],
+                    'description' => 'Payment received from ' . $customer['customer_name'],
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'status' => 'posted',
+                    'created_by' => $this->session['user_id']
+                ]);
+                
+                $this->accountModel->updateBalance($cashAccount['account_id'], $amount, 'debit');
+                $this->cashAccountModel->updateBalance($cashAccountId, $amount, 'deposit');
+                
+                $this->activityModel->log($this->session['user_id'], 'create', 'Receivables', 'Created payment: ' . $paymentData['payment_number']);
+                $this->setFlashMessage('success', 'Payment recorded successfully.');
+                redirect('receivables/payments');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to record payment.');
+            }
+        }
+        
+        try {
+            $customers = $this->customerModel->getAll();
+            $cashAccounts = $this->cashAccountModel->getActive();
+        } catch (Exception $e) {
+            $customers = [];
+            $cashAccounts = [];
+        }
+        
+        $data = [
+            'page_title' => 'Create Payment',
+            'customers' => $customers,
+            'cash_accounts' => $cashAccounts,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('receivables/create_payment', $data);
     }
 }
 

@@ -119,12 +119,33 @@ class Bookings extends Base_Controller {
             $duration = $end->diff($start);
             $hours = $duration->h + ($duration->i / 60);
 
+            // Validate customer email if provided
+            if (!empty($_POST['customer_email']) && !validate_email($_POST['customer_email'])) {
+                $this->setFlashMessage('danger', 'Invalid email address.');
+                redirect('bookings/create');
+            }
+            
+            // Validate customer phone if provided
+            if (!empty($_POST['customer_phone']) && !validate_phone($_POST['customer_phone'])) {
+                $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+                redirect('bookings/create');
+            }
+            
+            // Validate customer name
+            if (!empty($_POST['customer_name']) && !validate_name($_POST['customer_name'])) {
+                $this->setFlashMessage('danger', 'Invalid customer name.');
+                redirect('bookings/create');
+            }
+            
+            // Sanitize phone
+            $customerPhone = !empty($_POST['customer_phone']) ? sanitize_phone($_POST['customer_phone']) : '';
+            
             $data = [
                 'booking_number' => $this->bookingModel->getNextBookingNumber(),
                 'facility_id' => $facilityId,
                 'customer_name' => sanitize_input($_POST['customer_name'] ?? ''),
                 'customer_email' => sanitize_input($_POST['customer_email'] ?? ''),
-                'customer_phone' => sanitize_input($_POST['customer_phone'] ?? ''),
+                'customer_phone' => $customerPhone,
                 'customer_address' => sanitize_input($_POST['customer_address'] ?? ''),
                 'booking_date' => $bookingDate,
                 'start_time' => $startTime,

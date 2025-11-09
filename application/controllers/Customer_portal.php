@@ -58,14 +58,44 @@ class Customer_portal extends Base_Controller {
                 'country' => sanitize_input($_POST['country'] ?? '')
             ];
             
-            // Validate
+            // Validate required fields
             if (empty($data['email']) || empty($data['password'])) {
                 $this->setFlashMessage('danger', 'Email and password are required.');
                 redirect('customer-portal/register');
             }
             
-            if (strlen($data['password']) < 8) {
-                $this->setFlashMessage('danger', 'Password must be at least 8 characters.');
+            // Validate email format
+            if (!validate_email($data['email'])) {
+                $this->setFlashMessage('danger', 'Invalid email address.');
+                redirect('customer-portal/register');
+            }
+            
+            // Validate phone if provided
+            if (!empty($data['phone']) && !validate_phone($data['phone'])) {
+                $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+                redirect('customer-portal/register');
+            }
+            
+            // Sanitize phone
+            if (!empty($data['phone'])) {
+                $data['phone'] = sanitize_phone($data['phone']);
+            }
+            
+            // Validate names if provided
+            if (!empty($data['first_name']) && !validate_name($data['first_name'])) {
+                $this->setFlashMessage('danger', 'Invalid first name.');
+                redirect('customer-portal/register');
+            }
+            
+            if (!empty($data['last_name']) && !validate_name($data['last_name'])) {
+                $this->setFlashMessage('danger', 'Invalid last name.');
+                redirect('customer-portal/register');
+            }
+            
+            // Validate password strength
+            $passwordValidation = validate_password($data['password']);
+            if (!$passwordValidation['valid']) {
+                $this->setFlashMessage('danger', implode(' ', $passwordValidation['errors']));
                 redirect('customer-portal/register');
             }
             

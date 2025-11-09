@@ -15,6 +15,9 @@ class Base_Controller {
         // Load common helper
         require_once BASEPATH . '../application/helpers/common_helper.php';
         
+        // Load validation helper
+        require_once BASEPATH . '../application/helpers/validation_helper.php';
+        
         // Load permission helper
         require_once BASEPATH . '../application/helpers/permission_helper.php';
         

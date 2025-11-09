@@ -88,7 +88,8 @@ class Leases extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            if (empty($data['lease_number'])) {
+            // Auto-generate lease number if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['lease_number'])) {
                 $data['lease_number'] = $this->leaseModel->getNextLeaseNumber();
             }
             

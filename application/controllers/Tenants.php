@@ -53,7 +53,40 @@ class Tenants extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            if (empty($data['tenant_code'])) {
+            // Validate email
+            if (!empty($data['email']) && !validate_email($data['email'])) {
+                $this->setFlashMessage('danger', 'Invalid email address.');
+                redirect('tenants/create');
+            }
+            
+            // Validate phone
+            if (!empty($data['phone']) && !validate_phone($data['phone'])) {
+                $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+                redirect('tenants/create');
+            }
+            
+            // Validate alternate phone
+            if (!empty($data['alternate_phone']) && !validate_phone($data['alternate_phone'])) {
+                $this->setFlashMessage('danger', 'Invalid alternate phone number.');
+                redirect('tenants/create');
+            }
+            
+            // Sanitize phone numbers
+            if (!empty($data['phone'])) {
+                $data['phone'] = sanitize_phone($data['phone']);
+            }
+            if (!empty($data['alternate_phone'])) {
+                $data['alternate_phone'] = sanitize_phone($data['alternate_phone']);
+            }
+            
+            // Validate contact person name
+            if (!empty($data['contact_person']) && !validate_name($data['contact_person'])) {
+                $this->setFlashMessage('danger', 'Invalid contact person name.');
+                redirect('tenants/create');
+            }
+            
+            // Auto-generate tenant code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['tenant_code'])) {
                 $data['tenant_code'] = $this->tenantModel->getNextTenantCode();
             }
             

@@ -73,7 +73,36 @@ class Payroll extends Base_Controller {
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
 
-            if (empty($data['employee_code'])) {
+            // Validate email
+            if (!empty($data['email']) && !validate_email($data['email'])) {
+                $this->setFlashMessage('danger', 'Invalid email address.');
+                redirect('payroll/employees/create');
+            }
+            
+            // Validate phone
+            if (!empty($data['phone']) && !validate_phone($data['phone'])) {
+                $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+                redirect('payroll/employees/create');
+            }
+            
+            // Sanitize phone
+            if (!empty($data['phone'])) {
+                $data['phone'] = sanitize_phone($data['phone']);
+            }
+            
+            // Validate names
+            if (!empty($data['first_name']) && !validate_name($data['first_name'])) {
+                $this->setFlashMessage('danger', 'Invalid first name.');
+                redirect('payroll/employees/create');
+            }
+            
+            if (!empty($data['last_name']) && !validate_name($data['last_name'])) {
+                $this->setFlashMessage('danger', 'Invalid last name.');
+                redirect('payroll/employees/create');
+            }
+            
+            // Auto-generate employee code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['employee_code'])) {
                 $data['employee_code'] = $this->employeeModel->getNextEmployeeCode();
             }
 

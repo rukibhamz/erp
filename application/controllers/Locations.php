@@ -60,8 +60,8 @@ class Locations extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            // Auto-generate location code if empty
-            if (empty($data['location_code'])) {
+            // Auto-generate location code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['location_code'])) {
                 $data['location_code'] = $this->locationModel->getNextLocationCode();
             }
             

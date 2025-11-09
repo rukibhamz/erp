@@ -84,7 +84,8 @@ class Spaces extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            if (empty($data['space_number'])) {
+            // Auto-generate space number if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['space_number'])) {
                 $data['space_number'] = $this->spaceModel->getNextSpaceNumber($propertyId);
             }
             

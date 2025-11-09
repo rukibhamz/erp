@@ -94,7 +94,8 @@ class Facilities extends Base_Controller {
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
 
-            if (empty($data['facility_code'])) {
+            // Auto-generate facility code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['facility_code'])) {
                 $data['facility_code'] = $this->facilityModel->getNextFacilityCode();
             }
 

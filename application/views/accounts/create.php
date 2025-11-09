@@ -14,7 +14,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <form method="POST" action="<?= base_url('accounts/create') ?>">
                     <div class="mb-3">
-                        <label for="account_code" class="form-label">Account Code <span class="text-muted">(Leave empty for auto-generation)</span></label>
+                        <label for="account_number" class="form-label">Account Number <span class="text-muted">(Leave blank to auto-generate)</span></label>
+                        <input type="text" class="form-control" id="account_number" name="account_number" placeholder="Auto-generated" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        <small class="text-muted">Numbers only</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="account_code" class="form-label">Account Code <span class="text-muted">(Leave blank to auto-generate)</span></label>
                         <input type="text" class="form-control" id="account_code" name="account_code" placeholder="Auto-generated">
                     </div>
                     

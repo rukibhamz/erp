@@ -74,7 +74,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Terminal Code</label>
-                        <input type="text" name="terminal_code" class="form-control" required>
+                        <input type="text" name="terminal_code" class="form-control" placeholder="Auto-generated">
                         <small class="text-muted">Leave blank to auto-generate</small>
                     </div>
                     <div class="mb-3">

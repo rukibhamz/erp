@@ -67,18 +67,29 @@ class Accounts extends Base_Controller {
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'status' => sanitize_input($_POST['status'] ?? 'active'),
-                'is_default' => !empty($_POST['is_default']) ? 1 : 0,
                 'created_by' => $this->session['user_id']
             ];
             
-            // Generate account_number if not provided
-            if (empty($_POST['account_number'])) {
-                $data['account_number'] = $this->accountModel->getNextAccountCode($data['account_type'], $data['parent_id']);
-            } else {
-                $data['account_number'] = sanitize_input($_POST['account_number']);
+            // Only add is_default if column exists (for backward compatibility)
+            if (isset($_POST['is_default'])) {
+                $data['is_default'] = !empty($_POST['is_default']) ? 1 : 0;
             }
             
-            if (empty($data['account_code'])) {
+            // Generate account_number if not provided (leave blank to auto-generate)
+            if (is_empty_or_whitespace($_POST['account_number'] ?? '')) {
+                $data['account_number'] = $this->accountModel->getNextAccountCode($data['account_type'], $data['parent_id']);
+            } else {
+                // Validate account_number is numeric only
+                $accountNumber = sanitize_input($_POST['account_number']);
+                if (!preg_match('/^\d+$/', $accountNumber)) {
+                    $this->setFlashMessage('danger', 'Account number must contain only numbers.');
+                    redirect('accounts/create');
+                }
+                $data['account_number'] = $accountNumber;
+            }
+            
+            // Auto-generate account_code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['account_code'])) {
                 $data['account_code'] = $data['account_number']; // Use account_number as code if code is empty
             }
             

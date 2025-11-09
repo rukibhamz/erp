@@ -81,7 +81,8 @@ class Meters extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            if (empty($data['meter_number'])) {
+            // Auto-generate meter number if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['meter_number'])) {
                 $data['meter_number'] = $this->meterModel->getNextMeterNumber();
             }
             

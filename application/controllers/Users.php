@@ -44,9 +44,44 @@ class Users extends Base_Controller {
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
             
-            // Validate
+            // Validate required fields
             if (empty($data['username']) || empty($data['email']) || empty($data['password'])) {
                 $this->setFlashMessage('danger', 'Username, email, and password are required.');
+                redirect('users/create');
+            }
+            
+            // Validate email format
+            if (!validate_email($data['email'])) {
+                $this->setFlashMessage('danger', 'Invalid email address.');
+                redirect('users/create');
+            }
+            
+            // Validate phone if provided
+            if (!empty($data['phone']) && !validate_phone($data['phone'])) {
+                $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
+                redirect('users/create');
+            }
+            
+            // Sanitize phone
+            if (!empty($data['phone'])) {
+                $data['phone'] = sanitize_phone($data['phone']);
+            }
+            
+            // Validate names if provided
+            if (!empty($data['first_name']) && !validate_name($data['first_name'])) {
+                $this->setFlashMessage('danger', 'Invalid first name.');
+                redirect('users/create');
+            }
+            
+            if (!empty($data['last_name']) && !validate_name($data['last_name'])) {
+                $this->setFlashMessage('danger', 'Invalid last name.');
+                redirect('users/create');
+            }
+            
+            // Validate password strength
+            $passwordValidation = validate_password($data['password']);
+            if (!$passwordValidation['valid']) {
+                $this->setFlashMessage('danger', implode(' ', $passwordValidation['errors']));
                 redirect('users/create');
             }
             

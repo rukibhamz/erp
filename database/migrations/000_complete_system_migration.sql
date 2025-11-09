@@ -555,6 +555,33 @@ CREATE TABLE IF NOT EXISTS `erp_utility_bills` (
     KEY `idx_due_date` (`due_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- VAT TRANSACTIONS TABLE (for VAT return calculations)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `erp_vat_transactions` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `transaction_number` VARCHAR(50) DEFAULT NULL,
+    `date` DATE NOT NULL,
+    `transaction_type` ENUM('sale', 'purchase', 'adjustment') NOT NULL,
+    `reference_type` VARCHAR(50) DEFAULT NULL COMMENT 'invoice, bill, payment, etc.',
+    `reference_id` INT(11) DEFAULT NULL,
+    `description` TEXT DEFAULT NULL,
+    `amount` DECIMAL(15,2) NOT NULL DEFAULT 0,
+    `vat_amount` DECIMAL(15,2) NOT NULL DEFAULT 0,
+    `vat_rate` DECIMAL(5,2) DEFAULT 0,
+    `net_amount` DECIMAL(15,2) NOT NULL DEFAULT 0,
+    `status` ENUM('draft', 'posted', 'cancelled') DEFAULT 'posted',
+    `created_by` INT(11) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_date` (`date`),
+    KEY `idx_transaction_type` (`transaction_type`),
+    KEY `idx_reference_type` (`reference_type`),
+    KEY `idx_reference_id` (`reference_id`),
+    KEY `idx_status` (`status`),
+    KEY `idx_created_by` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================================

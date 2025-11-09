@@ -116,8 +116,8 @@ class Items extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            // Auto-generate SKU if empty
-            if (empty($data['sku'])) {
+            // Auto-generate SKU if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['sku'])) {
                 $data['sku'] = $this->itemModel->getNextSKU();
             }
             

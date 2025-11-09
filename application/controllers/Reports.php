@@ -288,37 +288,41 @@ class Reports extends Base_Controller {
         $startDate = $_GET['start_date'] ?? date('Y-m-01');
         $endDate = $_GET['end_date'] ?? date('Y-m-t');
 
-        if (!$accountId) {
-            $this->setFlashMessage('danger', 'Please select an account.');
-            redirect('reports');
-        }
+        // Don't redirect - show account selection if no account selected
+        $account = null;
+        $transactions = [];
+        
+        if ($accountId) {
 
-        try {
-            $account = $this->accountModel->getById($accountId);
-            if (!$account) {
-                $this->setFlashMessage('danger', 'Account not found.');
-                redirect('reports');
-            }
-
-            // Get transactions
-            $transactions = $this->transactionModel->getByAccount($accountId, $startDate, $endDate);
-
-            // Calculate running balance
-            $runningBalance = $this->getAccountBalance($accountId, $startDate);
-            foreach ($transactions as &$transaction) {
-                $isDebitAccount = in_array($account['account_type'], ['Assets', 'Expenses']);
-                if ($isDebitAccount) {
-                    $runningBalance += ($transaction['debit'] - $transaction['credit']);
+            try {
+                $account = $this->accountModel->getById($accountId);
+                if (!$account) {
+                    $this->setFlashMessage('danger', 'Account not found.');
                 } else {
-                    $runningBalance += ($transaction['credit'] - $transaction['debit']);
-                }
-                $transaction['running_balance'] = $runningBalance;
-            }
+                    // Get transactions
+                    $transactions = $this->transactionModel->getByAccount($accountId, $startDate, $endDate);
 
+                    // Calculate running balance
+                    $runningBalance = $this->getAccountBalance($accountId, $startDate);
+                    foreach ($transactions as &$transaction) {
+                        $isDebitAccount = in_array($account['account_type'], ['Assets', 'Expenses']);
+                        if ($isDebitAccount) {
+                            $runningBalance += ($transaction['debit'] - $transaction['credit']);
+                        } else {
+                            $runningBalance += ($transaction['credit'] - $transaction['debit']);
+                        }
+                        $transaction['running_balance'] = $runningBalance;
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('General Ledger error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Error loading account data.');
+            }
+        }
+        
+        try {
             $accounts = $this->accountModel->getAll();
         } catch (Exception $e) {
-            $account = null;
-            $transactions = [];
             $accounts = [];
         }
 

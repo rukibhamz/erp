@@ -56,7 +56,8 @@ class Properties extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            if (empty($data['property_code'])) {
+            // Auto-generate property code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['property_code'])) {
                 $data['property_code'] = $this->propertyModel->getNextPropertyCode();
             }
             

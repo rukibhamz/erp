@@ -45,8 +45,8 @@ class Suppliers extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            // Auto-generate supplier code if empty
-            if (empty($data['supplier_code'])) {
+            // Auto-generate supplier code if empty (leave blank to auto-generate)
+            if (is_empty_or_whitespace($data['supplier_code'])) {
                 $data['supplier_code'] = $this->supplierModel->getNextSupplierCode();
             }
             

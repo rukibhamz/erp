@@ -322,7 +322,9 @@ class Pos extends Base_Controller {
         $this->requirePermission('pos', 'manage');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['terminal_code'])) {
-            $terminalCode = !empty($_POST['terminal_code']) ? sanitize_input($_POST['terminal_code']) : $this->terminalModel->getNextTerminalCode();
+            $terminalCodeInput = sanitize_input($_POST['terminal_code'] ?? '');
+            // Auto-generate terminal code if empty (leave blank to auto-generate)
+            $terminalCode = is_empty_or_whitespace($terminalCodeInput) ? $this->terminalModel->getNextTerminalCode() : $terminalCodeInput;
             
             $data = [
                 'terminal_code' => $terminalCode,
