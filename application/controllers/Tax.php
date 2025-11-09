@@ -100,7 +100,7 @@ class Tax extends Base_Controller {
                     $taxId = intval($taxId);
                     $rate = floatval($rate);
                     try {
-                        $this->taxTypeModel->update(['rate' => $rate], "id = ?", [$taxId]);
+                        $this->taxTypeModel->update($taxId, ['rate' => $rate]);
                         $updated++;
                     } catch (Exception $e) {
                         error_log('Tax rate update error: ' . $e->getMessage());

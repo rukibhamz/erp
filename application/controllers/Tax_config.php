@@ -112,7 +112,8 @@ class Tax_config extends Base_Controller {
                 if ($existing && $existing['id'] != $id) {
                     $this->setFlashMessage('danger', 'Tax code already exists.');
                 } else {
-                    if ($this->taxTypeModel->update($data, "id = ?", [$id])) {
+                    // Use correct update method signature: update($id, $data)
+                    if ($this->taxTypeModel->update($id, $data)) {
                         $this->activityModel->log($this->session['user_id'], 'update', 'Tax', 'Updated tax type: ' . $data['name']);
                         $this->setFlashMessage('success', 'Tax type updated successfully.');
                         redirect('tax/config');
@@ -121,7 +122,8 @@ class Tax_config extends Base_Controller {
                     }
                 }
             } else {
-                if ($this->taxTypeModel->update($data, "id = ?", [$id])) {
+                // Use correct update method signature: update($id, $data)
+                if ($this->taxTypeModel->update($id, $data)) {
                     $this->activityModel->log($this->session['user_id'], 'update', 'Tax', 'Updated tax type: ' . $data['name']);
                     $this->setFlashMessage('success', 'Tax type updated successfully.');
                     redirect('tax/config');
@@ -164,7 +166,7 @@ class Tax_config extends Base_Controller {
             }
             
             // Instead of delete, deactivate
-            if ($this->taxTypeModel->update(['is_active' => 0], "id = ?", [$id])) {
+            if ($this->taxTypeModel->update($id, ['is_active' => 0])) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Tax', 'Deactivated tax type: ' . $taxType['name']);
                 $this->setFlashMessage('success', 'Tax type deactivated successfully.');
             } else {
@@ -193,7 +195,7 @@ class Tax_config extends Base_Controller {
         
         $newStatus = $taxType['is_active'] ? 0 : 1;
         
-        if ($this->taxTypeModel->update(['is_active' => $newStatus], "id = ?", [$id])) {
+        if ($this->taxTypeModel->update($id, ['is_active' => $newStatus])) {
             $this->activityModel->log($this->session['user_id'], 'update', 'Tax', ($newStatus ? 'Activated' : 'Deactivated') . ' tax type: ' . $taxType['name']);
             
             if (isset($_POST['ajax'])) {

@@ -86,7 +86,8 @@ class Router {
         foreach (array_keys($sortedRoutes) as $pattern) {
             $route = $routes[$pattern];
             // Exact match (case-insensitive)
-            if (strtolower($pattern) === $pathLower) {
+            $patternLower = strtolower($pattern);
+            if ($patternLower === $pathLower) {
                 $routeParts = explode('/', $route);
                 $this->controller = $routeParts[0];
                 $this->method = $routeParts[1] ?? 'index';
@@ -175,6 +176,21 @@ class Router {
         
         // No route match, use direct controller/method parsing
         // Handle underscore controllers (e.g., tax_compliance -> Tax_compliance)
+        // Special handling for tax/compliance routes
+        if (count($urlParts) >= 2 && $urlParts[0] === 'tax' && $urlParts[1] === 'compliance') {
+            // Handle tax/compliance routes
+            $this->controller = 'Tax_compliance';
+            if (isset($urlParts[2]) && !empty($urlParts[2])) {
+                $this->method = $urlParts[2];
+            } else {
+                $this->method = 'index';
+            }
+            if (count($urlParts) > 3) {
+                $this->params = array_slice($urlParts, 3);
+            }
+            return;
+        }
+        
         if (isset($urlParts[0]) && !empty($urlParts[0])) {
             // Convert tax_compliance to Tax_compliance (preserve underscores)
             $parts = explode('_', $urlParts[0]);
