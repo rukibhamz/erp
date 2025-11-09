@@ -115,5 +115,40 @@ class Item_model extends Base_Model {
             return 0;
         }
     }
+    
+    /**
+     * Get all active items
+     * @param int $limit Optional limit on number of items to return
+     * @return array
+     */
+    public function getAllActive($limit = null) {
+        try {
+            // Check both item_status and status columns (table has both)
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                    WHERE item_status = 'active' AND status = 'active'
+                    ORDER BY item_name";
+            
+            if ($limit !== null && is_numeric($limit) && $limit > 0) {
+                $sql .= " LIMIT " . intval($limit);
+            }
+            
+            return $this->db->fetchAll($sql);
+        } catch (Exception $e) {
+            error_log('Item_model getAllActive error: ' . $e->getMessage());
+            // Fallback: try without status column (for older installations)
+            try {
+                $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                        WHERE item_status = 'active'
+                        ORDER BY item_name";
+                if ($limit !== null && is_numeric($limit) && $limit > 0) {
+                    $sql .= " LIMIT " . intval($limit);
+                }
+                return $this->db->fetchAll($sql);
+            } catch (Exception $e2) {
+                error_log('Item_model getAllActive fallback error: ' . $e2->getMessage());
+                return [];
+            }
+        }
+    }
 }
 
