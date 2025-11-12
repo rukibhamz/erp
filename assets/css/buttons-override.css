@@ -1,0 +1,323 @@
+/**
+ * BUTTON OVERRIDES - System-wide uniform button styling
+ * This file ensures all buttons have white text and uniform colors
+ * Loads after Bootstrap to override default styles
+ * IMPORTANT: This file must load AFTER Bootstrap CSS
+ */
+
+/* Force white text on ALL buttons (except outline variants when not hovered) */
+button.btn,
+a.btn,
+input[type="button"].btn,
+input[type="submit"].btn,
+input[type="reset"].btn,
+.btn {
+    color: #ffffff !important;
+}
+
+/* Override any hover states that might change text color */
+.btn:hover,
+.btn:focus,
+.btn:active,
+button.btn:hover,
+a.btn:hover,
+input.btn:hover {
+    color: #ffffff !important;
+}
+
+/* Primary buttons - Uniform blue */
+.btn-primary,
+button.btn-primary,
+a.btn-primary,
+input.btn-primary {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+button.btn-primary:hover,
+a.btn-primary:hover {
+    background-color: #0052a3 !important;
+    border-color: #0052a3 !important;
+    color: #ffffff !important;
+}
+
+/* Dark buttons - Same as primary */
+.btn-dark,
+button.btn-dark,
+a.btn-dark {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+    color: #ffffff !important;
+}
+
+.btn-dark:hover,
+.btn-dark:focus,
+.btn-dark:active,
+button.btn-dark:hover,
+a.btn-dark:hover {
+    background-color: #0052a3 !important;
+    border-color: #0052a3 !important;
+    color: #ffffff !important;
+}
+
+/* Secondary buttons - Same as primary */
+.btn-secondary,
+button.btn-secondary,
+a.btn-secondary {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+    color: #ffffff !important;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus,
+.btn-secondary:active,
+button.btn-secondary:hover,
+a.btn-secondary:hover {
+    background-color: #0052a3 !important;
+    border-color: #0052a3 !important;
+    color: #ffffff !important;
+}
+
+/* Success buttons - Green with white text */
+.btn-success,
+button.btn-success,
+a.btn-success {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #ffffff !important;
+}
+
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active {
+    background-color: #218838 !important;
+    border-color: #218838 !important;
+    color: #ffffff !important;
+}
+
+/* Danger buttons - Red with white text */
+.btn-danger,
+button.btn-danger,
+a.btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+}
+
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active {
+    background-color: #c82333 !important;
+    border-color: #c82333 !important;
+    color: #ffffff !important;
+}
+
+/* Warning buttons - Orange with white text */
+.btn-warning,
+button.btn-warning,
+a.btn-warning {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #ffffff !important;
+}
+
+.btn-warning:hover,
+.btn-warning:focus,
+.btn-warning:active {
+    background-color: #e0a800 !important;
+    border-color: #e0a800 !important;
+    color: #ffffff !important;
+}
+
+/* Info buttons - Blue with white text */
+.btn-info,
+button.btn-info,
+a.btn-info {
+    background-color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+    color: #ffffff !important;
+}
+
+.btn-info:hover,
+.btn-info:focus,
+.btn-info:active {
+    background-color: #138496 !important;
+    border-color: #138496 !important;
+    color: #ffffff !important;
+}
+
+/* Outline buttons - Blue border, white text on hover */
+.btn-outline-primary,
+button.btn-outline-primary,
+a.btn-outline-primary {
+    border-color: #0066cc !important;
+    color: #0066cc !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-dark,
+button.btn-outline-dark,
+a.btn-outline-dark {
+    border-color: #0066cc !important;
+    color: #0066cc !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-dark:hover,
+.btn-outline-dark:focus,
+.btn-outline-dark:active {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-secondary,
+button.btn-outline-secondary,
+a.btn-outline-secondary {
+    border-color: #0066cc !important;
+    color: #0066cc !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus,
+.btn-outline-secondary:active {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+    color: #ffffff !important;
+}
+
+/* Small buttons */
+.btn-sm.btn-primary,
+.btn-sm.btn-dark,
+.btn-sm.btn-secondary {
+    color: #ffffff !important;
+}
+
+/* Large buttons */
+.btn-lg.btn-primary,
+.btn-lg.btn-dark,
+.btn-lg.btn-secondary {
+    color: #ffffff !important;
+}
+
+/* Disabled buttons - keep white text but reduce opacity */
+.btn:disabled,
+.btn.disabled {
+    opacity: 0.65;
+    color: #ffffff !important;
+}
+
+/* Override any Bootstrap button text color utilities */
+.btn.text-dark,
+.btn.text-muted,
+.btn.text-secondary {
+    color: #ffffff !important;
+}
+
+/* Ensure buttons in cards, modals, forms all have white text */
+.card .btn-primary,
+.card .btn-dark,
+.card .btn-secondary,
+.modal .btn-primary,
+.modal .btn-dark,
+.modal .btn-secondary,
+.form-group .btn-primary,
+.form-group .btn-dark,
+.form-group .btn-secondary {
+    color: #ffffff !important;
+}
+
+/* Navbar buttons */
+.navbar .btn-primary,
+.navbar .btn-dark,
+.navbar .btn-secondary {
+    color: #ffffff !important;
+}
+
+/* Table action buttons */
+.table .btn-primary,
+.table .btn-dark,
+.table .btn-secondary,
+.table .btn-sm {
+    color: #ffffff !important;
+}
+
+/* Override Bootstrap's default button colors completely */
+[class*="btn-"]:not(.btn-outline-primary):not(.btn-outline-dark):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-link):not(.btn-ghost) {
+    color: #ffffff !important;
+}
+
+/* Ensure all button text is white in all contexts */
+.btn-primary *,
+.btn-dark *,
+.btn-secondary *,
+.btn-success *,
+.btn-danger *,
+.btn-warning *,
+.btn-info * {
+    color: #ffffff !important;
+}
+
+/* Override any text color utilities on buttons */
+.btn.text-white,
+.btn.text-light {
+    color: #ffffff !important;
+}
+
+/* Force white text even with Bootstrap utilities */
+.btn-primary.text-dark,
+.btn-dark.text-dark,
+.btn-secondary.text-dark {
+    color: #ffffff !important;
+}
+
+/* Pagination buttons */
+.pagination .page-link.btn-primary,
+.pagination .page-link.btn-dark {
+    color: #ffffff !important;
+}
+
+/* Button groups */
+.btn-group .btn-primary,
+.btn-group .btn-dark,
+.btn-group .btn-secondary {
+    color: #ffffff !important;
+}
+
+/* Toolbar buttons */
+.toolbar .btn-primary,
+.toolbar .btn-dark,
+.toolbar .btn-secondary {
+    color: #ffffff !important;
+}
+
+/* Action buttons in any context */
+.actions .btn-primary,
+.actions .btn-dark,
+.actions .btn-secondary {
+    color: #ffffff !important;
+}
+
+/* Form buttons */
+form .btn-primary,
+form .btn-dark,
+form .btn-secondary,
+form button[type="submit"],
+form input[type="submit"] {
+    color: #ffffff !important;
+}
+
