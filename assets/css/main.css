@@ -571,7 +571,7 @@ footer .container-fluid {
     padding-bottom: 1rem;
 }
 
-/* Buttons - Flat, minimal design */
+/* Buttons - Uniform design with white text on all buttons */
 .btn {
     border-radius: 6px;
     font-weight: 500;
@@ -582,38 +582,136 @@ footer .container-fluid {
     font-family: var(--font-poppins);
 }
 
+/* Base rule: All buttons have white text unless explicitly overridden */
+.btn:not(.btn-outline-primary):not(.btn-outline-dark):not(.btn-ghost):not(.btn-link) {
+    color: #ffffff !important;
+}
+
+/* Primary button - Uniform blue color */
 .btn-primary {
-    background: var(--primary);
-    color: white;
+    background: #0066cc !important;
+    color: #ffffff !important;
+    border-color: #0066cc !important;
 }
 
 .btn-primary:hover {
-    background: var(--gray-800);
+    background: #0052a3 !important;
+    color: #ffffff !important;
     transform: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
-/* Dark button - ensure white text on dark background */
+.btn-primary:focus,
+.btn-primary:active {
+    background: #003d7a !important;
+    color: #ffffff !important;
+}
+
+/* Dark button - Same uniform color */
 .btn-dark {
-    background: var(--primary) !important;
-    color: white !important;
-    border-color: var(--primary) !important;
+    background: #0066cc !important;
+    color: #ffffff !important;
+    border-color: #0066cc !important;
 }
 
 .btn-dark:hover {
-    background: var(--gray-800) !important;
-    color: white !important;
+    background: #0052a3 !important;
+    color: #ffffff !important;
 }
 
+.btn-dark:focus,
+.btn-dark:active {
+    background: #003d7a !important;
+    color: #ffffff !important;
+}
+
+/* Outline buttons - White text on hover */
 .btn-outline-dark {
-    border: 1.5px solid var(--primary) !important;
-    color: var(--primary) !important;
+    border: 1.5px solid #0066cc !important;
+    color: #0066cc !important;
     background: transparent !important;
 }
 
 .btn-outline-dark:hover {
-    background: var(--primary) !important;
-    color: white !important;
+    background: #0066cc !important;
+    color: #ffffff !important;
+}
+
+.btn-outline-primary {
+    border: 1.5px solid #0066cc !important;
+    color: #0066cc !important;
+    background: transparent !important;
+}
+
+.btn-outline-primary:hover {
+    background: #0066cc !important;
+    color: #ffffff !important;
+}
+
+/* Secondary button - Uniform color with white text */
+.btn-secondary {
+    background: #0066cc !important;
+    color: #ffffff !important;
+    border-color: #0066cc !important;
+}
+
+.btn-secondary:hover {
+    background: #0052a3 !important;
+    color: #ffffff !important;
+}
+
+.btn-secondary:focus,
+.btn-secondary:active {
+    background: #003d7a !important;
+    color: #ffffff !important;
+}
+
+/* Success button - Green with white text */
+.btn-success {
+    background: #28a745 !important;
+    color: #ffffff !important;
+    border-color: #28a745 !important;
+}
+
+.btn-success:hover {
+    background: #218838 !important;
+    color: #ffffff !important;
+}
+
+/* Danger button - Red with white text */
+.btn-danger {
+    background: #dc3545 !important;
+    color: #ffffff !important;
+    border-color: #dc3545 !important;
+}
+
+.btn-danger:hover {
+    background: #c82333 !important;
+    color: #ffffff !important;
+}
+
+/* Warning button - Orange with white text */
+.btn-warning {
+    background: #ffc107 !important;
+    color: #ffffff !important;
+    border-color: #ffc107 !important;
+}
+
+.btn-warning:hover {
+    background: #e0a800 !important;
+    color: #ffffff !important;
+}
+
+/* Info button - Blue with white text */
+.btn-info {
+    background: #17a2b8 !important;
+    color: #ffffff !important;
+    border-color: #17a2b8 !important;
+}
+
+.btn-info:hover {
+    background: #138496 !important;
+    color: #ffffff !important;
 }
 
 /* Dark backgrounds must have white text */
@@ -659,7 +757,7 @@ footer .container-fluid {
 
 .badge.bg-warning {
     background: var(--warning) !important;
-    color: var(--gray-900) !important;
+    color: white !important;
 }
 
 .badge.bg-info {
@@ -670,27 +768,6 @@ footer .container-fluid {
 .badge.bg-secondary {
     background: var(--gray-500) !important;
     color: white !important;
-}
-
-.btn-secondary {
-    background: var(--gray-200);
-    color: var(--gray-700);
-}
-
-.btn-secondary:hover {
-    background: var(--gray-300);
-    color: var(--gray-800);
-}
-
-.btn-outline-primary {
-    border: 1.5px solid var(--primary);
-    color: var(--primary);
-    background: transparent;
-}
-
-.btn-outline-primary:hover {
-    background: var(--primary);
-    color: white;
 }
 
 .btn-sm {
