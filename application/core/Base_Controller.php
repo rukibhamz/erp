@@ -21,6 +21,9 @@ class Base_Controller {
         // Load CSRF protection helper (SECURITY: Required for CSRF protection)
         require_once BASEPATH . '../application/helpers/csrf_helper.php';
         
+        // Load email helper (for secure email sending)
+        require_once BASEPATH . '../application/helpers/email_helper.php';
+        
         // Load permission helper
         require_once BASEPATH . '../application/helpers/permission_helper.php';
         

@@ -146,16 +146,22 @@ class Auth extends Base_Controller {
                 // Generate reset token
                 $token = $this->userModel->generatePasswordResetToken($user['id']);
                 
-                // TODO: Send email with reset link
-                // For now, we'll just show the token (in production, send via email)
-                $resetLink = base_url('auth/resetPassword?token=' . $token);
+                // SECURITY: Send email with reset link (no token exposure in flash message)
+                $userName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+                $emailSent = send_password_reset_email($email, $token, $userName ?: null);
                 
                 // Log activity
                 $this->activityModel->log($user['id'], 'password_reset_requested', 'Auth');
                 
-                $this->setFlashMessage('info', 'Password reset link has been sent to your email. (In development: Token: ' . $token . ')');
+                if ($emailSent) {
+                    $this->setFlashMessage('success', 'Password reset link has been sent to your email address. Please check your inbox.');
+                } else {
+                    // Log the error but don't reveal to user (security best practice)
+                    error_log("Failed to send password reset email to: {$email}");
+                    $this->setFlashMessage('danger', 'We encountered an error sending the password reset email. Please try again later or contact support.');
+                }
             } else {
-                // Don't reveal if user exists
+                // Don't reveal if user exists (security best practice - prevents email enumeration)
                 $this->setFlashMessage('info', 'If that email exists, a password reset link has been sent.');
             }
             
