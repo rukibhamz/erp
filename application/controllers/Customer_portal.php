@@ -44,6 +44,8 @@ class Customer_portal extends Base_Controller {
      */
     public function register() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $data = [
                 'email' => sanitize_input($_POST['email'] ?? ''),
                 'password' => $_POST['password'] ?? '',
@@ -131,6 +133,8 @@ class Customer_portal extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $email = sanitize_input($_POST['email'] ?? '');
             $password = $_POST['password'] ?? '';
             $rememberMe = !empty($_POST['remember_me']);
@@ -301,6 +305,8 @@ class Customer_portal extends Base_Controller {
         $userId = $this->session['customer_user_id'];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $data = [
                 'first_name' => sanitize_input($_POST['first_name'] ?? ''),
                 'last_name' => sanitize_input($_POST['last_name'] ?? ''),

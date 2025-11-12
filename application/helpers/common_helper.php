@@ -45,3 +45,40 @@ if (!function_exists('timeAgo')) {
         return floor($diff / 31536000) . ' years ago';
     }
 }
+
+/**
+ * Escape output for HTML context
+ * SECURITY: Prevents XSS attacks by escaping special characters
+ * Similar to CodeIgniter's esc() function
+ * 
+ * @param mixed $string String to escape
+ * @param string $context Context: 'html', 'attr', 'js', 'css', 'url' (default: 'html')
+ * @return string Escaped string
+ */
+if (!function_exists('esc')) {
+    function esc($string, $context = 'html') {
+        if ($string === null) {
+            return '';
+        }
+        
+        if (!is_string($string)) {
+            $string = (string)$string;
+        }
+        
+        switch ($context) {
+            case 'html':
+                return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+            case 'attr':
+                return htmlspecialchars($string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            case 'js':
+                return json_encode($string, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            case 'css':
+                // Escape CSS special characters
+                return preg_replace('/[^a-zA-Z0-9]/', '\\$0', $string);
+            case 'url':
+                return rawurlencode($string);
+            default:
+                return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
+        }
+    }
+}

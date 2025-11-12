@@ -22,6 +22,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div class="card-body">
                         <form method="POST" action="<?= base_url('customer-portal/profile') ?>">
+                            <?php echo csrf_field(); ?>
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">First Name</label>

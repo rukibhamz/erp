@@ -72,7 +72,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     'bank_account' => 'Bank Account',
                                     'cash_register' => 'Cash Register'
                                 ];
-                                echo $typeLabels[$account['account_type']] ?? $account['account_type'];
+                                echo htmlspecialchars($typeLabels[$account['account_type']] ?? $account['account_type'], ENT_QUOTES, 'UTF-8');
                                 ?>
                             </td>
                             <td><?= htmlspecialchars($account['bank_name'] ?? '-') ?></td>

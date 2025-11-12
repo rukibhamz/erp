@@ -76,7 +76,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
                     
                     <?php if (($bill['tax_rate'] ?? 0) > 0): ?>
-                        <dt class="col-sm-4">Tax (<?= $bill['tax_rate'] ?>%):</dt>
+                        <dt class="col-sm-4">Tax (<?= htmlspecialchars($bill['tax_rate'], ENT_QUOTES, 'UTF-8') ?>%):</dt>
                         <dd class="col-sm-8"><?= format_currency($bill['tax_amount'] ?? 0) ?></dd>
                     <?php endif; ?>
                     

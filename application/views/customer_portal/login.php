@@ -19,6 +19,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
 
                     <form method="POST" action="<?= base_url('customer-portal/login') ?>">
+                        <?php echo csrf_field(); ?>
                         <div class="mb-3">
                             <label class="form-label">Email Address</label>
                             <input type="email" name="email" class="form-control" required 

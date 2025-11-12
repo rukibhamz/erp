@@ -159,6 +159,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 runMigrations($pdo, $_SESSION['db_prefix']);
                 error_log("Main migrations completed successfully");
                 
+                // Run complete system migration (includes role-based permissions)
+                // This ensures erp_roles, erp_role_permissions, and all business tables are created
+                $completeMigrationPath = dirname(__DIR__) . '/database/migrations/000_complete_system_migration.sql';
+                if (file_exists($completeMigrationPath)) {
+                    error_log("Starting complete system migration...");
+                    try {
+                        // Read and execute the SQL file
+                        $sql = file_get_contents($completeMigrationPath);
+                        // Replace the prefix placeholder if needed
+                        $sql = str_replace('erp_', $_SESSION['db_prefix'], $sql);
+                        // Split by semicolon and execute each statement
+                        $statements = array_filter(array_map('trim', explode(';', $sql)));
+                        foreach ($statements as $statement) {
+                            if (!empty($statement) && !preg_match('/^--/', $statement)) {
+                                try {
+                                    $pdo->exec($statement);
+                                } catch (PDOException $e) {
+                                    // Log but continue for non-critical errors (like duplicate keys)
+                                    if (strpos($e->getMessage(), 'Duplicate') === false && 
+                                        strpos($e->getMessage(), 'already exists') === false) {
+                                        error_log("SQL execution warning: " . $e->getMessage());
+                                    }
+                                }
+                            }
+                        }
+                        error_log("Complete system migration completed");
+                    } catch (Exception $e) {
+                        error_log("Complete system migration warning: " . $e->getMessage());
+                        // Don't fail installation, but log the error
+                    }
+                } else {
+                    error_log("Complete system migration file not found at: {$completeMigrationPath}");
+                }
+                
                 // Run enhanced migrations if file exists
                 if (file_exists(__DIR__ . '/migrations_enhanced.php')) {
                     error_log("Starting enhanced migrations...");

@@ -19,6 +19,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
 
                     <form method="POST" action="<?= base_url('customer-portal/register') ?>">
+                        <?php echo csrf_field(); ?>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">First Name <span class="text-danger">*</span></label>
