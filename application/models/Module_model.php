@@ -17,14 +17,35 @@ class Module_model extends Base_Model {
             }
             
             // Use provided orderBy or default
+            // SECURITY: Validate ORDER BY to prevent SQL injection
             if ($orderBy) {
-                $sql .= " ORDER BY {$orderBy}";
+                // Whitelist approach for ORDER BY
+                $allowedOrderColumns = ['sort_order', 'display_name', 'module_key', 'is_active', 'created_at', 'id'];
+                $allowedOrderDirections = ['ASC', 'DESC'];
+                $orderByParts = explode(' ', trim($orderBy));
+                $orderColumn = $orderByParts[0] ?? 'sort_order';
+                $orderDirection = strtoupper($orderByParts[1] ?? 'ASC');
+                
+                // Only allow whitelisted columns and directions
+                if (!in_array($orderColumn, $allowedOrderColumns)) {
+                    $orderColumn = 'sort_order';
+                }
+                if (!in_array($orderDirection, $allowedOrderDirections)) {
+                    $orderDirection = 'ASC';
+                }
+                $safeOrderBy = "{$orderColumn} {$orderDirection}";
+                $sql .= " ORDER BY {$safeOrderBy}";
             } else {
                 $sql .= " ORDER BY sort_order ASC, display_name ASC";
             }
             
             if ($limit) {
-                $sql .= " LIMIT {$limit} OFFSET {$offset}";
+                // Validate and sanitize limit and offset to prevent SQL injection
+                $limit = max(1, min(10000, intval($limit)));
+                $offset = max(0, intval($offset));
+                $sql .= " LIMIT ? OFFSET ?";
+                $params = [$limit, $offset];
+                return $this->db->fetchAll($sql, $params);
             }
             
             return $this->db->fetchAll($sql);

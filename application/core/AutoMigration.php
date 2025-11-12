@@ -129,14 +129,29 @@ class AutoMigration {
                     // Table might not exist yet
                 }
                 
+                // Check if admin has locations permissions
+                $adminHasLocationsPerms = false;
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt 
+                        FROM `{$this->prefix}role_permissions` rp
+                        JOIN `{$this->prefix}roles` r ON rp.role_id = r.id
+                        JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                        WHERE r.role_code = 'admin' AND p.module = 'locations'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $adminHasLocationsPerms = ($result['cnt'] ?? 0) > 0;
+                } catch (Exception $e) {
+                    // Table might not exist yet
+                }
+                
                 // Re-run migration if any critical updates are missing
-                if (!$taxTypesExists || !$entitiesLabelExists || !$locationsLabelExists || !$entitiesPermsExist || !$locationsPermsExist) {
+                if (!$taxTypesExists || !$entitiesLabelExists || !$locationsLabelExists || !$entitiesPermsExist || !$locationsPermsExist || !$adminHasLocationsPerms) {
                     $missing = [];
                     if (!$taxTypesExists) $missing[] = 'tax_types table';
                     if (!$entitiesLabelExists) $missing[] = 'entities module label';
                     if (!$locationsLabelExists) $missing[] = 'locations module label';
                     if (!$entitiesPermsExist) $missing[] = 'entities permissions';
                     if (!$locationsPermsExist) $missing[] = 'locations permissions';
+                    if (!$adminHasLocationsPerms) $missing[] = 'admin locations permissions';
                     
                     error_log("AutoMigration: Missing updates detected (" . implode(', ', $missing) . "), re-running migration to apply them");
                     $needsMigration = true;
@@ -150,6 +165,34 @@ class AutoMigration {
         if ($needsMigration) {
             if (file_exists($migrationFile)) {
                 $this->executeMigration($migrationFile, '000_complete_system_migration.sql');
+            }
+            
+            // Also run the admin locations permissions fix if it exists and hasn't been executed
+            $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
+            if (file_exists($adminLocationsFix) && !in_array('002_ensure_admin_locations_permissions.sql', $executed)) {
+                $this->executeMigration($adminLocationsFix, '002_ensure_admin_locations_permissions.sql');
+            }
+        } else {
+            // Even if main migration ran, check if admin locations fix is needed
+            $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
+            if (file_exists($adminLocationsFix) && !in_array('002_ensure_admin_locations_permissions.sql', $executed)) {
+                // Check if admin has locations permissions
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt 
+                        FROM `{$this->prefix}role_permissions` rp
+                        JOIN `{$this->prefix}roles` r ON rp.role_id = r.id
+                        JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                        WHERE r.role_code = 'admin' AND p.module = 'locations'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $adminHasLocationsPerms = ($result['cnt'] ?? 0) > 0;
+                    
+                    if (!$adminHasLocationsPerms) {
+                        error_log("AutoMigration: Admin missing locations permissions, running fix migration");
+                        $this->executeMigration($adminLocationsFix, '002_ensure_admin_locations_permissions.sql');
+                    }
+                } catch (Exception $e) {
+                    error_log("AutoMigration: Error checking admin locations permissions: " . $e->getMessage());
+                }
             }
         }
     }

@@ -34,6 +34,11 @@ class User_permission_model extends Base_Model {
             
             $userRole = $user['role'] ?? null;
             
+            // Super admin and admin bypass - they have all permissions
+            if ($userRole === 'super_admin' || $userRole === 'admin') {
+                return true;
+            }
+            
             // Check if permission exists in permissions table
             $permCheck = $this->db->fetchOne(
                 "SELECT id FROM `{$prefix}permissions` WHERE module = ? AND permission = ?",

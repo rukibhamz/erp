@@ -215,3 +215,29 @@ if (!function_exists('sanitize_name')) {
     }
 }
 
+/**
+ * Validate and sanitize integer value
+ * SECURITY: Prevents SQL injection by ensuring value is a valid integer within bounds
+ * 
+ * @param mixed $value Value to validate
+ * @param int|null $min Minimum allowed value (null = no minimum)
+ * @param int|null $max Maximum allowed value (null = no maximum)
+ * @param int $default Default value if validation fails
+ * @return int Validated integer value
+ */
+if (!function_exists('validate_integer')) {
+    function validate_integer($value, $min = null, $max = null, $default = 0) {
+        $int = filter_var($value, FILTER_VALIDATE_INT);
+        if ($int === false) {
+            return $default;
+        }
+        if ($min !== null && $int < $min) {
+            return $min;
+        }
+        if ($max !== null && $int > $max) {
+            return $max;
+        }
+        return $int;
+    }
+}
+

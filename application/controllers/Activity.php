@@ -17,7 +17,7 @@ class Activity extends Base_Controller {
         
         $data = [
             'page_title' => 'Activity Log',
-            'activities' => $this->activityModel->getAll(null, $offset, 'created_at DESC', $perPage),
+            'activities' => $this->activityModel->getAll(null, [], $offset, 'created_at DESC', $perPage),
             'total' => $this->activityModel->count(),
             'current_page' => $page,
             'per_page' => $perPage,

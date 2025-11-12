@@ -79,17 +79,26 @@ class Audit_model extends Base_Model {
     
     /**
      * Get audit trail for a specific record
+     * SECURITY: Uses parameterized query to prevent SQL injection
+     * 
+     * @param string $module Module name
+     * @param int $recordId Record ID
+     * @param int $limit Maximum number of records to return (default: 100, max: 1000)
+     * @return array
      */
     public function getRecordHistory($module, $recordId, $limit = 100) {
         try {
+            // Validate and sanitize limit to prevent SQL injection
+            $limit = max(1, min(1000, intval($limit)));
+            
             $sql = "SELECT a.*, u.username, u.email, u.first_name, u.last_name
                     FROM `" . $this->db->getPrefix() . $this->table . "` a
                     LEFT JOIN `" . $this->db->getPrefix() . "users` u ON a.user_id = u.id
                     WHERE a.module = ? AND a.record_id = ?
                     ORDER BY a.created_at DESC
-                    LIMIT {$limit}";
+                    LIMIT ?";
             
-            return $this->db->fetchAll($sql, [$module, $recordId]);
+            return $this->db->fetchAll($sql, [$module, $recordId, $limit]);
         } catch (Exception $e) {
             error_log('Audit_model getRecordHistory error: ' . $e->getMessage());
             return [];
@@ -98,17 +107,25 @@ class Audit_model extends Base_Model {
     
     /**
      * Get audit trail by user
+     * SECURITY: Uses parameterized query to prevent SQL injection
+     * 
+     * @param int $userId User ID
+     * @param int $limit Maximum number of records to return (default: 100, max: 1000)
+     * @return array
      */
     public function getUserAuditTrail($userId, $limit = 100) {
         try {
+            // Validate and sanitize limit to prevent SQL injection
+            $limit = max(1, min(1000, intval($limit)));
+            
             $sql = "SELECT a.*, u.username, u.email
                     FROM `" . $this->db->getPrefix() . $this->table . "` a
                     LEFT JOIN `" . $this->db->getPrefix() . "users` u ON a.user_id = u.id
                     WHERE a.user_id = ?
                     ORDER BY a.created_at DESC
-                    LIMIT {$limit}";
+                    LIMIT ?";
             
-            return $this->db->fetchAll($sql, [$userId]);
+            return $this->db->fetchAll($sql, [$userId, $limit]);
         } catch (Exception $e) {
             error_log('Audit_model getUserAuditTrail error: ' . $e->getMessage());
             return [];
@@ -117,17 +134,25 @@ class Audit_model extends Base_Model {
     
     /**
      * Get audit trail by module
+     * SECURITY: Uses parameterized query to prevent SQL injection
+     * 
+     * @param string $module Module name
+     * @param int $limit Maximum number of records to return (default: 100, max: 1000)
+     * @return array
      */
     public function getModuleAuditTrail($module, $limit = 100) {
         try {
+            // Validate and sanitize limit to prevent SQL injection
+            $limit = max(1, min(1000, intval($limit)));
+            
             $sql = "SELECT a.*, u.username, u.email
                     FROM `" . $this->db->getPrefix() . $this->table . "` a
                     LEFT JOIN `" . $this->db->getPrefix() . "users` u ON a.user_id = u.id
                     WHERE a.module = ?
                     ORDER BY a.created_at DESC
-                    LIMIT {$limit}";
+                    LIMIT ?";
             
-            return $this->db->fetchAll($sql, [$module]);
+            return $this->db->fetchAll($sql, [$module, $limit]);
         } catch (Exception $e) {
             error_log('Audit_model getModuleAuditTrail error: ' . $e->getMessage());
             return [];
@@ -180,7 +205,13 @@ class Audit_model extends Base_Model {
                 $sql .= " WHERE " . implode(" AND ", $where);
             }
             
-            $sql .= " ORDER BY a.created_at DESC LIMIT {$limit} OFFSET {$offset}";
+            // Validate and sanitize limit and offset to prevent SQL injection
+            $limit = max(1, min(1000, intval($limit)));
+            $offset = max(0, intval($offset));
+            
+            $sql .= " ORDER BY a.created_at DESC LIMIT ? OFFSET ?";
+            $params[] = $limit;
+            $params[] = $offset;
             
             return $this->db->fetchAll($sql, $params);
         } catch (Exception $e) {
@@ -232,17 +263,27 @@ class Audit_model extends Base_Model {
     
     /**
      * Get changes for a specific field
+     * SECURITY: Uses parameterized query to prevent SQL injection
+     * 
+     * @param string $tableName Table name
+     * @param int $recordId Record ID
+     * @param string $fieldName Field name
+     * @param int $limit Maximum number of records to return (default: 50, max: 1000)
+     * @return array
      */
     public function getFieldHistory($tableName, $recordId, $fieldName, $limit = 50) {
         try {
+            // Validate and sanitize limit to prevent SQL injection
+            $limit = max(1, min(1000, intval($limit)));
+            
             $sql = "SELECT a.*, u.username, u.email
                     FROM `" . $this->db->getPrefix() . $this->table . "` a
                     LEFT JOIN `" . $this->db->getPrefix() . "users` u ON a.user_id = u.id
                     WHERE a.table_name = ? AND a.record_id = ? AND a.field_name = ?
                     ORDER BY a.created_at DESC
-                    LIMIT {$limit}";
+                    LIMIT ?";
             
-            return $this->db->fetchAll($sql, [$tableName, $recordId, $fieldName]);
+            return $this->db->fetchAll($sql, [$tableName, $recordId, $fieldName, $limit]);
         } catch (Exception $e) {
             error_log('Audit_model getFieldHistory error: ' . $e->getMessage());
             return [];
