@@ -35,8 +35,8 @@ if (!function_exists('send_email')) {
             
             // If SMTP is configured, use it; otherwise use PHP mail()
             if (!empty($smtpHost) && !empty($smtpUsername) && !empty($smtpPassword)) {
-                return send_email_smtp($to, $subject, $message, $fromEmail, $fromName, $isHtml, 
-                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption);
+                return send_email_smtp($to, $subject, $message, $fromEmail, $fromName, 
+                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml);
             } else {
                 return send_email_php($to, $subject, $message, $fromEmail, $fromName, $isHtml);
             }
@@ -102,8 +102,8 @@ if (!function_exists('send_email_php')) {
  * SECURITY: Uses secure SMTP connection with authentication
  */
 if (!function_exists('send_email_smtp')) {
-    function send_email_smtp($to, $subject, $message, $fromEmail, $fromName, $isHtml = true,
-                            $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls') {
+    function send_email_smtp($to, $subject, $message, $fromEmail, $fromName,
+                            $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls', $isHtml = true) {
         try {
             // Validate email addresses
             if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -118,12 +118,12 @@ if (!function_exists('send_email_smtp')) {
             
             // Use PHPMailer if available, otherwise use socket-based SMTP
             if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-                return send_email_phpmailer($to, $subject, $message, $fromEmail, $fromName, $isHtml,
-                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption);
+                return send_email_phpmailer($to, $subject, $message, $fromEmail, $fromName,
+                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml);
             } else {
                 // Fallback to socket-based SMTP (basic implementation)
-                return send_email_smtp_socket($to, $subject, $message, $fromEmail, $fromName, $isHtml,
-                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption);
+                return send_email_smtp_socket($to, $subject, $message, $fromEmail, $fromName,
+                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml);
             }
         } catch (Exception $e) {
             error_log("SMTP email error: " . $e->getMessage());
@@ -136,8 +136,8 @@ if (!function_exists('send_email_smtp')) {
  * Send email using PHPMailer (if available)
  */
 if (!function_exists('send_email_phpmailer')) {
-    function send_email_phpmailer($to, $subject, $message, $fromEmail, $fromName, $isHtml = true,
-                                $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls') {
+    function send_email_phpmailer($to, $subject, $message, $fromEmail, $fromName,
+                                $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls', $isHtml = true) {
         try {
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
             
@@ -176,8 +176,8 @@ if (!function_exists('send_email_phpmailer')) {
  * SECURITY: Basic SMTP implementation with TLS support
  */
 if (!function_exists('send_email_smtp_socket')) {
-    function send_email_smtp_socket($to, $subject, $message, $fromEmail, $fromName, $isHtml = true,
-                                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls') {
+    function send_email_smtp_socket($to, $subject, $message, $fromEmail, $fromName,
+                                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls', $isHtml = true) {
         // This is a simplified implementation
         // For production, consider using PHPMailer or SwiftMailer
         error_log("Socket-based SMTP not fully implemented. Please install PHPMailer or configure PHP mail().");

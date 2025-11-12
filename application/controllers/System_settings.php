@@ -7,12 +7,12 @@ class System_settings extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('settings', 'read');
         $this->settingsModel = $this->loadModel('Settings_model');
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
     public function index() {
+        $this->requirePermission('settings', 'read');
         $tab = $_GET['tab'] ?? 'company';
         
         // Get current settings from database
@@ -80,18 +80,57 @@ class System_settings extends Base_Controller {
                     break;
                     
                 case 'email':
+                    // SECURITY: Validate and sanitize all SMTP settings
+                    $smtpHost = sanitize_input($_POST['smtp_host'] ?? '');
+                    $smtpPort = intval($_POST['smtp_port'] ?? 587);
+                    $smtpUsername = sanitize_input($_POST['smtp_username'] ?? '');
+                    $smtpEncryption = sanitize_input($_POST['smtp_encryption'] ?? 'tls');
+                    $fromEmail = sanitize_input($_POST['from_email'] ?? '');
+                    $fromName = sanitize_input($_POST['from_name'] ?? '');
+                    
+                    // SECURITY: Validate SMTP host (prevent injection)
+                    if (!empty($smtpHost) && !preg_match('/^[a-zA-Z0-9.-]+$/', $smtpHost)) {
+                        throw new Exception('Invalid SMTP host format');
+                    }
+                    
+                    // SECURITY: Validate port range
+                    if ($smtpPort < 1 || $smtpPort > 65535) {
+                        throw new Exception('SMTP port must be between 1 and 65535');
+                    }
+                    
+                    // SECURITY: Validate encryption type
+                    if (!in_array($smtpEncryption, ['tls', 'ssl', 'none'])) {
+                        $smtpEncryption = 'tls';
+                    }
+                    
+                    // SECURITY: Validate email format
+                    if (!empty($fromEmail) && !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+                        throw new Exception('Invalid from email address');
+                    }
+                    
+                    // SECURITY: Limit field lengths
+                    $smtpHost = substr($smtpHost, 0, 255);
+                    $smtpUsername = substr($smtpUsername, 0, 255);
+                    $fromEmail = substr($fromEmail, 0, 255);
+                    $fromName = substr($fromName, 0, 100);
+                    
                     $settings = [
-                        'smtp_host' => sanitize_input($_POST['smtp_host'] ?? ''),
-                        'smtp_port' => intval($_POST['smtp_port'] ?? 587),
-                        'smtp_username' => sanitize_input($_POST['smtp_username'] ?? ''),
-                        'smtp_encryption' => sanitize_input($_POST['smtp_encryption'] ?? 'tls'),
-                        'from_email' => sanitize_input($_POST['from_email'] ?? ''),
-                        'from_name' => sanitize_input($_POST['from_name'] ?? ''),
+                        'smtp_host' => $smtpHost,
+                        'smtp_port' => $smtpPort,
+                        'smtp_username' => $smtpUsername,
+                        'smtp_encryption' => $smtpEncryption,
+                        'from_email' => $fromEmail,
+                        'from_name' => $fromName,
                     ];
                     
-                    // Only update password if provided
+                    // SECURITY: Only update password if provided (and validate length)
                     if (!empty($_POST['smtp_password'])) {
-                        $settings['smtp_password'] = sanitize_input($_POST['smtp_password']);
+                        $smtpPassword = sanitize_input($_POST['smtp_password']);
+                        // SECURITY: Limit password length (reasonable limit)
+                        if (strlen($smtpPassword) > 500) {
+                            throw new Exception('SMTP password is too long');
+                        }
+                        $settings['smtp_password'] = $smtpPassword;
                     }
                     break;
                     
@@ -160,11 +199,238 @@ class System_settings extends Base_Controller {
     }
     
     public function testEmail() {
-        $this->requirePermission('settings', 'read');
+        // SECURITY: Only allow POST requests
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Content-Type: application/json');
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+        
+        // SECURITY: Validate session exists and user is authenticated
+        if (empty($this->session['user_id'])) {
+            header('Content-Type: application/json');
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Authentication required']);
+            exit;
+        }
+        
+        // SECURITY: Only super admin and admin can test email
+        $userRole = $this->session['role'] ?? '';
+        if ($userRole !== 'super_admin' && $userRole !== 'admin') {
+            header('Content-Type: application/json');
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Access denied. Only administrators can test email.']);
+            exit;
+        }
+        
+        // SECURITY: Rate limiting - max 5 test emails per 15 minutes per user
+        require_once BASEPATH . 'helpers/security_helper.php';
+        $rateLimitKey = 'test_email_' . $this->session['user_id'];
+        if (!checkRateLimit($rateLimitKey, 5, 900)) {
+            header('Content-Type: application/json');
+            http_response_code(429);
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Too many test email requests. Please wait 15 minutes before trying again.'
+            ]);
+            exit;
+        }
+        
+        // SECURITY: Validate CSRF token
+        check_csrf();
+        
         header('Content-Type: application/json');
         
-        // TODO: Implement email test
-        echo json_encode(['success' => false, 'message' => 'Email test not yet implemented']);
+        try {
+            // SECURITY: Get SMTP settings from database using parameterized query
+            $prefix = $this->db->getPrefix();
+            $settingsResult = $this->db->fetchAll(
+                "SELECT setting_key, setting_value FROM `{$prefix}settings` 
+                 WHERE setting_key IN (?, ?, ?, ?, ?, ?, ?)",
+                ['smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption', 'from_email', 'from_name']
+            );
+            
+            $emailSettings = [];
+            foreach ($settingsResult as $row) {
+                $emailSettings[$row['setting_key']] = $row['setting_value'];
+            }
+            
+            // SECURITY: Validate required settings exist
+            if (empty($emailSettings['smtp_host']) || empty($emailSettings['smtp_username']) || empty($emailSettings['smtp_password'])) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Please configure SMTP Host, Username, and Password before testing.'
+                ]);
+                exit;
+            }
+            
+            // SECURITY: Validate and sanitize test email address
+            $testEmail = sanitize_input($_POST['test_email'] ?? '');
+            
+            // SECURITY: Limit email length to prevent abuse
+            if (strlen($testEmail) > 255) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Email address is too long.'
+                ]);
+                exit;
+            }
+            
+            if (empty($testEmail)) {
+                // Use current user's email as fallback
+                $user = $this->loadModel('User_model')->getById($this->session['user_id']);
+                if (!$user || empty($user['email'])) {
+                    echo json_encode([
+                        'success' => false, 
+                        'message' => 'Please provide a test email address or ensure your account has a valid email.'
+                    ]);
+                    exit;
+                }
+                $testEmail = $user['email'];
+            }
+            
+            // SECURITY: Strict email validation
+            $testEmail = filter_var(trim($testEmail), FILTER_VALIDATE_EMAIL);
+            if ($testEmail === false) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Please provide a valid test email address.'
+                ]);
+                exit;
+            }
+            
+            // SECURITY: Additional email format validation
+            if (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $testEmail)) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Invalid email format.'
+                ]);
+                exit;
+            }
+            
+            // Prepare email configuration for the helper
+            // The email helper reads from config, so we need to temporarily set it
+            // Or we can call send_email_smtp directly with the settings
+            
+            // Use the email helper with database settings
+            $subject = 'Test Email - Business ERP System';
+            $message = "
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 4px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>✓ Email Test Successful</h2>
+        </div>
+        <div class='content'>
+            <p>Hello,</p>
+            <p>This is a test email from your Business ERP System.</p>
+            <div class='success'>
+                <strong>✓ SMTP Configuration Verified</strong><br>
+                Your email settings are working correctly. You can now send emails from the system.
+            </div>
+            <p><strong>Test Details:</strong></p>
+            <ul>
+                <li>SMTP Host: " . htmlspecialchars($emailSettings['smtp_host'] ?? '') . "</li>
+                <li>SMTP Port: " . htmlspecialchars($emailSettings['smtp_port'] ?? '587') . "</li>
+                <li>Encryption: " . htmlspecialchars(strtoupper($emailSettings['smtp_encryption'] ?? 'tls')) . "</li>
+                <li>From Email: " . htmlspecialchars($emailSettings['from_email'] ?? '') . "</li>
+                <li>From Name: " . htmlspecialchars($emailSettings['from_name'] ?? 'Business ERP System') . "</li>
+                <li>Test Time: " . date('Y-m-d H:i:s') . "</li>
+            </ul>
+            <p>If you received this email, your SMTP configuration is correct and working.</p>
+        </div>
+    </div>
+</body>
+</html>";
+            
+            // SECURITY: Validate SMTP port is within safe range
+            $smtpPort = intval($emailSettings['smtp_port'] ?? 587);
+            if ($smtpPort < 1 || $smtpPort > 65535) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Invalid SMTP port. Port must be between 1 and 65535.'
+                ]);
+                exit;
+            }
+            
+            // SECURITY: Validate encryption type
+            $smtpEncryption = $emailSettings['smtp_encryption'] ?? 'tls';
+            if (!in_array($smtpEncryption, ['tls', 'ssl', 'none'])) {
+                $smtpEncryption = 'tls'; // Default to TLS
+            }
+            
+            // SECURITY: Validate from email
+            $fromEmail = filter_var($emailSettings['from_email'] ?? '', FILTER_VALIDATE_EMAIL);
+            if ($fromEmail === false) {
+                $fromEmail = 'noreply@' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+            }
+            
+            // SECURITY: Sanitize from name
+            $fromName = htmlspecialchars($emailSettings['from_name'] ?? 'Business ERP System', ENT_QUOTES, 'UTF-8');
+            if (strlen($fromName) > 100) {
+                $fromName = substr($fromName, 0, 100);
+            }
+            
+            // SECURITY: Call send_email_smtp directly with validated database settings
+            $result = send_email_smtp(
+                $testEmail,
+                $subject,
+                $message,
+                $fromEmail,
+                $fromName,
+                $emailSettings['smtp_host'] ?? '',
+                $smtpPort,
+                $emailSettings['smtp_username'] ?? '',
+                $emailSettings['smtp_password'] ?? '',
+                $smtpEncryption,
+                true // isHtml
+            );
+            
+            if ($result) {
+                // SECURITY: Log activity without exposing sensitive data
+                $this->activityModel->log(
+                    $this->session['user_id'], 
+                    'test_email', 
+                    'Settings', 
+                    "Test email sent successfully"
+                );
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => "Test email sent successfully. Please check your inbox."
+                ]);
+            } else {
+                // SECURITY: Don't expose detailed error information
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Failed to send test email. Please verify your SMTP settings are correct and try again.'
+                ]);
+            }
+        } catch (Exception $e) {
+            // SECURITY: Log full error but don't expose to user
+            $errorMsg = $e->getMessage();
+            $userId = $this->session['user_id'] ?? 'unknown';
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+            error_log("System_settings testEmail error [User: {$userId}, IP: {$ipAddress}]: " . $errorMsg);
+            
+            // SECURITY: Generic error message to prevent information disclosure
+            echo json_encode([
+                'success' => false, 
+                'message' => 'An error occurred while sending the test email. Please check your configuration and try again.'
+            ]);
+        }
         exit;
     }
     

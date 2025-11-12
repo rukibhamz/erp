@@ -175,12 +175,34 @@ $activeTab = $active_tab ?? 'company';
                     </div>
                 </div>
                 
+                <!-- Test Email Section -->
+                <div class="card border-primary mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="bi bi-envelope-check"></i> Test Email Configuration</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">Send a test email to verify your SMTP settings are working correctly.</p>
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Test Email Address</label>
+                                <input type="email" id="test_email_address" class="form-control" 
+                                       placeholder="Enter email address to send test to (optional - will use your email if left blank)"
+                                       value="">
+                                <small class="text-muted">Leave blank to use your account email address</small>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary w-100" onclick="testEmail()" id="testEmailBtn">
+                                    <i class="bi bi-send"></i> Send Test Email
+                                </button>
+                            </div>
+                        </div>
+                        <div id="testEmailResult" class="mt-3" style="display: none;"></div>
+                    </div>
+                </div>
+                
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-dark">
                         <i class="bi bi-save"></i> Save Email Settings
-                    </button>
-                    <button type="button" class="btn btn-outline-dark" onclick="testEmail()">
-                        <i class="bi bi-send"></i> Test Email
                     </button>
                 </div>
             </form>
@@ -362,8 +384,58 @@ $activeTab = $active_tab ?? 'company';
 
 <script>
 function testEmail() {
-    alert('Email test functionality will be implemented');
-    // TODO: Implement AJAX call to test email
+    const btn = document.getElementById('testEmailBtn');
+    const resultDiv = document.getElementById('testEmailResult');
+    const testEmail = document.getElementById('test_email_address').value.trim();
+    
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+    resultDiv.style.display = 'none';
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('csrf_token', '<?= csrf_token() ?>');
+    if (testEmail) {
+        formData.append('test_email', testEmail);
+    }
+    
+    // Send AJAX request
+    fetch('<?= base_url("settings/system/test-email") ?>', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i> Send Test Email';
+        
+        // Show result
+        resultDiv.style.display = 'block';
+        if (data.success) {
+            resultDiv.className = 'mt-3 alert alert-success';
+            resultDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+        } else {
+            resultDiv.className = 'mt-3 alert alert-danger';
+            resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> ' + data.message;
+        }
+        
+        // Scroll to result
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .catch(error => {
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i> Send Test Email';
+        
+        // Show error
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'mt-3 alert alert-danger';
+        resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> Error: ' + error.message;
+        
+        console.error('Test email error:', error);
+    });
 }
 
 function testSMS() {
