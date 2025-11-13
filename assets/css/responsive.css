@@ -5,20 +5,36 @@
    ============================================ */
 @media (max-width: 575.98px) {
   /* Dashboard Stat Cards - Center icons on mobile */
-  .stat-card .card-body .d-flex {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center;
-  }
-  
-  .stat-card .stat-icon {
-    margin-right: 0 !important;
-    margin-bottom: 0.75rem !important;
-    margin-left: 0 !important;
+  .stat-card .card-body {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    min-height: 100px;
+    padding: 1rem !important;
+  }
+  
+  .stat-card .card-body > .d-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  
+  .stat-card .stat-icon {
+    margin: 0 auto 0.75rem auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0;
+  }
+  
+  /* Override Bootstrap margin utilities on mobile */
+  .stat-card .me-3,
+  .stat-card .ms-3,
+  .stat-card .mx-3 {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
   
   .stat-card .stat-icon i {
@@ -26,12 +42,19 @@
     align-items: center !important;
     justify-content: center !important;
     line-height: 1;
+    margin: 0;
   }
   
   .stat-card .stat-label,
   .stat-card .stat-number {
-    text-align: center;
+    text-align: center !important;
     width: 100%;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  
+  .stat-card .stat-label {
+    margin-bottom: 0.25rem;
   }
   /* Topbar mobile alignment fixes */
   .topbar {
@@ -207,20 +230,36 @@
    ============================================ */
 @media (min-width: 576px) and (max-width: 767.98px) {
   /* Dashboard Stat Cards - Center icons on small mobile */
-  .stat-card .card-body .d-flex {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center;
-  }
-  
-  .stat-card .stat-icon {
-    margin-right: 0 !important;
-    margin-bottom: 0.75rem !important;
-    margin-left: 0 !important;
+  .stat-card .card-body {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    min-height: 100px;
+    padding: 1rem !important;
+  }
+  
+  .stat-card .card-body > .d-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  
+  .stat-card .stat-icon {
+    margin: 0 auto 0.75rem auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0;
+  }
+  
+  /* Override Bootstrap margin utilities on small mobile */
+  .stat-card .me-3,
+  .stat-card .ms-3,
+  .stat-card .mx-3 {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
   
   .stat-card .stat-icon i {
@@ -228,12 +267,19 @@
     align-items: center !important;
     justify-content: center !important;
     line-height: 1;
+    margin: 0;
   }
   
   .stat-card .stat-label,
   .stat-card .stat-number {
-    text-align: center;
+    text-align: center !important;
     width: 100%;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  
+  .stat-card .stat-label {
+    margin-bottom: 0.25rem;
   }
   
   /* Topbar alignment */
