@@ -4,6 +4,35 @@
    EXTRA SMALL DEVICES (phones, less than 576px)
    ============================================ */
 @media (max-width: 575.98px) {
+  /* Dashboard Stat Cards - Center icons on mobile */
+  .stat-card .card-body .d-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center;
+  }
+  
+  .stat-card .stat-icon {
+    margin-right: 0 !important;
+    margin-bottom: 0.75rem !important;
+    margin-left: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .stat-card .stat-icon i {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1;
+  }
+  
+  .stat-card .stat-label,
+  .stat-card .stat-number {
+    text-align: center;
+    width: 100%;
+  }
   /* Topbar mobile alignment fixes */
   .topbar {
     display: flex !important;
@@ -177,6 +206,36 @@
    SMALL DEVICES (phones, 576px to 767.98px)
    ============================================ */
 @media (min-width: 576px) and (max-width: 767.98px) {
+  /* Dashboard Stat Cards - Center icons on small mobile */
+  .stat-card .card-body .d-flex {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center;
+  }
+  
+  .stat-card .stat-icon {
+    margin-right: 0 !important;
+    margin-bottom: 0.75rem !important;
+    margin-left: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .stat-card .stat-icon i {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1;
+  }
+  
+  .stat-card .stat-label,
+  .stat-card .stat-number {
+    text-align: center;
+    width: 100%;
+  }
+  
   /* Topbar alignment */
   .topbar {
     display: flex !important;
