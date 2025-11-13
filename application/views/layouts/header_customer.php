@@ -63,10 +63,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <ul class="navbar-nav">
                     <!-- Notifications -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link" href="#" id="customerNotificationsDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link position-relative" href="#" id="customerNotificationsDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-bell"></i>
                             <?php if (($unread_notification_count ?? 0) > 0): ?>
-                                <span class="badge bg-danger rounded-pill"><?= $unread_notification_count ?></span>
+                                <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle"><?= $unread_notification_count ?></span>
                             <?php endif; ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
