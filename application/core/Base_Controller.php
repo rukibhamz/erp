@@ -69,6 +69,9 @@ class Base_Controller {
         
         // Check authentication for protected pages
         $this->checkAuth();
+        
+        // Run authorization checks (before filter)
+        $this->checkAuthorization();
     }
     
     protected function checkModuleAccess() {
@@ -272,6 +275,13 @@ class Base_Controller {
         return true;
     }
     
+    /**
+     * Require user to have one of the specified roles
+     * 
+     * @param string|array $roles Required role(s)
+     * @return bool True if user has required role
+     * @throws void Redirects if role check fails
+     */
     protected function requireRole($roles) {
         if (!is_array($roles)) {
             $roles = [$roles];
@@ -283,6 +293,87 @@ class Base_Controller {
         }
         
         return true;
+    }
+    
+    /**
+     * Require user to be authenticated
+     * 
+     * Centralized authentication check. Redirects to login if not authenticated.
+     * 
+     * @return bool True if authenticated
+     * @throws void Redirects to login if not authenticated
+     */
+    protected function requireAuth() {
+        if (empty($this->session['user_id'])) {
+            $this->setFlashMessage('info', 'Please login to access this page.');
+            redirect('login');
+        }
+        return true;
+    }
+    
+    /**
+     * Check if user has specific permission
+     * 
+     * Centralized permission check. Returns true/false without redirecting.
+     * Use requirePermission() if you want automatic redirect on failure.
+     * 
+     * @param string $module Module name
+     * @param string $permission Permission name
+     * @return bool True if user has permission
+     */
+    protected function checkPermission($module, $permission) {
+        if (!isset($this->session['user_id'])) {
+            return false;
+        }
+        
+        // Super admin and admin bypass
+        if (isset($this->session['role']) && ($this->session['role'] === 'super_admin' || $this->session['role'] === 'admin')) {
+            return true;
+        }
+        
+        try {
+            $permissionModel = $this->loadModel('User_permission_model');
+            return $permissionModel->hasPermission($this->session['user_id'], $module, $permission);
+        } catch (Exception $e) {
+            error_log("Permission check failed: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Before filter hook for authorization
+     * 
+     * Override this method in child controllers to add authorization checks
+     * that run before any action method. This centralizes authorization logic.
+     * 
+     * Example:
+     * protected function beforeFilter() {
+     *     parent::beforeFilter();
+     *     $this->requireAuth();
+     *     $this->requireRole('admin');
+     * }
+     * 
+     * @return void
+     */
+    protected function beforeFilter() {
+        // Override in child controllers to add authorization
+        // This method is called automatically before action methods
+    }
+    
+    /**
+     * Check authorization before executing action
+     * 
+     * This method is called automatically before action methods.
+     * It calls beforeFilter() which can be overridden in child controllers.
+     * 
+     * @return void
+     */
+    protected function checkAuthorization() {
+        // Call before filter hook
+        $this->beforeFilter();
+        
+        // Additional centralized checks can be added here
+        // For example, checking module access is already done in checkModuleAccess()
     }
 }
 

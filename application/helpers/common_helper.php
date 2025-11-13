@@ -7,12 +7,58 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * Sanitize input data
+ * 
+ * @deprecated This function is too aggressive for general use. strip_tags() removes
+ * all HTML tags which can corrupt user input that legitimately contains HTML.
+ * 
+ * SECURITY WARNING: This function uses strip_tags() which is too aggressive for most use cases.
+ * 
+ * RECOMMENDED APPROACH:
+ * - Preserve user input as-is in the database
+ * - Use esc() function at OUTPUT time for escaping, not at input time
+ * - This allows rich text content to be stored and displayed properly
+ * 
+ * When to use sanitize_input():
+ * - Only for simple text fields where HTML is never expected
+ * - For legacy code that cannot be immediately refactored
+ * 
+ * When NOT to use sanitize_input():
+ * - Rich text content (WYSIWYG editors, markdown, etc.)
+ * - Email addresses, URLs, or other structured data
+ * - Any content that may legitimately contain HTML
+ * 
+ * PROPER USAGE EXAMPLES:
+ * 
+ * // BAD - Don't sanitize at input time for rich content:
+ * // $content = sanitize_input($_POST['content']); // Strips HTML from rich text!
+ * 
+ * // GOOD - Store raw input, escape at output:
+ * $content = $_POST['content']; // Store as-is
+ * // In view: <?= esc($content, 'html') ?>
+ * 
+ * // For HTML context (most common):
+ * <?= esc($user_input, 'html') ?>
+ * 
+ * // For JavaScript context:
+ * <script>
+ * var data = <?= esc($user_input, 'js') ?>;
+ * </script>
+ * 
+ * // For URL context:
+ * <a href="<?= esc($url, 'url') ?>">Link</a>
+ * 
+ * // For HTML attributes:
+ * <div class="<?= esc($class_name, 'attr') ?>">Content</div>
+ * 
+ * @param mixed $data Input data to sanitize
+ * @return mixed Sanitized data
  */
 if (!function_exists('sanitize_input')) {
     function sanitize_input($data) {
         if (is_array($data)) {
             return array_map('sanitize_input', $data);
         }
+        // WARNING: strip_tags() removes all HTML - use only for simple text fields
         return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
     }
 }

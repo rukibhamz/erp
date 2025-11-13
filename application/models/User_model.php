@@ -1,11 +1,33 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+/**
+ * User Model
+ * 
+ * Handles user authentication, password management, and user data operations.
+ * 
+ * ERROR HANDLING STRATEGY:
+ * - All methods use exceptions for error conditions
+ * - Authentication methods return arrays with 'success' and 'message' keys
+ * - Database operations throw exceptions on failure
+ * - Password validation throws exceptions with detailed error messages
+ * 
+ * @package Application
+ * @subpackage Models
+ */
 class User_model extends Base_Model {
     protected $table = 'users';
     private $maxLoginAttempts = 5;
     private $lockoutDuration = 1800; // 30 minutes in seconds
     
+    /**
+     * Authenticate user with username/email and password
+     * 
+     * @param string $username Username or email address
+     * @param string $password Plaintext password
+     * @param bool $rememberMe Whether to generate remember me token
+     * @return array ['success' => bool, 'user' => array|null, 'message' => string|null]
+     */
     public function authenticate($username, $password, $rememberMe = false) {
         $user = $this->db->fetchOne(
             "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE (username = ? OR email = ?)",
@@ -119,16 +141,55 @@ class User_model extends Base_Model {
         return $token;
     }
     
+    /**
+     * Reset user password with security validation
+     * 
+     * SECURITY: Validates password strength before resetting
+     * - Enforces password requirements using validatePasswordStrength()
+     * - Properly hashes the password using password_hash()
+     * - Clears password reset token and expiration
+     * - Resets failed login attempts and unlocks account
+     * 
+     * @param int $userId User ID
+     * @param string $newPassword New password (plaintext)
+     * @return bool True on success
+     * @throws Exception If password doesn't meet strength requirements
+     */
     public function resetPassword($userId, $newPassword) {
+        // SECURITY: Validate password strength before updating
+        $errors = $this->validatePasswordStrength($newPassword);
+        if (!empty($errors)) {
+            throw new Exception(implode('. ', $errors));
+        }
+        
+        // Hash the password securely
+        $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
+        
+        // Update password and clear reset-related fields
+        // Also reset failed login attempts and unlock account
         return $this->update($userId, [
-            'password' => $newPassword,
+            'password' => $hashedPassword,
             'password_reset_token' => null,
             'password_reset_expires' => null,
             'failed_login_attempts' => 0,
-            'locked_until' => null
+            'locked_until' => null,
+            'status' => 'active' // Ensure account is active after password reset
         ]);
     }
     
+    /**
+     * Validate password strength requirements
+     * 
+     * Checks password meets minimum requirements:
+     * - At least 8 characters
+     * - Contains lowercase letter
+     * - Contains uppercase letter
+     * - Contains number
+     * - Contains special character
+     * 
+     * @param string $password Password to validate
+     * @return array Array of error messages (empty if valid)
+     */
     public function validatePasswordStrength($password) {
         $errors = [];
         
@@ -168,14 +229,33 @@ class User_model extends Base_Model {
         return parent::create($data);
     }
     
+    /**
+     * Update user record
+     * 
+     * SECURITY: If password is provided, validates strength and hashes it
+     * Note: resetPassword() method should be used for password resets as it
+     * also clears reset tokens and unlocks accounts
+     * 
+     * @param int $id User ID
+     * @param array $data Data to update
+     * @return bool True on success
+     * @throws Exception If password doesn't meet strength requirements
+     */
     public function update($id, $data) {
+        // SECURITY: If password is provided, validate and hash it
+        // Note: If password is already hashed (from resetPassword), skip validation
         if (isset($data['password']) && !empty($data['password'])) {
-            // Validate password strength
-            $errors = $this->validatePasswordStrength($data['password']);
-            if (!empty($errors)) {
-                throw new Exception(implode('. ', $errors));
+            // Check if password is already hashed (starts with $2y$ for bcrypt)
+            if (!str_starts_with($data['password'], '$2y$')) {
+                // Validate password strength for plaintext passwords
+                $errors = $this->validatePasswordStrength($data['password']);
+                if (!empty($errors)) {
+                    throw new Exception(implode('. ', $errors));
+                }
+                // Hash the password
+                $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
             }
-            $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
+            // If already hashed, use as-is (allows resetPassword to pass hashed password)
         } else {
             unset($data['password']);
         }

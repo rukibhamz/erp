@@ -1,11 +1,24 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+/**
+ * Authentication Controller
+ * 
+ * Handles user authentication, login, logout, password reset, and remember me functionality
+ * 
+ * @package Application
+ * @subpackage Controllers
+ */
 class Auth extends Base_Controller {
     private $userModel;
     private $activityModel;
     private $sessionModel;
     
+    /**
+     * Constructor
+     * 
+     * Initializes models and checks remember me cookie
+     */
     public function __construct() {
         parent::__construct();
         // Only load models if database is available
@@ -19,6 +32,14 @@ class Auth extends Base_Controller {
         $this->checkRememberMe();
     }
     
+    /**
+     * Login page and authentication handler
+     * 
+     * Displays login form on GET request. Processes login on POST request.
+     * Implements rate limiting, CSRF protection, and session management.
+     * 
+     * @return void Renders login view or redirects to dashboard
+     */
     public function login() {
         // Redirect if already logged in
         if (isset($this->session['user_id'])) {
@@ -104,6 +125,14 @@ class Auth extends Base_Controller {
         $this->loader->view('auth/login', $data);
     }
     
+    /**
+     * Logout handler
+     * 
+     * Destroys session, clears remember me cookie, and logs activity.
+     * Redirects to login page after logout.
+     * 
+     * @return void Redirects to login page
+     */
     public function logout() {
         $userId = $this->session['user_id'] ?? null;
         
@@ -129,6 +158,15 @@ class Auth extends Base_Controller {
         redirect('login');
     }
     
+    /**
+     * Password reset request handler
+     * 
+     * Displays forgot password form on GET request.
+     * Processes password reset request on POST request.
+     * Generates reset token and sends email (does not reveal if email exists).
+     * 
+     * @return void Renders forgot password view or redirects
+     */
     public function forgotPassword() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // Validate CSRF token
@@ -172,6 +210,15 @@ class Auth extends Base_Controller {
         $this->loader->view('auth/forgot_password', $data);
     }
     
+    /**
+     * Password reset handler
+     * 
+     * Validates reset token and displays reset form on GET request.
+     * Processes password reset on POST request.
+     * Validates password strength and clears reset tokens.
+     * 
+     * @return void Renders reset password view or redirects
+     */
     public function resetPassword() {
         $token = $_GET['token'] ?? '';
         
@@ -217,6 +264,14 @@ class Auth extends Base_Controller {
         $this->loader->view('auth/reset_password', $data);
     }
     
+    /**
+     * Check remember me cookie and auto-login if valid
+     * 
+     * Checks for remember_token cookie and validates it against database.
+     * Automatically logs in user if token is valid.
+     * 
+     * @return void Sets session if remember token is valid
+     */
     private function checkRememberMe() {
         // Skip if already logged in
         if (isset($this->session['user_id'])) {
@@ -254,6 +309,15 @@ class Auth extends Base_Controller {
         }
     }
     
+    /**
+     * Store session in database for tracking
+     * 
+     * Creates or updates session record in database with user ID,
+     * IP address, user agent, and session data.
+     * 
+     * @param int $userId User ID
+     * @return void
+     */
     private function storeSession($userId) {
         if (!$this->sessionModel) {
             return;
