@@ -81,6 +81,16 @@ function csrf_field() {
 }
 
 /**
+ * Get CSRF token as string (for JavaScript/AJAX requests)
+ * SECURITY: Returns the current CSRF token for use in JavaScript
+ * 
+ * @return string Current CSRF token
+ */
+function csrf_token() {
+    return get_csrf_token();
+}
+
+/**
  * Check CSRF token from POST request
  * SECURITY: Validates CSRF token for POST requests to prevent CSRF attacks
  * Call this at the start of all POST handlers

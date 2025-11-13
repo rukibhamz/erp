@@ -99,22 +99,8 @@ class Users extends Base_Controller {
             try {
                 $userId = $this->userModel->create($data);
                 
-                // Assign permissions
-                if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
-                    // If permissions are explicitly provided, use them
-                    $permissionIds = array_map('intval', $_POST['permissions']);
-                    $this->userPermissionModel->assignPermissions($userId, $permissionIds);
-                } elseif ($data['role'] === 'admin') {
-                    // For admin role, assign all permissions by default
-                    $allPermissions = $this->permissionModel->getAllPermissions();
-                    $permissionIds = array_column($allPermissions, 'id');
-                    $this->userPermissionModel->assignPermissions($userId, $permissionIds);
-                } elseif ($data['role'] === 'manager') {
-                    // For manager role, assign create, read, update for all modules except tax
-                    $managerPermissions = $this->getManagerPermissions();
-                    $permissionIds = array_column($managerPermissions, 'id');
-                    $this->userPermissionModel->assignPermissions($userId, $permissionIds);
-                }
+                // Assign permissions using centralized method
+                $this->assignPermissionsByRole($userId, $data['role'], $_POST['permissions'] ?? null);
                 
                 // Log activity
                 $this->activityModel->log($this->session['user_id'], 'user_created', 'Users', 'Created user: ' . $data['username']);
@@ -139,12 +125,42 @@ class Users extends Base_Controller {
     public function edit($id) {
         $this->requirePermission('users', 'update');
         
-        $user = $this->userModel->getById($id);
+        // SECURITY: Prevent editing own account in this interface
+        if ($id == $this->session['user_id']) {
+            redirect('profile'); // Redirect to dedicated profile page
+        }
         
-        if (!$user) {
+        $userToEdit = $this->userModel->getById($id);
+        
+        if (!$userToEdit) {
             $this->setFlashMessage('danger', 'User not found.');
             redirect('users');
         }
+        
+        // SECURITY: Enforce role hierarchy - prevent privilege escalation
+        $currentUserRole = $this->session['role'] ?? 'user';
+        $targetUserRole = $userToEdit['role'] ?? 'user';
+        
+        // Define role hierarchy (higher number = higher privilege)
+        $roleHierarchy = [
+            'user' => 1,
+            'manager' => 2,
+            'admin' => 3,
+            'super_admin' => 4
+        ];
+        
+        // Get hierarchy values (default to lowest if role not found)
+        $currentUserLevel = $roleHierarchy[$currentUserRole] ?? 1;
+        $targetUserLevel = $roleHierarchy[$targetUserRole] ?? 1;
+        
+        // SECURITY: Only allow editing users with lower or equal privilege level
+        // Super admin can edit anyone, admin can edit manager/user, manager can only edit user
+        if ($currentUserLevel <= $targetUserLevel) {
+            $this->setFlashMessage('danger', 'You do not have permission to edit this user.');
+            redirect('users');
+        }
+        
+        $user = $userToEdit; // Keep variable name for backward compatibility
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // Validate CSRF token
@@ -163,25 +179,28 @@ class Users extends Base_Controller {
                 $data['password'] = $_POST['password'];
             }
             
+            // SECURITY: Prevent users from escalating their own or others' privileges
+            // Check if role is being changed to a higher privilege level
+            $newRole = $data['role'];
+            $newRoleLevel = $roleHierarchy[$newRole] ?? 1;
+            
+            // Prevent changing role to a level higher than current user's level
+            if ($newRoleLevel > $currentUserLevel) {
+                $this->setFlashMessage('danger', 'You cannot assign a role with higher privileges than your own.');
+                redirect('users/edit/' . $id);
+            }
+            
+            // Prevent changing role to a level higher than target user's current level
+            if ($newRoleLevel > $targetUserLevel) {
+                $this->setFlashMessage('danger', 'You cannot promote a user to a role with higher privileges than their current role.');
+                redirect('users/edit/' . $id);
+            }
+            
             try {
                 $this->userModel->update($id, $data);
                 
-                // Update permissions
-                if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
-                    // If permissions are explicitly provided, use them
-                    $permissionIds = array_map('intval', $_POST['permissions']);
-                    $this->userPermissionModel->assignPermissions($id, $permissionIds);
-                } elseif ($data['role'] === 'admin') {
-                    // If role is changed to admin, assign all permissions
-                    $allPermissions = $this->permissionModel->getAllPermissions();
-                    $permissionIds = array_column($allPermissions, 'id');
-                    $this->userPermissionModel->assignPermissions($id, $permissionIds);
-                } elseif ($data['role'] === 'manager') {
-                    // If role is changed to manager, assign create, read, update for all modules except tax
-                    $managerPermissions = $this->getManagerPermissions();
-                    $permissionIds = array_column($managerPermissions, 'id');
-                    $this->userPermissionModel->assignPermissions($id, $permissionIds);
-                }
+                // Update permissions using centralized method
+                $this->assignPermissionsByRole($id, $data['role'], $_POST['permissions'] ?? null);
                 
                 // Log activity
                 $this->activityModel->log($this->session['user_id'], 'user_updated', 'Users', 'Updated user: ' . $user['username']);
@@ -247,6 +266,35 @@ class Users extends Base_Controller {
      * Fix admin permissions - assign all permissions to all admin users
      * This is a utility method to fix existing admin users
      */
+    /**
+     * Assign permissions to user based on role
+     * 
+     * Centralized method to handle permission assignment logic.
+     * Removes code duplication between create() and edit() methods.
+     * 
+     * @param int $userId User ID
+     * @param string $role User role
+     * @param array|null $postedPermissions Explicitly provided permissions (optional)
+     * @return void
+     */
+    private function assignPermissionsByRole($userId, $role, $postedPermissions = null) {
+        if (isset($postedPermissions) && is_array($postedPermissions)) {
+            // If permissions are explicitly provided, use them
+            $permissionIds = array_map('intval', $postedPermissions);
+            $this->userPermissionModel->assignPermissions($userId, $permissionIds);
+        } elseif ($role === 'admin') {
+            // For admin role, assign all permissions by default
+            $allPermissions = $this->permissionModel->getAllPermissions();
+            $permissionIds = array_column($allPermissions, 'id');
+            $this->userPermissionModel->assignPermissions($userId, $permissionIds);
+        } elseif ($role === 'manager') {
+            // For manager role, assign create, read, update for all modules except tax
+            $managerPermissions = $this->getManagerPermissions();
+            $permissionIds = array_column($managerPermissions, 'id');
+            $this->userPermissionModel->assignPermissions($userId, $permissionIds);
+        }
+    }
+    
     /**
      * Get manager permissions - create, read, update for all modules except tax
      */

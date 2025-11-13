@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title><?= htmlspecialchars($page_title ?? 'Business Management System', ENT_QUOTES, 'UTF-8') ?> - ERP</title>
+    <title><?= esc($page_title ?? 'Business Management System') ?> - ERP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -107,8 +107,8 @@
                     ?>
                     <li class="nav-item">
                         <a href="<?= base_url($moduleKey) ?>" class="nav-link <?= $isActive ? 'active' : '' ?>">
-                            <i class="bi <?= htmlspecialchars($moduleIcon) ?>"></i>
-                            <span class="nav-text"><?= htmlspecialchars($moduleName) ?></span>
+                            <i class="bi <?= esc($moduleIcon, 'attr') ?>"></i>
+                            <span class="nav-text"><?= esc($moduleName) ?></span>
                         </a>
                     </li>
                     <?php endforeach; ?>
@@ -172,8 +172,8 @@
                                            onclick="markNotificationRead(<?= $notification['id'] ?>)">
                                             <div class="d-flex w-100 justify-content-between">
                                                 <div>
-                                                    <h6 class="mb-1"><?= htmlspecialchars($notification['title']) ?></h6>
-                                                    <p class="mb-0 small text-muted"><?= htmlspecialchars(substr($notification['message'], 0, 60)) ?></p>
+                                                    <h6 class="mb-1"><?= esc($notification['title']) ?></h6>
+                                                    <p class="mb-0 small text-muted"><?= esc(substr($notification['message'], 0, 60)) ?></p>
                                                     <small class="text-muted"><?= timeAgo($notification['created_at']) ?></small>
                                                 </div>
                                                 <?php if (!$notification['is_read']): ?>
@@ -209,7 +209,7 @@
                             <div class="d-flex align-items-center gap-2">
                                 <img src="<?= $avatarPath ?>" alt="Avatar" class="dropdown-avatar" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($current_user['username'] ?? 'User') ?>&background=000&color=fff&size=128'">
                                 <div>
-                                    <div class="fw-semibold"><?= htmlspecialchars(trim(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '')) ?: ($current_user['username'] ?? 'User')) ?></div>
+                                    <div class="fw-semibold"><?= esc(trim(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '')) ?: ($current_user['username'] ?? 'User')) ?></div>
                                     <small class="text-muted"><?= ucfirst(str_replace('_', ' ', $current_user['role'] ?? 'user')) ?></small>
                                 </div>
                             </div>
@@ -266,8 +266,8 @@
                                            onclick="markNotificationRead(<?= $notification['id'] ?>)">
                                             <div class="d-flex w-100 justify-content-between">
                                                 <div>
-                                                    <h6 class="mb-1"><?= htmlspecialchars($notification['title']) ?></h6>
-                                                    <p class="mb-0 small text-muted"><?= htmlspecialchars(substr($notification['message'], 0, 60)) ?></p>
+                                                    <h6 class="mb-1"><?= esc($notification['title']) ?></h6>
+                                                    <p class="mb-0 small text-muted"><?= esc(substr($notification['message'], 0, 60)) ?></p>
                                                     <small class="text-muted"><?= timeAgo($notification['created_at']) ?></small>
                                                 </div>
                                                 <?php if (!$notification['is_read']): ?>
@@ -297,7 +297,7 @@
                             base_url('assets/images/default-avatar.png');
                         ?>
                         <img src="<?= $avatarPath ?>" alt="Avatar" class="profile-avatar" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($current_user['username'] ?? 'User') ?>&background=000&color=fff&size=128'">
-                        <span class="profile-name"><?= htmlspecialchars(trim(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '')) ?: ($current_user['username'] ?? 'User')) ?></span>
+                        <span class="profile-name"><?= esc(trim(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '')) ?: ($current_user['username'] ?? 'User')) ?></span>
                         <i class="bi bi-chevron-down ms-2"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
@@ -305,7 +305,7 @@
                             <div class="d-flex align-items-center gap-2">
                                 <img src="<?= $avatarPath ?>" alt="Avatar" class="dropdown-avatar" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($current_user['username'] ?? 'User') ?>&background=000&color=fff&size=128'">
                                 <div>
-                                    <div class="fw-semibold"><?= htmlspecialchars(trim(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '')) ?: ($current_user['username'] ?? 'User')) ?></div>
+                                    <div class="fw-semibold"><?= esc(trim(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '')) ?: ($current_user['username'] ?? 'User')) ?></div>
                                     <small class="text-muted"><?= ucfirst(str_replace('_', ' ', $current_user['role'] ?? 'user')) ?></small>
                                 </div>
                             </div>
@@ -330,7 +330,7 @@
     <div class="container-fluid <?= isset($current_user) ? 'with-sidebar' : '' ?>">
         <?php if (isset($flash)): ?>
             <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show" role="alert">
-                <?= htmlspecialchars($flash['message']) ?>
+                <?= esc($flash['message']) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>

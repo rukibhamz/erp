@@ -96,15 +96,34 @@ class Activity_model extends Base_Model {
         
         $params = [];
         
-        // If where clause provided, it must be parameterized
+        // SECURITY: If where clause provided, it must be parameterized
         if ($where) {
-            // Basic validation: WHERE clause should contain ? placeholders if it has values
-            // For security, we require parameterized where clauses
-            // Log warning if WHERE clause doesn't look parameterized
-            if (preg_match('/[^a-zA-Z0-9_\.\s=<>!?(),\']/', $where)) {
-                error_log('Activity_model getAll: Potentially unsafe WHERE clause detected: ' . $where);
-                throw new Exception('Invalid WHERE clause format. Use parameterized queries with ? placeholders.');
+            // Count placeholders in WHERE clause
+            $placeholderCount = substr_count($where, '?');
+            
+            // SECURITY: Validate that WHERE clause uses parameterized queries
+            // Must contain ? placeholders if it has any values
+            if ($placeholderCount === 0 && !empty($whereParams)) {
+                error_log('Activity_model getAll: WHERE clause has no placeholders but parameters provided');
+                throw new Exception('WHERE clause must use ? placeholders for parameterized queries.');
             }
+            
+            // SECURITY: Validate parameter count matches placeholder count
+            if ($placeholderCount !== count($whereParams)) {
+                error_log('Activity_model getAll: Placeholder count mismatch. Placeholders: ' . $placeholderCount . ', Params: ' . count($whereParams));
+                throw new Exception('Number of placeholders must match number of parameters.');
+            }
+            
+            // SECURITY: Additional validation - ensure WHERE clause doesn't contain dangerous SQL keywords
+            $dangerousKeywords = ['UNION', 'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'EXEC', 'EXECUTE', 'SCRIPT'];
+            $whereUpper = strtoupper($where);
+            foreach ($dangerousKeywords as $keyword) {
+                if (strpos($whereUpper, $keyword) !== false) {
+                    error_log('Activity_model getAll: Dangerous SQL keyword detected in WHERE clause: ' . $keyword);
+                    throw new Exception('WHERE clause contains prohibited SQL keywords. Use only simple comparisons with ? placeholders.');
+                }
+            }
+            
             $sql .= " WHERE " . $where;
             $params = array_merge($params, $whereParams);
         }

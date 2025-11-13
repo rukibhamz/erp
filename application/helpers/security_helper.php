@@ -111,9 +111,17 @@ function checkIPAccess($ip = null) {
         
         return true; // Access allowed
     } catch (Exception $e) {
-        // If tables don't exist, allow access (fail open)
+        // SECURITY: Fail closed - deny access if IP check fails
+        // This prevents attackers from bypassing IP restrictions by causing database errors
         error_log('IP access check failed: ' . $e->getMessage());
-        return true;
+        error_log('IP access failure details: ' . print_r([
+            'ip_address' => $ip ?? ($_SERVER['REMOTE_ADDR'] ?? 'unknown'),
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+            'timestamp' => date('Y-m-d H:i:s')
+        ], true));
+        
+        // Fail closed for security - deny access if IP check fails
+        return false;
     }
 }
 
@@ -129,7 +137,16 @@ function checkIPAccess($ip = null) {
  * @param array $allowedTypes Allowed MIME types (defaults to common types)
  * @return array ['valid' => bool, 'error' => string|null]
  */
-function validateFileUpload($file, $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf']) {
+function validateFileUpload($file, $allowedTypes = [
+    'image/jpeg', 
+    'image/png', 
+    'image/gif', 
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+]) {
     // SECURITY: Verify file is actually uploaded (prevents path traversal)
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
         return ['valid' => false, 'error' => 'Invalid file upload - file must be uploaded via HTTP POST'];

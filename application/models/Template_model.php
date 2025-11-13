@@ -68,7 +68,18 @@ class Template_model extends Base_Model {
         }
     }
     
-    public function render($templateId, $data) {
+    /**
+     * Render template with data
+     * 
+     * SECURITY: All data is escaped by default. Use {{key}} for escaped text,
+     * and {key} only for trusted HTML content that has been validated.
+     * 
+     * @param int $templateId Template ID
+     * @param array $data Data to replace in template
+     * @param array $trustedKeys Array of keys that contain pre-validated HTML (optional)
+     * @return string|false Rendered HTML or false on error
+     */
+    public function render($templateId, $data, $trustedKeys = []) {
         try {
             $template = $this->getById($templateId);
             if (!$template) {
@@ -79,8 +90,18 @@ class Template_model extends Base_Model {
             
             // Replace placeholders
             foreach ($data as $key => $value) {
-                $html = str_replace('{{' . $key . '}}', htmlspecialchars($value), $html);
-                $html = str_replace('{' . $key . '}', $value, $html); // For HTML content
+                // {{key}} - Always escaped (safe for any content)
+                $html = str_replace('{{' . $key . '}}', htmlspecialchars($value, ENT_QUOTES, 'UTF-8'), $html);
+                
+                // {key} - Only for trusted HTML content (must be in trustedKeys whitelist)
+                if (in_array($key, $trustedKeys)) {
+                    // SECURITY: Even trusted content should be sanitized
+                    // Use basic HTML tag whitelist to prevent XSS
+                    $html = str_replace('{' . $key . '}', $this->sanitizeHtml($value), $html);
+                } else {
+                    // If not in trusted list, escape it (default safe behavior)
+                    $html = str_replace('{' . $key . '}', htmlspecialchars($value, ENT_QUOTES, 'UTF-8'), $html);
+                }
             }
             
             return $html;
@@ -88,6 +109,39 @@ class Template_model extends Base_Model {
             error_log('Template_model render error: ' . $e->getMessage());
             return false;
         }
+    }
+    
+    /**
+     * Sanitize HTML content with basic whitelist
+     * 
+     * SECURITY: Allows only safe HTML tags. Removes script tags and event handlers.
+     * For production use, consider using HTMLPurifier library for more robust sanitization.
+     * 
+     * @param string $html HTML content to sanitize
+     * @return string Sanitized HTML
+     */
+    private function sanitizeHtml($html) {
+        if (empty($html)) {
+            return '';
+        }
+        
+        // SECURITY: Remove script tags and event handlers
+        $html = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi', '', $html);
+        $html = preg_replace('/on\w+="[^"]*"/i', '', $html);
+        $html = preg_replace("/on\w+='[^']*'/i", '', $html);
+        $html = preg_replace('/on\w+=\S+/i', '', $html);
+        
+        // SECURITY: Allow only safe HTML tags (basic whitelist)
+        // For production, use HTMLPurifier for comprehensive sanitization
+        $allowedTags = '<p><br><strong><em><u><b><i><ul><ol><li><a><h1><h2><h3><h4><h5><h6><div><span><table><tr><td><th><thead><tbody><tfoot>';
+        $html = strip_tags($html, $allowedTags);
+        
+        // SECURITY: Remove javascript: and data: URLs from href/src attributes
+        $html = preg_replace('/href=["\']javascript:[^"\']*["\']/i', 'href="#"', $html);
+        $html = preg_replace('/src=["\']javascript:[^"\']*["\']/i', '', $html);
+        $html = preg_replace('/href=["\']data:[^"\']*["\']/i', 'href="#"', $html);
+        
+        return $html;
     }
 }
 

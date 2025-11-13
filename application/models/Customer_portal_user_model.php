@@ -17,8 +17,8 @@ class Customer_portal_user_model extends Base_Model {
                 return ['success' => false, 'message' => 'Email already registered'];
             }
             
-            // Hash password
-            $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+            // SECURITY: Hash password using bcrypt (consistent with User_model)
+            $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
             
             // Generate email verification token
             $data['email_verification_token'] = bin2hex(random_bytes(32));
@@ -206,7 +206,7 @@ class Customer_portal_user_model extends Base_Model {
             }
             
             $this->update($user['id'], [
-                'password' => password_hash($newPassword, PASSWORD_DEFAULT),
+                'password' => password_hash($newPassword, PASSWORD_BCRYPT),
                 'password_reset_token' => null,
                 'password_reset_expires' => null,
                 'failed_login_attempts' => 0,

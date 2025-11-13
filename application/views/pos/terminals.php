@@ -83,6 +83,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="<?= base_url('pos/create-terminal') ?>">
+                <?php echo csrf_field(); ?>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Terminal Code</label>

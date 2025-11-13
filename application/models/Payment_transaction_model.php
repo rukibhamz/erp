@@ -58,13 +58,30 @@ class Payment_transaction_model extends Base_Model {
         }
     }
     
+    /**
+     * Generate a cryptographically secure transaction reference
+     * SECURITY: Uses random_bytes() instead of MD5 for secure random generation
+     * 
+     * @param string $prefix Transaction reference prefix (default: 'TXN')
+     * @return string Generated transaction reference in format: PREFIX-YYYYMMDDHHMMSS-RANDOM
+     */
     public function generateTransactionRef($prefix = 'TXN') {
         try {
             $timestamp = date('YmdHis');
-            $random = strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
+            // SECURITY: Use cryptographically secure random_bytes() instead of MD5
+            // Generate 4 bytes (8 hex characters) of secure random data
+            $random = strtoupper(bin2hex(random_bytes(4)));
             return $prefix . '-' . $timestamp . '-' . $random;
         } catch (Exception $e) {
-            return $prefix . '-' . time() . '-' . rand(1000, 9999);
+            // Fallback: Use time-based reference if random_bytes() fails
+            // Still avoid MD5 - use time + cryptographically secure random if available
+            try {
+                $random = strtoupper(bin2hex(random_bytes(4)));
+            } catch (Exception $e2) {
+                // Last resort: use time-based random (not cryptographically secure but better than MD5)
+                $random = strtoupper(substr(base64_encode(time() . uniqid()), 0, 8));
+            }
+            return $prefix . '-' . time() . '-' . $random;
         }
     }
 }

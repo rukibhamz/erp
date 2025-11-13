@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($page_title ?? 'Customer Portal') ?> - <?= htmlspecialchars($config['app_name'] ?? 'ERP System') ?></title>
+    <title><?= esc($page_title ?? 'Customer Portal') ?> - <?= esc($config['app_name'] ?? 'ERP System') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -78,8 +78,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <li>
                                             <a class="dropdown-item notification-item <?= !$notification['is_read'] ? 'unread' : '' ?>" 
                                                href="<?= $notification['related_module'] === 'booking' && $notification['related_id'] ? base_url('customer-portal/booking/' . $notification['related_id']) : '#' ?>">
-                                                <h6 class="mb-1"><?= htmlspecialchars($notification['title']) ?></h6>
-                                                <p class="mb-0 small"><?= htmlspecialchars(substr($notification['message'], 0, 60)) ?></p>
+                                                <h6 class="mb-1"><?= esc($notification['title']) ?></h6>
+                                                <p class="mb-0 small"><?= esc(substr($notification['message'], 0, 60)) ?></p>
                                             </a>
                                         </li>
                                     <?php endforeach; ?>
@@ -95,7 +95,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <!-- Profile -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?= htmlspecialchars($session['customer_name'] ?? 'Account') ?>
+                            <i class="bi bi-person-circle"></i> <?= esc($session['customer_name'] ?? 'Account') ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="<?= base_url('customer-portal/profile') ?>">

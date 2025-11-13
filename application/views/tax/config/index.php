@@ -106,6 +106,7 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                                 <?php if ($isAdmin): ?>
                                     <div class="btn-group btn-group-sm">
                                         <form method="POST" action="<?= base_url('tax/config/updateRate') ?>" class="d-inline" id="form_<?= htmlspecialchars($code) ?>">
+                                            <?php echo csrf_field(); ?>
                                             <input type="hidden" name="tax_id" value="<?= $taxId ?>">
                                             <input type="hidden" name="tax_code" value="<?= htmlspecialchars($code) ?>">
                                             <input type="hidden" name="tax_rate" id="hidden_rate_<?= htmlspecialchars($code) ?>" value="<?= number_format($currentRate, 2, '.', '') ?>">

@@ -479,6 +479,60 @@ class Booking_wizard extends Base_Controller {
             $pdo = $this->db->getConnection();
             $pdo->beginTransaction();
             
+            // SECURITY: Recalculate all prices to prevent TOCTOU (Time-of-Check to Time-of-Use) attacks
+            // Never trust calculated values from session - recalculate from raw inputs
+            $resource = $this->facilityModel->getById($bookingData['resource_id']);
+            if (!$resource) {
+                throw new Exception('Resource not found');
+            }
+            
+            // Recalculate base amount
+            $baseAmount = $this->facilityModel->calculatePrice(
+                $bookingData['resource_id'],
+                $bookingData['date'],
+                $bookingData['start_time'],
+                $bookingData['end_time'],
+                $bookingData['booking_type'] ?? 'hourly',
+                $bookingData['quantity'] ?? 1,
+                false // isMember - would check customer membership status
+            );
+            
+            // Recalculate addons total
+            $addonsTotal = 0;
+            if (!empty($bookingData['addons'])) {
+                foreach ($bookingData['addons'] as $addonId => $qty) {
+                    $addon = $this->addonModel->getById($addonId);
+                    if ($addon) {
+                        $addonsTotal += floatval($addon['price']) * intval($qty);
+                    }
+                }
+            }
+            
+            // Recalculate discount amount (re-validate promo code)
+            $discountAmount = 0;
+            $promoCode = $bookingData['promo_code'] ?? null;
+            if (!empty($promoCode)) {
+                $promoValidation = $this->promoCodeModel->validateCode(
+                    $promoCode,
+                    $baseAmount + $addonsTotal,
+                    [$bookingData['resource_id']],
+                    array_keys($bookingData['addons'] ?? [])
+                );
+                
+                if ($promoValidation['valid']) {
+                    $discountAmount = $promoValidation['discount_amount'];
+                } else {
+                    // Invalid promo code - clear it
+                    $promoCode = null;
+                    $discountAmount = 0;
+                }
+            }
+            
+            // Calculate final totals
+            $subtotal = $baseAmount + $addonsTotal;
+            $securityDeposit = floatval($resource['security_deposit'] ?? 0);
+            $finalTotal = $subtotal - $discountAmount + $securityDeposit;
+            
             // Create booking
             $bookingNumber = $this->bookingModel->getNextBookingNumber();
             $paymentPlan = sanitize_input($_POST['payment_plan'] ?? 'full');
@@ -496,18 +550,18 @@ class Booking_wizard extends Base_Controller {
                 'duration_hours' => $this->calculateDuration($bookingData['date'], $bookingData['start_time'], $bookingData['end_time']),
                 'number_of_guests' => intval($bookingData['guests'] ?? 0),
                 'booking_type' => $bookingData['booking_type'] ?? 'hourly',
-                'base_amount' => $bookingData['base_amount'] ?? 0,
-                'subtotal' => $bookingData['subtotal'] ?? 0,
-                'discount_amount' => $bookingData['discount_amount'] ?? 0,
-                'security_deposit' => $bookingData['security_deposit'] ?? 0,
-                'total_amount' => $bookingData['total_amount'] ?? 0,
+                'base_amount' => $baseAmount, // Use recalculated value
+                'subtotal' => $subtotal, // Use recalculated value
+                'discount_amount' => $discountAmount, // Use recalculated value
+                'security_deposit' => $securityDeposit, // Use recalculated value
+                'total_amount' => $finalTotal, // Use recalculated value
                 'paid_amount' => 0,
-                'balance_amount' => $bookingData['total_amount'] ?? 0,
+                'balance_amount' => $finalTotal, // Use recalculated total
                 'currency' => 'NGN',
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
                 'payment_plan' => $paymentPlan,
-                'promo_code' => $bookingData['promo_code'] ?? null,
+                'promo_code' => $promoCode, // Use validated promo code
                 'booking_notes' => sanitize_input($bookingData['notes'] ?? ''),
                 'special_requests' => sanitize_input($bookingData['special_requests'] ?? ''),
                 'booking_source' => 'online',
@@ -549,7 +603,7 @@ class Booking_wizard extends Base_Controller {
             $this->paymentScheduleModel->createSchedule(
                 $bookingId,
                 $paymentPlan,
-                $bookingData['total_amount'] ?? 0,
+                $finalTotal, // Use recalculated total
                 !empty($_POST['deposit_percentage']) ? floatval($_POST['deposit_percentage']) : null
             );
             

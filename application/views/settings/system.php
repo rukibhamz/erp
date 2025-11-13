@@ -50,6 +50,7 @@ $activeTab = $active_tab ?? 'company';
         </div>
         <div class="card-body">
             <form method="POST" action="<?= base_url('settings/system/save') ?>" enctype="multipart/form-data">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="tab" value="company">
                 
                 <div class="row g-3 mb-3">

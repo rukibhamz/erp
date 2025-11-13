@@ -195,12 +195,25 @@ To change settings after installation, edit `application/config/config.installed
 
 This project is provided as-is for business management purposes.
 
+## Documentation
+
+**📚 Complete Documentation:** See `docs/COMPLETE_DOCUMENTATION.md` for comprehensive system documentation including:
+- Installation guide
+- Security documentation
+- Architecture & development guide
+- Module management
+- Permission system
+- Database & migrations
+- Troubleshooting
+- Production deployment
+
 ## Support
 
 For issues and questions, please check:
 1. PHP error logs in `logs/error.log`
 2. Apache/Nginx error logs
 3. Browser console for JavaScript errors
+4. Complete documentation in `docs/COMPLETE_DOCUMENTATION.md`
 
 ## Changelog
 

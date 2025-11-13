@@ -9,6 +9,7 @@ $page_title = $page_title ?? 'Edit Entity';
 <div class="card">
     <div class="card-body">
         <form method="POST" action="<?= base_url('entities/edit/' . $Entity['id']) ?>">
+            <?php echo csrf_field(); ?>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="name" class="form-label">Entity Name <span class="text-danger">*</span></label>

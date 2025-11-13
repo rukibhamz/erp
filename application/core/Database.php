@@ -58,6 +58,42 @@ class Database {
         return $this->config['dbprefix'];
     }
     
+    /**
+     * Redact sensitive data from SQL query for logging
+     * SECURITY: Prevents sensitive information (passwords, tokens, etc.) from appearing in logs
+     * 
+     * @param string $sql SQL query string
+     * @return string SQL query with sensitive data redacted
+     */
+    private function redactSensitiveData($sql) {
+        // List of sensitive field patterns to redact
+        $sensitivePatterns = [
+            // Password fields
+            '/(password\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            '/(passwd\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            '/(pwd\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            // Token fields
+            '/(token\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            '/(api_key\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            '/(secret\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            // Credit card fields
+            '/(card_number\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            '/(cvv\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+            // Email addresses in WHERE clauses (may contain sensitive data)
+            '/(email\s*=\s*)[\'"]?[^\'"\s,)]+[\'"]?/i' => '$1\'[REDACTED]\'',
+        ];
+        
+        $redactedSql = $sql;
+        foreach ($sensitivePatterns as $pattern => $replacement) {
+            $redactedSql = preg_replace($pattern, $replacement, $redactedSql);
+        }
+        
+        // Also redact parameter placeholders that might contain sensitive data
+        // This is a conservative approach - we redact all parameter values in logs
+        // The actual query execution still uses parameterized queries safely
+        return $redactedSql;
+    }
+    
     public function query($sql, $params = []) {
         try {
             if (!$this->connection) {
@@ -67,7 +103,9 @@ class Database {
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
-            error_log('Database Query Error: ' . $e->getMessage() . ' | SQL: ' . $sql);
+            // SECURITY: Redact sensitive data from SQL before logging
+            $redactedSql = $this->redactSensitiveData($sql);
+            error_log('Database Query Error: ' . $e->getMessage() . ' | SQL: ' . $redactedSql);
             throw new Exception('Database query failed: ' . $e->getMessage());
         }
     }

@@ -29,7 +29,7 @@
 
     <?php if (isset($flash)): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show" role="alert" style="margin-bottom: 0;">
-            <?= htmlspecialchars($flash['message']) ?>
+            <?= esc($flash['message']) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>

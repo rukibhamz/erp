@@ -13,6 +13,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card">
             <div class="card-body">
                 <form method="POST" action="<?= base_url('receivables/payments/create') ?>">
+                    <?php echo csrf_field(); ?>
                     <div class="mb-3">
                         <label for="customer_id" class="form-label">Customer <span class="text-danger">*</span></label>
                         <select class="form-select" id="customer_id" name="customer_id" required>

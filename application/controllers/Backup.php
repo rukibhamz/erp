@@ -64,6 +64,14 @@ class Backup extends Base_Controller {
         }
     }
     
+    /**
+     * Create database backup
+     * 
+     * SECURITY: Uses MySQL configuration file to avoid exposing password in process list.
+     * This prevents command injection and credential exposure.
+     * 
+     * @return string|false Backup file path or false on failure
+     */
     private function createBackup() {
         $backupDir = BASEPATH . '../backups/';
         if (!is_dir($backupDir)) {
@@ -74,24 +82,58 @@ class Backup extends Base_Controller {
         $backupFile = $backupDir . 'backup_' . $timestamp . '.sql';
         
         $config = require BASEPATH . 'config/config.php';
-        $dbConfig = $config['database'];
+        $dbConfig = $config['db'] ?? $config['database'] ?? [];
         
-        // Create SQL dump
-        $command = sprintf(
-            'mysqldump --host=%s --user=%s --password=%s %s > %s 2>&1',
-            escapeshellarg($dbConfig['hostname']),
-            escapeshellarg($dbConfig['username']),
-            escapeshellarg($dbConfig['password']),
-            escapeshellarg($dbConfig['database']),
-            escapeshellarg($backupFile)
-        );
+        // SECURITY: Validate database configuration
+        if (empty($dbConfig['hostname']) || empty($dbConfig['username']) || 
+            empty($dbConfig['database']) || !isset($dbConfig['password'])) {
+            error_log('Backup: Incomplete database configuration');
+            return false;
+        }
         
-        exec($command, $output, $returnVar);
+        // SECURITY: Create temporary MySQL config file to avoid password in command line
+        $mysqlConfigFile = sys_get_temp_dir() . '/mysql_backup_' . uniqid() . '.cnf';
+        $mysqlConfigContent = "[client]\n";
+        $mysqlConfigContent .= "host=" . $dbConfig['hostname'] . "\n";
+        $mysqlConfigContent .= "user=" . $dbConfig['username'] . "\n";
+        $mysqlConfigContent .= "password=" . $dbConfig['password'] . "\n";
         
-        if ($returnVar === 0 && file_exists($backupFile)) {
-            // Keep only last 30 backups
-            $this->cleanupOldBackups($backupDir, 30);
-            return $backupFile;
+        // SECURITY: Set restrictive permissions on config file (readable only by owner)
+        if (file_put_contents($mysqlConfigFile, $mysqlConfigContent) === false) {
+            error_log('Backup: Failed to create MySQL config file');
+            return false;
+        }
+        
+        // Set file permissions to 600 (read/write for owner only)
+        chmod($mysqlConfigFile, 0600);
+        
+        try {
+            // SECURITY: Use --defaults-file to read credentials from file instead of command line
+            // This prevents password from appearing in process list
+            $command = sprintf(
+                'mysqldump --defaults-file=%s %s > %s 2>&1',
+                escapeshellarg($mysqlConfigFile),
+                escapeshellarg($dbConfig['database']),
+                escapeshellarg($backupFile)
+            );
+            
+            exec($command, $output, $returnVar);
+            
+            // SECURITY: Always delete config file, even on error
+            @unlink($mysqlConfigFile);
+            
+            if ($returnVar === 0 && file_exists($backupFile)) {
+                // Keep only last 30 backups
+                $this->cleanupOldBackups($backupDir, 30);
+                return $backupFile;
+            } else {
+                // Log error output for debugging (but don't expose to user)
+                error_log('Backup failed: ' . implode("\n", $output));
+            }
+        } catch (Exception $e) {
+            // SECURITY: Ensure config file is deleted even on exception
+            @unlink($mysqlConfigFile);
+            error_log('Backup error: ' . $e->getMessage());
         }
         
         return false;
@@ -151,26 +193,54 @@ class Backup extends Base_Controller {
             }
             
             $config = require BASEPATH . 'config/config.php';
-            $dbConfig = $config['database'];
+            $dbConfig = $config['db'] ?? $config['database'] ?? [];
             
-            // Restore database
-            $command = sprintf(
-                'mysql --host=%s --user=%s --password=%s %s < %s 2>&1',
-                escapeshellarg($dbConfig['hostname']),
-                escapeshellarg($dbConfig['username']),
-                escapeshellarg($dbConfig['password']),
-                escapeshellarg($dbConfig['database']),
-                escapeshellarg($tempFile)
-            );
+            // SECURITY: Validate database configuration
+            if (empty($dbConfig['hostname']) || empty($dbConfig['username']) || 
+                empty($dbConfig['database']) || !isset($dbConfig['password'])) {
+                throw new Exception('Incomplete database configuration');
+            }
             
-            exec($command, $output, $returnVar);
-            @unlink($tempFile);
+            // SECURITY: Create temporary MySQL config file to avoid password in command line
+            $mysqlConfigFile = sys_get_temp_dir() . '/mysql_restore_' . uniqid() . '.cnf';
+            $mysqlConfigContent = "[client]\n";
+            $mysqlConfigContent .= "host=" . $dbConfig['hostname'] . "\n";
+            $mysqlConfigContent .= "user=" . $dbConfig['username'] . "\n";
+            $mysqlConfigContent .= "password=" . $dbConfig['password'] . "\n";
             
-            if ($returnVar === 0) {
-                $this->activityModel->log($this->session['user_id'], 'update', 'Backup', 'Restored system from backup');
-                $this->setFlashMessage('success', 'Database restored successfully from backup.');
-            } else {
-                throw new Exception('Restore failed: ' . implode("\n", $output));
+            if (file_put_contents($mysqlConfigFile, $mysqlConfigContent) === false) {
+                throw new Exception('Failed to create MySQL config file');
+            }
+            
+            // Set file permissions to 600 (read/write for owner only)
+            chmod($mysqlConfigFile, 0600);
+            
+            try {
+                // SECURITY: Use --defaults-file to read credentials from file
+                $command = sprintf(
+                    'mysql --defaults-file=%s %s < %s 2>&1',
+                    escapeshellarg($mysqlConfigFile),
+                    escapeshellarg($dbConfig['database']),
+                    escapeshellarg($tempFile)
+                );
+                
+                exec($command, $output, $returnVar);
+                
+                // SECURITY: Always delete config file and temp file
+                @unlink($mysqlConfigFile);
+                @unlink($tempFile);
+                
+                if ($returnVar === 0) {
+                    $this->activityModel->log($this->session['user_id'], 'update', 'Backup', 'Restored system from backup');
+                    $this->setFlashMessage('success', 'Database restored successfully from backup.');
+                } else {
+                    throw new Exception('Restore failed: ' . implode("\n", $output));
+                }
+            } catch (Exception $e) {
+                // SECURITY: Ensure config file is deleted even on exception
+                @unlink($mysqlConfigFile);
+                @unlink($tempFile);
+                throw $e;
             }
         } catch (Exception $e) {
             error_log('Restore error: ' . $e->getMessage());

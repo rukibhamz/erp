@@ -4,7 +4,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <h6><?= htmlspecialchars($config['app_name'] ?? 'ERP System') ?></h6>
+                    <h6><?= esc($config['app_name'] ?? 'ERP System') ?></h6>
                     <p class="mb-0 small">Customer Portal</p>
                 </div>
                 <div class="col-md-6 text-md-end">
