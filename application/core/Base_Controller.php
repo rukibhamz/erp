@@ -375,5 +375,30 @@ class Base_Controller {
         // Additional centralized checks can be added here
         // For example, checking module access is already done in checkModuleAccess()
     }
+    
+    /**
+     * Check if a column exists in a table
+     * SECURITY: Uses parameterized query to prevent SQL injection
+     * 
+     * @param string $table Table name (without prefix)
+     * @param string $column Column name
+     * @return bool True if column exists, false otherwise
+     */
+    protected function checkColumnExists($table, $column) {
+        try {
+            if (!$this->db) {
+                return false;
+            }
+            $prefix = $this->db->getPrefix();
+            $result = $this->db->fetchOne(
+                "SHOW COLUMNS FROM `{$prefix}{$table}` LIKE ?",
+                [$column]
+            );
+            return !empty($result);
+        } catch (Exception $e) {
+            error_log("Error checking column {$table}.{$column}: " . $e->getMessage());
+            return false;
+        }
+    }
 }
 

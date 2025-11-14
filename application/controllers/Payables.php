@@ -382,7 +382,6 @@ class Payables extends Base_Controller {
                     'reference_id' => null,
                     'vendor_id' => null, // Multiple vendors in batch
                     'account_id' => $cashAccount['account_id'],
-                    'bank_account_id' => $cashAccountId,
                     'amount' => $totalAmount,
                     'payment_method' => $paymentMethod,
                     'reference' => $reference,
@@ -390,6 +389,11 @@ class Payables extends Base_Controller {
                     'status' => 'posted',
                     'created_by' => $this->session['user_id']
                 ];
+                
+                // Only add bank_account_id if column exists
+                if ($this->checkColumnExists('payments', 'bank_account_id')) {
+                    $paymentData['bank_account_id'] = $cashAccountId;
+                }
                 
                 $paymentId = $this->paymentModel->create($paymentData);
                 

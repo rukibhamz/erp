@@ -71,26 +71,46 @@ class Accounts extends Base_Controller {
             ];
             
             // Only add is_default if column exists (for backward compatibility)
-            if (isset($_POST['is_default'])) {
+            $hasIsDefaultColumn = $this->checkColumnExists('accounts', 'is_default');
+            if ($hasIsDefaultColumn && isset($_POST['is_default'])) {
                 $data['is_default'] = !empty($_POST['is_default']) ? 1 : 0;
             }
             
-            // Generate account_number if not provided (leave blank to auto-generate)
-            if (is_empty_or_whitespace($_POST['account_number'] ?? '')) {
-                $data['account_number'] = $this->accountModel->getNextAccountCode($data['account_type'], $data['parent_id']);
-            } else {
-                // Validate account_number is numeric only
-                $accountNumber = sanitize_input($_POST['account_number']);
-                if (!preg_match('/^\d+$/', $accountNumber)) {
-                    $this->setFlashMessage('danger', 'Account number must contain only numbers.');
-                    redirect('accounts/create');
-                }
-                $data['account_number'] = $accountNumber;
-            }
+            // Check if account_number column exists in database
+            $hasAccountNumberColumn = $this->checkColumnExists('accounts', 'account_number');
             
-            // Auto-generate account_code if empty (leave blank to auto-generate)
-            if (is_empty_or_whitespace($data['account_code'])) {
-                $data['account_code'] = $data['account_number']; // Use account_number as code if code is empty
+            // Generate account_number if column exists and not provided (leave blank to auto-generate)
+            if ($hasAccountNumberColumn) {
+                if (is_empty_or_whitespace($_POST['account_number'] ?? '')) {
+                    $data['account_number'] = $this->accountModel->getNextAccountCode($data['account_type'], $data['parent_id']);
+                } else {
+                    // Validate account_number is numeric only
+                    $accountNumber = sanitize_input($_POST['account_number']);
+                    if (!preg_match('/^\d+$/', $accountNumber)) {
+                        $this->setFlashMessage('danger', 'Account number must contain only numbers.');
+                        redirect('accounts/create');
+                    }
+                    $data['account_number'] = $accountNumber;
+                }
+                
+                // Auto-generate account_code if empty (leave blank to auto-generate)
+                if (is_empty_or_whitespace($data['account_code'])) {
+                    $data['account_code'] = $data['account_number']; // Use account_number as code if code is empty
+                }
+            } else {
+                // If account_number column doesn't exist, ensure account_code is set
+                if (is_empty_or_whitespace($data['account_code'])) {
+                    // Generate a simple code based on account type
+                    $typePrefix = [
+                        'Assets' => '1000',
+                        'Liabilities' => '2000',
+                        'Equity' => '3000',
+                        'Revenue' => '4000',
+                        'Expenses' => '5000'
+                    ];
+                    $prefix = $typePrefix[$data['account_type']] ?? '1000';
+                    $data['account_code'] = $prefix . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+                }
             }
             
             if ($this->accountModel->create($data)) {
@@ -139,14 +159,21 @@ class Accounts extends Base_Controller {
                 'is_default' => !empty($_POST['is_default']) ? 1 : 0
             ];
             
-            // Update account_number if provided
-            if (!empty($_POST['account_number'])) {
+            // Update account_number if column exists and value provided
+            $hasAccountNumberColumn = $this->checkColumnExists('accounts', 'account_number');
+            if ($hasAccountNumberColumn && !empty($_POST['account_number'])) {
                 $data['account_number'] = sanitize_input($_POST['account_number']);
             }
             
-            // If setting as default, handle it
-            if (!empty($_POST['is_default'])) {
+            // If setting as default, handle it (only if column exists)
+            $hasIsDefaultColumn = $this->checkColumnExists('accounts', 'is_default');
+            if ($hasIsDefaultColumn && !empty($_POST['is_default'])) {
                 $this->accountModel->setDefaultAccount($id);
+            }
+            
+            // Remove is_default from data if column doesn't exist
+            if (!$hasIsDefaultColumn && isset($data['is_default'])) {
+                unset($data['is_default']);
             }
             
             if ($this->accountModel->update($id, $data)) {
@@ -214,5 +241,6 @@ class Accounts extends Base_Controller {
         }
         return $tree;
     }
+    
 }
 

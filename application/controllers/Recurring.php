@@ -197,9 +197,13 @@ class Recurring extends Base_Controller {
                 'description' => $templateData['description'] ?? 'Recurring journal entry',
                 'amount' => floatval($templateData['amount'] ?? 0),
                 'status' => 'draft',
-                'journal_type' => $templateData['journal_type'] ?? 'general',
                 'created_by' => $this->session['user_id']
             ];
+            
+            // Only add journal_type if column exists
+            if ($this->checkColumnExists('journal_entries', 'journal_type')) {
+                $journalData['journal_type'] = $templateData['journal_type'] ?? 'general';
+            }
 
             $journalId = $this->journalModel->create($journalData);
             if (!$journalId) {

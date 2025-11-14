@@ -43,12 +43,17 @@ class Templates extends Base_Controller {
                 'template_name' => sanitize_input($_POST['template_name'] ?? ''),
                 'template_type' => sanitize_input($_POST['template_type'] ?? 'invoice'),
                 'template_html' => $_POST['template_html'] ?? '',
-                'is_default' => !empty($_POST['is_default']) ? 1 : 0,
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
+            
+            // Only add is_default if column exists
+            $hasIsDefaultColumn = $this->checkColumnExists('templates', 'is_default');
+            if ($hasIsDefaultColumn) {
+                $data['is_default'] = !empty($_POST['is_default']) ? 1 : 0;
+            }
 
             if ($this->templateModel->create($data)) {
-                if ($data['is_default']) {
+                if ($hasIsDefaultColumn && !empty($data['is_default'])) {
                     $template = $this->templateModel->getByTypeAndName($data['template_type'], $data['template_name']);
                     if ($template) {
                         $this->templateModel->setDefault($template['id']);
@@ -84,12 +89,17 @@ class Templates extends Base_Controller {
             $data = [
                 'template_name' => sanitize_input($_POST['template_name'] ?? ''),
                 'template_html' => $_POST['template_html'] ?? '',
-                'is_default' => !empty($_POST['is_default']) ? 1 : 0,
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
+            
+            // Only add is_default if column exists
+            $hasIsDefaultColumn = $this->checkColumnExists('templates', 'is_default');
+            if ($hasIsDefaultColumn) {
+                $data['is_default'] = !empty($_POST['is_default']) ? 1 : 0;
+            }
 
             if ($this->templateModel->update($id, $data)) {
-                if ($data['is_default']) {
+                if ($hasIsDefaultColumn && !empty($data['is_default'])) {
                     $this->templateModel->setDefault($id);
                 }
                 

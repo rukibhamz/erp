@@ -315,9 +315,13 @@ class Payroll extends Base_Controller {
                 'description' => 'Payroll for ' . $payrollRun['period'],
                 'amount' => floatval($payrollRun['total_amount']),
                 'status' => 'draft',
-                'journal_type' => 'payroll',
                 'created_by' => $this->session['user_id']
             ];
+            
+            // Only add journal_type if column exists
+            if ($this->checkColumnExists('journal_entries', 'journal_type')) {
+                $journalData['journal_type'] = 'payroll';
+            }
 
             $journalId = $this->journalModel->create($journalData);
 
