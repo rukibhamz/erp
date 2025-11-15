@@ -23,6 +23,7 @@ class Module_label_model {
             $sql = "SELECT 
                         module_code,
                         default_label,
+                        custom_label,
                         COALESCE(custom_label, default_label) as display_label,
                         icon_class,
                         display_order,

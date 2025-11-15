@@ -3,7 +3,7 @@
 // This view only contains the page content
 $page_title = $title ?? 'Module Customization';
 ?>
-<div data-base-url="<?= base_url() ?>" style="display: none;"></div>
+<div data-base-url="<?= base_url() ?>" data-csrf-token="<?= csrf_token() ?>" style="display: none;"></div>
 
 <div class="page-header mb-4">
         <h1 class="page-title">Module Customization</h1>

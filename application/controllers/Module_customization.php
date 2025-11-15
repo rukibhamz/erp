@@ -90,6 +90,9 @@ class Module_customization extends Base_Controller {
                 throw new Exception('Invalid request method');
             }
             
+            // CSRF Protection
+            check_csrf();
+            
             $moduleCode = $_POST['module_code'] ?? '';
             $customLabel = trim($_POST['custom_label'] ?? '');
             
@@ -102,7 +105,7 @@ class Module_customization extends Base_Controller {
             }
             
             // Get current user ID
-            $userId = $_SESSION['user_id'] ?? null;
+            $userId = $this->session['user_id'] ?? null;
             if (!$userId) {
                 throw new Exception('User not authenticated');
             }
@@ -147,12 +150,15 @@ class Module_customization extends Base_Controller {
                 throw new Exception('Invalid request method');
             }
             
+            // CSRF Protection
+            check_csrf();
+            
             $moduleCode = $_POST['module_code'] ?? '';
             if (empty($moduleCode)) {
                 throw new Exception('Module code is required');
             }
             
-            $userId = $_SESSION['user_id'] ?? null;
+            $userId = $this->session['user_id'] ?? null;
             if (!$userId) {
                 throw new Exception('User not authenticated');
             }
@@ -199,6 +205,9 @@ class Module_customization extends Base_Controller {
                 throw new Exception('Invalid request method');
             }
             
+            // CSRF Protection
+            check_csrf();
+            
             $moduleCode = $_POST['module_code'] ?? '';
             $isActive = isset($_POST['is_active']) ? (intval($_POST['is_active']) == 1) : null;
             
@@ -206,7 +215,7 @@ class Module_customization extends Base_Controller {
                 throw new Exception('Missing required parameters');
             }
             
-            $userId = $_SESSION['user_id'] ?? null;
+            $userId = $this->session['user_id'] ?? null;
             if (!$userId) {
                 throw new Exception('User not authenticated');
             }
@@ -250,6 +259,16 @@ class Module_customization extends Base_Controller {
                 throw new Exception('Invalid request method');
             }
             
+            // CSRF Protection - For JSON requests, check token in header or body
+            $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+            if (!$csrfToken) {
+                $input = json_decode(file_get_contents('php://input'), true);
+                $csrfToken = $input['csrf_token'] ?? null;
+            }
+            if (!$csrfToken || !validate_csrf_token($csrfToken)) {
+                throw new Exception('Invalid or missing CSRF token');
+            }
+            
             // Expecting JSON payload with module orders
             $input = json_decode(file_get_contents('php://input'), true);
             
@@ -257,7 +276,7 @@ class Module_customization extends Base_Controller {
                 throw new Exception('Invalid orders data');
             }
             
-            $userId = $_SESSION['user_id'] ?? null;
+            $userId = $this->session['user_id'] ?? null;
             if (!$userId) {
                 throw new Exception('User not authenticated');
             }
@@ -297,6 +316,9 @@ class Module_customization extends Base_Controller {
                 throw new Exception('Invalid request method');
             }
             
+            // CSRF Protection
+            check_csrf();
+            
             $moduleCode = $_POST['module_code'] ?? '';
             $iconClass = trim($_POST['icon_class'] ?? '');
             
@@ -316,7 +338,7 @@ class Module_customization extends Base_Controller {
                 exit;
             }
             
-            $userId = $_SESSION['user_id'] ?? null;
+            $userId = $this->session['user_id'] ?? null;
             if (!$userId) {
                 throw new Exception('User not authenticated');
             }

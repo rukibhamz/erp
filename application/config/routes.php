@@ -42,6 +42,11 @@ $route['profile/terminate-session/(:any)'] = 'Profile/terminateSession/$1';
 // Module Customization (Super Admin Only)
         $route['module_customization'] = 'Module_customization/index';
         $route['module-customization'] = 'Module_customization/index';
+        $route['module_customization/updateLabel'] = 'Module_customization/updateLabel';
+        $route['module_customization/updateIcon'] = 'Module_customization/updateIcon';
+        $route['module_customization/toggleVisibility'] = 'Module_customization/toggleVisibility';
+        $route['module_customization/updateOrder'] = 'Module_customization/updateOrder';
+        $route['module_customization/resetLabel'] = 'Module_customization/resetLabel';
         
         // Global Search
         $route['search'] = 'Search/index';

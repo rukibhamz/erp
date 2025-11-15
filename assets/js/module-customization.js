@@ -6,7 +6,7 @@
 // Global variables
 let currentEditingModule = null;
 
-// Get base URL from a data attribute or construct it
+// Get base URL and CSRF token from data attributes
 function getBaseUrl() {
     // Try to get from data attribute first
     const baseUrlElement = document.querySelector('[data-base-url]');
@@ -29,7 +29,16 @@ function getBaseUrl() {
     return window.location.origin + basePath;
 }
 
+function getCsrfToken() {
+    const baseUrlElement = document.querySelector('[data-csrf-token]');
+    if (baseUrlElement) {
+        return baseUrlElement.getAttribute('data-csrf-token');
+    }
+    return '';
+}
+
 const BASE_URL = getBaseUrl();
+const CSRF_TOKEN = getCsrfToken();
 
 // Debug: Log BASE_URL for troubleshooting
 console.log('Module Customization - BASE_URL:', BASE_URL);
@@ -118,9 +127,10 @@ function saveModuleOrder() {
     fetch(BASE_URL + 'module_customization/updateOrder', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': CSRF_TOKEN
         },
-        body: JSON.stringify({ orders: orders })
+        body: JSON.stringify({ orders: orders, csrf_token: CSRF_TOKEN })
     })
     .then(response => response.json())
     .then(data => {
@@ -155,7 +165,7 @@ function initializeVisibilityToggles() {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: `module_code=${encodeURIComponent(moduleCode)}&is_active=${isActive ? 1 : 0}`
+                body: `module_code=${encodeURIComponent(moduleCode)}&is_active=${isActive ? 1 : 0}&csrf_token=${encodeURIComponent(CSRF_TOKEN)}`
             })
             .then(response => {
                 console.log('Toggle Visibility - Response status:', response.status);
@@ -276,7 +286,7 @@ function saveModuleEdit() {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: `module_code=${encodeURIComponent(moduleCode)}&custom_label=${encodeURIComponent(customLabel)}`
+        body: `module_code=${encodeURIComponent(moduleCode)}&custom_label=${encodeURIComponent(customLabel)}&csrf_token=${encodeURIComponent(CSRF_TOKEN)}`
     })
     .then(response => {
         console.log('Update Label - Response status:', response.status);
@@ -294,7 +304,7 @@ function saveModuleEdit() {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `module_code=${encodeURIComponent(moduleCode)}&icon_class=${encodeURIComponent(iconClass.trim())}`
+                    body: `module_code=${encodeURIComponent(moduleCode)}&icon_class=${encodeURIComponent(iconClass.trim())}&csrf_token=${encodeURIComponent(CSRF_TOKEN)}`
                 })
                 .then(response => response.json())
                 .then(iconData => {
@@ -345,7 +355,7 @@ function initializeResetButtons() {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `module_code=${encodeURIComponent(moduleCode)}`
+                    body: `module_code=${encodeURIComponent(moduleCode)}&csrf_token=${encodeURIComponent(CSRF_TOKEN)}`
                 })
                 .then(response => response.json())
                 .then(data => {
