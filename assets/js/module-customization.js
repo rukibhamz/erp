@@ -47,7 +47,6 @@ console.log('Module Customization - BASE_URL:', BASE_URL);
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Module Customization - Initializing...');
     initializeDragAndDrop();
-    initializeVisibilityToggles();
     initializeEditButtons();
     initializeResetButtons();
     initializeIconPreview();
@@ -143,53 +142,6 @@ function saveModuleOrder() {
     .catch(error => {
         console.error('Error:', error);
         showMessage('An error occurred while updating module order', 'danger');
-    });
-}
-
-/**
- * Initialize visibility toggle switches
- */
-function initializeVisibilityToggles() {
-    const toggles = document.querySelectorAll('.visibility-toggle');
-    
-    toggles.forEach(toggle => {
-        toggle.addEventListener('change', function() {
-            const moduleCode = this.dataset.moduleCode;
-            const isActive = this.checked;
-
-            const url = BASE_URL + 'module_customization/toggleVisibility';
-            console.log('Toggle Visibility - URL:', url, 'Module:', moduleCode, 'Active:', isActive);
-            
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `module_code=${encodeURIComponent(moduleCode)}&is_active=${isActive ? 1 : 0}&csrf_token=${encodeURIComponent(CSRF_TOKEN)}`
-            })
-            .then(response => {
-                console.log('Toggle Visibility - Response status:', response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Toggle Visibility - Response data:', data);
-                if (data.success) {
-                    showMessage(`Module ${isActive ? 'enabled' : 'disabled'} successfully`, 'success');
-                } else {
-                    // Revert toggle on error
-                    this.checked = !isActive;
-                    showMessage('Failed to update visibility: ' + (data.error || 'Unknown error'), 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Toggle Visibility - Error:', error);
-                this.checked = !isActive;
-                showMessage('An error occurred while updating visibility: ' + error.message, 'danger');
-            });
-        });
     });
 }
 

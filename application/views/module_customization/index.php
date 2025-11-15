@@ -8,7 +8,7 @@ $page_title = $title ?? 'Module Customization';
 <div class="page-header mb-4">
         <h1 class="page-title">Module Customization</h1>
         <p class="page-description">
-            Customize module names, icons, and visibility. Changes will be visible to all users.
+            Customize module names and icons. Changes will be visible to all users.
         </p>
     </div>
 
@@ -19,7 +19,7 @@ $page_title = $title ?? 'Module Customization';
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">Navigation Modules</h2>
-            <p class="text-muted mb-0">Drag to reorder, click to edit</p>
+            <p class="text-muted mb-0">Drag to reorder, click to edit. Note: Module visibility cannot be changed from this page.</p>
         </div>
         <div class="card-body">
             <div id="module-list" class="module-list">
@@ -54,14 +54,6 @@ $page_title = $title ?? 'Module Customization';
                         <?php endif; ?>
                     </div>
                     <div class="module-item-actions">
-                        <!-- Toggle Visibility -->
-                        <label class="toggle-switch" title="Toggle Visibility">
-                            <input type="checkbox" 
-                                   class="visibility-toggle"
-                                   data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
-                                   <?= ($module['is_active'] ?? 1) ? 'checked' : '' ?>>
-                            <span class="toggle-slider"></span>
-                        </label>
                         <!-- Edit Button -->
                         <button class="btn btn-sm btn-ghost edit-module"
                                 data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
