@@ -9,6 +9,12 @@ define('BASEPATH', __DIR__ . '/application/');
 define('ROOTPATH', __DIR__ . '/');
 define('SYSPATH', __DIR__ . '/application/core/');
 
+// Load Composer autoloader if available (for PHPMailer and other dependencies)
+$composerAutoload = __DIR__ . '/vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+}
+
 // Check if installed
 // Prefer config.installed.php if it exists (created during installation)
 $config_installed_file = BASEPATH . 'config/config.installed.php';

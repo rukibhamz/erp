@@ -21,6 +21,12 @@ class Base_Controller {
         // Load CSRF protection helper (SECURITY: Required for CSRF protection)
         require_once BASEPATH . '../application/helpers/csrf_helper.php';
         
+        // Load Composer autoloader if available (for PHPMailer and other dependencies)
+        $composerAutoload = BASEPATH . '../vendor/autoload.php';
+        if (file_exists($composerAutoload)) {
+            require_once $composerAutoload;
+        }
+        
         // Load email helper (for secure email sending)
         require_once BASEPATH . '../application/helpers/email_helper.php';
         
