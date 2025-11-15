@@ -117,10 +117,13 @@ class Pos extends Base_Controller {
             redirect('pos');
         }
         
+        check_csrf(); // CSRF Protection
+        
         try {
             $terminalId = intval($_POST['terminal_id'] ?? 0);
             $customerId = !empty($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
-            $items = json_decode($_POST['items'] ?? '[]', true);
+            // Use safe JSON decoding with validation
+            $items = safe_json_decode($_POST['items'] ?? '[]', true, []);
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'cash');
             $amountPaid = floatval($_POST['amount_paid'] ?? 0);
             $discountAmount = floatval($_POST['discount_amount'] ?? 0);
@@ -407,6 +410,7 @@ class Pos extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['terminal_code'])) {
+            check_csrf(); // CSRF Protection
             $terminalCodeInput = sanitize_input($_POST['terminal_code'] ?? '');
             // Auto-generate terminal code if empty (leave blank to auto-generate)
             $terminalCode = is_empty_or_whitespace($terminalCodeInput) ? $this->terminalModel->getNextTerminalCode() : $terminalCodeInput;

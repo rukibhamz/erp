@@ -55,6 +55,7 @@ class Products extends Base_Controller {
         $this->requirePermission('products', 'create');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'product_code' => sanitize_input($_POST['product_code'] ?? ''),
                 'product_name' => sanitize_input($_POST['product_name'] ?? ''),
@@ -113,6 +114,7 @@ class Products extends Base_Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'product_code' => sanitize_input($_POST['product_code'] ?? ''),
                 'product_name' => sanitize_input($_POST['product_name'] ?? ''),

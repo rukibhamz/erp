@@ -59,6 +59,7 @@ class Payroll extends Base_Controller {
         $this->requirePermission('payroll', 'create');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'employee_code' => sanitize_input($_POST['employee_code'] ?? ''),
                 'first_name' => sanitize_input($_POST['first_name'] ?? ''),
@@ -106,11 +107,11 @@ class Payroll extends Base_Controller {
                 $data['employee_code'] = $this->employeeModel->getNextEmployeeCode();
             }
 
-            // Salary structure
+            // Salary structure - Use safe JSON decoding
             $salaryStructure = [
                 'basic_salary' => floatval($_POST['basic_salary'] ?? 0),
-                'allowances' => json_decode($_POST['allowances_json'] ?? '[]', true),
-                'deductions' => json_decode($_POST['deductions_json'] ?? '[]', true)
+                'allowances' => safe_json_decode($_POST['allowances_json'] ?? '[]', true, []),
+                'deductions' => safe_json_decode($_POST['deductions_json'] ?? '[]', true, [])
             ];
             $data['salary_structure'] = json_encode($salaryStructure);
 
@@ -137,6 +138,7 @@ class Payroll extends Base_Controller {
         $period = $_GET['period'] ?? date('Y-m');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $period = sanitize_input($_POST['period'] ?? date('Y-m'));
             $cashAccountId = intval($_POST['cash_account_id'] ?? 0);
             $employeeIds = $_POST['employee_ids'] ?? [];

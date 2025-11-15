@@ -34,6 +34,7 @@ class Properties extends Base_Controller {
         $this->requirePermission('properties', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'property_code' => sanitize_input($_POST['property_code'] ?? ''),
                 'property_name' => sanitize_input($_POST['property_name'] ?? ''),
@@ -117,6 +118,7 @@ class Properties extends Base_Controller {
         $this->requirePermission('properties', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'property_name' => sanitize_input($_POST['property_name'] ?? ''),
                 'property_type' => sanitize_input($_POST['property_type'] ?? 'multi_purpose'),

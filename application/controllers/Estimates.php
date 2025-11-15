@@ -53,6 +53,7 @@ class Estimates extends Base_Controller {
         $this->requirePermission('estimates', 'create');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $customerId = intval($_POST['customer_id'] ?? 0);
             $estimateDate = sanitize_input($_POST['estimate_date'] ?? date('Y-m-d'));
             $expiryDate = sanitize_input($_POST['expiry_date'] ?? '');

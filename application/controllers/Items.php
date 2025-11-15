@@ -85,8 +85,9 @@ class Items extends Base_Controller {
     
     public function create() {
         $this->requirePermission('inventory', 'create');
-        
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'sku' => sanitize_input($_POST['sku'] ?? ''),
                 'item_name' => sanitize_input($_POST['item_name'] ?? ''),
@@ -192,8 +193,9 @@ class Items extends Base_Controller {
     
     public function edit($id) {
         $this->requirePermission('inventory', 'update');
-        
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'sku' => sanitize_input($_POST['sku'] ?? ''),
                 'item_name' => sanitize_input($_POST['item_name'] ?? ''),

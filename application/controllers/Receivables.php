@@ -50,6 +50,7 @@ class Receivables extends Base_Controller {
         $this->requirePermission('receivables', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'customer_code' => sanitize_input($_POST['customer_code'] ?? ''),
                 'company_name' => sanitize_input($_POST['company_name'] ?? ''),
@@ -117,6 +118,7 @@ class Receivables extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'customer_code' => sanitize_input($_POST['customer_code'] ?? ''),
                 'company_name' => sanitize_input($_POST['company_name'] ?? ''),
@@ -205,6 +207,7 @@ class Receivables extends Base_Controller {
         $this->requirePermission('receivables', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $customerId = intval($_POST['customer_id'] ?? 0);
             $invoiceDate = sanitize_input($_POST['invoice_date'] ?? date('Y-m-d'));
             $dueDate = sanitize_input($_POST['due_date'] ?? date('Y-m-d', strtotime('+30 days')));
@@ -336,6 +339,7 @@ class Receivables extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $amount = floatval($_POST['amount'] ?? 0);
             $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'cash');
@@ -525,6 +529,7 @@ class Receivables extends Base_Controller {
         $this->requirePermission('receivables', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $amount = floatval($_POST['amount'] ?? 0);
             $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'cash');

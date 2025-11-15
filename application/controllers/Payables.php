@@ -49,6 +49,7 @@ class Payables extends Base_Controller {
         $this->requirePermission('payables', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'vendor_code' => sanitize_input($_POST['vendor_code'] ?? ''),
                 'company_name' => sanitize_input($_POST['company_name'] ?? ''),
@@ -116,6 +117,7 @@ class Payables extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'company_name' => sanitize_input($_POST['company_name'] ?? ''),
                 'contact_name' => sanitize_input($_POST['contact_name'] ?? ''),
@@ -209,6 +211,7 @@ class Payables extends Base_Controller {
         $this->requirePermission('payables', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $vendorId = intval($_POST['vendor_id'] ?? 0);
             $billDate = sanitize_input($_POST['bill_date'] ?? date('Y-m-d'));
             $dueDate = sanitize_input($_POST['due_date'] ?? date('Y-m-d', strtotime('+30 days')));
@@ -333,6 +336,7 @@ class Payables extends Base_Controller {
         $this->requirePermission('payables', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $billIds = $_POST['bill_ids'] ?? [];
             $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'bank_transfer');

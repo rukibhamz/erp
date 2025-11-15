@@ -49,6 +49,7 @@ class Ledger extends Base_Controller {
         $this->requirePermission('ledger', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $entryDate = sanitize_input($_POST['entry_date'] ?? date('Y-m-d'));
             $reference = sanitize_input($_POST['reference'] ?? '');
             $description = sanitize_input($_POST['description'] ?? '');

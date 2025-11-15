@@ -57,6 +57,7 @@ class Credit_notes extends Base_Controller {
         $invoiceId = $_GET['invoice_id'] ?? null;
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $customerId = intval($_POST['customer_id'] ?? 0);
             $invoiceId = !empty($_POST['invoice_id']) ? intval($_POST['invoice_id']) : null;
             $creditDate = sanitize_input($_POST['credit_date'] ?? date('Y-m-d'));
@@ -178,6 +179,11 @@ class Credit_notes extends Base_Controller {
 
     public function apply($id) {
         $this->requirePermission('receivables', 'update');
+
+        // CSRF Protection for POST requests
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+        }
 
         $invoiceId = $_POST['invoice_id'] ?? $_GET['invoice_id'] ?? null;
 

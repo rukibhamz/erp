@@ -30,6 +30,9 @@ class Base_Controller {
         // Load module helper
         require_once BASEPATH . '../application/helpers/module_helper.php';
         
+        // Load JSON helper (for safe JSON decoding and validation)
+        require_once BASEPATH . '../application/helpers/json_helper.php';
+        
         // Initialize database only if installed and config is valid
         if (isset($this->config['installed']) && $this->config['installed'] === true) {
             if (!empty($this->config['db']['hostname']) && !empty($this->config['db']['database'])) {
