@@ -10,6 +10,7 @@ class Receivables extends Base_Controller {
     private $transactionModel;
     private $cashAccountModel;
     private $activityModel;
+    private $entityModel;
     
     public function __construct() {
         parent::__construct();
@@ -22,6 +23,7 @@ class Receivables extends Base_Controller {
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->entityModel = $this->loadModel('Entity_model');
     }
     
     // Customers Management
@@ -327,6 +329,66 @@ class Receivables extends Base_Controller {
         ];
         
         $this->loadView('receivables/edit_invoice', $data);
+    }
+    
+    /**
+     * Generate and download/view invoice PDF
+     */
+    public function pdf($id) {
+        $this->requirePermission('receivables', 'read');
+        
+        $invoice = $this->invoiceModel->getWithCustomer($id);
+        if (!$invoice) {
+            $this->setFlashMessage('danger', 'Invoice not found.');
+            redirect('receivables/invoices');
+        }
+        
+        $items = $this->invoiceModel->getItems($id);
+        
+        // Get company/entity information
+        $entities = $this->entityModel->getAll();
+        $companyInfo = !empty($entities) ? $entities[0] : [
+            'name' => $this->config['app_name'] ?? 'Company Name',
+            'address' => '',
+            'city' => '',
+            'state' => '',
+            'zip_code' => '',
+            'country' => '',
+            'phone' => '',
+            'email' => '',
+            'tax_id' => ''
+        ];
+        
+        // Prepare customer data
+        $customer = [
+            'company_name' => $invoice['company_name'] ?? '',
+            'address' => $invoice['address'] ?? '',
+            'city' => $invoice['city'] ?? '',
+            'state' => $invoice['state'] ?? '',
+            'zip_code' => $invoice['zip_code'] ?? '',
+            'country' => $invoice['country'] ?? '',
+            'email' => $invoice['email'] ?? '',
+            'phone' => $invoice['phone'] ?? ''
+        ];
+        
+        // Load PDF view
+        $data = [
+            'invoice' => $invoice,
+            'items' => $items,
+            'customer' => $customer,
+            'company' => $companyInfo
+        ];
+        
+        // Load the PDF view directly without header/footer
+        $viewFile = BASEPATH . '../application/views/receivables/invoice_pdf.php';
+        if (file_exists($viewFile)) {
+            extract($data);
+            require_once $viewFile;
+        } else {
+            $this->setFlashMessage('danger', 'Invoice PDF template not found.');
+            redirect('receivables/invoices');
+        }
+        exit;
     }
     
     public function recordPayment($invoiceId) {

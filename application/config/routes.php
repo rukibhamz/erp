@@ -111,6 +111,7 @@ $route['receivables/customers/edit/(:num)'] = 'Receivables/editCustomer/$1';
 $route['receivables/invoices'] = 'Receivables/invoices';
 $route['receivables/invoices/create'] = 'Receivables/createInvoice';
 $route['receivables/invoices/edit/(:num)'] = 'Receivables/editInvoice/$1';
+$route['receivables/invoices/pdf/(:num)'] = 'Receivables/pdf/$1';
 $route['receivables/invoices/payment/(:num)'] = 'Receivables/recordPayment/$1';
 $route['receivables/payments'] = 'Receivables/payments';
 $route['receivables/payments/create'] = 'Receivables/createPayment';

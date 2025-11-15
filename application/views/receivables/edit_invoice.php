@@ -91,6 +91,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <?php endif; ?>
                 
                 <div class="d-flex gap-2">
+                    <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-primary">
+                        <i class="bi bi-file-pdf"></i> View/Download PDF
+                    </a>
                     <?php if (($invoice['balance_amount'] ?? 0) > 0): ?>
                         <a href="<?= base_url('receivables/invoices/payment/' . $invoice['id']) ?>" class="btn btn-success">
                             <i class="bi bi-cash-coin"></i> Record Payment
