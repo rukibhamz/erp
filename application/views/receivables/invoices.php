@@ -116,13 +116,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" class="btn btn-outline-secondary" title="View/Edit">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <?php if (($invoice['balance_amount'] ?? 0) > 0): ?>
-                                            <a href="<?= base_url('receivables/invoices/payment/' . $invoice['id']) ?>" class="btn btn-outline-success" title="Record Payment">
-                                                <i class="bi bi-cash-coin"></i>
+                                        <?php if (!empty($invoice['id'])): ?>
+                                            <a href="<?= base_url('receivables/invoices/edit/' . intval($invoice['id'])) ?>" class="btn btn-outline-secondary" title="View/Edit">
+                                                <i class="bi bi-eye"></i>
                                             </a>
+                                            <?php if (($invoice['balance_amount'] ?? 0) > 0): ?>
+                                                <a href="<?= base_url('receivables/invoices/payment/' . intval($invoice['id'])) ?>" class="btn btn-outline-success" title="Record Payment">
+                                                    <i class="bi bi-cash-coin"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">N/A</span>
                                         <?php endif; ?>
                                     </div>
                                 </td>

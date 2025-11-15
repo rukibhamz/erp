@@ -163,7 +163,9 @@ class Receivables extends Base_Controller {
         $customerId = $_GET['customer_id'] ?? null;
         
         try {
-            $sql = "SELECT i.*, c.company_name 
+            $sql = "SELECT i.id, i.invoice_number, i.invoice_date, i.due_date, i.total_amount, 
+                           i.paid_amount, i.balance_amount, i.status, i.currency,
+                           c.company_name 
                     FROM `" . $this->db->getPrefix() . "invoices` i
                     JOIN `" . $this->db->getPrefix() . "customers` c ON i.customer_id = c.id";
             
@@ -312,15 +314,25 @@ class Receivables extends Base_Controller {
     
     public function editInvoice($id) {
         // Allow both read and update permissions for viewing/editing invoices
+        // Note: requirePermission already checks in constructor, but we allow read-only access here
         if (!$this->checkPermission('receivables', 'read') && !$this->checkPermission('receivables', 'update')) {
             $this->setFlashMessage('danger', 'You do not have permission to view invoices.');
             redirect('receivables/invoices');
+            return;
+        }
+        
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid invoice ID.');
+            redirect('receivables/invoices');
+            return;
         }
         
         $invoice = $this->invoiceModel->getWithCustomer($id);
         if (!$invoice) {
             $this->setFlashMessage('danger', 'Invoice not found.');
             redirect('receivables/invoices');
+            return;
         }
         
         $items = $this->invoiceModel->getItems($id);
@@ -398,10 +410,18 @@ class Receivables extends Base_Controller {
     public function recordPayment($invoiceId) {
         $this->requirePermission('receivables', 'update');
         
+        $invoiceId = intval($invoiceId);
+        if ($invoiceId <= 0) {
+            $this->setFlashMessage('danger', 'Invalid invoice ID.');
+            redirect('receivables/invoices');
+            return;
+        }
+        
         $invoice = $this->invoiceModel->getWithCustomer($invoiceId);
         if (!$invoice) {
             $this->setFlashMessage('danger', 'Invoice not found.');
             redirect('receivables/invoices');
+            return;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
