@@ -204,7 +204,14 @@ class Tax_config extends Base_Controller {
     }
     
     /**
-     * Update tax rates (admin/super_admin only) - DEPRECATED: Use updateRate() instead
+     * Update multiple tax rates in batch (admin/super_admin only)
+     * 
+     * This method handles batch updates of tax rates.
+     * For single rate updates, use updateRate() instead.
+     * 
+     * Can be called from:
+     * - Direct POST from tax/config views
+     * - Redirect from Tax::settings() (data passed via session)
      */
     public function updateRates() {
         // Only admin and super_admin can update rates
@@ -214,7 +221,14 @@ class Tax_config extends Base_Controller {
             redirect('tax/config');
         }
         
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Check if data was passed via session (from Tax::settings() redirect)
+        if (isset($_SESSION['tax_rate_update_data'])) {
+            $_POST['tax_rates'] = $_SESSION['tax_rate_update_data']['tax_rates'] ?? [];
+            $_POST['tax_ids'] = $_SESSION['tax_rate_update_data']['tax_ids'] ?? [];
+            unset($_SESSION['tax_rate_update_data']);
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST['tax_rates'])) {
             $updated = 0;
             $errors = [];
             $updatedTaxes = [];
@@ -315,9 +329,18 @@ class Tax_config extends Base_Controller {
             } else {
                 $this->setFlashMessage('info', 'No changes detected.');
             }
+        } else {
+            // No POST data and no session data - redirect back
+            $this->setFlashMessage('info', 'No tax rate data provided.');
         }
         
-        redirect('tax/config');
+        // Redirect to appropriate page based on where request came from
+        $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+        if (strpos($referrer, 'tax/settings') !== false) {
+            redirect('tax/settings');
+        } else {
+            redirect('tax/config');
+        }
     }
     
     private function getTaxName($code) {

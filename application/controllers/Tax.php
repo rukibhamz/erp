@@ -91,25 +91,36 @@ class Tax extends Base_Controller {
     public function settings() {
         $this->requirePermission('tax', 'update');
         
-        // Handle tax rate updates
+        // Handle tax rate updates - redirect to Tax_config to avoid code duplication
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_tax_rates'])) {
-            $updated = 0;
+            // Convert tax_rates array from ID-based to code-based format for Tax_config::updateRates()
             if (isset($_POST['tax_rates']) && is_array($_POST['tax_rates'])) {
+                $taxRates = [];
+                $taxIds = [];
                 foreach ($_POST['tax_rates'] as $taxId => $rate) {
                     $taxId = intval($taxId);
                     $rate = floatval($rate);
-                    try {
-                        $this->taxTypeModel->update($taxId, ['rate' => $rate]);
-                        $updated++;
-                    } catch (Exception $e) {
-                        error_log('Tax rate update error: ' . $e->getMessage());
+                    if ($taxId > 0) {
+                        $tax = $this->taxTypeModel->getById($taxId);
+                        if ($tax && isset($tax['code'])) {
+                            $code = strtoupper(trim($tax['code']));
+                            $taxRates[$code] = $rate;
+                            $taxIds[$code] = $taxId;
+                        }
                     }
                 }
-            }
-            if ($updated > 0) {
-                $this->activityModel->log($this->session['user_id'], 'update', 'Tax', 'Updated tax rates');
-                $this->setFlashMessage('success', "Updated {$updated} tax rate(s) successfully.");
-                redirect('tax/settings');
+                
+                // Store converted data in session temporarily and redirect
+                // Note: This approach uses session to pass data, but a better solution would be
+                // to refactor updateRates() to accept both ID-based and code-based formats
+                $_SESSION['tax_rate_update_data'] = [
+                    'tax_rates' => $taxRates,
+                    'tax_ids' => $taxIds
+                ];
+                
+                // Redirect to Tax_config::updateRates() which will handle the update
+                redirect('tax/config/updateRates');
+                return;
             }
         }
         
