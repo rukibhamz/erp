@@ -3,13 +3,26 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
 <div class="page-header">
-    <h1 class="page-title mb-0">Invoice: <?= htmlspecialchars($invoice['invoice_number'] ?? 'N/A') ?></h1>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Edit Invoice: <?= htmlspecialchars($invoice['invoice_number'] ?? 'N/A') ?></h1>
+        <div class="btn-group">
+            <a href="<?= base_url('receivables/invoices/view/' . $invoice['id']) ?>" class="btn btn-outline-primary">
+                <i class="bi bi-eye"></i> View
+            </a>
+            <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-outline-primary">
+                <i class="bi bi-file-pdf"></i> PDF
+            </a>
+            <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
 </div>
 
 <?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
 <div class="row">
-    <div class="col-lg-8">
+    <div class="col-lg-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Invoice Details</h5>
@@ -20,91 +33,279 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <strong>Invoice Number:</strong> <?= htmlspecialchars($invoice['invoice_number']) ?><br>
-                        <strong>Customer:</strong> <?= htmlspecialchars($invoice['company_name'] ?? '-') ?><br>
-                        <strong>Invoice Date:</strong> <?= format_date($invoice['invoice_date']) ?><br>
-                        <strong>Due Date:</strong> <?= format_date($invoice['due_date']) ?>
+                <form method="POST" action="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" id="invoiceForm">
+                    <?php echo csrf_field(); ?>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="customer_id" class="form-label">Customer <span class="text-danger">*</span></label>
+                            <select class="form-select" id="customer_id" name="customer_id" required disabled>
+                                <option value="<?= $invoice['customer_id'] ?>">
+                                    <?= htmlspecialchars($invoice['company_name'] ?? '-') ?>
+                                </option>
+                            </select>
+                            <small class="text-muted">Customer cannot be changed after invoice creation</small>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="invoice_date" class="form-label">Invoice Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="invoice_date" name="invoice_date" value="<?= $invoice['invoice_date'] ?>" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="due_date" name="due_date" value="<?= $invoice['due_date'] ?>" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="currency" class="form-label">Currency</label>
+                            <select class="form-select" id="currency" name="currency">
+                                <?php if (!empty($currencies)): ?>
+                                    <?php foreach ($currencies as $code => $name): ?>
+                                        <option value="<?= $code ?>" <?= $code === ($invoice['currency'] ?? 'USD') ? 'selected' : '' ?>>
+                                            <?= $code ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="draft" <?= $invoice['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
+                                <option value="sent" <?= $invoice['status'] === 'sent' ? 'selected' : '' ?>>Sent</option>
+                                <option value="paid" <?= $invoice['status'] === 'paid' ? 'selected' : '' ?>>Paid</option>
+                                <option value="partially_paid" <?= $invoice['status'] === 'partially_paid' ? 'selected' : '' ?>>Partially Paid</option>
+                                <option value="overdue" <?= $invoice['status'] === 'overdue' ? 'selected' : '' ?>>Overdue</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="col-md-6 text-end">
-                        <strong>Total Amount:</strong> <span class="fs-5"><?= format_currency($invoice['total_amount'], $invoice['currency']) ?></span><br>
-                        <strong>Paid:</strong> <?= format_currency($invoice['paid_amount'] ?? 0, $invoice['currency']) ?><br>
-                        <strong>Balance:</strong> <span class="fs-5 <?= ($invoice['balance_amount'] ?? 0) > 0 ? 'text-danger' : 'text-success' ?>">
-                            <?= format_currency($invoice['balance_amount'], $invoice['currency']) ?>
-                        </span>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="reference" class="form-label">Reference</label>
+                            <input type="text" class="form-control" id="reference" name="reference" value="<?= htmlspecialchars($invoice['reference'] ?? '') ?>" placeholder="PO Number, etc.">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="tax_rate" class="form-label">Tax Rate (%)</label>
+                            <input type="number" step="0.01" class="form-control" id="tax_rate" name="tax_rate" value="<?= $invoice['tax_rate'] ?? 0 ?>" onchange="calculateTotals()">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="discount_amount" class="form-label">Discount Amount</label>
+                            <input type="number" step="0.01" class="form-control" id="discount_amount" name="discount_amount" value="<?= $invoice['discount_amount'] ?? 0 ?>" onchange="calculateTotals()">
+                        </div>
                     </div>
-                </div>
-                
-                <?php if (!empty($items)): ?>
-                <div class="table-responsive mb-3">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th class="text-end">Qty</th>
-                                <th class="text-end">Unit Price</th>
-                                <th class="text-end">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($items as $item): ?>
+                    
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered" id="invoiceItemsTable">
+                            <thead>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['item_description']) ?></td>
-                                    <td class="text-end"><?= number_format($item['quantity'], 2) ?></td>
-                                    <td class="text-end"><?= format_currency($item['unit_price'], $invoice['currency']) ?></td>
-                                    <td class="text-end"><?= format_currency($item['line_total'], $invoice['currency']) ?></td>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Description</th>
+                                    <th style="width: 10%;">Qty</th>
+                                    <th style="width: 15%;" class="text-end">Unit Price</th>
+                                    <th style="width: 15%;" class="text-end">Tax Rate %</th>
+                                    <th style="width: 15%;" class="text-end">Line Total</th>
+                                    <th style="width: 5%;"></th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" class="text-end fw-bold">Subtotal:</td>
-                                <td class="text-end fw-bold"><?= format_currency($invoice['subtotal'], $invoice['currency']) ?></td>
-                            </tr>
-                            <?php if ($invoice['tax_amount'] > 0): ?>
-                            <tr>
-                                <td colspan="3" class="text-end">Tax (<?= $invoice['tax_rate'] ?>%):</td>
-                                <td class="text-end"><?= format_currency($invoice['tax_amount'], $invoice['currency']) ?></td>
-                            </tr>
-                            <?php endif; ?>
-                            <?php if ($invoice['discount_amount'] > 0): ?>
-                            <tr>
-                                <td colspan="3" class="text-end">Discount:</td>
-                                <td class="text-end"><?= format_currency($invoice['discount_amount'], $invoice['currency']) ?></td>
-                            </tr>
-                            <?php endif; ?>
-                            <tr>
-                                <td colspan="3" class="text-end fw-bold fs-5">Total:</td>
-                                <td class="text-end fw-bold fs-5"><?= format_currency($invoice['total_amount'], $invoice['currency']) ?></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($invoice['notes'])): ?>
-                <div class="mb-3">
-                    <strong>Notes:</strong>
-                    <p class="text-muted"><?= nl2br(htmlspecialchars($invoice['notes'])) ?></p>
-                </div>
-                <?php endif; ?>
-                
-                <div class="d-flex gap-2">
-                    <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-primary">
-                        <i class="bi bi-file-pdf"></i> View/Download PDF
-                    </a>
-                    <?php if (($invoice['balance_amount'] ?? 0) > 0): ?>
-                        <a href="<?= base_url('receivables/invoices/payment/' . $invoice['id']) ?>" class="btn btn-success">
-                            <i class="bi bi-cash-coin"></i> Record Payment
+                            </thead>
+                            <tbody id="invoiceItemsBody">
+                                <?php if (!empty($items)): ?>
+                                    <?php foreach ($items as $index => $item): ?>
+                                        <tr>
+                                            <td><?= $index + 1 ?></td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" name="items[<?= $index ?>][description]" value="<?= htmlspecialchars($item['item_description']) ?>" placeholder="Item description" required>
+                                            </td>
+                                            <td>
+                                                <input type="number" step="0.01" class="form-control form-control-sm" name="items[<?= $index ?>][quantity]" value="<?= $item['quantity'] ?>" onchange="calculateLineTotal(<?= $index ?>)" required>
+                                            </td>
+                                            <td>
+                                                <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[<?= $index ?>][unit_price]" value="<?= $item['unit_price'] ?>" onchange="calculateLineTotal(<?= $index ?>)" required>
+                                            </td>
+                                            <td>
+                                                <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[<?= $index ?>][tax_rate]" value="<?= $item['tax_rate'] ?? 0 ?>" onchange="calculateLineTotal(<?= $index ?>)">
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="line-total" data-index="<?= $index ?>"><?= number_format($item['line_total'], 2) ?></span>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm" name="items[0][description]" placeholder="Item description" required>
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" class="form-control form-control-sm" name="items[0][quantity]" value="1.00" onchange="calculateLineTotal(0)" required>
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[0][unit_price]" value="0.00" onchange="calculateLineTotal(0)" required>
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[0][tax_rate]" value="0.00" onchange="calculateLineTotal(0)">
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="line-total" data-index="0">0.00</span>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">Subtotal:</td>
+                                    <td class="text-end fw-bold" id="subtotal"><?= number_format($invoice['subtotal'] ?? 0, 2) ?></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="text-end">Tax:</td>
+                                    <td class="text-end" id="taxAmount"><?= number_format($invoice['tax_amount'] ?? 0, 2) ?></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="text-end">Discount:</td>
+                                    <td class="text-end" id="discountDisplay"><?= number_format($invoice['discount_amount'] ?? 0, 2) ?></td>
+                                    <td></td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td colspan="5" class="text-end fw-bold fs-5">Total:</td>
+                                    <td class="text-end fw-bold fs-5" id="totalAmount"><?= number_format($invoice['total_amount'] ?? 0, 2) ?></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="terms" class="form-label">Terms & Conditions</label>
+                            <textarea class="form-control" id="terms" name="terms" rows="3" placeholder="Payment terms, delivery terms, etc."><?= htmlspecialchars($invoice['terms'] ?? '') ?></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Internal notes"><?= htmlspecialchars($invoice['notes'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="addItem()">
+                            <i class="bi bi-plus-circle"></i> Add Item
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Update Invoice
+                        </button>
+                        <a href="<?= base_url('receivables/invoices/view/' . $invoice['id']) ?>" class="btn btn-outline-secondary">
+                            <i class="bi bi-eye"></i> View
                         </a>
-                    <?php endif; ?>
-                    <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left"></i> Back to Invoices
-                    </a>
-                </div>
+                        <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+<script>
+let itemIndex = <?= !empty($items) ? count($items) : 1 ?>;
+
+function addItem() {
+    const tbody = document.getElementById('invoiceItemsBody');
+    const rowCount = tbody.rows.length + 1;
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+        <td>${rowCount}</td>
+        <td>
+            <input type="text" class="form-control form-control-sm" name="items[${itemIndex}][description]" placeholder="Item description" required>
+        </td>
+        <td>
+            <input type="number" step="0.01" class="form-control form-control-sm" name="items[${itemIndex}][quantity]" value="1.00" onchange="calculateLineTotal(${itemIndex})" required>
+        </td>
+        <td>
+            <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[${itemIndex}][unit_price]" value="0.00" onchange="calculateLineTotal(${itemIndex})" required>
+        </td>
+        <td>
+            <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[${itemIndex}][tax_rate]" value="0.00" onchange="calculateLineTotal(${itemIndex})">
+        </td>
+        <td class="text-end">
+            <span class="line-total" data-index="${itemIndex}">0.00</span>
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(newRow);
+    itemIndex++;
+    updateRowNumbers();
+}
+
+function removeItem(btn) {
+    if (document.getElementById('invoiceItemsBody').rows.length > 1) {
+        btn.closest('tr').remove();
+        updateRowNumbers();
+        calculateTotals();
+    }
+}
+
+function updateRowNumbers() {
+    const rows = document.getElementById('invoiceItemsBody').rows;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].cells[0].textContent = i + 1;
+    }
+}
+
+function calculateLineTotal(index) {
+    const row = document.querySelector(`input[name="items[${index}][quantity]"]`)?.closest('tr');
+    if (!row) return;
+    
+    const quantity = parseFloat(row.querySelector(`input[name="items[${index}][quantity]"]`).value) || 0;
+    const unitPrice = parseFloat(row.querySelector(`input[name="items[${index}][unit_price]"]`).value) || 0;
+    const lineTotal = quantity * unitPrice;
+    
+    row.querySelector(`[data-index="${index}"]`).textContent = lineTotal.toFixed(2);
+    calculateTotals();
+}
+
+function calculateTotals() {
+    let subtotal = 0;
+    
+    document.querySelectorAll('.line-total').forEach(span => {
+        subtotal += parseFloat(span.textContent) || 0;
+    });
+    
+    const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
+    const discountAmount = parseFloat(document.getElementById('discount_amount').value) || 0;
+    const taxAmount = subtotal * (taxRate / 100);
+    const totalAmount = subtotal + taxAmount - discountAmount;
+    
+    document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+    document.getElementById('taxAmount').textContent = taxAmount.toFixed(2);
+    document.getElementById('discountDisplay').textContent = discountAmount.toFixed(2);
+    document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
+}
+
+// Initialize calculations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTotals();
+    
+    // Recalculate when inputs change
+    document.getElementById('invoiceForm').addEventListener('input', function(e) {
+        if (e.target.classList.contains('form-control-sm')) {
+            const index = parseInt(e.target.name.match(/\[(\d+)\]/)?.[1]);
+            if (!isNaN(index)) {
+                calculateLineTotal(index);
+            }
+        }
+    });
+});
+</script>

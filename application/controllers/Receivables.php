@@ -312,10 +312,9 @@ class Receivables extends Base_Controller {
         $this->loadView('receivables/create_invoice', $data);
     }
     
-    public function editInvoice($id) {
-        // Allow both read and update permissions for viewing/editing invoices
-        // Note: requirePermission already checks in constructor, but we allow read-only access here
-        if (!$this->checkPermission('receivables', 'read') && !$this->checkPermission('receivables', 'update')) {
+    public function viewInvoice($id) {
+        // Allow read permission for viewing invoices
+        if (!$this->checkPermission('receivables', 'read')) {
             $this->setFlashMessage('danger', 'You do not have permission to view invoices.');
             redirect('receivables/invoices');
             return;
@@ -337,14 +336,242 @@ class Receivables extends Base_Controller {
         
         $items = $this->invoiceModel->getItems($id);
         
+        // Check if PDF exists
+        $pdfPath = $this->getInvoicePdfPath($id);
+        $pdfExists = file_exists($pdfPath);
+        
+        $data = [
+            'page_title' => 'View Invoice',
+            'invoice' => $invoice,
+            'items' => $items,
+            'pdf_exists' => $pdfExists,
+            'pdf_url' => $pdfExists ? base_url('uploads/invoices/' . basename($pdfPath)) : null,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('receivables/view_invoice', $data);
+    }
+    
+    public function editInvoice($id) {
+        // Allow both read and update permissions for viewing/editing invoices
+        if (!$this->checkPermission('receivables', 'read') && !$this->checkPermission('receivables', 'update')) {
+            $this->setFlashMessage('danger', 'You do not have permission to view invoices.');
+            redirect('receivables/invoices');
+            return;
+        }
+        
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid invoice ID.');
+            redirect('receivables/invoices');
+            return;
+        }
+        
+        // Handle POST request for updating invoice
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->requirePermission('receivables', 'update');
+            check_csrf();
+            
+            $invoice = $this->invoiceModel->getById($id);
+            if (!$invoice) {
+                $this->setFlashMessage('danger', 'Invoice not found.');
+                redirect('receivables/invoices');
+                return;
+            }
+            
+            $invoiceDate = sanitize_input($_POST['invoice_date'] ?? $invoice['invoice_date']);
+            $dueDate = sanitize_input($_POST['due_date'] ?? $invoice['due_date']);
+            $taxRate = floatval($_POST['tax_rate'] ?? $invoice['tax_rate']);
+            $reference = sanitize_input($_POST['reference'] ?? '');
+            $currency = sanitize_input($_POST['currency'] ?? $invoice['currency']);
+            $terms = sanitize_input($_POST['terms'] ?? '');
+            $notes = sanitize_input($_POST['notes'] ?? '');
+            $status = sanitize_input($_POST['status'] ?? $invoice['status']);
+            
+            // Calculate totals from items
+            $items = $_POST['items'] ?? [];
+            $subtotal = 0;
+            foreach ($items as $item) {
+                $quantity = floatval($item['quantity'] ?? 0);
+                $unitPrice = floatval($item['unit_price'] ?? 0);
+                $lineTotal = $quantity * $unitPrice;
+                $subtotal += $lineTotal;
+            }
+            
+            $taxAmount = $subtotal * ($taxRate / 100);
+            $discountAmount = floatval($_POST['discount_amount'] ?? 0);
+            $totalAmount = $subtotal + $taxAmount - $discountAmount;
+            $balanceAmount = $totalAmount - floatval($invoice['paid_amount'] ?? 0);
+            
+            // Update invoice
+            $updateData = [
+                'invoice_date' => $invoiceDate,
+                'due_date' => $dueDate,
+                'reference' => $reference,
+                'subtotal' => $subtotal,
+                'tax_rate' => $taxRate,
+                'tax_amount' => $taxAmount,
+                'discount_amount' => $discountAmount,
+                'total_amount' => $totalAmount,
+                'balance_amount' => max(0, $balanceAmount),
+                'currency' => $currency,
+                'terms' => $terms,
+                'notes' => $notes,
+                'status' => $status,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            if ($this->invoiceModel->update($id, $updateData)) {
+                // Delete existing items and recreate
+                $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "invoice_items` WHERE invoice_id = ?", [$id]);
+                
+                // Add new items
+                foreach ($items as $item) {
+                    $quantity = floatval($item['quantity'] ?? 0);
+                    $unitPrice = floatval($item['unit_price'] ?? 0);
+                    $itemTaxRate = floatval($item['tax_rate'] ?? $taxRate);
+                    $lineTotal = $quantity * $unitPrice;
+                    
+                    $itemData = [
+                        'product_id' => !empty($item['product_id']) ? intval($item['product_id']) : null,
+                        'item_description' => sanitize_input($item['description'] ?? ''),
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'tax_rate' => $itemTaxRate,
+                        'tax_amount' => $lineTotal * ($itemTaxRate / 100),
+                        'discount_rate' => floatval($item['discount_rate'] ?? 0),
+                        'discount_amount' => floatval($item['discount_amount'] ?? 0),
+                        'line_total' => $lineTotal,
+                        'account_id' => !empty($item['account_id']) ? intval($item['account_id']) : null
+                    ];
+                    
+                    $this->invoiceModel->addItem($id, $itemData);
+                }
+                
+                // Auto-generate PDF
+                $this->generateInvoicePdf($id);
+                
+                $this->activityModel->log($this->session['user_id'], 'update', 'Receivables', 'Updated invoice: ' . $invoice['invoice_number']);
+                $this->setFlashMessage('success', 'Invoice updated successfully.');
+                redirect('receivables/invoices/edit/' . $id);
+                return;
+            } else {
+                $this->setFlashMessage('danger', 'Failed to update invoice.');
+            }
+        }
+        
+        $invoice = $this->invoiceModel->getWithCustomer($id);
+        if (!$invoice) {
+            $this->setFlashMessage('danger', 'Invoice not found.');
+            redirect('receivables/invoices');
+            return;
+        }
+        
+        $items = $this->invoiceModel->getItems($id);
+        
+        // Get customers and accounts for dropdowns
+        try {
+            $customers = $this->customerModel->getAll();
+            $revenueAccounts = $this->accountModel->getByType('Revenue');
+        } catch (Exception $e) {
+            $customers = [];
+            $revenueAccounts = [];
+        }
+        
         $data = [
             'page_title' => 'Edit Invoice',
             'invoice' => $invoice,
             'items' => $items,
+            'customers' => $customers,
+            'revenue_accounts' => $revenueAccounts,
+            'currencies' => get_all_currencies(),
             'flash' => $this->getFlashMessage()
         ];
         
         $this->loadView('receivables/edit_invoice', $data);
+    }
+    
+    /**
+     * Generate PDF for invoice and save to disk
+     */
+    private function generateInvoicePdf($invoiceId) {
+        try {
+            $invoice = $this->invoiceModel->getWithCustomer($invoiceId);
+            if (!$invoice) {
+                return false;
+            }
+            
+            $items = $this->invoiceModel->getItems($invoiceId);
+            
+            // Get company/entity information
+            $entities = $this->entityModel->getAll();
+            $companyInfo = !empty($entities) ? $entities[0] : [
+                'name' => $this->config['app_name'] ?? 'Company Name',
+                'address' => '',
+                'city' => '',
+                'state' => '',
+                'zip_code' => '',
+                'country' => '',
+                'phone' => '',
+                'email' => '',
+                'tax_id' => ''
+            ];
+            
+            // Prepare customer data
+            $customer = [
+                'company_name' => $invoice['company_name'] ?? '',
+                'address' => $invoice['address'] ?? '',
+                'city' => $invoice['city'] ?? '',
+                'state' => $invoice['state'] ?? '',
+                'zip_code' => $invoice['zip_code'] ?? '',
+                'country' => $invoice['country'] ?? '',
+                'email' => $invoice['email'] ?? '',
+                'phone' => $invoice['phone'] ?? ''
+            ];
+            
+            // Generate HTML invoice
+            ob_start();
+            $data = [
+                'invoice' => $invoice,
+                'items' => $items,
+                'customer' => $customer,
+                'company' => $companyInfo
+            ];
+            extract($data);
+            include BASEPATH . '../application/views/receivables/invoice_pdf.php';
+            $html = ob_get_clean();
+            
+            // Create uploads/invoices directory if it doesn't exist
+            $uploadDir = BASEPATH . '../uploads/invoices/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            // Save HTML version (can be converted to PDF using browser print)
+            $filename = 'invoice-' . $invoice['invoice_number'] . '.html';
+            $filepath = $uploadDir . $filename;
+            file_put_contents($filepath, $html);
+            
+            // Also save as a viewable HTML file
+            return $filepath;
+        } catch (Exception $e) {
+            error_log('Error generating invoice PDF: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Get PDF path for invoice
+     */
+    private function getInvoicePdfPath($invoiceId) {
+        $invoice = $this->invoiceModel->getById($invoiceId);
+        if (!$invoice) {
+            return null;
+        }
+        
+        $uploadDir = BASEPATH . '../uploads/invoices/';
+        $filename = 'invoice-' . $invoice['invoice_number'] . '.html';
+        return $uploadDir . $filename;
     }
     
     /**
