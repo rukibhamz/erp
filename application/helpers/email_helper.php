@@ -15,13 +15,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @param string $fromEmail Sender email address
  * @param string $fromName Sender name
  * @param bool $isHtml Whether message is HTML
+ * @param array $attachments Array of attachments (file paths or ['content' => string, 'filename' => string, 'mime' => string])
  * @return bool True if email sent successfully, false otherwise
  */
 if (!function_exists('send_email')) {
-    function send_email($to, $subject, $message, $fromEmail = null, $fromName = null, $isHtml = true) {
+    function send_email($to, $subject, $message, $fromEmail = null, $fromName = null, $isHtml = true, $attachments = []) {
         try {
-            // Load settings
-            $config = require BASEPATH . 'config/config.php';
+            // Load settings - try config.installed.php first
+            $configFile = BASEPATH . 'config/config.installed.php';
+            if (!file_exists($configFile)) {
+                $configFile = BASEPATH . 'config/config.php';
+            }
+            $config = require $configFile;
             $settings = $config['email'] ?? [];
             
             // Get SMTP settings or use defaults
@@ -34,10 +39,15 @@ if (!function_exists('send_email')) {
             $fromName = $fromName ?? ($settings['from_name'] ?? 'Business ERP System');
             
             // If SMTP is configured, use it; otherwise use PHP mail()
+            // Note: Attachments only work with SMTP/PHPMailer
             if (!empty($smtpHost) && !empty($smtpUsername) && !empty($smtpPassword)) {
                 return send_email_smtp($to, $subject, $message, $fromEmail, $fromName, 
-                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml);
+                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml, $attachments);
             } else {
+                // PHP mail() doesn't support attachments easily, so warn if attachments provided
+                if (!empty($attachments)) {
+                    error_log("Warning: Attachments require SMTP configuration. Email sent without attachments.");
+                }
                 return send_email_php($to, $subject, $message, $fromEmail, $fromName, $isHtml);
             }
         } catch (Exception $e) {
@@ -100,10 +110,25 @@ if (!function_exists('send_email_php')) {
 /**
  * Send email using SMTP
  * SECURITY: Uses secure SMTP connection with authentication
+ * 
+ * @param string $to Recipient email
+ * @param string $subject Email subject
+ * @param string $message Email body
+ * @param string $fromEmail Sender email
+ * @param string $fromName Sender name
+ * @param string $smtpHost SMTP host
+ * @param int $smtpPort SMTP port
+ * @param string $smtpUsername SMTP username
+ * @param string $smtpPassword SMTP password
+ * @param string $smtpEncryption Encryption type
+ * @param bool $isHtml Whether message is HTML
+ * @param array $attachments Array of attachments
+ * @return bool True if sent successfully
  */
 if (!function_exists('send_email_smtp')) {
     function send_email_smtp($to, $subject, $message, $fromEmail, $fromName,
-                            $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls', $isHtml = true) {
+                            $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, 
+                            $smtpEncryption = 'tls', $isHtml = true, $attachments = []) {
         try {
             // Validate email addresses
             if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -119,9 +144,12 @@ if (!function_exists('send_email_smtp')) {
             // Use PHPMailer if available, otherwise use socket-based SMTP
             if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
                 return send_email_phpmailer($to, $subject, $message, $fromEmail, $fromName,
-                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml);
+                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml, $attachments);
             } else {
-                // Fallback to socket-based SMTP (basic implementation)
+                // Fallback to socket-based SMTP (basic implementation - no attachment support)
+                if (!empty($attachments)) {
+                    error_log("Warning: Attachments require PHPMailer. Email sent without attachments.");
+                }
                 return send_email_smtp_socket($to, $subject, $message, $fromEmail, $fromName,
                     $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml);
             }
@@ -134,12 +162,31 @@ if (!function_exists('send_email_smtp')) {
 
 /**
  * Send email using PHPMailer (if available)
+ * 
+ * @param string $to Recipient email
+ * @param string $subject Email subject
+ * @param string $message Email body
+ * @param string $fromEmail Sender email
+ * @param string $fromName Sender name
+ * @param string $smtpHost SMTP host
+ * @param int $smtpPort SMTP port
+ * @param string $smtpUsername SMTP username
+ * @param string $smtpPassword SMTP password
+ * @param string $smtpEncryption Encryption type (tls or ssl)
+ * @param bool $isHtml Whether message is HTML
+ * @param array $attachments Array of attachment paths or ['content' => string, 'filename' => string, 'mime' => string]
+ * @return bool True if sent successfully
  */
 if (!function_exists('send_email_phpmailer')) {
     function send_email_phpmailer($to, $subject, $message, $fromEmail, $fromName,
-                                $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption = 'tls', $isHtml = true) {
+                                $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, 
+                                $smtpEncryption = 'tls', $isHtml = true, $attachments = []) {
         try {
+            require_once BASEPATH . '../vendor/autoload.php';
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+            
+            // Enable verbose error output in debug mode
+            // $mail->SMTPDebug = 2; // Uncomment for debugging
             
             // Server settings
             $mail->isSMTP();
@@ -150,9 +197,34 @@ if (!function_exists('send_email_phpmailer')) {
             $mail->SMTPSecure = $smtpEncryption === 'ssl' ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = $smtpPort;
             
+            // Enable TLS/SSL certificate verification (recommended for production)
+            $mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true,
+                    'allow_self_signed' => false
+                ]
+            ];
+            
             // Recipients
             $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($to);
+            
+            // Add attachments if provided
+            if (!empty($attachments) && is_array($attachments)) {
+                foreach ($attachments as $attachment) {
+                    if (is_array($attachment)) {
+                        // Attachment with content string
+                        if (isset($attachment['content']) && isset($attachment['filename'])) {
+                            $mime = $attachment['mime'] ?? 'application/pdf';
+                            $mail->addStringAttachment($attachment['content'], $attachment['filename'], 'base64', $mime);
+                        }
+                    } elseif (is_string($attachment) && file_exists($attachment)) {
+                        // Attachment as file path
+                        $mail->addAttachment($attachment);
+                    }
+                }
+            }
             
             // Content
             $mail->isHTML($isHtml);
@@ -160,12 +232,19 @@ if (!function_exists('send_email_phpmailer')) {
             $mail->Body = $message;
             if (!$isHtml) {
                 $mail->AltBody = strip_tags($message);
+            } else {
+                // Create plain text version from HTML
+                $mail->AltBody = strip_tags($message);
             }
             
             $mail->send();
             return true;
-        } catch (Exception $e) {
+        } catch (\PHPMailer\PHPMailer\Exception $e) {
             error_log("PHPMailer error: " . $e->getMessage());
+            error_log("PHPMailer error info: " . $mail->ErrorInfo);
+            return false;
+        } catch (Exception $e) {
+            error_log("Email sending error: " . $e->getMessage());
             return false;
         }
     }

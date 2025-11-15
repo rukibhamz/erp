@@ -1,0 +1,11 @@
+# Deny direct access to invoice PDFs
+# SECURITY: Prevent directory listing and direct file access
+# Files should only be accessed through the view_invoice.php and download_invoice.php endpoints
+
+# Deny all direct access
+Order Deny,Allow
+Deny from all
+
+# Allow access only from PHP scripts (if needed for specific cases)
+# This is a fallback - the main security is in the PHP endpoints
+

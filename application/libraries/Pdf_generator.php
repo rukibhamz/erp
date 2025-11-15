@@ -3,22 +3,31 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * PDF Generator Library
- * Simple PDF generator for invoices and documents
- * Uses TCPDF if available, otherwise falls back to HTML output
+ * Professional PDF generator for invoices and documents
+ * Supports Dompdf (preferred), TCPDF, or HTML fallback
  */
 class Pdf_generator {
     private $pdf;
     private $companyInfo;
+    private $pdfLibrary = null; // 'dompdf', 'tcpdf', or 'html'
     
     public function __construct($companyInfo = []) {
         $this->companyInfo = $companyInfo;
         
-        // Try to use TCPDF if available
-        if (class_exists('TCPDF')) {
+        // Try Dompdf first (preferred - easier to use)
+        if (class_exists('Dompdf\Dompdf')) {
+            require_once BASEPATH . '../vendor/autoload.php';
+            $this->pdf = new \Dompdf\Dompdf();
+            $this->pdfLibrary = 'dompdf';
+        }
+        // Try TCPDF if available
+        elseif (class_exists('TCPDF')) {
             $this->pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+            $this->pdfLibrary = 'tcpdf';
         } else {
-            // Fallback: Create a simple PDF-like HTML generator
+            // Fallback: HTML output
             $this->pdf = null;
+            $this->pdfLibrary = 'html';
         }
     }
     
@@ -28,12 +37,45 @@ class Pdf_generator {
      * @param array $invoice Invoice data
      * @param array $items Invoice items
      * @param array $customer Customer data
-     * @return string PDF content or HTML fallback
+     * @return string PDF content (binary string) or HTML fallback
      */
     public function generateInvoice($invoice, $items, $customer) {
-        if ($this->pdf instanceof TCPDF) {
+        if ($this->pdfLibrary === 'dompdf') {
+            return $this->generateInvoiceDompdf($invoice, $items, $customer);
+        } elseif ($this->pdfLibrary === 'tcpdf') {
             return $this->generateInvoiceTCPDF($invoice, $items, $customer);
         } else {
+            return $this->generateInvoiceHTML($invoice, $items, $customer);
+        }
+    }
+    
+    /**
+     * Generate invoice using Dompdf (preferred method)
+     * 
+     * @param array $invoice Invoice data
+     * @param array $items Invoice items
+     * @param array $customer Customer data
+     * @return string PDF content as binary string
+     */
+    private function generateInvoiceDompdf($invoice, $items, $customer) {
+        try {
+            // Generate HTML content
+            $html = $this->generateInvoiceHTML($invoice, $items, $customer);
+            
+            // Load HTML into Dompdf
+            $this->pdf->loadHtml($html);
+            
+            // Set paper size and orientation
+            $this->pdf->setPaper('A4', 'portrait');
+            
+            // Render PDF
+            $this->pdf->render();
+            
+            // Return PDF as string
+            return $this->pdf->output();
+        } catch (Exception $e) {
+            error_log('Dompdf error: ' . $e->getMessage());
+            // Fallback to HTML
             return $this->generateInvoiceHTML($invoice, $items, $customer);
         }
     }
@@ -189,15 +231,217 @@ class Pdf_generator {
     }
     
     /**
-     * Generate invoice as HTML (fallback when TCPDF not available)
+     * Generate invoice as HTML (used by Dompdf and as fallback)
+     * 
+     * @param array $invoice Invoice data
+     * @param array $items Invoice items
+     * @param array $customer Customer data
+     * @return string HTML content
      */
     private function generateInvoiceHTML($invoice, $items, $customer) {
         $companyName = $this->companyInfo['name'] ?? 'Company Name';
         $companyAddress = $this->getCompanyAddress();
+        $companyLogo = $this->companyInfo['logo'] ?? null;
         
-        ob_start();
-        include BASEPATH . '../application/views/receivables/invoice_pdf.php';
-        return ob_get_clean();
+        // Get logo path if available
+        $logoPath = '';
+        if ($companyLogo && file_exists(BASEPATH . '../uploads/' . $companyLogo)) {
+            $logoPath = base_url('uploads/' . $companyLogo);
+        }
+        
+        // Format currency helper (fallback if not available)
+        if (!function_exists('format_currency')) {
+            function format_currency($amount, $currency = 'USD') {
+                $symbols = ['USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦'];
+                $symbol = $symbols[$currency] ?? $currency . ' ';
+                return $symbol . number_format((float)$amount, 2);
+            }
+        }
+        
+        // Format date helper (fallback if not available)
+        if (!function_exists('format_date')) {
+            function format_date($date, $format = 'M d, Y') {
+                if (empty($date) || $date === '0000-00-00') return '';
+                $timestamp = strtotime($date);
+                return $timestamp ? date($format, $timestamp) : '';
+            }
+        }
+        
+        // Start HTML output
+        $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice ' . htmlspecialchars($invoice['invoice_number']) . '</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #333; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #0066cc; }
+        .company-info { flex: 1; }
+        .company-logo { max-width: 150px; max-height: 80px; margin-bottom: 10px; }
+        .company-name { font-size: 24px; font-weight: bold; color: #0066cc; margin-bottom: 10px; }
+        .company-address { font-size: 10px; color: #666; line-height: 1.8; }
+        .invoice-info { text-align: right; }
+        .invoice-title { font-size: 32px; font-weight: bold; color: #0066cc; margin-bottom: 15px; }
+        .invoice-details { font-size: 11px; }
+        .invoice-details p { margin: 3px 0; }
+        .billing-section { display: flex; justify-content: space-between; margin-bottom: 30px; padding: 15px; background-color: #f9f9f9; }
+        .bill-to, .bill-from { flex: 1; }
+        .bill-to h3, .bill-from h3 { font-size: 12px; margin-bottom: 8px; color: #333; }
+        .bill-to p, .bill-from p { font-size: 10px; color: #666; line-height: 1.8; }
+        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .items-table th { background-color: #0066cc; color: white; padding: 10px; text-align: left; font-size: 11px; font-weight: bold; }
+        .items-table td { padding: 10px; border-bottom: 1px solid #ddd; font-size: 10px; }
+        .items-table tr:nth-child(even) { background-color: #f9f9f9; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .totals-section { margin-top: 20px; }
+        .totals-table { width: 100%; max-width: 300px; margin-left: auto; }
+        .totals-table td { padding: 8px 10px; border-bottom: 1px solid #ddd; }
+        .totals-table td:first-child { text-align: right; font-weight: bold; }
+        .totals-table .total-row { background-color: #0066cc; color: white; font-weight: bold; font-size: 14px; }
+        .totals-table .total-row td { border: none; }
+        .notes-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; }
+        .notes-section h3 { font-size: 12px; margin-bottom: 10px; color: #333; }
+        .notes-section p { font-size: 10px; color: #666; line-height: 1.8; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 9px; color: #999; }
+        @media print {
+            .container { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="company-info">
+                ' . ($logoPath ? '<img src="' . htmlspecialchars($logoPath) . '" alt="Company Logo" class="company-logo">' : '') . '
+                <div class="company-name">' . htmlspecialchars($companyName) . '</div>
+                <div class="company-address">' . nl2br(htmlspecialchars($companyAddress)) . '</div>
+            </div>
+            <div class="invoice-info">
+                <div class="invoice-title">INVOICE</div>
+                <div class="invoice-details">
+                    <p><strong>Invoice #:</strong> ' . htmlspecialchars($invoice['invoice_number']) . '</p>
+                    <p><strong>Date:</strong> ' . format_date($invoice['invoice_date']) . '</p>
+                    <p><strong>Due Date:</strong> ' . format_date($invoice['due_date']) . '</p>
+                    ' . (!empty($invoice['reference']) ? '<p><strong>Reference:</strong> ' . htmlspecialchars($invoice['reference']) . '</p>' : '') . '
+                </div>
+            </div>
+        </div>
+        
+        <!-- Billing Section -->
+        <div class="billing-section">
+            <div class="bill-to">
+                <h3>Bill To:</h3>
+                <p>
+                    <strong>' . htmlspecialchars($customer['company_name'] ?? '') . '</strong><br>
+                    ' . (!empty($customer['address']) ? htmlspecialchars($customer['address']) . '<br>' : '') . '
+                    ' . (!empty($customer['city']) ? htmlspecialchars($customer['city']) . ', ' : '') . 
+                    (!empty($customer['state']) ? htmlspecialchars($customer['state']) . ' ' : '') . 
+                    (!empty($customer['zip_code']) ? htmlspecialchars($customer['zip_code']) : '') . '<br>
+                    ' . (!empty($customer['country']) ? htmlspecialchars($customer['country']) . '<br>' : '') . '
+                    ' . (!empty($customer['email']) ? 'Email: ' . htmlspecialchars($customer['email']) . '<br>' : '') . '
+                    ' . (!empty($customer['phone']) ? 'Phone: ' . htmlspecialchars($customer['phone']) : '') . '
+                </p>
+            </div>
+            <div class="bill-from">
+                <h3>From:</h3>
+                <p>
+                    <strong>' . htmlspecialchars($companyName) . '</strong><br>
+                    ' . nl2br(htmlspecialchars($companyAddress)) . '
+                </p>
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="text-center">Quantity</th>
+                    <th class="text-right">Unit Price</th>
+                    <th class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>';
+        
+        foreach ($items as $item) {
+            $html .= '<tr>
+                <td>' . htmlspecialchars($item['item_description']) . '</td>
+                <td class="text-center">' . number_format($item['quantity'], 2) . '</td>
+                <td class="text-right">' . format_currency($item['unit_price'], $invoice['currency']) . '</td>
+                <td class="text-right">' . format_currency($item['line_total'], $invoice['currency']) . '</td>
+            </tr>';
+        }
+        
+        $html .= '</tbody>
+        </table>
+        
+        <!-- Totals Section -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td>Subtotal:</td>
+                    <td class="text-right">' . format_currency($invoice['subtotal'], $invoice['currency']) . '</td>
+                </tr>';
+        
+        if (!empty($invoice['discount_amount']) && $invoice['discount_amount'] > 0) {
+            $html .= '<tr>
+                    <td>Discount:</td>
+                    <td class="text-right">-' . format_currency($invoice['discount_amount'], $invoice['currency']) . '</td>
+                </tr>';
+        }
+        
+        if (!empty($invoice['tax_amount']) && $invoice['tax_amount'] > 0) {
+            $html .= '<tr>
+                    <td>Tax (' . number_format($invoice['tax_rate'], 2) . '%):</td>
+                    <td class="text-right">' . format_currency($invoice['tax_amount'], $invoice['currency']) . '</td>
+                </tr>';
+        }
+        
+        $html .= '<tr class="total-row">
+                    <td>Total Amount:</td>
+                    <td class="text-right">' . format_currency($invoice['total_amount'], $invoice['currency']) . '</td>
+                </tr>';
+        
+        if (!empty($invoice['paid_amount']) && $invoice['paid_amount'] > 0) {
+            $html .= '<tr>
+                    <td>Paid Amount:</td>
+                    <td class="text-right">' . format_currency($invoice['paid_amount'], $invoice['currency']) . '</td>
+                </tr>
+                <tr>
+                    <td><strong>Balance Due:</strong></td>
+                    <td class="text-right"><strong>' . format_currency($invoice['balance_amount'], $invoice['currency']) . '</strong></td>
+                </tr>';
+        }
+        
+        $html .= '</table>
+        </div>
+        
+        <!-- Notes and Terms Section -->
+        ' . ((!empty($invoice['notes']) || !empty($invoice['terms'])) ? '<div class="notes-section">
+            ' . (!empty($invoice['notes']) ? '<div style="margin-bottom: 15px;">
+                <h3>Notes:</h3>
+                <p>' . nl2br(htmlspecialchars($invoice['notes'])) . '</p>
+            </div>' : '') . '
+            ' . (!empty($invoice['terms']) ? '<div>
+                <h3>Payment Terms:</h3>
+                <p>' . nl2br(htmlspecialchars($invoice['terms'])) . '</p>
+            </div>' : '') . '
+        </div>' : '') . '
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>Thank you for your business!</p>
+            <p>This is a computer-generated invoice.</p>
+        </div>
+    </div>
+</body>
+</html>';
+        
+        return $html;
     }
     
     /**

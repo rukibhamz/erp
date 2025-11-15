@@ -3,7 +3,8 @@
     "description": "Business ERP System",
     "type": "project",
     "require": {
-        "phpmailer/phpmailer": "^6.9"
+        "phpmailer/phpmailer": "^6.9",
+        "dompdf/dompdf": "^2.0"
     },
     "autoload": {
         "psr-4": {

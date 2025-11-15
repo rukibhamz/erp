@@ -493,6 +493,10 @@ class Receivables extends Base_Controller {
     
     /**
      * Generate PDF for invoice and save to disk
+     * Uses the enhanced Pdf_generator library with Dompdf support
+     * 
+     * @param int $invoiceId Invoice ID
+     * @return string|false File path if successful, false on error
      */
     private function generateInvoicePdf($invoiceId) {
         try {
@@ -502,6 +506,11 @@ class Receivables extends Base_Controller {
             }
             
             $items = $this->invoiceModel->getItems($invoiceId);
+            
+            if (empty($items)) {
+                error_log('Invoice has no items: ' . $invoiceId);
+                return false;
+            }
             
             // Get company/entity information
             $entities = $this->entityModel->getAll();
@@ -514,7 +523,8 @@ class Receivables extends Base_Controller {
                 'country' => '',
                 'phone' => '',
                 'email' => '',
-                'tax_id' => ''
+                'tax_id' => '',
+                'logo' => null
             ];
             
             // Prepare customer data
@@ -529,30 +539,28 @@ class Receivables extends Base_Controller {
                 'phone' => $invoice['phone'] ?? ''
             ];
             
-            // Generate HTML invoice
-            ob_start();
-            $data = [
-                'invoice' => $invoice,
-                'items' => $items,
-                'customer' => $customer,
-                'company' => $companyInfo
-            ];
-            extract($data);
-            include BASEPATH . '../application/views/receivables/invoice_pdf.php';
-            $html = ob_get_clean();
+            // Load PDF generator library
+            $this->loadLibrary('Pdf_generator');
+            $pdfGenerator = new Pdf_generator($companyInfo);
             
-            // Create uploads/invoices directory if it doesn't exist
-            $uploadDir = BASEPATH . '../uploads/invoices/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
+            // Generate PDF
+            $pdfContent = $pdfGenerator->generateInvoice($invoice, $items, $customer);
+            
+            // Determine file extension based on content type
+            $isPdf = (substr($pdfContent, 0, 4) === '%PDF');
+            $extension = $isPdf ? '.pdf' : '.html';
+            
+            // Create invoices directory if it doesn't exist
+            $invoiceDir = BASEPATH . '../invoices/';
+            if (!is_dir($invoiceDir)) {
+                mkdir($invoiceDir, 0755, true);
             }
             
-            // Save HTML version (can be converted to PDF using browser print)
-            $filename = 'invoice-' . $invoice['invoice_number'] . '.html';
-            $filepath = $uploadDir . $filename;
-            file_put_contents($filepath, $html);
+            // Save PDF to file
+            $filename = 'invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . $extension;
+            $filepath = $invoiceDir . $filename;
+            file_put_contents($filepath, $pdfContent);
             
-            // Also save as a viewable HTML file
             return $filepath;
         } catch (Exception $e) {
             error_log('Error generating invoice PDF: ' . $e->getMessage());
@@ -562,6 +570,9 @@ class Receivables extends Base_Controller {
     
     /**
      * Get PDF path for invoice
+     * 
+     * @param int $invoiceId Invoice ID
+     * @return string|null File path if exists, null otherwise
      */
     private function getInvoicePdfPath($invoiceId) {
         $invoice = $this->invoiceModel->getById($invoiceId);
@@ -569,9 +580,25 @@ class Receivables extends Base_Controller {
             return null;
         }
         
-        $uploadDir = BASEPATH . '../uploads/invoices/';
-        $filename = 'invoice-' . $invoice['invoice_number'] . '.html';
-        return $uploadDir . $filename;
+        $invoiceDir = BASEPATH . '../invoices/';
+        
+        // Check for PDF first
+        $pdfFilename = 'invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . '.pdf';
+        $pdfPath = $invoiceDir . $pdfFilename;
+        
+        if (file_exists($pdfPath)) {
+            return $pdfPath;
+        }
+        
+        // Check for HTML fallback
+        $htmlFilename = 'invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . '.html';
+        $htmlPath = $invoiceDir . $htmlFilename;
+        
+        if (file_exists($htmlPath)) {
+            return $htmlPath;
+        }
+        
+        return null;
     }
     
     /**
