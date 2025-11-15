@@ -383,34 +383,18 @@ class System_settings extends Base_Controller {
                 $fromName = substr($fromName, 0, 100);
             }
             
-            // Use Email_sender library for better error handling
+            // Use Email_sender library - it now reads from database automatically
             require_once BASEPATH . 'libraries/Email_sender.php';
+            $emailSender = new Email_sender();
             
-            // Create temporary config array for Email_sender
-            // Note: Email_sender reads from config file, but we can update it temporarily
-            // For now, we'll use the helper function which accepts parameters directly
-            
-            // Load email helper if not already loaded
-            if (!function_exists('send_email_smtp')) {
-                require_once BASEPATH . '../application/helpers/email_helper.php';
-            }
-            
-            // SECURITY: Call send_email_smtp directly with validated database settings
-            $result = send_email_smtp(
+            // Send test email using Email_sender library
+            $result = $emailSender->sendInvoice(
                 $testEmail,
                 $subject,
-                $message,
-                $fromEmail,
-                $fromName,
-                $emailSettings['smtp_host'] ?? '',
-                $smtpPort,
-                $emailSettings['smtp_username'] ?? '',
-                $emailSettings['smtp_password'] ?? '',
-                $smtpEncryption,
-                true // isHtml
+                $message
             );
             
-            if ($result) {
+            if ($result['success']) {
                 // SECURITY: Log activity without exposing sensitive data
                 $this->activityModel->log(
                     $this->session['user_id'], 
@@ -424,10 +408,24 @@ class System_settings extends Base_Controller {
                     'message' => "Test email sent successfully. Please check your inbox."
                 ]);
             } else {
-                // SECURITY: Don't expose detailed error information
+                // Provide helpful error message
+                $errorMsg = $result['error'] ?? 'Unknown error';
+                
+                // SECURITY: Don't expose detailed error information, but provide helpful hints
+                $message = 'Failed to send test email. ';
+                if (strpos($errorMsg, 'not configured') !== false) {
+                    $message .= 'Please configure SMTP settings in System Settings > Email Configuration.';
+                } elseif (strpos($errorMsg, 'Connection') !== false || strpos($errorMsg, 'timeout') !== false) {
+                    $message .= 'Please verify your SMTP host and port settings.';
+                } elseif (strpos($errorMsg, 'authentication') !== false || strpos($errorMsg, 'login') !== false || strpos($errorMsg, '535') !== false) {
+                    $message .= 'Please verify your SMTP username and password. For Gmail, use an App Password (not your regular password).';
+                } else {
+                    $message .= 'Error: ' . htmlspecialchars($errorMsg);
+                }
+                
                 echo json_encode([
                     'success' => false, 
-                    'message' => 'Failed to send test email. Please verify your SMTP settings are correct and try again.'
+                    'message' => $message
                 ]);
             }
         } catch (Exception $e) {

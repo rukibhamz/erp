@@ -31,33 +31,67 @@ class Email_sender {
     }
     
     /**
-     * Load email configuration
-     * 
-     * CONFIGURE THESE SETTINGS BELOW:
-     * For Gmail: Generate App Password at https://myaccount.google.com/apppasswords
+     * Load email configuration from database
+     * Falls back to config file if database not available
      */
     private function loadConfig() {
-        // Try to load from config file first
-        $configFile = BASEPATH . 'config/config.installed.php';
-        if (!file_exists($configFile)) {
-            $configFile = BASEPATH . 'config/config.php';
+        $emailSettings = [];
+        
+        // Try to load from database first
+        try {
+            if (class_exists('Database')) {
+                $db = Database::getInstance();
+                if ($db) {
+                    $prefix = $db->getPrefix();
+                    $settingsResult = $db->fetchAll(
+                        "SELECT setting_key, setting_value FROM `{$prefix}settings` 
+                         WHERE setting_key IN (?, ?, ?, ?, ?, ?, ?)",
+                        ['smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption', 'from_email', 'from_name']
+                    );
+                    
+                    foreach ($settingsResult as $row) {
+                        $emailSettings[$row['setting_key']] = $row['setting_value'];
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log('Email_sender loadConfig database error: ' . $e->getMessage());
         }
         
-        $emailConfig = [];
-        if (file_exists($configFile)) {
-            $config = require $configFile;
-            $emailConfig = $config['email'] ?? [];
+        // Fallback to config file if database settings not found
+        if (empty($emailSettings['smtp_host'])) {
+            $configFile = BASEPATH . 'config/config.installed.php';
+            if (!file_exists($configFile)) {
+                $configFile = BASEPATH . 'config/config.php';
+            }
+            
+            if (file_exists($configFile)) {
+                $config = require $configFile;
+                $emailConfig = $config['email'] ?? [];
+                
+                if (!empty($emailConfig)) {
+                    $emailSettings = array_merge($emailSettings, [
+                        'smtp_host' => $emailConfig['smtp_host'] ?? '',
+                        'smtp_port' => $emailConfig['smtp_port'] ?? 587,
+                        'smtp_username' => $emailConfig['smtp_username'] ?? $emailConfig['smtp_user'] ?? '',
+                        'smtp_password' => $emailConfig['smtp_password'] ?? $emailConfig['smtp_pass'] ?? '',
+                        'from_email' => $emailConfig['from_email'] ?? '',
+                        'from_name' => $emailConfig['from_name'] ?? 'Invoice System',
+                        'smtp_encryption' => $emailConfig['smtp_encryption'] ?? 'tls'
+                    ]);
+                }
+            }
         }
         
-        // CONFIGURE THESE SETTINGS - Update with your SMTP credentials
+        // Set configuration with database values or defaults
         $this->config = [
-            'smtp_host' => $emailConfig['smtp_host'] ?? 'smtp.gmail.com',
-            'smtp_port' => $emailConfig['smtp_port'] ?? 587,
-            'smtp_user' => $emailConfig['smtp_username'] ?? $emailConfig['smtp_user'] ?? '', // YOUR GMAIL HERE
-            'smtp_pass' => $emailConfig['smtp_password'] ?? $emailConfig['smtp_pass'] ?? '', // YOUR APP PASSWORD HERE
-            'from_email' => $emailConfig['from_email'] ?? '', // YOUR EMAIL HERE
-            'from_name' => $emailConfig['from_name'] ?? 'Invoice System',
-            'encryption' => $emailConfig['smtp_encryption'] ?? 'tls'
+            'smtp_host' => $emailSettings['smtp_host'] ?? 'smtp.gmail.com',
+            'smtp_port' => intval($emailSettings['smtp_port'] ?? 587),
+            'smtp_user' => $emailSettings['smtp_username'] ?? '',
+            'smtp_pass' => $emailSettings['smtp_password'] ?? '',
+            'from_email' => $emailSettings['from_email'] ?? '',
+            'from_name' => $emailSettings['from_name'] ?? 'Invoice System',
+            'encryption' => $emailSettings['smtp_encryption'] ?? 'tls'
         ];
     }
     
@@ -73,7 +107,17 @@ class Email_sender {
             $this->mail->SMTPAuth = true;
             $this->mail->Username = $this->config['smtp_user'];
             $this->mail->Password = $this->config['smtp_pass'];
-            $this->mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            
+            // Set encryption based on config
+            $encryption = strtolower($this->config['encryption'] ?? 'tls');
+            if ($encryption === 'ssl') {
+                $this->mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+            } elseif ($encryption === 'tls') {
+                $this->mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            } else {
+                $this->mail->SMTPSecure = '';
+            }
+            
             $this->mail->Port = $this->config['smtp_port'];
             $this->mail->setFrom($this->config['from_email'], $this->config['from_name']);
             $this->mail->CharSet = 'UTF-8';
@@ -99,7 +143,7 @@ class Email_sender {
         }
         
         if (empty($this->config['smtp_user'])) {
-            return ['success' => false, 'error' => 'Email not configured. Update Email_sender.php line 18-24 or configure in config file'];
+            return ['success' => false, 'error' => 'Email not configured. Please configure SMTP settings in System Settings > Email Configuration'];
         }
         
         if (!$this->usePhpMailer) {
@@ -173,9 +217,12 @@ class Email_sender {
         return [
             'smtp_host' => $this->config['smtp_host'],
             'smtp_port' => $this->config['smtp_port'],
+            'smtp_encryption' => $this->config['encryption'],
             'from_email' => $this->config['from_email'],
+            'from_name' => $this->config['from_name'],
             'using_phpmailer' => $this->usePhpMailer,
-            'smtp_user_set' => !empty($this->config['smtp_user'])
+            'smtp_user_set' => !empty($this->config['smtp_user']),
+            'smtp_pass_set' => !empty($this->config['smtp_pass'])
         ];
     }
 }

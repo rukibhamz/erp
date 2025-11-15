@@ -30,29 +30,33 @@ if (empty($config['from_email']) || empty($config['smtp_user_set'])) {
     echo '<h2 style="color: red;">ERROR: Email not configured.</h2>';
     echo '<h3>Configuration Steps:</h3>';
     echo '<ol>';
-    echo '<li>Open: <code>application/libraries/Email_sender.php</code></li>';
-    echo '<li>Update lines 18-24 with your SMTP credentials:</li>';
+    echo '<li>Go to: <strong>System Settings > Email Configuration</strong> in your ERP system</li>';
+    echo '<li>Fill in the SMTP settings:</li>';
     echo '<ul>';
-    echo '<li><code>smtp_user</code> - Your Gmail address</li>';
-    echo '<li><code>smtp_pass</code> - Your Gmail App Password (16 characters)</li>';
-    echo '<li><code>from_email</code> - Your email address</li>';
+    echo '<li><strong>SMTP Host:</strong> smtp.gmail.com (for Gmail)</li>';
+    echo '<li><strong>SMTP Port:</strong> 587 (for TLS) or 465 (for SSL)</li>';
+    echo '<li><strong>SMTP Username:</strong> Your Gmail address</li>';
+    echo '<li><strong>SMTP Password:</strong> Your Gmail App Password (16 characters)</li>';
+    echo '<li><strong>From Email:</strong> Your email address</li>';
+    echo '<li><strong>From Name:</strong> Your company name</li>';
     echo '</ul>';
-    echo '<li>Or configure in config file: <code>application/config/config.installed.php</code></li>';
+    echo '<li>Click <strong>Save</strong></li>';
     echo '</ol>';
     echo '<h3>Gmail Setup:</h3>';
     echo '<ol>';
     echo '<li>Go to: <a href="https://myaccount.google.com/security" target="_blank">Google Account Security</a></li>';
-    echo '<li>Enable 2-Factor Authentication</li>';
+    echo '<li>Enable <strong>2-Factor Authentication</strong></li>';
     echo '<li>Go to: <a href="https://myaccount.google.com/apppasswords" target="_blank">App Passwords</a></li>';
-    echo '<li>Generate App Password for "Mail"</li>';
-    echo '<li>Copy the 16-character password</li>';
-    echo '<li>Paste it in Email_sender.php line 21</li>';
+    echo '<li>Generate App Password for <strong>"Mail"</strong></li>';
+    echo '<li>Copy the <strong>16-character password</strong></li>';
+    echo '<li>Paste it in <strong>System Settings > Email Configuration > SMTP Password</strong></li>';
     echo '</ol>';
     echo '<hr>';
     echo '<h3>Current Configuration:</h3>';
     echo '<pre>';
     print_r($config);
     echo '</pre>';
+    echo '<p><strong>Note:</strong> Settings are stored in the database. Update them via System Settings > Email Configuration.</p>';
     exit;
 }
 
@@ -92,10 +96,11 @@ if (!$result['success']) {
     echo '<h3>Common Fixes:</h3>';
     echo '<ul>';
     echo '<li><strong>Gmail:</strong> Generate App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank">https://myaccount.google.com/apppasswords</a></li>';
-    echo '<li><strong>Check SMTP credentials</strong> in Email_sender.php (lines 18-24)</li>';
+    echo '<li><strong>Check SMTP credentials</strong> in System Settings > Email Configuration</li>';
     echo '<li><strong>Verify firewall</strong> allows port 587 (TLS) or 465 (SSL)</li>';
     echo '<li><strong>Check error logs:</strong> ' . ini_get('error_log') . '</li>';
-    echo '<li><strong>Enable debug mode:</strong> Uncomment <code>$this->mail->SMTPDebug = 2;</code> in Email_sender.php line 80</li>';
+    echo '<li><strong>For Gmail:</strong> Make sure you\'re using an App Password (not your regular password)</li>';
+    echo '<li><strong>Verify 2FA is enabled</strong> on your Google account</li>';
     echo '</ul>';
 } else {
     echo '<h2 class="success">✓ SUCCESS: Test email sent!</h2>';
