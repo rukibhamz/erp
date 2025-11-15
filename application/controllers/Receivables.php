@@ -247,25 +247,27 @@ class Receivables extends Base_Controller {
             $invoiceId = $this->invoiceModel->create($invoiceData);
             
             if ($invoiceId) {
-                // Create invoice items
-                $itemModel = $this->loadModel('Base_Model');
-                $itemModel->table = 'invoice_items';
-                
+                // Create invoice items using Invoice_model's addItem method
                 foreach ($items as $item) {
                     $quantity = floatval($item['quantity'] ?? 0);
                     $unitPrice = floatval($item['unit_price'] ?? 0);
                     $itemTaxRate = floatval($item['tax_rate'] ?? $taxRate);
                     $lineTotal = $quantity * $unitPrice;
                     
-                    $itemModel->create([
-                        'invoice_id' => $invoiceId,
+                    $itemData = [
+                        'product_id' => !empty($item['product_id']) ? intval($item['product_id']) : null,
                         'item_description' => sanitize_input($item['description'] ?? ''),
                         'quantity' => $quantity,
                         'unit_price' => $unitPrice,
                         'tax_rate' => $itemTaxRate,
+                        'tax_amount' => $lineTotal * ($itemTaxRate / 100),
+                        'discount_rate' => floatval($item['discount_rate'] ?? 0),
+                        'discount_amount' => floatval($item['discount_amount'] ?? 0),
                         'line_total' => $lineTotal,
                         'account_id' => !empty($item['account_id']) ? intval($item['account_id']) : null
-                    ]);
+                    ];
+                    
+                    $this->invoiceModel->addItem($invoiceId, $itemData);
                 }
                 
                 // If status is 'sent', create transaction

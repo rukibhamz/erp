@@ -118,24 +118,20 @@ class Estimates extends Base_Controller {
                     $lineTotal = ($qty * $price) - $discount;
                     $lineTax = $lineTotal * ($taxRate / 100);
 
-                    $this->db->query(
-                        "INSERT INTO `" . $this->db->getPrefix() . "estimate_items` 
-                         (estimate_id, product_id, item_description, quantity, unit_price, tax_rate, tax_amount, discount_rate, discount_amount, line_total, account_id, created_at) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
-                        [
-                            $estimateId,
-                            !empty($item['product_id']) ? intval($item['product_id']) : null,
-                            sanitize_input($item['description'] ?? ''),
-                            $qty,
-                            $price,
-                            $taxRate,
-                            $lineTax,
-                            0,
-                            $discount,
-                            $lineTotal,
-                            !empty($item['account_id']) ? intval($item['account_id']) : null
-                        ]
-                    );
+                    $itemData = [
+                        'product_id' => !empty($item['product_id']) ? intval($item['product_id']) : null,
+                        'item_description' => sanitize_input($item['description'] ?? ''),
+                        'quantity' => $qty,
+                        'unit_price' => $price,
+                        'tax_rate' => $taxRate,
+                        'tax_amount' => $lineTax,
+                        'discount_rate' => 0,
+                        'discount_amount' => $discount,
+                        'line_total' => $lineTotal,
+                        'account_id' => !empty($item['account_id']) ? intval($item['account_id']) : null
+                    ];
+                    
+                    $this->estimateModel->addItem($estimateId, $itemData);
                 }
 
                 $this->activityModel->log($this->session['user_id'], 'create', 'Estimates', 'Created estimate: ' . $estimateData['estimate_number']);

@@ -99,25 +99,21 @@ class Credit_notes extends Base_Controller {
             $creditNoteId = $this->creditNoteModel->create($creditNoteData);
 
             if ($creditNoteId) {
-                // Create credit note items
+                // Create credit note items using Credit_note_model's addItem method
                 foreach ($items as $item) {
                     $qty = floatval($item['quantity'] ?? 1);
                     $price = floatval($item['unit_price'] ?? 0);
                     $lineTotal = $qty * $price;
 
-                    $this->db->query(
-                        "INSERT INTO `" . $this->db->getPrefix() . "credit_note_items` 
-                         (credit_note_id, product_id, item_description, quantity, unit_price, line_total, created_at) 
-                         VALUES (?, ?, ?, ?, ?, ?, NOW())",
-                        [
-                            $creditNoteId,
-                            !empty($item['product_id']) ? intval($item['product_id']) : null,
-                            sanitize_input($item['description'] ?? ''),
-                            $qty,
-                            $price,
-                            $lineTotal
-                        ]
-                    );
+                    $itemData = [
+                        'product_id' => !empty($item['product_id']) ? intval($item['product_id']) : null,
+                        'item_description' => sanitize_input($item['description'] ?? ''),
+                        'quantity' => $qty,
+                        'unit_price' => $price,
+                        'line_total' => $lineTotal
+                    ];
+                    
+                    $this->creditNoteModel->addItem($creditNoteId, $itemData);
                 }
 
                 $this->activityModel->log($this->session['user_id'], 'create', 'Credit Notes', 'Created credit note: ' . $creditNoteData['credit_note_number']);

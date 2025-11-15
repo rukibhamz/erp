@@ -210,21 +210,17 @@ class Recurring extends Base_Controller {
                 throw new Exception('Failed to create journal entry');
             }
 
-            // Add journal lines
+            // Add journal lines using Journal_entry_model's addLine method
             if (!empty($templateData['lines'])) {
                 foreach ($templateData['lines'] as $line) {
-                    $this->db->query(
-                        "INSERT INTO `" . $this->db->getPrefix() . "journal_entry_lines` 
-                         (journal_entry_id, account_id, description, debit, credit, created_at) 
-                         VALUES (?, ?, ?, ?, ?, NOW())",
-                        [
-                            $journalId,
-                            $line['account_id'],
-                            $line['description'] ?? '',
-                            floatval($line['debit'] ?? 0),
-                            floatval($line['credit'] ?? 0)
-                        ]
-                    );
+                    $lineData = [
+                        'account_id' => $line['account_id'],
+                        'description' => $line['description'] ?? '',
+                        'debit' => floatval($line['debit'] ?? 0),
+                        'credit' => floatval($line['credit'] ?? 0)
+                    ];
+                    
+                    $this->journalModel->addLine($journalId, $lineData);
                 }
             }
 

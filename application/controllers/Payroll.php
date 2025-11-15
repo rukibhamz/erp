@@ -342,20 +342,20 @@ class Payroll extends Base_Controller {
             }
 
             // Debit Payroll Expense
-            $this->db->query(
-                "INSERT INTO `" . $this->db->getPrefix() . "journal_entry_lines` 
-                 (journal_entry_id, account_id, description, debit, credit, created_at) 
-                 VALUES (?, ?, ?, ?, ?, NOW())",
-                [$journalId, $expenseAccount['id'], 'Payroll Expense', floatval($payrollRun['total_amount']), 0]
-            );
+            $this->journalModel->addLine($journalId, [
+                'account_id' => $expenseAccount['id'],
+                'description' => 'Payroll Expense',
+                'debit' => floatval($payrollRun['total_amount']),
+                'credit' => 0
+            ]);
 
             // Credit Cash Account
-            $this->db->query(
-                "INSERT INTO `" . $this->db->getPrefix() . "journal_entry_lines` 
-                 (journal_entry_id, account_id, description, debit, credit, created_at) 
-                 VALUES (?, ?, ?, ?, ?, NOW())",
-                [$journalId, $cashAccount['account_id'], 'Payroll Payment', 0, floatval($payrollRun['total_amount'])]
-            );
+            $this->journalModel->addLine($journalId, [
+                'account_id' => $cashAccount['account_id'],
+                'description' => 'Payroll Payment',
+                'debit' => 0,
+                'credit' => floatval($payrollRun['total_amount'])
+            ]);
 
             // Post journal entry
             $this->journalModel->approve($journalId, $this->session['user_id']);

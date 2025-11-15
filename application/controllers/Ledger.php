@@ -85,19 +85,17 @@ class Ledger extends Base_Controller {
             $entryId = $this->journalModel->create($entryData);
             
             if ($entryId) {
-                // Create journal entry lines
-                $lineModel = $this->loadModel('Base_Model');
-                $lineModel->table = 'journal_entry_lines';
-                
+                // Create journal entry lines using Journal_entry_model's addLine method
                 foreach ($lines as $line) {
                     if (!empty($line['account_id']) && (floatval($line['debit'] ?? 0) > 0 || floatval($line['credit'] ?? 0) > 0)) {
-                        $lineModel->create([
-                            'journal_entry_id' => $entryId,
+                        $lineData = [
                             'account_id' => intval($line['account_id']),
                             'description' => sanitize_input($line['description'] ?? ''),
                             'debit' => floatval($line['debit'] ?? 0),
                             'credit' => floatval($line['credit'] ?? 0)
-                        ]);
+                        ];
+                        
+                        $this->journalModel->addLine($entryId, $lineData);
                     }
                 }
                 

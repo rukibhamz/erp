@@ -115,24 +115,22 @@ class Credit_note_model extends Base_Model {
                 'created_by' => $_SESSION['user_id'] ?? null
             ]);
             
-            // Create journal lines
+            // Create journal lines using Journal_entry_model's addLine method
             // DR: Accounts Receivable (decrease AR)
-            $this->db->query(
-                "INSERT INTO `" . $this->db->getPrefix() . "journal_entry_lines` 
-                 (journal_entry_id, account_id, description, debit, credit, created_at) 
-                 VALUES (?, ?, ?, ?, ?, NOW())",
-                [$entryId, $arAccount['id'], 'Credit Note: ' . $creditNote['credit_note_number'], 
-                 0, $creditNote['total_amount']]
-            );
+            $journalModel->addLine($entryId, [
+                'account_id' => $arAccount['id'],
+                'description' => 'Credit Note: ' . $creditNote['credit_note_number'],
+                'debit' => 0,
+                'credit' => $creditNote['total_amount']
+            ]);
             
             // CR: Revenue (decrease revenue)
-            $this->db->query(
-                "INSERT INTO `" . $this->db->getPrefix() . "journal_entry_lines` 
-                 (journal_entry_id, account_id, description, debit, credit, created_at) 
-                 VALUES (?, ?, ?, ?, ?, NOW())",
-                [$entryId, $revenueAccount['id'], 'Credit Note: ' . $creditNote['credit_note_number'], 
-                 $creditNote['total_amount'], 0]
-            );
+            $journalModel->addLine($entryId, [
+                'account_id' => $revenueAccount['id'],
+                'description' => 'Credit Note: ' . $creditNote['credit_note_number'],
+                'debit' => $creditNote['total_amount'],
+                'credit' => 0
+            ]);
             
             // Approve and post
             $journalModel->approve($entryId, $_SESSION['user_id'] ?? null);
@@ -142,6 +140,26 @@ class Credit_note_model extends Base_Model {
         } catch (Exception $e) {
             error_log('Credit_note_model createCreditNoteJournalEntry error: ' . $e->getMessage());
             throw $e;
+        }
+    }
+    
+    public function addItem($creditNoteId, $itemData) {
+        try {
+            $sql = "INSERT INTO `" . $this->db->getPrefix() . "credit_note_items` 
+                    (credit_note_id, product_id, item_description, quantity, unit_price, line_total, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, NOW())";
+            
+            return $this->db->query($sql, [
+                $creditNoteId,
+                $itemData['product_id'] ?? null,
+                $itemData['item_description'] ?? '',
+                $itemData['quantity'] ?? 0,
+                $itemData['unit_price'] ?? 0,
+                $itemData['line_total'] ?? 0
+            ]);
+        } catch (Exception $e) {
+            error_log('Credit_note_model addItem error: ' . $e->getMessage());
+            return false;
         }
     }
     

@@ -202,6 +202,25 @@ class Journal_entry_model extends Base_Model {
         }
     }
     
+    public function addLine($entryId, $lineData) {
+        try {
+            $sql = "INSERT INTO `" . $this->db->getPrefix() . "journal_entry_lines` 
+                    (journal_entry_id, account_id, description, debit, credit, created_at) 
+                    VALUES (?, ?, ?, ?, ?, NOW())";
+            
+            return $this->db->query($sql, [
+                $entryId,
+                $lineData['account_id'] ?? null,
+                $lineData['description'] ?? '',
+                $lineData['debit'] ?? 0,
+                $lineData['credit'] ?? 0
+            ]);
+        } catch (Exception $e) {
+            error_log('Journal_entry_model addLine error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
     private function loadModel($modelName) {
         require_once BASEPATH . 'models/' . $modelName . '.php';
         return new $modelName();
