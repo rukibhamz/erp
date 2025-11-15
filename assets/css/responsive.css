@@ -53,9 +53,20 @@
     margin-right: auto !important;
   }
   
+  /* Prevent amount overflow on mobile - responsive font sizing */
+  .stat-card .stat-number {
+    font-size: clamp(1rem, 3vw, 1.5rem) !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
   .stat-card .stat-label {
     margin-bottom: 0.25rem;
   }
+  
   /* Topbar mobile alignment fixes */
   .topbar {
     display: flex !important;
@@ -276,6 +287,16 @@
     width: 100%;
     margin-left: auto !important;
     margin-right: auto !important;
+  }
+  
+  /* Prevent amount overflow on small devices - responsive font sizing */
+  .stat-card .stat-number {
+    font-size: clamp(1rem, 3vw, 1.5rem) !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .stat-card .stat-label {

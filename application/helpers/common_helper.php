@@ -73,6 +73,29 @@ if (!function_exists('format_currency')) {
 }
 
 /**
+ * Format date
+ * Formats a date string to a readable format
+ * 
+ * @param string $date Date string (Y-m-d format or any valid date format)
+ * @param string $format Output format (default: 'M d, Y')
+ * @return string Formatted date or empty string if invalid
+ */
+if (!function_exists('format_date')) {
+    function format_date($date, $format = 'M d, Y') {
+        if (empty($date) || $date === '0000-00-00' || $date === '0000-00-00 00:00:00') {
+            return '';
+        }
+        
+        $timestamp = strtotime($date);
+        if ($timestamp === false) {
+            return '';
+        }
+        
+        return date($format, $timestamp);
+    }
+}
+
+/**
  * Time ago function
  */
 if (!function_exists('timeAgo')) {

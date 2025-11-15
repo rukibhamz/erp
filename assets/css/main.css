@@ -1073,10 +1073,14 @@ select:focus {
 .stat-icon.danger { background: #fee2e2; color: var(--danger); }
 
 .stat-number {
-    font-size: 1.875rem;
     font-weight: 700;
     color: var(--gray-900);
     line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    /* Responsive font sizing for large numbers - prevents overflow */
+    font-size: clamp(1.25rem, 4vw, 1.875rem);
 }
 
 .stat-label {
@@ -1264,7 +1268,10 @@ select:focus {
     }
     
     .stat-number {
-        font-size: 1.5rem;
+        font-size: clamp(1.125rem, 3.5vw, 1.5rem);
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
     }
     
     .stat-icon {
@@ -1344,7 +1351,10 @@ select:focus {
     }
     
     .stat-number {
-        font-size: 1.625rem;
+        font-size: clamp(1rem, 3vw, 1.625rem);
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
     }
 }
 
