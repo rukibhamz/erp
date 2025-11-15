@@ -15,10 +15,26 @@ class Pdf_generator {
         $this->companyInfo = $companyInfo;
         
         // Try Dompdf first (preferred - easier to use)
+        // Check if autoloader exists and load it
+        $autoloadPath = BASEPATH . '../vendor/autoload.php';
+        if (file_exists($autoloadPath)) {
+            require_once $autoloadPath;
+        }
+        
         if (class_exists('Dompdf\Dompdf')) {
-            require_once BASEPATH . '../vendor/autoload.php';
-            $this->pdf = new \Dompdf\Dompdf();
-            $this->pdfLibrary = 'dompdf';
+            try {
+                $options = new \Dompdf\Options();
+                $options->set('isHtml5ParserEnabled', true);
+                $options->set('isRemoteEnabled', true);
+                $options->set('defaultFont', 'DejaVu Sans');
+                
+                $this->pdf = new \Dompdf\Dompdf($options);
+                $this->pdfLibrary = 'dompdf';
+            } catch (Exception $e) {
+                error_log('Dompdf initialization error: ' . $e->getMessage());
+                $this->pdf = null;
+                $this->pdfLibrary = 'html';
+            }
         }
         // Try TCPDF if available
         elseif (class_exists('TCPDF')) {
@@ -37,9 +53,65 @@ class Pdf_generator {
      * @param array $invoice Invoice data
      * @param array $items Invoice items
      * @param array $customer Customer data
-     * @return string PDF content (binary string) or HTML fallback
+     * @return array ['success' => bool, 'file_path' => string, 'filename' => string, 'pdf_content' => string, 'error' => string]
      */
     public function generateInvoice($invoice, $items, $customer) {
+        try {
+            // Generate PDF content
+            if ($this->pdfLibrary === 'dompdf') {
+                $pdfContent = $this->generateInvoiceDompdf($invoice, $items, $customer);
+            } elseif ($this->pdfLibrary === 'tcpdf') {
+                $pdfContent = $this->generateInvoiceTCPDF($invoice, $items, $customer);
+            } else {
+                $pdfContent = $this->generateInvoiceHTML($invoice, $items, $customer);
+            }
+            
+            // Determine if it's actual PDF or HTML
+            $isPdf = (substr($pdfContent, 0, 4) === '%PDF');
+            $extension = $isPdf ? '.pdf' : '.html';
+            
+            // Create uploads/invoices directory if it doesn't exist
+            $uploadDir = BASEPATH . '../uploads/invoices/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            // Generate filename
+            $filename = 'invoice_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . '_' . time() . $extension;
+            $filePath = $uploadDir . $filename;
+            
+            // Save to file
+            file_put_contents($filePath, $pdfContent);
+            
+            return [
+                'success' => true,
+                'file_path' => $filePath,
+                'filename' => $filename,
+                'pdf_content' => $pdfContent,
+                'error' => null
+            ];
+            
+        } catch (Exception $e) {
+            error_log('PDF Generation Error: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'file_path' => null,
+                'filename' => null,
+                'pdf_content' => null,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Generate invoice PDF content only (without saving)
+     * 
+     * @param array $invoice Invoice data
+     * @param array $items Invoice items
+     * @param array $customer Customer data
+     * @return string PDF content (binary string) or HTML fallback
+     */
+    public function generateInvoiceContent($invoice, $items, $customer) {
         if ($this->pdfLibrary === 'dompdf') {
             return $this->generateInvoiceDompdf($invoice, $items, $customer);
         } elseif ($this->pdfLibrary === 'tcpdf') {
@@ -59,7 +131,7 @@ class Pdf_generator {
      */
     private function generateInvoiceDompdf($invoice, $items, $customer) {
         try {
-            // Generate HTML content
+            // Generate HTML content (uses template file if available)
             $html = $this->generateInvoiceHTML($invoice, $items, $customer);
             
             // Load HTML into Dompdf
@@ -73,8 +145,9 @@ class Pdf_generator {
             
             // Return PDF as string
             return $this->pdf->output();
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             error_log('Dompdf error: ' . $e->getMessage());
+            error_log('Dompdf trace: ' . $e->getTraceAsString());
             // Fallback to HTML
             return $this->generateInvoiceHTML($invoice, $items, $customer);
         }
@@ -232,6 +305,7 @@ class Pdf_generator {
     
     /**
      * Generate invoice as HTML (used by Dompdf and as fallback)
+     * Uses the invoice_pdf.php template file if available, otherwise generates inline HTML
      * 
      * @param array $invoice Invoice data
      * @param array $items Invoice items
@@ -239,6 +313,26 @@ class Pdf_generator {
      * @return string HTML content
      */
     private function generateInvoiceHTML($invoice, $items, $customer) {
+        // Try to use the invoice_pdf.php template file first
+        $templateFile = BASEPATH . 'views/receivables/invoice_pdf.php';
+        
+        if (file_exists($templateFile)) {
+            // Use template file
+            ob_start();
+            
+            // Extract variables for template
+            $company = $this->companyInfo;
+            
+            // Include the template file
+            include $templateFile;
+            
+            // Get buffer contents
+            $html = ob_get_clean();
+            
+            return $html;
+        }
+        
+        // Fallback: Generate HTML inline
         $companyName = $this->companyInfo['name'] ?? 'Company Name';
         $companyAddress = $this->getCompanyAddress();
         $companyLogo = $this->companyInfo['logo'] ?? null;

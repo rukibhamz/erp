@@ -186,6 +186,24 @@ class Base_Controller {
         return $this->loader->model($model);
     }
     
+    protected function loadLibrary($library, $params = null) {
+        $libraryFile = BASEPATH . 'libraries/' . $library . '.php';
+        
+        if (file_exists($libraryFile)) {
+            require_once $libraryFile;
+            
+            // Create instance with params if provided
+            if ($params !== null) {
+                return new $library($params);
+            } else {
+                return new $library();
+            }
+        }
+        
+        error_log("Library not found: {$libraryFile}");
+        return null;
+    }
+    
     protected function loadView($view, $data = []) {
         $data['config'] = $this->config;
         $data['session'] = $this->session;

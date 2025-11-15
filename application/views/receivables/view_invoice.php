@@ -15,6 +15,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <i class="bi bi-download"></i> Download PDF
             </a>
             <?php if (hasPermission('receivables', 'update')): ?>
+                <?php if (!empty($invoice['email'])): ?>
+                    <a href="<?= base_url('receivables/invoices/send/' . $invoice['id']) ?>" 
+                       class="btn btn-success" 
+                       onclick="return confirm('Send invoice to <?= htmlspecialchars($invoice['email']) ?>?')">
+                        <i class="bi bi-envelope"></i> Send Email
+                    </a>
+                <?php endif; ?>
                 <a href="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" class="btn btn-outline-secondary">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
