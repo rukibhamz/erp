@@ -173,14 +173,68 @@ class Module_label_model {
      */
     public function toggleVisibility($moduleCode, $isActive, $userId) {
         try {
-            $sql = "UPDATE `{$this->prefix}module_labels`
-                    SET is_active = ?,
-                        updated_by = ?,
-                        updated_at = NOW()
-                    WHERE module_code = ?";
+            // First, check if the module exists in the table
+            $existing = $this->db->fetchOne(
+                "SELECT id, is_active FROM `{$this->prefix}module_labels` WHERE module_code = ?",
+                [$moduleCode]
+            );
             
-            $stmt = $this->db->query($sql, [$isActive ? 1 : 0, $userId, $moduleCode]);
-            return $stmt ? true : false;
+            if ($existing) {
+                // Module exists, update it
+                $sql = "UPDATE `{$this->prefix}module_labels`
+                        SET is_active = ?,
+                            updated_by = ?,
+                            updated_at = NOW()
+                        WHERE module_code = ?";
+                
+                $stmt = $this->db->query($sql, [$isActive ? 1 : 0, $userId, $moduleCode]);
+                
+                // Check if update actually affected a row
+                if ($stmt && $stmt->rowCount() > 0) {
+                    return true;
+                }
+                
+                // If no rows affected but module exists, it might already have that value
+                // Check if the value is already what we want
+                if (intval($existing['is_active']) == ($isActive ? 1 : 0)) {
+                    return true; // Already set to desired value
+                }
+                
+                // Something went wrong
+                error_log("Toggle visibility: Update query executed but no rows affected for module: {$moduleCode}");
+                return false;
+            } else {
+                // Module doesn't exist, create it with default values
+                $defaultLabel = ucfirst(str_replace('_', ' ', $moduleCode));
+                $defaultIcon = 'bi-circle';
+                
+                // Try to get default values from getDefaultLabels if available
+                $defaults = $this->getDefaultLabels();
+                if (isset($defaults[$moduleCode])) {
+                    $defaultLabel = $defaults[$moduleCode]['display_label'] ?? $defaultLabel;
+                    $defaultIcon = $defaults[$moduleCode]['icon_class'] ?? $defaultIcon;
+                }
+                
+                $sql = "INSERT INTO `{$this->prefix}module_labels`
+                        (module_code, default_label, custom_label, icon_class, display_order, is_active, updated_by, created_at, updated_at)
+                        VALUES (?, ?, NULL, ?, 999, ?, ?, NOW(), NOW())";
+                
+                $stmt = $this->db->query($sql, [
+                    $moduleCode,
+                    $defaultLabel,
+                    $defaultIcon,
+                    $isActive ? 1 : 0,
+                    $userId
+                ]);
+                
+                if ($stmt) {
+                    error_log("Created module label entry for {$moduleCode} with is_active = " . ($isActive ? 1 : 0));
+                    return true;
+                }
+                
+                error_log("Failed to create module label entry for {$moduleCode}");
+                return false;
+            }
         } catch (Exception $e) {
             error_log("Error toggling module visibility: " . $e->getMessage());
             return false;
@@ -240,10 +294,11 @@ class Module_label_model {
     }
     
     /**
-     * Fallback default labels if database is unavailable
+     * Get default labels for modules
+     * Used as fallback if database is unavailable or when creating new entries
      * @return array
      */
-    private function getDefaultLabels() {
+    protected function getDefaultLabels() {
         return [
             'dashboard' => ['module_code' => 'dashboard', 'display_label' => 'Dashboard', 'icon_class' => 'bi-speedometer2', 'is_active' => 1, 'display_order' => 1],
             'accounting' => ['module_code' => 'accounting', 'display_label' => 'Accounting', 'icon_class' => 'bi-calculator', 'is_active' => 1, 'display_order' => 2],
