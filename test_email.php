@@ -8,7 +8,25 @@
 
 // Bootstrap the application
 define('BASEPATH', __DIR__ . '/application/');
-require_once BASEPATH . 'core/Base_Controller.php';
+
+// Load config first
+require_once BASEPATH . 'config/config.php';
+$config = require BASEPATH . 'config/config.php';
+
+// Load Database class
+require_once BASEPATH . 'core/Database.php';
+
+// Initialize database if installed
+try {
+    if (isset($config['installed']) && $config['installed'] === true) {
+        if (!empty($config['db']['hostname']) && !empty($config['db']['database'])) {
+            // Initialize database connection
+            $db = Database::getInstance();
+        }
+    }
+} catch (Exception $e) {
+    error_log('Database initialization error in test_email.php: ' . $e->getMessage());
+}
 
 // Start session
 if (session_status() === PHP_SESSION_NONE) {
@@ -20,7 +38,56 @@ if (empty($_SESSION['user_id'])) {
     die('ERROR: Please log in first. Or remove this check to test without authentication.');
 }
 
+// Load Composer autoloader if available
+$composerAutoload = __DIR__ . '/vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+}
+
 require_once BASEPATH . 'libraries/Email_sender.php';
+
+// Debug: Check database connection and settings
+echo '<h2>Debug Information:</h2>';
+echo '<pre>';
+try {
+    if (class_exists('Database')) {
+        $db = Database::getInstance();
+        if ($db && $db->getConnection()) {
+            echo "✓ Database connection: OK\n";
+            $prefix = $db->getPrefix();
+            echo "✓ Database prefix: {$prefix}\n\n";
+            
+            // Check settings in database
+            $settingsResult = $db->fetchAll(
+                "SELECT setting_key, setting_value FROM `{$prefix}settings` 
+                 WHERE setting_key IN (?, ?, ?, ?, ?, ?, ?)",
+                ['smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption', 'from_email', 'from_name']
+            );
+            
+            echo "Settings in database:\n";
+            if ($settingsResult && is_array($settingsResult)) {
+                foreach ($settingsResult as $row) {
+                    $value = $row['setting_value'];
+                    // Hide password
+                    if ($row['setting_key'] === 'smtp_password') {
+                        $value = $value ? str_repeat('*', min(strlen($value), 16)) : '(empty)';
+                    }
+                    echo "  {$row['setting_key']}: {$value}\n";
+                }
+            } else {
+                echo "  No settings found in database\n";
+            }
+        } else {
+            echo "✗ Database connection: FAILED\n";
+        }
+    } else {
+        echo "✗ Database class not found\n";
+    }
+} catch (Exception $e) {
+    echo "✗ Error: " . $e->getMessage() . "\n";
+}
+echo '</pre>';
+echo '<hr>';
 
 $emailSender = new Email_sender();
 $config = $emailSender->getConfig();

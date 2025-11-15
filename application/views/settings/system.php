@@ -409,7 +409,21 @@ function testEmail() {
         },
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        // Check if response is OK
+        if (!response.ok) {
+            throw new Error('HTTP error! status: ' + response.status);
+        }
+        // Try to parse as JSON
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                // If not JSON, return the text as error
+                throw new Error('Invalid response: ' + text.substring(0, 100));
+            }
+        });
+    })
     .then(data => {
         // Reset button
         btn.disabled = false;
@@ -417,12 +431,12 @@ function testEmail() {
         
         // Show result
         resultDiv.style.display = 'block';
-        if (data.success) {
+        if (data && data.success) {
             resultDiv.className = 'mt-3 alert alert-success';
-            resultDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+            resultDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + (data.message || 'Email sent successfully');
         } else {
             resultDiv.className = 'mt-3 alert alert-danger';
-            resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> ' + data.message;
+            resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.message || data.error || 'Unknown error occurred');
         }
         
         // Scroll to result
@@ -436,7 +450,7 @@ function testEmail() {
         // Show error
         resultDiv.style.display = 'block';
         resultDiv.className = 'mt-3 alert alert-danger';
-        resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> Error: ' + error.message;
+        resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> Error: ' + (error.message || 'Failed to send test email. Please check your configuration.');
         
         console.error('Test email error:', error);
     });

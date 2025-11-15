@@ -41,7 +41,7 @@ class Email_sender {
         try {
             if (class_exists('Database')) {
                 $db = Database::getInstance();
-                if ($db) {
+                if ($db && $db->getConnection()) {
                     $prefix = $db->getPrefix();
                     $settingsResult = $db->fetchAll(
                         "SELECT setting_key, setting_value FROM `{$prefix}settings` 
@@ -49,13 +49,19 @@ class Email_sender {
                         ['smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption', 'from_email', 'from_name']
                     );
                     
-                    foreach ($settingsResult as $row) {
-                        $emailSettings[$row['setting_key']] = $row['setting_value'];
+                    if ($settingsResult && is_array($settingsResult)) {
+                        foreach ($settingsResult as $row) {
+                            if (isset($row['setting_key']) && isset($row['setting_value'])) {
+                                $emailSettings[$row['setting_key']] = $row['setting_value'];
+                            }
+                        }
                     }
                 }
             }
         } catch (Exception $e) {
             error_log('Email_sender loadConfig database error: ' . $e->getMessage());
+        } catch (Error $e) {
+            error_log('Email_sender loadConfig database fatal error: ' . $e->getMessage());
         }
         
         // Fallback to config file if database settings not found
