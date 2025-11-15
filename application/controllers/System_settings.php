@@ -383,6 +383,11 @@ class System_settings extends Base_Controller {
                 $fromName = substr($fromName, 0, 100);
             }
             
+            // Load email helper if not already loaded
+            if (!function_exists('send_email_smtp')) {
+                require_once BASEPATH . '../application/helpers/email_helper.php';
+            }
+            
             // SECURITY: Call send_email_smtp directly with validated database settings
             $result = send_email_smtp(
                 $testEmail,
@@ -426,9 +431,19 @@ class System_settings extends Base_Controller {
             error_log("System_settings testEmail error [User: {$userId}, IP: {$ipAddress}]: " . $errorMsg);
             
             // SECURITY: Generic error message to prevent information disclosure
+            // But provide slightly more helpful message for common issues
+            $message = 'An error occurred while sending the test email. ';
+            if (strpos($errorMsg, 'Connection') !== false || strpos($errorMsg, 'timeout') !== false) {
+                $message .= 'Please verify your SMTP host and port settings.';
+            } elseif (strpos($errorMsg, 'authentication') !== false || strpos($errorMsg, 'login') !== false) {
+                $message .= 'Please verify your SMTP username and password.';
+            } else {
+                $message .= 'Please check your configuration and try again.';
+            }
+            
             echo json_encode([
                 'success' => false, 
-                'message' => 'An error occurred while sending the test email. Please check your configuration and try again.'
+                'message' => $message
             ]);
         }
         exit;

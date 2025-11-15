@@ -404,6 +404,9 @@ function testEmail() {
     // Send AJAX request
     fetch('<?= base_url("settings/system/test-email") ?>', {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(response => response.json())
