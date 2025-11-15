@@ -383,6 +383,13 @@ class System_settings extends Base_Controller {
                 $fromName = substr($fromName, 0, 100);
             }
             
+            // Use Email_sender library for better error handling
+            require_once BASEPATH . 'libraries/Email_sender.php';
+            
+            // Create temporary config array for Email_sender
+            // Note: Email_sender reads from config file, but we can update it temporarily
+            // For now, we'll use the helper function which accepts parameters directly
+            
             // Load email helper if not already loaded
             if (!function_exists('send_email_smtp')) {
                 require_once BASEPATH . '../application/helpers/email_helper.php';

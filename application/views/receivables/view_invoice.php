@@ -11,7 +11,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-file-pdf"></i> View PDF
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-outline-primary">
+            <a href="<?= base_url('receivables/invoices/download/' . $invoice['id']) ?>" class="btn btn-outline-primary">
                 <i class="bi bi-download"></i> Download PDF
             </a>
             <?php if (hasPermission('receivables', 'update')): ?>
@@ -140,7 +140,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <a href="<?= $pdf_url ?>" target="_blank" class="btn btn-outline-primary" title="Open in new tab">
                             <i class="bi bi-box-arrow-up-right"></i>
                         </a>
-                        <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" download class="btn btn-outline-primary" title="Download">
+                        <a href="<?= base_url('receivables/invoices/download/' . $invoice['id']) ?>" class="btn btn-outline-primary" title="Download">
                             <i class="bi bi-download"></i>
                         </a>
                     <?php endif; ?>

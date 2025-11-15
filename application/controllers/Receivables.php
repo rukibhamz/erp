@@ -577,20 +577,12 @@ class Receivables extends Base_Controller {
             
             $items = $this->invoiceModel->getItems($id);
             
-            // Check if PDF exists
-            $invoiceDir = BASEPATH . '../uploads/invoices/';
-            $pdfPattern = $invoiceDir . 'invoice_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . '_*.pdf';
+            // Check for existing PDF
+            $pdfPattern = BASEPATH . '../uploads/invoices/invoice_' . 
+                          preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . '_*.pdf';
             $pdfFiles = glob($pdfPattern);
             $pdfExists = !empty($pdfFiles);
-            
-            // Get the most recent PDF file
-            $pdfUrl = null;
-            if ($pdfExists) {
-                usort($pdfFiles, function($a, $b) {
-                    return filemtime($b) - filemtime($a);
-                });
-                $pdfUrl = base_url('uploads/invoices/' . basename($pdfFiles[0]));
-            }
+            $pdfUrl = $pdfExists ? base_url('uploads/invoices/' . basename($pdfFiles[0])) : null;
             
             $data = [
                 'page_title' => 'Invoice: ' . $invoice['invoice_number'],
@@ -611,74 +603,75 @@ class Receivables extends Base_Controller {
     }
     
     /**
-     * Generate and download PDF
+     * Generate PDF
      */
     public function pdfInvoice($id) {
         $this->requirePermission('receivables', 'read');
         
-        try {
-            $invoice = $this->invoiceModel->getWithCustomer($id);
-            if (!$invoice) {
-                die('Invoice not found.');
-            }
-            
-            $items = $this->invoiceModel->getItems($id);
-            
-            if (empty($items)) {
-                die('Invoice has no items.');
-            }
-            
-            // Get company info
-            $entities = $this->entityModel->getAll();
-            $company = !empty($entities) ? $entities[0] : [
-                'name' => $this->config['app_name'] ?? 'Company Name',
-                'address' => '',
-                'city' => '',
-                'state' => '',
-                'zip_code' => '',
-                'country' => '',
-                'phone' => '',
-                'email' => '',
-                'tax_id' => '',
-                'logo' => null
-            ];
-            
-            // Prepare customer data
-            $customer = [
-                'company_name' => $invoice['company_name'] ?? '',
-                'address' => $invoice['address'] ?? '',
-                'city' => $invoice['city'] ?? '',
-                'state' => $invoice['state'] ?? '',
-                'zip_code' => $invoice['zip_code'] ?? '',
-                'country' => $invoice['country'] ?? '',
-                'email' => $invoice['email'] ?? '',
-                'phone' => $invoice['phone'] ?? ''
-            ];
-            
-            // Load PDF generator
-            $pdfGenerator = $this->loadLibrary('Pdf_generator', $company);
-            if (!$pdfGenerator) {
-                die('PDF generator library not found.');
-            }
-            
-            $result = $pdfGenerator->generateInvoice($invoice, $items, $customer);
-            
-            if (!$result['success']) {
-                die('Error generating PDF: ' . $result['error']);
-            }
-            
-            // Output PDF
-            header('Content-Type: application/pdf');
-            header('Content-Disposition: inline; filename="Invoice-' . $invoice['invoice_number'] . '.pdf"');
-            header('Content-Length: ' . strlen($result['pdf_content']));
-            
-            echo $result['pdf_content'];
-            exit;
-            
-        } catch (Exception $e) {
-            error_log('PDF generation error: ' . $e->getMessage());
-            die('Error generating PDF: ' . $e->getMessage());
+        $invoice = $this->invoiceModel->getWithCustomer($id);
+        if (!$invoice) die('Invoice not found.');
+        
+        $items = $this->invoiceModel->getItems($id);
+        if (empty($items)) die('Invoice has no items.');
+        
+        // Get company info
+        $entities = $this->entityModel->getAll();
+        $company = !empty($entities) ? $entities[0] : ['name' => 'Company Name'];
+        
+        $customer = [
+            'company_name' => $invoice['company_name'] ?? '',
+            'address' => $invoice['address'] ?? '',
+            'email' => $invoice['email'] ?? '',
+            'phone' => $invoice['phone'] ?? ''
+        ];
+        
+        // Load library
+        require_once BASEPATH . 'libraries/Pdf_generator.php';
+        $pdfGen = new Pdf_generator($company);
+        $pdfContent = $pdfGen->generateInvoice($invoice, $items, $customer);
+        
+        // Save PDF
+        $isPdf = (substr($pdfContent, 0, 4) === '%PDF');
+        if ($isPdf) {
+            $filename = 'invoice_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . '_' . time() . '.pdf';
+            $pdfGen->savePdf($pdfContent, $filename);
         }
+        
+        // Output
+        header('Content-Type: ' . ($isPdf ? 'application/pdf' : 'text/html'));
+        header('Content-Disposition: inline; filename="Invoice-' . $invoice['invoice_number'] . '.pdf"');
+        echo $pdfContent;
+        exit;
+    }
+    
+    /**
+     * Download PDF
+     */
+    public function downloadInvoice($id) {
+        $this->requirePermission('receivables', 'read');
+        
+        $invoice = $this->invoiceModel->getWithCustomer($id);
+        if (!$invoice) die('Invoice not found.');
+        
+        $items = $this->invoiceModel->getItems($id);
+        
+        $entityModel = $this->loadModel('Entity_model');
+        $entities = $entityModel->getAll();
+        $company = !empty($entities) ? $entities[0] : ['name' => 'Company'];
+        
+        $customer = ['company_name' => $invoice['company_name'] ?? ''];
+        
+        require_once BASEPATH . 'libraries/Pdf_generator.php';
+        $pdfGen = new Pdf_generator($company);
+        $pdfContent = $pdfGen->generateInvoice($invoice, $items, $customer);
+        
+        $isPdf = (substr($pdfContent, 0, 4) === '%PDF');
+        $filename = 'Invoice-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $invoice['invoice_number']) . ($isPdf ? '.pdf' : '.html');
+        
+        header('Content-Type: ' . ($isPdf ? 'application/pdf' : 'text/html'));
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo $pdfContent;
+        exit;
     }
     
     /**
@@ -690,152 +683,89 @@ class Receivables extends Base_Controller {
     }
     
     /**
-     * Send invoice via email
+     * Send invoice email
      */
-    public function sendInvoice($id) {
+    public function sendInvoiceEmail($id) {
         $this->requirePermission('receivables', 'update');
         
-        try {
-            $invoice = $this->invoiceModel->getWithCustomer($id);
-            if (!$invoice || empty($invoice['email'])) {
-                $this->setFlashMessage('danger', 'Invoice not found or customer has no email.');
-                redirect('receivables/invoices/view/' . $id);
+        $invoice = $this->invoiceModel->getWithCustomer($id);
+        if (!$invoice || empty($invoice['email'])) {
+            $this->setFlashMessage('danger', 'Invoice not found or no email.');
+            redirect('receivables/invoices/view/' . $id);
+        }
+        
+        $items = $this->invoiceModel->getItems($id);
+        
+        $entityModel = $this->loadModel('Entity_model');
+        $entities = $entityModel->getAll();
+        $company = !empty($entities) ? $entities[0] : ['name' => 'Company'];
+        
+        $customer = [
+            'company_name' => $invoice['company_name'],
+            'email' => $invoice['email']
+        ];
+        
+        // Generate PDF
+        require_once BASEPATH . 'libraries/Pdf_generator.php';
+        $pdfGen = new Pdf_generator($company);
+        $pdfContent = $pdfGen->generateInvoice($invoice, $items, $customer);
+        
+        $isPdf = (substr($pdfContent, 0, 4) === '%PDF');
+        $pdfPath = null;
+        
+        if ($isPdf) {
+            $filename = 'invoice_temp_' . time() . '.pdf';
+            $result = $pdfGen->savePdf($pdfContent, $filename);
+            if ($result['success']) {
+                $pdfPath = $result['file_path'];
             }
-            
-            // Generate PDF
-            $items = $this->invoiceModel->getItems($id);
-            
-            if (empty($items)) {
-                $this->setFlashMessage('danger', 'Invoice has no items.');
-                redirect('receivables/invoices/view/' . $id);
-            }
-            
-            // Get company info
-            $entities = $this->entityModel->getAll();
-            $company = !empty($entities) ? $entities[0] : [
-                'name' => $this->config['app_name'] ?? 'Company Name',
-                'address' => '',
-                'city' => '',
-                'state' => '',
-                'zip_code' => '',
-                'country' => '',
-                'phone' => '',
-                'email' => '',
-                'tax_id' => '',
-                'logo' => null
-            ];
-            
-            // Prepare customer data
-            $customer = [
-                'company_name' => $invoice['company_name'] ?? '',
-                'address' => $invoice['address'] ?? '',
-                'city' => $invoice['city'] ?? '',
-                'state' => $invoice['state'] ?? '',
-                'zip_code' => $invoice['zip_code'] ?? '',
-                'country' => $invoice['country'] ?? '',
-                'email' => $invoice['email'] ?? '',
-                'phone' => $invoice['phone'] ?? ''
-            ];
-            
-            // Generate PDF
-            $pdfGenerator = $this->loadLibrary('Pdf_generator', $company);
-            if (!$pdfGenerator) {
-                throw new Exception('PDF generator library not found.');
-            }
-            
-            $pdfResult = $pdfGenerator->generateInvoice($invoice, $items, $customer);
-            
-            if (!$pdfResult['success']) {
-                throw new Exception('PDF generation failed: ' . $pdfResult['error']);
-            }
-            
-            // Send email
-            $emailSender = $this->loadLibrary('Email_sender');
-            if (!$emailSender) {
-                throw new Exception('Email sender library not found.');
-            }
-            
-            $subject = 'Invoice ' . $invoice['invoice_number'] . ' from ' . $company['name'];
-            $body = $this->loadEmailTemplate($invoice, $customer, $company);
-            
-            $emailResult = $emailSender->sendInvoice(
-                $invoice['email'],
-                $subject,
-                $body,
-                $pdfResult['file_path'],
-                'Invoice-' . $invoice['invoice_number'] . '.pdf'
-            );
-            
-            if ($emailResult['success']) {
-                // Update invoice status to 'sent'
+        }
+        
+        // Send email
+        require_once BASEPATH . 'libraries/Email_sender.php';
+        $emailSender = new Email_sender();
+        
+        $subject = 'Invoice ' . $invoice['invoice_number'];
+        $body = $this->getEmailTemplate($invoice, $customer, $company);
+        
+        $result = $emailSender->sendInvoice(
+            $invoice['email'],
+            $subject,
+            $body,
+            $pdfPath,
+            'Invoice-' . $invoice['invoice_number'] . '.pdf'
+        );
+        
+        if ($result['success']) {
+            if ($invoice['status'] === 'draft') {
                 $this->invoiceModel->update($id, ['status' => 'sent']);
-                $this->activityModel->log($this->session['user_id'], 'update', 'Receivables', 'Sent invoice: ' . $invoice['invoice_number']);
-                $this->setFlashMessage('success', 'Invoice sent successfully to ' . $invoice['email']);
-            } else {
-                throw new Exception('Email send failed: ' . $emailResult['error']);
             }
-            
-        } catch (Exception $e) {
-            error_log('Send invoice error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Failed to send invoice: ' . $e->getMessage());
+            $this->setFlashMessage('success', 'Invoice sent to ' . $invoice['email']);
+        } else {
+            $this->setFlashMessage('danger', 'Email failed: ' . $result['error']);
         }
         
         redirect('receivables/invoices/view/' . $id);
     }
     
     /**
-     * Load email template for invoice
+     * Send invoice (alias for sendInvoiceEmail)
      */
-    private function loadEmailTemplate($invoice, $customer, $company) {
-        $html = '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #0066cc; color: white; padding: 20px; text-align: center; }
-        .content { background-color: #f9f9f9; padding: 20px; }
-        .invoice-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #0066cc; }
-        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Invoice from ' . htmlspecialchars($company['name']) . '</h2>
-        </div>
-        <div class="content">
-            <p>Dear ' . htmlspecialchars($customer['company_name'] ?: 'Customer') . ',</p>
-            <p>Please find attached invoice #' . htmlspecialchars($invoice['invoice_number']) . '</p>
-            
-            <div class="invoice-details">
-                <p><strong>Invoice Date:</strong> ' . date('M d, Y', strtotime($invoice['invoice_date'])) . '</p>
-                <p><strong>Due Date:</strong> ' . date('M d, Y', strtotime($invoice['due_date'])) . '</p>
-                <p><strong>Total Amount:</strong> ' . format_currency($invoice['total_amount'], $invoice['currency']) . '</p>';
-        
-        if ($invoice['balance_amount'] > 0) {
-            $html .= '<p><strong>Balance Due:</strong> ' . format_currency($invoice['balance_amount'], $invoice['currency']) . '</p>';
-        }
-        
-        $html .= '</div>
-            <p>Thank you for your business!</p>
-        </div>
-        <div class="footer">
-            <p><strong>' . htmlspecialchars($company['name']) . '</strong></p>';
-        
-        if (!empty($company['email'])) {
-            $html .= '<p>Email: ' . htmlspecialchars($company['email']) . '</p>';
-        }
-        if (!empty($company['phone'])) {
-            $html .= '<p>Phone: ' . htmlspecialchars($company['phone']) . '</p>';
-        }
-        
-        $html .= '</div>
-    </div>
-</body>
-</html>';
-        
+    public function sendInvoice($id) {
+        $this->sendInvoiceEmail($id);
+    }
+    
+    /**
+     * Get email template for invoice
+     */
+    private function getEmailTemplate($invoice, $customer, $company) {
+        $html = '<html><body style="font-family: Arial;">';
+        $html .= '<h2>Invoice ' . htmlspecialchars($invoice['invoice_number']) . '</h2>';
+        $html .= '<p>Dear ' . htmlspecialchars($customer['company_name']) . ',</p>';
+        $html .= '<p>Please find your invoice attached.</p>';
+        $html .= '<p><strong>Amount Due:</strong> ₦' . number_format($invoice['total_amount'], 2) . '</p>';
+        $html .= '<p>Thank you!</p>';
+        $html .= '</body></html>';
         return $html;
     }
     
