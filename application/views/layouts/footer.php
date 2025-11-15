@@ -13,6 +13,10 @@
     </footer>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Set base URL for JavaScript files
+        window.BASE_URL = '<?= base_url() ?>';
+    </script>
     <script src="<?= base_url('assets/js/main.js') ?>"></script>
     <script src="<?= base_url('assets/js/search.js') ?>"></script>
     <?php if (isset($current_user)): ?>

@@ -11,7 +11,7 @@ $page_title = $page_title ?? 'My Profile';
         <div class="card mb-4">
             <div class="card-body text-center">
                 <?php 
-                $avatarPath = $user['avatar'] ? base_url('uploads/avatars/' . $user['avatar']) : base_url('assets/images/default-avatar.png');
+                $avatarPath = $user['avatar'] ? base_url('uploads/avatars/' . $user['avatar']) : 'https://ui-avatars.com/api/?name=' . urlencode($user['username'] ?? 'User') . '&background=0066cc&color=fff&size=128';
                 ?>
                 <img src="<?= $avatarPath ?>" alt="Avatar" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/150'">
                 

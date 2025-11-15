@@ -6,7 +6,7 @@ class Notifications extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('settings', 'read'); // Or create a notifications permission
+        // Don't require permission in constructor for AJAX endpoints - check in methods instead
         $this->notificationModel = $this->loadModel('Notification_model');
     }
     
@@ -14,6 +14,13 @@ class Notifications extends Base_Controller {
      * Get notifications (AJAX)
      */
     public function getNotifications() {
+        // Check authentication but don't require specific permission for viewing own notifications
+        if (empty($this->session['user_id']) && empty($this->session['customer_user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
+        
         header('Content-Type: application/json');
         
         $userId = $this->session['user_id'] ?? null;

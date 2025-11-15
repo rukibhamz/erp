@@ -200,9 +200,9 @@
                         <?php
                         $avatarPath = isset($current_user['avatar']) && $current_user['avatar'] ? 
                             base_url('uploads/avatars/' . $current_user['avatar']) : 
-                            base_url('assets/images/default-avatar.png');
+                            'https://ui-avatars.com/api/?name=' . urlencode($current_user['username'] ?? 'User') . '&background=0066cc&color=fff&size=128';
                         ?>
-                        <img src="<?= $avatarPath ?>" alt="Avatar" class="topbar-avatar" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($current_user['username'] ?? 'User') ?>&background=000&color=fff&size=128'">
+                        <img src="<?= $avatarPath ?>" alt="Avatar" class="topbar-avatar" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($current_user['username'] ?? 'User') ?>&background=0066cc&color=fff&size=128'">
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end profile-dropdown">
                         <li class="dropdown-header">
@@ -294,9 +294,9 @@
                         <?php
                         $avatarPath = isset($current_user['avatar']) && $current_user['avatar'] ? 
                             base_url('uploads/avatars/' . $current_user['avatar']) : 
-                            base_url('assets/images/default-avatar.png');
+                            'https://ui-avatars.com/api/?name=' . urlencode($current_user['username'] ?? 'User') . '&background=0066cc&color=fff&size=128';
                         ?>
-                        <img src="<?= $avatarPath ?>" alt="Avatar" class="profile-avatar" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($current_user['username'] ?? 'User') ?>&background=000&color=fff&size=128'">
+                        <img src="<?= $avatarPath ?>" alt="Avatar" class="profile-avatar" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($current_user['username'] ?? 'User') ?>&background=0066cc&color=fff&size=128'">
                         <span class="profile-name"><?= esc(trim(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '')) ?: ($current_user['username'] ?? 'User')) ?></span>
                         <i class="bi bi-chevron-down ms-2"></i>
                     </button>

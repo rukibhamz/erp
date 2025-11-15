@@ -281,6 +281,7 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         
         // Notifications
         $route['notifications'] = 'Notifications/getNotifications';
+        $route['notifications/get-notifications'] = 'Notifications/getNotifications';
         $route['notifications/mark-read/(:num)'] = 'Notifications/markRead/$1';
         $route['notifications/mark-all-read'] = 'Notifications/markAllRead';
         $route['notifications/settings'] = 'Notifications/settings';

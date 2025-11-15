@@ -33,7 +33,15 @@
     });
     
     function performSearch(query) {
-        fetch('<?= base_url('search/ajax') ?>?q=' + encodeURIComponent(query))
+        // Get base URL from window object or construct it
+        const baseUrl = window.BASE_URL || (function() {
+            const pathParts = window.location.pathname.split('/').filter(p => p);
+            pathParts.pop();
+            const basePath = pathParts.length > 0 ? '/' + pathParts.join('/') + '/' : '/';
+            return window.location.origin + basePath;
+        })();
+        
+        fetch(baseUrl + 'search/ajax?q=' + encodeURIComponent(query))
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.results.length > 0) {
