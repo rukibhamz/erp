@@ -14,7 +14,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-outline-primary">
                 <i class="bi bi-download"></i> Download PDF
             </a>
-            <?php if ($this->checkPermission('receivables', 'update')): ?>
+            <?php if (hasPermission('receivables', 'update')): ?>
                 <a href="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" class="btn btn-outline-secondary">
                     <i class="bi bi-pencil"></i> Edit
                 </a>

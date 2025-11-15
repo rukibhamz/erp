@@ -120,7 +120,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <a href="<?= base_url('receivables/invoices/view/' . intval($invoice['id'])) ?>" class="btn btn-outline-primary" title="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <?php if ($this->checkPermission('receivables', 'update')): ?>
+                                            <?php if (hasPermission('receivables', 'update')): ?>
                                                 <a href="<?= base_url('receivables/invoices/edit/' . intval($invoice['id'])) ?>" class="btn btn-outline-secondary" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
