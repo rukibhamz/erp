@@ -311,7 +311,11 @@ class Receivables extends Base_Controller {
     }
     
     public function editInvoice($id) {
-        $this->requirePermission('receivables', 'update');
+        // Allow both read and update permissions for viewing/editing invoices
+        if (!$this->checkPermission('receivables', 'read') && !$this->checkPermission('receivables', 'update')) {
+            $this->setFlashMessage('danger', 'You do not have permission to view invoices.');
+            redirect('receivables/invoices');
+        }
         
         $invoice = $this->invoiceModel->getWithCustomer($id);
         if (!$invoice) {
@@ -394,7 +398,7 @@ class Receivables extends Base_Controller {
     public function recordPayment($invoiceId) {
         $this->requirePermission('receivables', 'update');
         
-        $invoice = $this->invoiceModel->getById($invoiceId);
+        $invoice = $this->invoiceModel->getWithCustomer($invoiceId);
         if (!$invoice) {
             $this->setFlashMessage('danger', 'Invoice not found.');
             redirect('receivables/invoices');

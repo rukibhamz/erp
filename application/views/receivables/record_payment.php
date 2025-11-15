@@ -37,6 +37,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="card-body">
                 <form method="POST" action="<?= base_url('receivables/invoices/payment/' . $invoice['id']) ?>">
+                    <?php echo csrf_field(); ?>
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="cash_account_id" class="form-label">Payment Account <span class="text-danger">*</span></label>
