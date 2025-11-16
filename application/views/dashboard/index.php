@@ -14,7 +14,7 @@ $page_title = $page_title ?? 'Dashboard';
                     <i class="bi bi-people"></i>
                 </div>
                 <div>
-                    <div class="stat-number"><?= number_format($total_users ?? 0) ?></div>
+                    <div class="stat-number"><?= format_large_number($total_users ?? 0) ?></div>
                     <div class="stat-label">Users</div>
                 </div>
             </div>
@@ -28,7 +28,7 @@ $page_title = $page_title ?? 'Dashboard';
                     <i class="bi bi-building"></i>
                 </div>
                 <div>
-                    <div class="stat-number"><?= number_format($total_companies ?? 0) ?></div>
+                    <div class="stat-number"><?= format_large_number($total_companies ?? 0) ?></div>
                     <div class="stat-label">Companies</div>
                 </div>
             </div>

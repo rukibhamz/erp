@@ -21,7 +21,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <!-- Location Management Navigation -->
 <div class="Location-nav mb-4">
     <nav class="nav nav-pills nav-fill">
-        <a class="nav-link active" href="<?= base_url('locations') ?>">
+        <a class="nav-link <?= (strpos($_GET['url'] ?? '', 'locations') === 0 && !strpos($_GET['url'] ?? '', '/')) ? 'active' : '' ?>" href="<?= base_url('locations') ?>">
             <i class="bi bi-building"></i> Locations
         </a>
         <a class="nav-link" href="<?= base_url('spaces') ?>">

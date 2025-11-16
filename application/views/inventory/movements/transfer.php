@@ -22,7 +22,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('inventory/transfer') ?>" >
+        <form action="<?= base_url('inventory/transfer') ?>" method="POST">
             <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">

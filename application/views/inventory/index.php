@@ -21,7 +21,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-2">Total Items</h6>
-                <h2 class="mb-0"><?= number_format($stats['total_items']) ?></h2>
+                <h2 class="mb-0"><?= format_large_number($stats['total_items']) ?></h2>
             </div>
         </div>
     </div>

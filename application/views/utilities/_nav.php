@@ -12,6 +12,7 @@ $is_providers = isset($uri_segments[1]) && $uri_segments[1] === 'providers';
 $is_tariffs = isset($uri_segments[1]) && $uri_segments[1] === 'tariffs';
 $is_payments = isset($uri_segments[1]) && $uri_segments[1] === 'payments';
 $is_reports = isset($uri_segments[1]) && $uri_segments[1] === 'reports';
+$is_alerts = isset($uri_segments[1]) && $uri_segments[1] === 'alerts';
 ?>
 
 <!-- Utilities Management Navigation -->
@@ -44,7 +45,7 @@ $is_reports = isset($uri_segments[1]) && $uri_segments[1] === 'reports';
         <a class="nav-link <?= (isset($uri_segments[1]) && $uri_segments[1] === 'vendor-bills') ? 'active' : '' ?>" href="<?= base_url('utilities/vendor-bills') ?>">
             <i class="bi bi-file-earmark-text"></i> Vendor Bills
         </a>
-        <a class="nav-link <?= (isset($uri_segments[1]) && $uri_segments[1] === 'alerts') ? 'active' : '' ?>" href="<?= base_url('utilities/alerts') ?>">
+        <a class="nav-link <?= $is_alerts ? 'active' : '' ?>" href="<?= base_url('utilities/alerts') ?>">
             <i class="bi bi-bell"></i> Alerts
         </a>
     </nav>

@@ -21,7 +21,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-2">Total Meters</h6>
-                <h2 class="mb-0"><?= number_format($stats['total_meters']) ?></h2>
+                <h2 class="mb-0"><?= format_large_number($stats['total_meters']) ?></h2>
                 <a href="<?= base_url('utilities/meters') ?>" class="btn btn-sm btn-primary mt-2">
                     View All
                 </a>
@@ -32,7 +32,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-2">Total Bills</h6>
-                <h2 class="mb-0"><?= number_format($stats['total_bills']) ?></h2>
+                <h2 class="mb-0"><?= format_large_number($stats['total_bills']) ?></h2>
                 <a href="<?= base_url('utilities/bills') ?>" class="btn btn-sm btn-primary mt-2">
                     View All
                 </a>
@@ -43,7 +43,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-2">Overdue Bills</h6>
-                <h2 class="mb-0 text-danger"><?= number_format($stats['overdue_bills']) ?></h2>
+                <h2 class="mb-0 text-danger"><?= format_large_number($stats['overdue_bills']) ?></h2>
             </div>
         </div>
     </div>

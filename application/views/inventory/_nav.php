@@ -25,9 +25,6 @@ $is_assets = isset($uri_segments[1]) && $uri_segments[1] === 'assets';
         <a class="nav-link <?= $is_items ? 'active' : '' ?>" href="<?= base_url('inventory/items') ?>">
             <i class="bi bi-box"></i> Items
         </a>
-        <a class="nav-link <?= $is_locations ? 'active' : '' ?>" href="<?= base_url('inventory/locations') ?>">
-            <i class="bi bi-geo-alt"></i> Locations
-        </a>
         <a class="nav-link <?= $is_movements ? 'active' : '' ?>" href="<?= base_url('inventory/receive') ?>">
             <i class="bi bi-arrow-left-right"></i> Movements
         </a>

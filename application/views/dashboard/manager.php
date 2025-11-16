@@ -50,7 +50,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Pending Bookings</div>
-                        <div class="stat-number"><?= number_format($kpis['bookings_pending'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_number($kpis['bookings_pending'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -130,7 +130,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Total Invoices</div>
-                        <div class="stat-number"><?= number_format($kpis['total_invoices'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_number($kpis['total_invoices'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -211,7 +211,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h6 class="mb-0"><i class="bi bi-clock-history"></i> Pending Payments</h6>
             </div>
             <div class="card-body">
-                <h4 class="mb-1"><?= number_format($quick_stats['pending_payments']['count'] ?? 0) ?></h4>
+                <h4 class="mb-1"><?= format_large_number($quick_stats['pending_payments']['count'] ?? 0) ?></h4>
                 <p class="text-muted mb-0 small"><?= format_currency($quick_stats['pending_payments']['amount'] ?? 0) ?></p>
                 <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-sm btn-primary mt-2">View All</a>
             </div>

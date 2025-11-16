@@ -121,14 +121,12 @@
                         </a>
                     </li>
                     <?php endif; ?>
-                    <?php if (!isset($current_user['role']) || $current_user['role'] !== 'manager'): ?>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">
                             <i class="bi <?= get_module_icon('settings') ?>"></i>
                             <span class="nav-text"><?= get_module_name('settings') ?></span>
                         </a>
                     </li>
-                    <?php endif; ?>
                 </ul>
             </nav>
             

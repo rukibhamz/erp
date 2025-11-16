@@ -13,11 +13,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<!-- Property Management Navigation -->
-<div class="property-nav mb-4">
+<!-- Location Management Navigation -->
+<div class="Location-nav mb-4">
     <nav class="nav nav-pills nav-fill">
-        <a class="nav-link" href="<?= base_url('properties') ?>">
-            <i class="bi bi-building"></i> Properties
+        <a class="nav-link" href="<?= base_url('locations') ?>">
+            <i class="bi bi-building"></i> Locations
         </a>
         <a class="nav-link" href="<?= base_url('spaces') ?>">
             <i class="bi bi-door-open"></i> Spaces
@@ -35,29 +35,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <style>
-.property-nav {
+.Location-nav {
     background: #f8f9fa;
     padding: 1rem;
     border-radius: 0.5rem;
 }
 
-.property-nav .nav-link {
+.Location-nav .nav-link {
     color: #495057;
     border: 1px solid #dee2e6;
 }
 
-.property-nav .nav-link:hover {
+.Location-nav .nav-link:hover {
     background-color: #e9ecef;
     color: #000;
 }
 
-.property-nav .nav-link.active {
+.Location-nav .nav-link.active {
     background-color: #000;
     color: #fff;
     border-color: #000;
 }
 
-.property-nav .nav-link i {
+.Location-nav .nav-link i {
     margin-right: 0.5rem;
 }
 </style>

@@ -54,7 +54,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('pos?terminal=' . $terminal['id']) ?>" class="btn btn-dark" title="Open POS">
+                                        <a href="<?= base_url('pos/index?terminal=' . $terminal['id']) ?>" class="btn btn-primary" title="Open POS">
                                             <i class="bi bi-cash-register"></i> Open POS
                                         </a>
                                         <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>

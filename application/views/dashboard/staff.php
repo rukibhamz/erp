@@ -21,7 +21,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="stat-label">Today's Bookings</div>
-                    <div class="stat-number"><?= $stats['today_bookings'] ?? 0 ?></div>
+                    <div class="stat-number"><?= format_large_number($stats['today_bookings'] ?? 0) ?></div>
                 </div>
                 <div class="stat-icon primary">
                     <i class="bi bi-calendar-check"></i>
@@ -36,7 +36,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="stat-label">This Week</div>
-                    <div class="stat-number"><?= $stats['week_bookings'] ?? 0 ?></div>
+                    <div class="stat-number"><?= format_large_number($stats['week_bookings'] ?? 0) ?></div>
                 </div>
                 <div class="stat-icon success">
                     <i class="bi bi-calendar-week"></i>
@@ -51,7 +51,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="stat-label">Pending Bookings</div>
-                    <div class="stat-number"><?= $stats['pending_bookings'] ?? 0 ?></div>
+                    <div class="stat-number"><?= format_large_number($stats['pending_bookings'] ?? 0) ?></div>
                 </div>
                 <div class="stat-icon warning">
                     <i class="bi bi-clock-history"></i>
@@ -66,7 +66,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="stat-label">Low Stock Items</div>
-                    <div class="stat-number"><?= $stats['low_stock_count'] ?? 0 ?></div>
+                    <div class="stat-number"><?= format_large_number($stats['low_stock_count'] ?? 0) ?></div>
                 </div>
                 <div class="stat-icon danger">
                     <i class="bi bi-exclamation-triangle"></i>

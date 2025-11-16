@@ -68,7 +68,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Pending Bookings</div>
-                        <div class="stat-number"><?= number_format($kpis['bookings_pending'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_number($kpis['bookings_pending'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -148,7 +148,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Active Users</div>
-                        <div class="stat-number"><?= number_format($kpis['active_users'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_number($kpis['active_users'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
