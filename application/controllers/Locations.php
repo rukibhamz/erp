@@ -106,9 +106,12 @@ class Locations extends Base_Controller {
             redirect('locations');
         }
         
+        // Ensure fields are mapped for view
+        $location = $this->locationModel->mapFieldsForView($location);
+        
         $data = [
-            'page_title' => 'Location: ' . $location['property_name'],
-            'location' => $location,
+            'page_title' => 'Location: ' . ($location['Location_name'] ?? $location['property_name'] ?? ''),
+            'Location' => $location, // Use Location for consistency with view
             'flash' => $this->getFlashMessage()
         ];
         
@@ -157,6 +160,8 @@ class Locations extends Base_Controller {
                 $this->setFlashMessage('danger', 'Location not found.');
                 redirect('locations');
             }
+            // Ensure fields are mapped for view
+            $location = $this->locationModel->mapFieldsForView($location);
         } catch (Exception $e) {
             $this->setFlashMessage('danger', 'Error loading location.');
             redirect('locations');
@@ -171,7 +176,7 @@ class Locations extends Base_Controller {
         
         $data = [
             'page_title' => 'Edit Location',
-            'location' => $location,
+            'Location' => $location, // Use Location for consistency with view
             'managers' => $managers,
             'flash' => $this->getFlashMessage()
         ];

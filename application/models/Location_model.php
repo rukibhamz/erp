@@ -25,15 +25,37 @@ class Location_model extends Base_Model {
     
     public function getActive() {
         try {
-            return $this->db->fetchAll(
+            $locations = $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
                  WHERE status = 'operational' 
                  ORDER BY property_name"
             );
+            // Map fields for views
+            return array_map([$this, 'mapFieldsForView'], $locations);
         } catch (Exception $e) {
             error_log('Location_model getActive error: ' . $e->getMessage());
             return [];
         }
+    }
+    
+    /**
+     * Override getAll to map fields for views
+     */
+    public function getAll($limit = null, $offset = 0, $orderBy = null) {
+        $locations = parent::getAll($limit, $offset, $orderBy);
+        // Map fields for views
+        return array_map([$this, 'mapFieldsForView'], $locations);
+    }
+    
+    /**
+     * Override getById to map fields for views
+     */
+    public function getById($id) {
+        $location = parent::getById($id);
+        if ($location) {
+            return $this->mapFieldsForView($location);
+        }
+        return $location;
     }
     
     public function getWithSpaces($locationId) {
@@ -42,6 +64,9 @@ class Location_model extends Base_Model {
             if (!$location) {
                 return false;
             }
+            
+            // Map database fields to view fields for backward compatibility
+            $location = $this->mapFieldsForView($location);
             
             // Load spaces for this location using direct query
             $location['spaces'] = $this->db->fetchAll(
@@ -56,6 +81,26 @@ class Location_model extends Base_Model {
             error_log('Location_model getWithSpaces error: ' . $e->getMessage());
             return false;
         }
+    }
+    
+    /**
+     * Map database field names to view field names for backward compatibility
+     * Maps property_* to Location_* for views
+     */
+    public function mapFieldsForView($location) {
+        if (isset($location['property_code'])) {
+            $location['Location_code'] = $location['property_code'];
+        }
+        if (isset($location['property_name'])) {
+            $location['Location_name'] = $location['property_name'];
+        }
+        if (isset($location['property_type'])) {
+            $location['Location_type'] = $location['property_type'];
+        }
+        if (isset($location['property_value'])) {
+            $location['Location_value'] = $location['property_value'];
+        }
+        return $location;
     }
     
     public function getBookableSpaces($locationId = null) {
