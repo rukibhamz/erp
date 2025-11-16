@@ -119,8 +119,10 @@ class Locations extends Base_Controller {
         $this->requirePermission('locations', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
+            
             $data = [
-                'property_name' => sanitize_input($_POST['property_name'] ?? ''),
+                'property_name' => sanitize_input($_POST['Location_name'] ?? $_POST['property_name'] ?? ''),
                 'property_type' => sanitize_input($_POST['property_type'] ?? 'multi_purpose'),
                 'address' => sanitize_input($_POST['address'] ?? ''),
                 'city' => sanitize_input($_POST['city'] ?? ''),

@@ -19,8 +19,8 @@ include(BASEPATH . 'views/tax/_nav.php');
         <h5 class="mb-0"><i class="bi bi-gear"></i> Company Tax Profile</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="<?= base_url('tax/settings') ?>
-            <?php echo csrf_field(); ?>">
+        <form method="POST" action="<?= base_url('tax/settings') ?>">
+            <?php echo csrf_field(); ?>
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Company TIN</label>
@@ -70,6 +70,7 @@ include(BASEPATH . 'views/tax/_nav.php');
     </div>
     <div class="card-body">
         <form method="POST" action="<?= base_url('tax/settings') ?>" id="taxRatesForm">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="update_tax_rates" value="1">
             <div class="alert alert-info">
                 <i class="bi bi-info-circle"></i> Recommended rates are shown in parentheses. You can adjust rates as needed.

@@ -115,6 +115,7 @@ class Tax_config extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $taxId = intval($_POST['tax_id'] ?? 0);
             $taxCode = strtoupper(trim($_POST['tax_code'] ?? ''));
             $rate = floatval($_POST['tax_rate'] ?? 0);
@@ -231,6 +232,9 @@ class Tax_config extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_POST['tax_rates'])) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                check_csrf(); // CSRF Protection
+            }
             $updated = 0;
             $errors = [];
             $updatedTaxes = [];
@@ -369,6 +373,7 @@ class Tax_config extends Base_Controller {
         $this->requirePermission('tax', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'name' => sanitize_input($_POST['name'] ?? ''),
                 'code' => strtoupper(sanitize_input($_POST['code'] ?? '')),
@@ -415,6 +420,7 @@ class Tax_config extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'name' => sanitize_input($_POST['name'] ?? ''),
                 'code' => strtoupper(sanitize_input($_POST['code'] ?? '')),
