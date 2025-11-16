@@ -25,61 +25,61 @@ input.btn:hover {
     color: #ffffff !important;
 }
 
-/* Primary buttons - Uniform blue */
+/* Primary buttons - Black background with white text */
 .btn-primary,
 button.btn-primary,
 a.btn-primary,
 input.btn-primary {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
+    background-color: #000000 !important;
+    border-color: #000000 !important;
     color: #ffffff !important;
 }
 
-.btn-primary:hover,
-.btn-primary:focus,
-.btn-primary:active,
-button.btn-primary:hover,
-a.btn-primary:hover {
-    background-color: #0052a3 !important;
-    border-color: #0052a3 !important;
+.btn-primary:hover:not(:disabled),
+.btn-primary:focus:not(:disabled),
+.btn-primary:active:not(:disabled),
+button.btn-primary:hover:not(:disabled),
+a.btn-primary:hover:not(:disabled) {
+    background-color: #333333 !important;
+    border-color: #333333 !important;
     color: #ffffff !important;
 }
 
-/* Dark buttons - Same as primary */
+/* Dark buttons - Black background with white text */
 .btn-dark,
 button.btn-dark,
 a.btn-dark {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
+    background-color: #000000 !important;
+    border-color: #000000 !important;
     color: #ffffff !important;
 }
 
-.btn-dark:hover,
-.btn-dark:focus,
-.btn-dark:active,
-button.btn-dark:hover,
-a.btn-dark:hover {
-    background-color: #0052a3 !important;
-    border-color: #0052a3 !important;
+.btn-dark:hover:not(:disabled),
+.btn-dark:focus:not(:disabled),
+.btn-dark:active:not(:disabled),
+button.btn-dark:hover:not(:disabled),
+a.btn-dark:hover:not(:disabled) {
+    background-color: #333333 !important;
+    border-color: #333333 !important;
     color: #ffffff !important;
 }
 
-/* Secondary buttons - Same as primary */
+/* Secondary buttons - Black background with white text */
 .btn-secondary,
 button.btn-secondary,
 a.btn-secondary {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
+    background-color: #000000 !important;
+    border-color: #000000 !important;
     color: #ffffff !important;
 }
 
-.btn-secondary:hover,
-.btn-secondary:focus,
-.btn-secondary:active,
-button.btn-secondary:hover,
-a.btn-secondary:hover {
-    background-color: #0052a3 !important;
-    border-color: #0052a3 !important;
+.btn-secondary:hover:not(:disabled),
+.btn-secondary:focus:not(:disabled),
+.btn-secondary:active:not(:disabled),
+button.btn-secondary:hover:not(:disabled),
+a.btn-secondary:hover:not(:disabled) {
+    background-color: #333333 !important;
+    border-color: #333333 !important;
     color: #ffffff !important;
 }
 
@@ -151,52 +151,52 @@ a.btn-info {
     color: #ffffff !important;
 }
 
-/* Outline buttons - Blue border, white text on hover */
+/* Outline buttons - Black border, black background on hover */
 .btn-outline-primary,
 button.btn-outline-primary,
 a.btn-outline-primary {
-    border-color: #0066cc !important;
-    color: #0066cc !important;
+    border-color: #000000 !important;
+    color: #000000 !important;
     background-color: transparent !important;
 }
 
-.btn-outline-primary:hover,
-.btn-outline-primary:focus,
-.btn-outline-primary:active {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
+.btn-outline-primary:hover:not(:disabled),
+.btn-outline-primary:focus:not(:disabled),
+.btn-outline-primary:active:not(:disabled) {
+    background-color: #000000 !important;
+    border-color: #000000 !important;
     color: #ffffff !important;
 }
 
 .btn-outline-dark,
 button.btn-outline-dark,
 a.btn-outline-dark {
-    border-color: #0066cc !important;
-    color: #0066cc !important;
+    border-color: #000000 !important;
+    color: #000000 !important;
     background-color: transparent !important;
 }
 
-.btn-outline-dark:hover,
-.btn-outline-dark:focus,
-.btn-outline-dark:active {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
+.btn-outline-dark:hover:not(:disabled),
+.btn-outline-dark:focus:not(:disabled),
+.btn-outline-dark:active:not(:disabled) {
+    background-color: #000000 !important;
+    border-color: #000000 !important;
     color: #ffffff !important;
 }
 
 .btn-outline-secondary,
 button.btn-outline-secondary,
 a.btn-outline-secondary {
-    border-color: #0066cc !important;
-    color: #0066cc !important;
+    border-color: #000000 !important;
+    color: #000000 !important;
     background-color: transparent !important;
 }
 
-.btn-outline-secondary:hover,
-.btn-outline-secondary:focus,
-.btn-outline-secondary:active {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
+.btn-outline-secondary:hover:not(:disabled),
+.btn-outline-secondary:focus:not(:disabled),
+.btn-outline-secondary:active:not(:disabled) {
+    background-color: #000000 !important;
+    border-color: #000000 !important;
     color: #ffffff !important;
 }
 

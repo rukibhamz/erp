@@ -653,19 +653,19 @@ footer .container-fluid {
     border-color: #000000 !important;
 }
 
-.btn-primary:hover {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
+.btn-primary:hover:not(:disabled) {
+    background: #333333 !important;
+    color: #ffffff !important;
+    border-color: #333333 !important;
     transform: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
-.btn-primary:focus,
-.btn-primary:active {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
+.btn-primary:focus:not(:disabled),
+.btn-primary:active:not(:disabled) {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: #1a1a1a !important;
 }
 
 /* Dark button - Black background with white text */
@@ -675,29 +675,30 @@ footer .container-fluid {
     border-color: #000000 !important;
 }
 
-.btn-dark:hover {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
+.btn-dark:hover:not(:disabled) {
+    background: #333333 !important;
+    color: #ffffff !important;
+    border-color: #333333 !important;
 }
 
-.btn-dark:focus,
-.btn-dark:active {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
+.btn-dark:focus:not(:disabled),
+.btn-dark:active:not(:disabled) {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: #1a1a1a !important;
 }
 
-/* Outline buttons - Black border, white on hover */
+/* Outline buttons - Black border, black background on hover */
 .btn-outline-dark {
     border: 1.5px solid #000000 !important;
     color: #000000 !important;
     background: transparent !important;
 }
 
-.btn-outline-dark:hover {
+.btn-outline-dark:hover:not(:disabled) {
     background: #000000 !important;
     color: #ffffff !important;
+    border-color: #000000 !important;
 }
 
 .btn-outline-primary {
@@ -706,9 +707,10 @@ footer .container-fluid {
     background: transparent !important;
 }
 
-.btn-outline-primary:hover {
+.btn-outline-primary:hover:not(:disabled) {
     background: #000000 !important;
     color: #ffffff !important;
+    border-color: #000000 !important;
 }
 
 /* Secondary button - Black background with white text */
@@ -718,17 +720,17 @@ footer .container-fluid {
     border-color: #000000 !important;
 }
 
-.btn-secondary:hover {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
+.btn-secondary:hover:not(:disabled) {
+    background: #333333 !important;
+    color: #ffffff !important;
+    border-color: #333333 !important;
 }
 
-.btn-secondary:focus,
-.btn-secondary:active {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
+.btn-secondary:focus:not(:disabled),
+.btn-secondary:active:not(:disabled) {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: #1a1a1a !important;
 }
 
 /* Ensure white text on all black/dark backgrounds */
