@@ -23,6 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="card">
                     <div class="card-body">
                         <form method="POST">
+<?php echo csrf_field(); ?>
                             <!-- API Credentials -->
                             <h5 class="mb-3">API Credentials</h5>
                             

@@ -15,7 +15,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">Bill Details</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('payables/bills/create') ?>" id="billForm">
+                <form method="POST" action="<?= base_url('payables/bills/create') ?>
+<?php echo csrf_field(); ?>" id="billForm">
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="vendor_id" class="form-label">Vendor <span class="text-danger">*</span></label>

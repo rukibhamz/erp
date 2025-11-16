@@ -121,7 +121,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <h6 class="mb-0">Update Status</h6>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="<?= base_url('bookings/status/' . $booking['id']) ?>">
+                        <form method="POST" action="<?= base_url('bookings/status/' . $booking['id']) ?>
+<?php echo csrf_field(); ?>">
                             <div class="mb-3">
                                 <select name="status" class="form-select">
                                     <option value="pending" <?= $booking['status'] === 'pending' ? 'selected' : '' ?>>Pending</option>

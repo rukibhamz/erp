@@ -24,7 +24,8 @@ include(BASEPATH . 'views/tax/_nav.php');
         <h5 class="mb-0"><i class="bi bi-pencil"></i> Edit Tax Type: <?= htmlspecialchars($tax_type['name'] ?? '') ?></h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="<?= base_url('tax/config/edit/' . ($tax_type['id'] ?? '')) ?>">
+        <form method="POST" action="<?= base_url('tax/config/edit/' . ($tax_type['id'] ?? '')) ?>
+            <?php echo csrf_field(); ?>">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Tax Name <span class="text-danger">*</span></label>

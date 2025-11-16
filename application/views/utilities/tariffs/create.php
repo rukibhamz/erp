@@ -22,7 +22,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('utilities/tariffs/create') ?>" method="POST">
+        <form action="<?= base_url('utilities/tariffs/create') ?>
+            <?php echo csrf_field(); ?>" method="POST">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="tariff_name" class="form-label">Tariff Name <span class="text-danger">*</span></label>

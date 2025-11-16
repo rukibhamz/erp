@@ -13,7 +13,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">Record Cash Receipt</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('cash/receipts') ?>">
+                <form method="POST" action="<?= base_url('cash/receipts') ?>
+<?php echo csrf_field(); ?>">
                     <div class="mb-3">
                         <label for="cash_account_id" class="form-label">Cash Account <span class="text-danger">*</span></label>
                         <select class="form-select" id="cash_account_id" name="cash_account_id" required>

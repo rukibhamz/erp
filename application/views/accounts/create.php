@@ -12,7 +12,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?= base_url('accounts/create') ?>">
+                <form method="POST" action="<?= base_url('accounts/create') ?>
+<?php echo csrf_field(); ?>">
                     <div class="mb-3">
                         <label for="account_number" class="form-label">Account Number <span class="text-muted">(Leave blank to auto-generate)</span></label>
                         <input type="text" class="form-control" id="account_number" name="account_number" placeholder="Auto-generated" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">

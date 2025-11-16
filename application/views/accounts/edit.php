@@ -10,7 +10,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?= base_url('accounts/edit/' . $account['id']) ?>">
+                <form method="POST" action="<?= base_url('accounts/edit/' . $account['id']) ?>
+<?php echo csrf_field(); ?>">
                     <div class="mb-3">
                         <label for="account_code" class="form-label">Account Code</label>
                         <input type="text" class="form-control" id="account_code" name="account_code" value="<?= htmlspecialchars($account['account_code']) ?>" required>

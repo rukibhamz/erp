@@ -72,7 +72,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('spaces/create') ?>" method="POST" id="spaceForm">
+        <form action="<?= base_url('spaces/create') ?>
+            <?php echo csrf_field(); ?>" method="POST" id="spaceForm">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="property_id" class="form-label">Property <span class="text-danger">*</span></label>

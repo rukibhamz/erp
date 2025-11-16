@@ -22,7 +22,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('inventory/purchase-orders/create') ?>" method="POST" id="poForm">
+        <form action="<?= base_url('inventory/purchase-orders/create') ?>
+            <?php echo csrf_field(); ?>" method="POST" id="poForm">
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <label for="supplier_id" class="form-label">Supplier <span class="text-danger">*</span></label>

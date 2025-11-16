@@ -47,7 +47,7 @@ $label = $typeLabels[$type] ?? ucfirst($type);
                     </ul>
                 </div>
                 
-                <form method="POST" action="<?= base_url('import-export/process-import') ?>" enctype="multipart/form-data">
+                <form method="POST" action="<?= base_url('import-export/process-import') ?><?php echo csrf_field(); ?>" enctype="multipart/form-data">
                     <input type="hidden" name="type" value="<?= htmlspecialchars($type) ?>">
                     
                     <div class="mb-3">

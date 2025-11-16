@@ -24,7 +24,8 @@ include(BASEPATH . 'views/accounting/_nav.php');
         <h5 class="mb-0"><i class="bi bi-calculator"></i> Process Payroll</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="<?= base_url('payroll/process') ?>">
+        <form method="POST" action="<?= base_url('payroll/process') ?>
+            <?php echo csrf_field(); ?>">
             <div class="row mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Period (YYYY-MM) <span class="text-danger">*</span></label>

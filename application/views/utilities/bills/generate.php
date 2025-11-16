@@ -22,7 +22,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('utilities/bills/generate' . ($selected_meter_id ? '/' . $selected_meter_id : '')) ?>" method="POST">
+        <form action="<?= base_url('utilities/bills/generate' . ($selected_meter_id ? '/' . $selected_meter_id : '')) ?>
+            <?php echo csrf_field(); ?>" method="POST">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="meter_id" class="form-label">Meter <span class="text-danger">*</span></label>

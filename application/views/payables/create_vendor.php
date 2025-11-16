@@ -12,7 +12,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?= base_url('payables/vendors/create') ?>">
+                <form method="POST" action="<?= base_url('payables/vendors/create') ?>
+<?php echo csrf_field(); ?>">
                     <div class="mb-3">
                         <label for="vendor_code" class="form-label">Vendor Code <span class="text-muted">(Auto-generated if empty)</span></label>
                         <input type="text" class="form-control" id="vendor_code" name="vendor_code" placeholder="Auto-generated">

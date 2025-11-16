@@ -20,6 +20,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="card">
         <div class="card-body">
             <form method="POST">
+                <?php echo csrf_field(); ?>
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="mb-3">

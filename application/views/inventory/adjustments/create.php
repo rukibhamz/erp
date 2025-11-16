@@ -25,7 +25,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Adjustment Details</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="<?= base_url('inventory/adjustments/create') ?>">
+        <form method="POST" action="<?= base_url('inventory/adjustments/create') ?>
+            <?php echo csrf_field(); ?>">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Item <span class="text-danger">*</span></label>

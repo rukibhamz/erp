@@ -22,7 +22,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('utilities/meters/create') ?>" method="POST">
+        <form action="<?= base_url('utilities/meters/create') ?>
+            <?php echo csrf_field(); ?>" method="POST">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="meter_number" class="form-label">Meter Number</label>

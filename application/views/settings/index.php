@@ -79,7 +79,8 @@ $page_title = $page_title ?? 'Settings';
                 <h5 class="mb-0">General Settings</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('settings') ?>">
+                <form method="POST" action="<?= base_url('settings') ?>
+<?php echo csrf_field(); ?>">
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="site_name" class="form-label">Site Name</label>

@@ -24,7 +24,7 @@ include(BASEPATH . 'views/tax/_nav.php');
         <h5 class="mb-0"><i class="bi bi-credit-card"></i> Payment Information</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="<?= base_url('tax/payments/create') ?>" enctype="multipart/form-data">
+        <form method="POST" action="<?= base_url('tax/payments/create') ?><?php echo csrf_field(); ?>" enctype="multipart/form-data">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Tax Type <span class="text-danger">*</span></label>

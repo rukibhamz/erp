@@ -22,7 +22,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('inventory/locations/create') ?>" method="POST">
+        <form action="<?= base_url('inventory/locations/create') ?>
+            <?php echo csrf_field(); ?>" method="POST">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="location_code" class="form-label">Location Code</label>

@@ -53,7 +53,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <td>
                                             <?php if ($period['is_locked']): ?>
                                                 <?php if (has_permission('settings', 'update')): ?>
-                                                    <form method="POST" action="<?= base_url('financial-years/unlock-period') ?>" class="d-inline">
+                                                    <form method="POST" action="<?= base_url('financial-years/unlock-period') ?><?php echo csrf_field(); ?>" class="d-inline">
                                                         <input type="hidden" name="financial_year_id" value="<?= $financial_year['id'] ?>">
                                                         <input type="hidden" name="month" value="<?= $period['month'] ?>">
                                                         <input type="hidden" name="year" value="<?= $period['year'] ?>">

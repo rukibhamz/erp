@@ -216,7 +216,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="modal-title">Record Payment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="<?= base_url('rent-invoices/record-payment') ?>" method="POST">
+            <form action="<?= base_url('rent-invoices/record-payment') ?>
+            <?php echo csrf_field(); ?>" method="POST">
                 <div class="modal-body">
                     <input type="hidden" name="invoice_id" value="<?= $invoice['id'] ?>">
                     

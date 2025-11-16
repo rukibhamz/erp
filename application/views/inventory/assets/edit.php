@@ -25,7 +25,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="mb-0"><i class="bi bi-pencil"></i> Edit Asset Information</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="<?= base_url('inventory/assets/edit/' . $asset['id']) ?>">
+        <form method="POST" action="<?= base_url('inventory/assets/edit/' . $asset['id']) ?>
+            <?php echo csrf_field(); ?>">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Asset Name <span class="text-danger">*</span></label>

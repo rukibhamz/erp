@@ -20,6 +20,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="card">
         <div class="card-body">
             <form method="POST">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3">
                     <label class="form-label">Budget Name</label>
                     <input type="text" name="budget_name" class="form-control" value="<?= htmlspecialchars($budget['budget_name'] ?? '') ?>" placeholder="e.g., 2024 Operating Budget">

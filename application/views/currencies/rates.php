@@ -29,6 +29,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
         <div class="card-body">
             <form method="POST" class="row g-3">
+                <?php echo csrf_field(); ?>
                 <div class="col-md-3">
                     <label class="form-label">From Currency</label>
                     <select name="from_currency" class="form-select" required>

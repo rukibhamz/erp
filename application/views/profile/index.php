@@ -20,6 +20,7 @@ $page_title = $page_title ?? 'My Profile';
                 <span class="badge bg-<?= getRoleBadgeClass($user['role']) ?>"><?= ucfirst(str_replace('_', ' ', $user['role'])) ?></span>
                 
                 <form method="POST" enctype="multipart/form-data" class="mt-3">
+<?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="upload_avatar">
                     <div class="mb-3">
                         <input type="file" class="form-control form-control-sm" name="avatar" id="avatar" accept="image/*" required>

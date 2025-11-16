@@ -119,7 +119,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 <h5 class="modal-title">Resolve Alert</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <form action="<?= base_url('utilities/alerts/resolve/' . $alert['id']) ?>" method="POST">
+                                            <form action="<?= base_url('utilities/alerts/resolve/' . $alert['id']) ?>
+            <?php echo csrf_field(); ?>" method="POST">
                                                 <div class="modal-body">
                                                     <div class="mb-3">
                                                         <label class="form-label">Alert Details</label>

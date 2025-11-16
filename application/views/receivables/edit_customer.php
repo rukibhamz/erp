@@ -12,7 +12,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?= base_url('receivables/customers/edit/' . $customer['id']) ?>">
+                <form method="POST" action="<?= base_url('receivables/customers/edit/' . $customer['id']) ?>
+<?php echo csrf_field(); ?>">
                     <div class="mb-3">
                         <label for="customer_code" class="form-label">Customer Code</label>
                         <input type="text" class="form-control" id="customer_code" name="customer_code" value="<?= htmlspecialchars($customer['customer_code']) ?>" readonly>

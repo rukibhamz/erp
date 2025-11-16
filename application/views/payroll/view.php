@@ -120,7 +120,8 @@ include(BASEPATH . 'views/accounting/_nav.php');
         <div class="modal fade" id="postModal" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <form method="POST" action="<?= base_url('payroll/post/' . $payroll_run['id']) ?>">
+                    <form method="POST" action="<?= base_url('payroll/post/' . $payroll_run['id']) ?>
+<?php echo csrf_field(); ?>">
                         <div class="modal-header bg-dark text-white">
                             <h5 class="modal-title"><i class="bi bi-check-circle"></i> Post Payroll</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>

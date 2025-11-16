@@ -15,7 +15,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">Invoice Details</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('receivables/invoices/create') ?>" id="invoiceForm">
+                <form method="POST" action="<?= base_url('receivables/invoices/create') ?><?php echo csrf_field(); ?>" id="invoiceForm">
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="customer_id" class="form-label">Customer <span class="text-danger">*</span></label>

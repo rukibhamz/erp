@@ -39,7 +39,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <h5 class="mb-0">New Booking Details</h5>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="<?= base_url('bookings/reschedule/' . $booking['id']) ?>">
+                        <form method="POST" action="<?= base_url('bookings/reschedule/' . $booking['id']) ?>
+<?php echo csrf_field(); ?>">
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">New Date <span class="text-danger">*</span></label>

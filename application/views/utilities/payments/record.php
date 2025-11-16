@@ -27,7 +27,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">Payment Details</h5>
             </div>
             <div class="card-body">
-                <form action="<?= base_url('utilities/payments/record/' . $bill['id']) ?>" method="POST">
+                <form action="<?= base_url('utilities/payments/record/' . $bill['id']) ?>
+            <?php echo csrf_field(); ?>" method="POST">
                     <div class="row g-3">
                         <div class="col-md-12">
                             <div class="alert alert-info">

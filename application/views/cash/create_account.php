@@ -10,7 +10,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?= base_url('cash/accounts/create') ?>">
+                <form method="POST" action="<?= base_url('cash/accounts/create') ?>
+<?php echo csrf_field(); ?>">
                     <div class="mb-3">
                         <label for="account_name" class="form-label">Account Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="account_name" name="account_name" required placeholder="e.g., Main Bank Account">

@@ -5,7 +5,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Backup & Restore</h1>
-        <form method="POST" action="<?= base_url('settings/backup/create') ?>" onsubmit="return confirm('Create a new backup? This may take a few moments.')">
+        <form method="POST" action="<?= base_url('settings/backup/create') ?><?php echo csrf_field(); ?>" onsubmit="return confirm('Create a new backup? This may take a few moments.')">
             <button type="submit" class="btn btn-dark">
                 <i class="bi bi-database"></i> Create Backup Now
             </button>

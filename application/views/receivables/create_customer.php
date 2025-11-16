@@ -10,7 +10,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="<?= base_url('receivables/customers/create') ?>">
+                <form method="POST" action="<?= base_url('receivables/customers/create') ?>
+<?php echo csrf_field(); ?>">
                     <div class="mb-3">
                         <label for="customer_code" class="form-label">Customer Code <span class="text-muted">(Auto-generated if empty)</span></label>
                         <input type="text" class="form-control" id="customer_code" name="customer_code" placeholder="Auto-generated">

@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `code=${code}&amount=<?= $booking_data['subtotal'] ?? 0 ?>`
+            body: `csrf_token=<?= csrf_token() ?>&code=${code}&amount=<?= $booking_data['subtotal'] ?? 0 ?>`
         })
         .then(response => response.json())
         .then(data => {
@@ -233,6 +233,8 @@ document.addEventListener('DOMContentLoaded', function() {
         form.method = 'POST';
         form.action = '<?= base_url('booking-wizard/finalize') ?>';
         
+        // Add CSRF token
+        form.appendChild(createInput('csrf_token', '<?= csrf_token() ?>'));
         form.appendChild(createInput('payment_plan', paymentPlan));
         form.appendChild(createInput('payment_method', paymentMethod));
         if (gatewayCode) {
