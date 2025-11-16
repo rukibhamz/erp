@@ -68,7 +68,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('payroll/employees/edit/' . $employee['id']) ?>" class="btn btn-outline-dark" title="Edit">
+                                        <a href="<?= base_url('payroll/employees/edit/' . $employee['id']) ?>" class="btn btn-primary" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>

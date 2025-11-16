@@ -76,22 +76,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="<?= base_url('accounts/create') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('accounts/create') ?>" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> New Account
                     </a>
-                    <a href="<?= base_url('journal/create') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('journal/create') ?>" class="btn btn-primary">
                         <i class="bi bi-journal-text"></i> Journal Entry
                     </a>
-                    <a href="<?= base_url('receivables/invoices/create') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('receivables/invoices/create') ?>" class="btn btn-primary">
                         <i class="bi bi-file-earmark-text"></i> New Invoice
                     </a>
-                    <a href="<?= base_url('payables/bills/create') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('payables/bills/create') ?>" class="btn btn-primary">
                         <i class="bi bi-receipt"></i> New Bill
                     </a>
-                    <a href="<?= base_url('cash/receipts/create') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('cash/receipts/create') ?>" class="btn btn-primary">
                         <i class="bi bi-cash-coin"></i> Cash Receipt
                     </a>
-                    <a href="<?= base_url('cash/payments/create') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('cash/payments/create') ?>" class="btn btn-primary">
                         <i class="bi bi-credit-card"></i> Cash Payment
                     </a>
                 </div>

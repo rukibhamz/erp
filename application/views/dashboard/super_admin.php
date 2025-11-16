@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <p class="text-muted mb-0">Welcome back, <?= htmlspecialchars(($current_user['first_name'] ?? '') . ' ' . ($current_user['last_name'] ?? '') ?: ($current_user['username'] ?? 'User')) ?>!</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('reports') ?>" class="btn btn-outline-dark">
+            <a href="<?= base_url('reports') ?>" class="btn btn-primary">
                 <i class="bi bi-graph-up"></i> Reports
             </a>
         </div>
@@ -234,7 +234,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <h4 class="mb-1"><?= number_format($quick_stats['pending_payments']['count'] ?? 0) ?></h4>
                 <p class="text-muted mb-0 small"><?= format_currency($quick_stats['pending_payments']['amount'] ?? 0) ?></p>
-                <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-sm btn-outline-dark mt-2">View All</a>
+                <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-sm btn-primary mt-2">View All</a>
             </div>
         </div>
     </div>
@@ -247,7 +247,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <h4 class="mb-1"><?= count($quick_stats['expiring_leases'] ?? []) ?></h4>
                 <p class="text-muted mb-0 small">Leases expiring soon</p>
-                <a href="<?= base_url('leases') ?>" class="btn btn-sm btn-outline-dark mt-2">View All</a>
+                <a href="<?= base_url('leases') ?>" class="btn btn-sm btn-primary mt-2">View All</a>
             </div>
         </div>
     </div>
@@ -260,7 +260,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <h4 class="mb-1"><?= count($quick_stats['low_stock_items'] ?? []) ?></h4>
                 <p class="text-muted mb-0 small">Items below reorder point</p>
-                <a href="<?= base_url('inventory/stock-levels') ?>" class="btn btn-sm btn-outline-dark mt-2">View All</a>
+                <a href="<?= base_url('inventory/stock-levels') ?>" class="btn btn-sm btn-primary mt-2">View All</a>
             </div>
         </div>
     </div>
@@ -306,16 +306,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <a href="<?= base_url('receivables/invoices/create') ?>" class="btn btn-dark">
                         <i class="bi bi-file-earmark-plus"></i> Create Invoice
                     </a>
-                    <a href="<?= base_url('receivables/payments/create') ?>" class="btn btn-outline-dark">
+                    <a href="<?= base_url('receivables/payments/create') ?>" class="btn btn-primary">
                         <i class="bi bi-cash-coin"></i> Record Payment
                     </a>
-                    <a href="<?= base_url('bookings/create') ?>" class="btn btn-outline-dark">
+                    <a href="<?= base_url('bookings/create') ?>" class="btn btn-primary">
                         <i class="bi bi-calendar-plus"></i> New Booking
                     </a>
-                    <a href="<?= base_url('payables/bills/create') ?>" class="btn btn-outline-dark">
+                    <a href="<?= base_url('payables/bills/create') ?>" class="btn btn-primary">
                         <i class="bi bi-receipt-cutoff"></i> Add Expense
                     </a>
-                    <a href="<?= base_url('reports') ?>" class="btn btn-outline-dark">
+                    <a href="<?= base_url('reports') ?>" class="btn btn-primary">
                         <i class="bi bi-graph-up"></i> Generate Report
                     </a>
                 </div>

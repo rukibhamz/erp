@@ -172,7 +172,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
 
             <div class="text-center">
-                <a href="<?= base_url('booking-wizard') ?>" class="btn btn-outline-primary">
+                <a href="<?= base_url('booking-wizard') ?>" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Book Another Resource
                 </a>
             </div>

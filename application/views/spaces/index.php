@@ -150,10 +150,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('spaces/view/' . $space['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('spaces/view/' . $space['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="<?= base_url('spaces/edit/' . $space['id']) ?>" class="btn btn-outline-primary" title="Edit">
+                                        <a href="<?= base_url('spaces/edit/' . $space['id']) ?>" class="btn btn-primary" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                         <?php if ($space['is_bookable']): ?>

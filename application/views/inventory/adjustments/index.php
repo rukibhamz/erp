@@ -26,10 +26,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card mb-4">
     <div class="card-body">
         <div class="btn-group" role="group">
-            <a href="?status=all" class="btn btn-sm <?= $selected_status === 'all' ? 'btn-dark' : 'btn-outline-dark' ?>">All</a>
-            <a href="?status=pending" class="btn btn-sm <?= $selected_status === 'pending' ? 'btn-dark' : 'btn-outline-dark' ?>">Pending</a>
-            <a href="?status=approved" class="btn btn-sm <?= $selected_status === 'approved' ? 'btn-dark' : 'btn-outline-dark' ?>">Approved</a>
-            <a href="?status=rejected" class="btn btn-sm <?= $selected_status === 'rejected' ? 'btn-dark' : 'btn-outline-dark' ?>">Rejected</a>
+            <a href="?status=all" class="btn btn-sm <?= $selected_status === 'all' ? 'btn-dark' : 'btn-primary' ?>">All</a>
+            <a href="?status=pending" class="btn btn-sm <?= $selected_status === 'pending' ? 'btn-dark' : 'btn-primary' ?>">Pending</a>
+            <a href="?status=approved" class="btn btn-sm <?= $selected_status === 'approved' ? 'btn-dark' : 'btn-primary' ?>">Approved</a>
+            <a href="?status=rejected" class="btn btn-sm <?= $selected_status === 'rejected' ? 'btn-dark' : 'btn-primary' ?>">Rejected</a>
         </div>
     </div>
 </div>
@@ -93,7 +93,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <td><?= date('M d, Y', strtotime($adj['adjustment_date'])) ?></td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('inventory/adjustments/view/' . $adj['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('inventory/adjustments/view/' . $adj['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <?php if ($adj['status'] === 'pending' && hasPermission('inventory', 'update')): ?>

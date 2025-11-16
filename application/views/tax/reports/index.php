@@ -7,10 +7,10 @@ include(BASEPATH . 'views/tax/_nav.php');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Tax Reports</h1>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-dark" onclick="window.print()">
+            <button class="btn btn-primary" onclick="window.print()">
                 <i class="bi bi-printer"></i> Print
             </button>
-            <a href="<?= base_url('tax/reports/export?type=' . $report_type . '&start_date=' . $start_date . '&end_date=' . $end_date . '&format=pdf') ?>" class="btn btn-outline-dark">
+            <a href="<?= base_url('tax/reports/export?type=' . $report_type . '&start_date=' . $start_date . '&end_date=' . $end_date . '&format=pdf') ?>" class="btn btn-primary">
                 <i class="bi bi-file-earmark-pdf"></i> Export PDF
             </a>
         </div>

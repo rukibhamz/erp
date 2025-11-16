@@ -109,7 +109,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 
                 <hr>
                 
-                <a href="<?= base_url('utilities/bills/view/' . $bill['id']) ?>" class="btn btn-outline-dark w-100">
+                <a href="<?= base_url('utilities/bills/view/' . $bill['id']) ?>" class="btn btn-primary w-100">
                     <i class="bi bi-receipt"></i> View Bill
                 </a>
             </div>

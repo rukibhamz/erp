@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('spaces/create/' . $Location['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Space
             </a>
-            <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-outline-primary">
+            <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
             <a href="<?= base_url('locations') ?>" class="btn btn-outline-secondary">
@@ -148,7 +148,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         </td>
                                         <td><?= ucfirst(str_replace('_', ' ', $space['operational_mode'])) ?></td>
                                         <td>
-                                            <a href="<?= base_url('spaces/view/' . $space['id']) ?>" class="btn btn-sm btn-outline-dark">
+                                            <a href="<?= base_url('spaces/view/' . $space['id']) ?>" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                         </td>

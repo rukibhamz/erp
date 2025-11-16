@@ -112,7 +112,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('pos/receipt/' . $sale['id']) ?>" class="btn btn-sm btn-outline-dark">
+                                    <a href="<?= base_url('pos/receipt/' . $sale['id']) ?>" class="btn btn-sm btn-primary">
                                         <i class="bi bi-receipt"></i> Receipt
                                     </a>
                                 </td>

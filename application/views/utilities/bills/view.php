@@ -173,13 +173,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <?php endif; ?>
                 
                 <?php if (!empty($bill['meter_id'])): ?>
-                    <a href="<?= base_url('utilities/meters/view/' . $bill['meter_id']) ?>" class="btn btn-outline-dark w-100 mb-2">
+                    <a href="<?= base_url('utilities/meters/view/' . $bill['meter_id']) ?>" class="btn btn-primary w-100 mb-2">
                         <i class="bi bi-speedometer2"></i> View Meter
                     </a>
                 <?php endif; ?>
                 
                 <?php if ($bill['pdf_url']): ?>
-                    <a href="<?= base_url($bill['pdf_url']) ?>" target="_blank" class="btn btn-outline-dark w-100 mb-2">
+                    <a href="<?= base_url($bill['pdf_url']) ?>" target="_blank" class="btn btn-primary w-100 mb-2">
                         <i class="bi bi-file-pdf"></i> Download PDF
                     </a>
                 <?php endif; ?>

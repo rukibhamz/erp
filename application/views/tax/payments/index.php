@@ -95,7 +95,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                                 <td><?= htmlspecialchars($payment['period_covered'] ?? '-') ?></td>
                                 <td>
                                     <?php if (!empty($payment['receipt_url'])): ?>
-                                        <a href="<?= base_url($payment['receipt_url']) ?>" target="_blank" class="btn btn-sm btn-outline-dark" title="View Receipt">
+                                        <a href="<?= base_url($payment['receipt_url']) ?>" target="_blank" class="btn btn-sm btn-primary" title="View Receipt">
                                             <i class="bi bi-file-earmark-pdf"></i>
                                         </a>
                                     <?php endif; ?>

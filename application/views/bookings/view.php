@@ -99,7 +99,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="card-body">
                         <div class="d-grid gap-2 mb-3">
                             <?php if ($booking['status'] !== 'cancelled'): ?>
-                                <a href="<?= base_url('bookings/reschedule/' . $booking['id']) ?>" class="btn btn-outline-primary btn-sm">
+                                <a href="<?= base_url('bookings/reschedule/' . $booking['id']) ?>" class="btn btn-primary btn-sm">
                                     <i class="bi bi-calendar-event"></i> Reschedule
                                 </a>
                                 <?php if ($booking['status'] !== 'completed'): ?>

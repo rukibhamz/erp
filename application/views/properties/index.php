@@ -115,10 +115,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                         
                         <div class="d-flex gap-2">
-                            <a href="<?= base_url('properties/view/' . $property['id']) ?>" class="btn btn-sm btn-outline-dark">
+                            <a href="<?= base_url('properties/view/' . $property['id']) ?>" class="btn btn-sm btn-primary">
                                 <i class="bi bi-eye"></i> View
                             </a>
-                            <a href="<?= base_url('properties/edit/' . $property['id']) ?>" class="btn btn-sm btn-outline-primary">
+                            <a href="<?= base_url('properties/edit/' . $property['id']) ?>" class="btn btn-sm btn-primary">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
                             <a href="<?= base_url('spaces?property_id=' . $property['id']) ?>" class="btn btn-sm btn-outline-secondary">

@@ -127,7 +127,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </a>
                 <?php endif; ?>
                 
-                <a href="<?= base_url('utilities/vendor-bills') ?>" class="btn btn-outline-dark w-100 mb-2">
+                <a href="<?= base_url('utilities/vendor-bills') ?>" class="btn btn-primary w-100 mb-2">
                     <i class="bi bi-arrow-left"></i> Back to List
                 </a>
             </div>

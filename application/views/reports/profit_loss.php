@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Profit & Loss Statement</h1>
         <div>
-            <button onclick="window.print()" class="btn btn-outline-primary">
+            <button onclick="window.print()" class="btn btn-primary">
                 <i class="bi bi-printer"></i> Print
             </button>
             <a href="<?= base_url('reports') ?>" class="btn btn-secondary">

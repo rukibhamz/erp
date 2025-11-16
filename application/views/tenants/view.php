@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Tenant: <?= htmlspecialchars($tenant['business_name'] ?: $tenant['contact_person']) ?></h1>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-outline-primary">
+            <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
             <a href="<?= base_url('tenants') ?>" class="btn btn-outline-secondary">
@@ -174,7 +174,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </span>
                                         </td>
                                         <td>
-                                            <a href="<?= base_url('leases/view/' . $lease['id']) ?>" class="btn btn-sm btn-outline-dark">
+                                            <a href="<?= base_url('leases/view/' . $lease['id']) ?>" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                         </td>

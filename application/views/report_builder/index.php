@@ -50,10 +50,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <i class="bi bi-database"></i> <?= htmlspecialchars($report['data_source']) ?>
                         </div>
                         <div class="d-flex gap-2">
-                            <a href="<?= base_url('report-builder/view/' . $report['id']) ?>" class="btn btn-sm btn-outline-dark">
+                            <a href="<?= base_url('report-builder/view/' . $report['id']) ?>" class="btn btn-sm btn-primary">
                                 <i class="bi bi-eye"></i> View
                             </a>
-                            <a href="<?= base_url('report-builder/export/' . $report['id'] . '/csv') ?>" class="btn btn-sm btn-outline-dark">
+                            <a href="<?= base_url('report-builder/export/' . $report['id'] . '/csv') ?>" class="btn btn-sm btn-primary">
                                 <i class="bi bi-download"></i> Export
                             </a>
                         </div>

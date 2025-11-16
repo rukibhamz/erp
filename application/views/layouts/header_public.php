@@ -20,7 +20,7 @@
                 <i class="bi bi-calendar-check text-primary"></i> Booking Portal
             </a>
             <div class="ms-auto d-flex align-items-center gap-2">
-                <a href="<?= base_url('login') ?>" class="btn btn-outline-primary btn-sm">
+                <a href="<?= base_url('login') ?>" class="btn btn-primary btn-sm">
                     <i class="bi bi-box-arrow-in-right"></i> Admin Login
                 </a>
             </div>

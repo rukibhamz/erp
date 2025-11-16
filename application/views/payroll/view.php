@@ -12,7 +12,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
                     <i class="bi bi-check-circle"></i> Post Payroll
                 </button>
             <?php endif; ?>
-            <a href="<?= base_url('payroll') ?>" class="btn btn-outline-dark">
+            <a href="<?= base_url('payroll') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

@@ -84,7 +84,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </td>
                                     <td>
                                         <a href="<?= base_url('settings/payment-gateways/edit/' . $gateway['id']) ?>" 
-                                           class="btn btn-sm btn-outline-primary">
+                                           class="btn btn-sm btn-primary">
                                             <i class="bi bi-gear"></i> Configure
                                         </a>
                                         <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 

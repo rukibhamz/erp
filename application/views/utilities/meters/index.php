@@ -125,10 +125,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('utilities/meters/view/' . $meter['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('utilities/meters/view/' . $meter['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="<?= base_url('utilities/meters/edit/' . $meter['id']) ?>" class="btn btn-outline-primary" title="Edit">
+                                        <a href="<?= base_url('utilities/meters/edit/' . $meter['id']) ?>" class="btn btn-primary" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                         <a href="<?= base_url('utilities/readings/create?meter_id=' . $meter['id']) ?>" class="btn btn-outline-success" title="Record Reading">

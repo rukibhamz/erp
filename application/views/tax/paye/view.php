@@ -6,7 +6,7 @@ include(BASEPATH . 'views/tax/_nav.php');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">PAYE Return: <?= htmlspecialchars($paye_return['return_number'] ?? '') ?></h1>
-        <a href="<?= base_url('tax/paye') ?>" class="btn btn-outline-dark">
+        <a href="<?= base_url('tax/paye') ?>" class="btn btn-primary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>

@@ -121,7 +121,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('utilities/bills/view/' . $bill['id']) ?>" class="btn btn-sm btn-outline-dark">
+                                    <a href="<?= base_url('utilities/bills/view/' . $bill['id']) ?>" class="btn btn-sm btn-primary">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </td>

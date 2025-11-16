@@ -37,7 +37,7 @@ $page_title = $page_title ?? 'Entities';
                                 <td><?= htmlspecialchars($entity['currency'] ?? 'USD') ?></td>
                                 <td><?= $entity['created_at'] ? date('M d, Y', strtotime($entity['created_at'])) : '-' ?></td>
                                 <td>
-                                    <a href="<?= base_url('entities/edit/' . $entity['id']) ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a href="<?= base_url('entities/edit/' . $entity['id']) ?>" class="btn btn-sm btn-primary">Edit</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

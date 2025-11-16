@@ -7,7 +7,7 @@ include(BASEPATH . 'views/tax/_nav.php');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">PAYE (Pay As You Earn)</h1>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('payroll') ?>" class="btn btn-outline-dark">
+            <a href="<?= base_url('payroll') ?>" class="btn btn-primary">
                 <i class="bi bi-people"></i> Go to Payroll
             </a>
         </div>
@@ -154,7 +154,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                                 <td><?= $return['employee_count'] ?></td>
                                 <td><span class="badge bg-<?= $return['status'] === 'paid' ? 'success' : 'secondary' ?>"><?= ucfirst($return['status']) ?></span></td>
                                 <td>
-                                    <a href="<?= base_url('tax/paye/view/' . $return['id']) ?>" class="btn btn-sm btn-outline-dark">
+                                    <a href="<?= base_url('tax/paye/view/' . $return['id']) ?>" class="btn btn-sm btn-primary">
                                         <i class="bi bi-eye"></i> View
                                     </a>
                                 </td>

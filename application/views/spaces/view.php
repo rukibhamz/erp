@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0"><?= htmlspecialchars($space['space_name']) ?></h1>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('spaces/edit/' . $space['id']) ?>" class="btn btn-outline-primary">
+            <a href="<?= base_url('spaces/edit/' . $space['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
             <?php if ($space['is_bookable']): ?>

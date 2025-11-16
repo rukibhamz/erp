@@ -6,7 +6,7 @@ include(BASEPATH . 'views/tax/_nav.php');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Calculate Company Income Tax (CIT)</h1>
-        <a href="<?= base_url('tax/cit') ?>" class="btn btn-outline-dark">
+        <a href="<?= base_url('tax/cit') ?>" class="btn btn-primary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
@@ -82,7 +82,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                     </div>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-dark" id="add-adjustment">
+            <button type="button" class="btn btn-sm btn-primary" id="add-adjustment">
                 <i class="bi bi-plus-circle"></i> Add Adjustment
             </button>
             

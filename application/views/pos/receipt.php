@@ -74,7 +74,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <button class="btn btn-dark" onclick="window.print()">
                             <i class="bi bi-printer"></i> Print Receipt
                         </button>
-                        <a href="<?= base_url('pos') ?>" class="btn btn-outline-dark">
+                        <a href="<?= base_url('pos') ?>" class="btn btn-primary">
                             <i class="bi bi-arrow-left"></i> New Sale
                         </a>
                     </div>

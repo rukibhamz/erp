@@ -13,7 +13,7 @@ $deductions = $salaryStructure['deductions'] ?? [];
         <h1 class="page-title mb-0">Employee: <?= htmlspecialchars($employee['first_name'] . ' ' . $employee['last_name']) ?></h1>
         <div class="d-flex gap-2">
             <?php if (hasPermission('payroll', 'update')): ?>
-                <a href="<?= base_url('employees/edit/' . $employee['id']) ?>" class="btn btn-outline-primary">
+                <a href="<?= base_url('employees/edit/' . $employee['id']) ?>" class="btn btn-primary">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
             <?php endif; ?>
@@ -179,7 +179,7 @@ $deductions = $salaryStructure['deductions'] ?? [];
                         </table>
                     </div>
                     <div class="mt-2">
-                        <a href="<?= base_url('payroll') ?>" class="btn btn-sm btn-outline-dark">View All Payroll</a>
+                        <a href="<?= base_url('payroll') ?>" class="btn btn-sm btn-primary">View All Payroll</a>
                     </div>
                 <?php endif; ?>
             </div>

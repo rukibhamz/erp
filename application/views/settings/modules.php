@@ -54,7 +54,7 @@ $page_title = $page_title ?? 'Module Settings';
                                     <span class="badge bg-success">Active</span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('companies') ?>" class="btn btn-sm btn-outline-primary">Manage</a>
+                                    <a href="<?= base_url('companies') ?>" class="btn btn-sm btn-primary">Manage</a>
                                 </td>
                             </tr>
                             <tr>
@@ -67,7 +67,7 @@ $page_title = $page_title ?? 'Module Settings';
                                     <span class="badge bg-success">Active</span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('users') ?>" class="btn btn-sm btn-outline-primary">Manage</a>
+                                    <a href="<?= base_url('users') ?>" class="btn btn-sm btn-primary">Manage</a>
                                 </td>
                             </tr>
                             <tr>
@@ -80,7 +80,7 @@ $page_title = $page_title ?? 'Module Settings';
                                     <span class="badge bg-success">Active</span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('activity') ?>" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="<?= base_url('activity') ?>" class="btn btn-sm btn-primary">View</a>
                                 </td>
                             </tr>
                             <tr>
@@ -93,7 +93,7 @@ $page_title = $page_title ?? 'Module Settings';
                                     <span class="badge bg-success">Active</span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('settings') ?>" class="btn btn-sm btn-outline-primary">Configure</a>
+                                    <a href="<?= base_url('settings') ?>" class="btn btn-sm btn-primary">Configure</a>
                                 </td>
                             </tr>
                         </tbody>

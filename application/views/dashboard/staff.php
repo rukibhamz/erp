@@ -27,7 +27,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-calendar-check"></i>
                 </div>
             </div>
-            <a href="<?= base_url('bookings') ?>" class="btn btn-sm btn-outline-primary mt-2 w-100">View Bookings</a>
+            <a href="<?= base_url('bookings') ?>" class="btn btn-sm btn-primary mt-2 w-100">View Bookings</a>
         </div>
     </div>
     
@@ -116,7 +116,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </span>
                                         </td>
                                         <td>
-                                            <a href="<?= base_url('bookings/view/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-outline-primary">
+                                            <a href="<?= base_url('bookings/view/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                         </td>
@@ -127,7 +127,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <?php if (count($today_bookings) > 5): ?>
                         <div class="text-center mt-2">
-                            <a href="<?= base_url('bookings') ?>" class="btn btn-sm btn-outline-primary">View All (<?= count($today_bookings) ?>)</a>
+                            <a href="<?= base_url('bookings') ?>" class="btn btn-sm btn-primary">View All (<?= count($today_bookings) ?>)</a>
                         </div>
                     <?php endif; ?>
                 <?php else: ?>
@@ -152,7 +152,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <div class="row g-2">
                     <div class="col-md-6">
-                        <a href="<?= base_url('pos') ?>" class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center py-3">
+                        <a href="<?= base_url('pos') ?>" class="btn btn-primary w-100 d-flex align-items-center justify-content-center py-3">
                             <i class="bi bi-cash-register me-2 fs-4"></i>
                             <div class="text-start">
                                 <div class="fw-bold">POS</div>
@@ -219,7 +219,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </td>
                                     <td><?= htmlspecialchars($item['reorder_level'] ?? 0) ?></td>
                                     <td>
-                                        <a href="<?= base_url('inventory/edit/' . ($item['id'] ?? '')) ?>" class="btn btn-sm btn-outline-primary">
+                                        <a href="<?= base_url('inventory/edit/' . ($item['id'] ?? '')) ?>" class="btn btn-sm btn-primary">
                                             <i class="bi bi-pencil"></i> Update
                                         </a>
                                     </td>
@@ -243,7 +243,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Bookings</h6>
-                <a href="<?= base_url('bookings') ?>" class="btn btn-sm btn-outline-primary">View All</a>
+                <a href="<?= base_url('bookings') ?>" class="btn btn-sm btn-primary">View All</a>
             </div>
             <div class="card-body">
                 <?php if (!empty($recent_bookings)): ?>
@@ -268,7 +268,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </div>
                                 </div>
                                 <div class="mt-2">
-                                    <a href="<?= base_url('bookings/view/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-outline-primary">
+                                    <a href="<?= base_url('bookings/view/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-primary">
                                         <i class="bi bi-eye"></i> View
                                     </a>
                                     <a href="<?= base_url('bookings/edit/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-outline-secondary">

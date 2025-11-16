@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('utilities/readings/create?meter_id=' . $meter['id']) ?>" class="btn btn-success">
                 <i class="bi bi-clipboard-data"></i> Record Reading
             </a>
-            <a href="<?= base_url('utilities/meters/edit/' . $meter['id']) ?>" class="btn btn-outline-primary">
+            <a href="<?= base_url('utilities/meters/edit/' . $meter['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
             <a href="<?= base_url('utilities/meters') ?>" class="btn btn-outline-secondary">
@@ -102,7 +102,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card mt-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Recent Readings</h5>
-                <a href="<?= base_url('utilities/readings?meter_id=' . $meter['id']) ?>" class="btn btn-sm btn-outline-dark">
+                <a href="<?= base_url('utilities/readings?meter_id=' . $meter['id']) ?>" class="btn btn-sm btn-primary">
                     View All
                 </a>
             </div>
@@ -146,7 +146,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card mt-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Recent Bills</h5>
-                <a href="<?= base_url('utilities/bills?meter_id=' . $meter['id']) ?>" class="btn btn-sm btn-outline-dark">
+                <a href="<?= base_url('utilities/bills?meter_id=' . $meter['id']) ?>" class="btn btn-sm btn-primary">
                     View All
                 </a>
             </div>
@@ -185,7 +185,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </span>
                                         </td>
                                         <td>
-                                            <a href="<?= base_url('utilities/bills/view/' . $bill['id']) ?>" class="btn btn-sm btn-outline-dark">
+                                            <a href="<?= base_url('utilities/bills/view/' . $bill['id']) ?>" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                         </td>
@@ -211,7 +211,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <a href="<?= base_url('utilities/bills/generate/' . $meter['id']) ?>" class="btn btn-primary w-100 mb-2">
                     <i class="bi bi-receipt"></i> Generate Bill
                 </a>
-                <a href="<?= base_url('utilities/readings?meter_id=' . $meter['id']) ?>" class="btn btn-outline-dark w-100 mb-2">
+                <a href="<?= base_url('utilities/readings?meter_id=' . $meter['id']) ?>" class="btn btn-primary w-100 mb-2">
                     <i class="bi bi-list"></i> View All Readings
                 </a>
             </div>

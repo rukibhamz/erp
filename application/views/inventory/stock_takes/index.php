@@ -26,10 +26,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card mb-4">
     <div class="card-body">
         <div class="btn-group" role="group">
-            <a href="?status=all" class="btn btn-sm <?= $selected_status === 'all' ? 'btn-dark' : 'btn-outline-dark' ?>">All</a>
-            <a href="?status=scheduled" class="btn btn-sm <?= $selected_status === 'scheduled' ? 'btn-dark' : 'btn-outline-dark' ?>">Scheduled</a>
-            <a href="?status=in_progress" class="btn btn-sm <?= $selected_status === 'in_progress' ? 'btn-dark' : 'btn-outline-dark' ?>">In Progress</a>
-            <a href="?status=completed" class="btn btn-sm <?= $selected_status === 'completed' ? 'btn-dark' : 'btn-outline-dark' ?>">Completed</a>
+            <a href="?status=all" class="btn btn-sm <?= $selected_status === 'all' ? 'btn-dark' : 'btn-primary' ?>">All</a>
+            <a href="?status=scheduled" class="btn btn-sm <?= $selected_status === 'scheduled' ? 'btn-dark' : 'btn-primary' ?>">Scheduled</a>
+            <a href="?status=in_progress" class="btn btn-sm <?= $selected_status === 'in_progress' ? 'btn-dark' : 'btn-primary' ?>">In Progress</a>
+            <a href="?status=completed" class="btn btn-sm <?= $selected_status === 'completed' ? 'btn-dark' : 'btn-primary' ?>">Completed</a>
         </div>
     </div>
 </div>
@@ -84,7 +84,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <td>User ID: <?= $st['created_by'] ?></td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('inventory/stock-takes/view/' . $st['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('inventory/stock-takes/view/' . $st['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>

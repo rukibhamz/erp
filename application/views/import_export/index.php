@@ -124,17 +124,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         
         <div class="row g-3">
             <div class="col-md-4">
-                <a href="<?= base_url('import-export/download-template?type=customers') ?>" class="btn btn-outline-dark w-100">
+                <a href="<?= base_url('import-export/download-template?type=customers') ?>" class="btn btn-primary w-100">
                     <i class="bi bi-download"></i> Customers Template
                 </a>
             </div>
             <div class="col-md-4">
-                <a href="<?= base_url('import-export/download-template?type=items') ?>" class="btn btn-outline-dark w-100">
+                <a href="<?= base_url('import-export/download-template?type=items') ?>" class="btn btn-primary w-100">
                     <i class="bi bi-download"></i> Items Template
                 </a>
             </div>
             <div class="col-md-4">
-                <a href="<?= base_url('import-export/download-template?type=vendors') ?>" class="btn btn-outline-dark w-100">
+                <a href="<?= base_url('import-export/download-template?type=vendors') ?>" class="btn btn-primary w-100">
                     <i class="bi bi-download"></i> Vendors Template
                 </a>
             </div>

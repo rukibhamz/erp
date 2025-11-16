@@ -26,11 +26,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card mb-4">
     <div class="card-body">
         <div class="btn-group" role="group">
-            <a href="?category=all" class="btn btn-sm <?= $selected_category === 'all' ? 'btn-dark' : 'btn-outline-dark' ?>">All</a>
-            <a href="?category=equipment" class="btn btn-sm <?= $selected_category === 'equipment' ? 'btn-dark' : 'btn-outline-dark' ?>">Equipment</a>
-            <a href="?category=vehicle" class="btn btn-sm <?= $selected_category === 'vehicle' ? 'btn-dark' : 'btn-outline-dark' ?>">Vehicles</a>
-            <a href="?category=furniture" class="btn btn-sm <?= $selected_category === 'furniture' ? 'btn-dark' : 'btn-outline-dark' ?>">Furniture</a>
-            <a href="?category=it" class="btn btn-sm <?= $selected_category === 'it' ? 'btn-dark' : 'btn-outline-dark' ?>">IT</a>
+            <a href="?category=all" class="btn btn-sm <?= $selected_category === 'all' ? 'btn-dark' : 'btn-primary' ?>">All</a>
+            <a href="?category=equipment" class="btn btn-sm <?= $selected_category === 'equipment' ? 'btn-dark' : 'btn-primary' ?>">Equipment</a>
+            <a href="?category=vehicle" class="btn btn-sm <?= $selected_category === 'vehicle' ? 'btn-dark' : 'btn-primary' ?>">Vehicles</a>
+            <a href="?category=furniture" class="btn btn-sm <?= $selected_category === 'furniture' ? 'btn-dark' : 'btn-primary' ?>">Furniture</a>
+            <a href="?category=it" class="btn btn-sm <?= $selected_category === 'it' ? 'btn-dark' : 'btn-primary' ?>">IT</a>
         </div>
     </div>
 </div>
@@ -88,11 +88,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('inventory/assets/view/' . $asset['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('inventory/assets/view/' . $asset['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <?php if (hasPermission('inventory', 'update')): ?>
-                                            <a href="<?= base_url('inventory/assets/edit/' . $asset['id']) ?>" class="btn btn-outline-primary" title="Edit">
+                                            <a href="<?= base_url('inventory/assets/edit/' . $asset['id']) ?>" class="btn btn-primary" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                         <?php endif; ?>

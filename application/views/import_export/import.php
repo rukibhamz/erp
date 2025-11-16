@@ -15,7 +15,7 @@ $label = $typeLabels[$type] ?? ucfirst($type);
             <h1 class="page-title mb-0">Import <?= $label ?></h1>
             <p class="text-muted mb-0">Upload a CSV file to import <?= strtolower($label) ?></p>
         </div>
-        <a href="<?= base_url('import-export') ?>" class="btn btn-outline-dark">
+        <a href="<?= base_url('import-export') ?>" class="btn btn-primary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
@@ -60,7 +60,7 @@ $label = $typeLabels[$type] ?? ucfirst($type);
                         <button type="submit" class="btn btn-dark">
                             <i class="bi bi-upload"></i> Import Data
                         </button>
-                        <a href="<?= base_url('import-export/download-template?type=' . $type) ?>" class="btn btn-outline-dark">
+                        <a href="<?= base_url('import-export/download-template?type=' . $type) ?>" class="btn btn-primary">
                             <i class="bi bi-download"></i> Download Template
                         </a>
                     </div>

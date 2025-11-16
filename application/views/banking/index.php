@@ -24,7 +24,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <p class="text-muted mb-2"><?= htmlspecialchars($account['account_code']) ?></p>
                             <h3 class="mb-3"><?= format_currency($account['current_balance'], $account['currency'] ?? 'USD') ?></h3>
                             <div class="d-flex gap-2">
-                                <a href="<?= base_url('banking/transactions/' . $account['id']) ?>" class="btn btn-sm btn-outline-primary">
+                                <a href="<?= base_url('banking/transactions/' . $account['id']) ?>" class="btn btn-sm btn-primary">
                                     <i class="bi bi-list"></i> Transactions
                                 </a>
                                 <a href="<?= base_url('banking/reconcile/' . $account['id']) ?>" class="btn btn-sm btn-outline-success">

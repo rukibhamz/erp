@@ -59,7 +59,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-cash-register"></i> Open POS
                                         </a>
                                         <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>
-                                            <a href="<?= base_url('pos/reports?terminal_id=' . $terminal['id']) ?>" class="btn btn-outline-dark" title="View Reports">
+                                            <a href="<?= base_url('pos/reports?terminal_id=' . $terminal['id']) ?>" class="btn btn-primary" title="View Reports">
                                                 <i class="bi bi-bar-chart"></i> Reports
                                             </a>
                                         <?php endif; ?>

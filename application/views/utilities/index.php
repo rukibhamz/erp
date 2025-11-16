@@ -22,7 +22,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <h6 class="text-muted mb-2">Total Meters</h6>
                 <h2 class="mb-0"><?= number_format($stats['total_meters']) ?></h2>
-                <a href="<?= base_url('utilities/meters') ?>" class="btn btn-sm btn-outline-dark mt-2">
+                <a href="<?= base_url('utilities/meters') ?>" class="btn btn-sm btn-primary mt-2">
                     View All
                 </a>
             </div>
@@ -33,7 +33,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <h6 class="text-muted mb-2">Total Bills</h6>
                 <h2 class="mb-0"><?= number_format($stats['total_bills']) ?></h2>
-                <a href="<?= base_url('utilities/bills') ?>" class="btn btn-sm btn-outline-dark mt-2">
+                <a href="<?= base_url('utilities/bills') ?>" class="btn btn-sm btn-primary mt-2">
                     View All
                 </a>
             </div>
@@ -93,7 +93,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <h6><?= htmlspecialchars($type['name']) ?></h6>
                             <small class="text-muted"><?= htmlspecialchars($type['unit_of_measure']) ?></small>
                             <br>
-                            <a href="<?= base_url('utilities/meters?utility_type_id=' . $type['id']) ?>" class="btn btn-sm btn-outline-dark mt-2">
+                            <a href="<?= base_url('utilities/meters?utility_type_id=' . $type['id']) ?>" class="btn btn-sm btn-primary mt-2">
                                 View Meters
                             </a>
                         </div>

@@ -97,7 +97,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-primary" onclick="addLine()">
+                        <button type="button" class="btn btn-primary" onclick="addLine()">
                             <i class="bi bi-plus-circle"></i> Add Line
                         </button>
                         <button type="submit" class="btn btn-primary" id="submitBtn" disabled>

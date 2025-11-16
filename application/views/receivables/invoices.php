@@ -117,7 +117,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <?php if (!empty($invoice['id'])): ?>
-                                            <a href="<?= base_url('receivables/invoices/view/' . intval($invoice['id'])) ?>" class="btn btn-outline-primary" title="View">
+                                            <a href="<?= base_url('receivables/invoices/view/' . intval($invoice['id'])) ?>" class="btn btn-primary" title="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             <?php if (hasPermission('receivables', 'update')): ?>

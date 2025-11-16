@@ -85,7 +85,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </tbody>
                         </table>
                     </div>
-                    <a href="<?= base_url('inventory/items?filter=low_stock') ?>" class="btn btn-sm btn-outline-dark mt-2">
+                    <a href="<?= base_url('inventory/items?filter=low_stock') ?>" class="btn btn-sm btn-primary mt-2">
                         View All
                     </a>
                 <?php endif; ?>
@@ -124,7 +124,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </tbody>
                         </table>
                     </div>
-                    <a href="<?= base_url('inventory/items?filter=out_of_stock') ?>" class="btn btn-sm btn-outline-dark mt-2">
+                    <a href="<?= base_url('inventory/items?filter=out_of_stock') ?>" class="btn btn-sm btn-primary mt-2">
                         View All
                     </a>
                 <?php endif; ?>
@@ -157,7 +157,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </div>
                         <?php endforeach; ?>
                     </div>
-                    <a href="<?= base_url('inventory/locations') ?>" class="btn btn-sm btn-outline-dark mt-3">
+                    <a href="<?= base_url('inventory/locations') ?>" class="btn btn-sm btn-primary mt-3">
                         Manage Locations
                     </a>
                 <?php endif; ?>

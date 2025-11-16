@@ -6,10 +6,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Edit Invoice: <?= htmlspecialchars($invoice['invoice_number'] ?? 'N/A') ?></h1>
         <div class="btn-group">
-            <a href="<?= base_url('receivables/invoices/view/' . $invoice['id']) ?>" class="btn btn-outline-primary">
+            <a href="<?= base_url('receivables/invoices/view/' . $invoice['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-eye"></i> View
             </a>
-            <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-outline-primary">
+            <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-primary">
                 <i class="bi bi-file-pdf"></i> PDF
             </a>
             <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-secondary">
@@ -195,7 +195,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-primary" onclick="addItem()">
+                        <button type="button" class="btn btn-primary" onclick="addItem()">
                             <i class="bi bi-plus-circle"></i> Add Item
                         </button>
                         <button type="submit" class="btn btn-primary">

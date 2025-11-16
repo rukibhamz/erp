@@ -59,7 +59,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                        placeholder="SKU, Name, Barcode">
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-outline-dark w-100">
+                <button type="submit" class="btn btn-primary w-100">
                     <i class="bi bi-search"></i> Search
                 </button>
             </div>
@@ -127,10 +127,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('inventory/items/view/' . $item['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('inventory/items/view/' . $item['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="<?= base_url('inventory/items/edit/' . $item['id']) ?>" class="btn btn-outline-primary" title="Edit">
+                                        <a href="<?= base_url('inventory/items/edit/' . $item['id']) ?>" class="btn btn-primary" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>

@@ -117,7 +117,7 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
                                     </div>
                                 <?php else: ?>
                                     <?php if ($taxId > 0): ?>
-                                        <a href="<?= base_url('tax/config/edit/' . $taxId) ?>" class="btn btn-sm btn-outline-dark" title="View Tax Details">
+                                        <a href="<?= base_url('tax/config/edit/' . $taxId) ?>" class="btn btn-sm btn-primary" title="View Tax Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     <?php endif; ?>

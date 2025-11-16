@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     data.slots.forEach(slot => {
                         html += `
                             <div class="col-md-6 col-lg-4">
-                                <button type="button" class="btn btn-outline-primary w-100 time-slot-btn" 
+                                <button type="button" class="btn btn-primary w-100 time-slot-btn" 
                                         data-start="${slot.start}" 
                                         data-end="${slot.end}"
                                         style="min-height: 60px;">
@@ -171,12 +171,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             document.querySelectorAll('.time-slot-btn').forEach(b => {
                                 b.classList.remove('active');
                                 b.classList.remove('btn-primary');
-                                b.classList.add('btn-outline-primary');
+                                b.classList.add('btn-primary');
                             });
                             
                             // Add active class to selected
                             this.classList.add('active');
-                            this.classList.remove('btn-outline-primary');
+                            this.classList.remove('btn-primary');
                             this.classList.add('btn-primary');
                             
                             selectedStartTime = this.dataset.start;

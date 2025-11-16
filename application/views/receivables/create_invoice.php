@@ -149,7 +149,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-primary" onclick="addItem()">
+                        <button type="button" class="btn btn-primary" onclick="addItem()">
                             <i class="bi bi-plus-circle"></i> Add Item
                         </button>
                         <button type="submit" class="btn btn-primary">

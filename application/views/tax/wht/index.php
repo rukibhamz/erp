@@ -12,7 +12,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                     <i class="bi bi-plus-circle"></i> Create Return
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('tax/wht/transactions') ?>" class="btn btn-outline-dark">
+            <a href="<?= base_url('tax/wht/transactions') ?>" class="btn btn-primary">
                 <i class="bi bi-list-ul"></i> Transactions
             </a>
         </div>
@@ -67,7 +67,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                                 <td><?= date('M d, Y', strtotime($return['filing_deadline'])) ?></td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('tax/wht/view/' . $return['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('tax/wht/view/' . $return['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>

@@ -117,7 +117,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('utilities/vendor-bills/view/' . $bill['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('utilities/vendor-bills/view/' . $bill['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <?php if ($bill['status'] === 'pending' || $bill['status'] === 'verified'): ?>
@@ -175,7 +175,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <span class="badge bg-warning"><?= ucfirst($bill['status']) ?></span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('utilities/vendor-bills/view/' . $bill['id']) ?>" class="btn btn-sm btn-outline-dark">
+                                    <a href="<?= base_url('utilities/vendor-bills/view/' . $bill['id']) ?>" class="btn btn-sm btn-primary">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 </td>

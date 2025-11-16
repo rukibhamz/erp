@@ -270,7 +270,7 @@ $activeTab = $active_tab ?? 'company';
                     <button type="submit" class="btn btn-dark">
                         <i class="bi bi-save"></i> Save SMS Settings
                     </button>
-                    <button type="button" class="btn btn-outline-dark" onclick="testSMS()">
+                    <button type="button" class="btn btn-primary" onclick="testSMS()">
                         <i class="bi bi-send"></i> Test SMS
                     </button>
                 </div>

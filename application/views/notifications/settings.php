@@ -184,7 +184,7 @@ $notificationTypes = [
         <button type="submit" class="btn btn-dark">
             <i class="bi bi-save"></i> Save Preferences
         </button>
-        <a href="<?= base_url('notifications') ?>" class="btn btn-outline-dark">
+        <a href="<?= base_url('notifications') ?>" class="btn btn-primary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>

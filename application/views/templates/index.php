@@ -74,7 +74,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </td>
                                     <td>
                                         <?php if (has_permission('settings', 'update')): ?>
-                                            <a href="<?= base_url('templates/edit/' . $template['id']) ?>" class="btn btn-sm btn-outline-primary">
+                                            <a href="<?= base_url('templates/edit/' . $template['id']) ?>" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                         <?php endif; ?>

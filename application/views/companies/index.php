@@ -37,7 +37,7 @@ $page_title = $page_title ?? 'Companies';
                                 <td><?= htmlspecialchars($company['currency']) ?></td>
                                 <td><small class="text-muted"><?= date('M d, Y', strtotime($company['created_at'])) ?></small></td>
                                 <td>
-                                    <a href="<?= base_url('companies/edit/' . $company['id']) ?>" class="btn btn-sm btn-outline-primary">
+                                    <a href="<?= base_url('companies/edit/' . $company['id']) ?>" class="btn btn-sm btn-primary">
                                         <i class="bi bi-pencil"></i> Edit
                                     </a>
                                 </td>

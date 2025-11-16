@@ -73,11 +73,11 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('employees/view/' . $employee['id']) ?>" class="btn btn-outline-primary" title="View">
+                                        <a href="<?= base_url('employees/view/' . $employee['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <?php if (hasPermission('payroll', 'update')): ?>
-                                            <a href="<?= base_url('employees/edit/' . $employee['id']) ?>" class="btn btn-outline-dark" title="Edit">
+                                            <a href="<?= base_url('employees/edit/' . $employee['id']) ?>" class="btn btn-primary" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                         <?php endif; ?>

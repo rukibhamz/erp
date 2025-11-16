@@ -200,7 +200,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </button>
                 <?php endif; ?>
                 
-                <a href="<?= base_url('leases/view/' . $invoice['lease_id']) ?>" class="btn btn-outline-dark w-100 mb-2">
+                <a href="<?= base_url('leases/view/' . $invoice['lease_id']) ?>" class="btn btn-primary w-100 mb-2">
                     <i class="bi bi-file-earmark-text"></i> View Lease
                 </a>
             </div>

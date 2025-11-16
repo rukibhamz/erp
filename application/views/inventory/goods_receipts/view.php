@@ -108,7 +108,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">Quick Actions</h5>
             </div>
             <div class="card-body">
-                <a href="<?= base_url('inventory/goods-receipts') ?>" class="btn btn-outline-dark w-100 mb-2">
+                <a href="<?= base_url('inventory/goods-receipts') ?>" class="btn btn-primary w-100 mb-2">
                     <i class="bi bi-arrow-left"></i> Back to List
                 </a>
                 <?php if ($grn['po_id']): ?>

@@ -53,7 +53,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </div>
                             
                             <div class="d-flex gap-2 mt-3">
-                                <a href="<?= base_url('facilities/edit/' . $facility['id']) ?>" class="btn btn-sm btn-outline-primary">
+                                <a href="<?= base_url('facilities/edit/' . $facility['id']) ?>" class="btn btn-sm btn-primary">
                                     <i class="bi bi-pencil"></i> Edit
                                 </a>
                                 <a href="<?= base_url('bookings?facility_id=' . $facility['id']) ?>" class="btn btn-sm btn-outline-info">

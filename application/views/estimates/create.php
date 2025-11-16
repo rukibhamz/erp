@@ -58,7 +58,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5>Items</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addItem()">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">
                             <i class="bi bi-plus"></i> Add Item
                         </button>
                     </div>

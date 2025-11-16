@@ -60,7 +60,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Upcoming Bookings</h5>
-                    <a href="<?= base_url('customer-portal/bookings') ?>" class="btn btn-sm btn-outline-primary">
+                    <a href="<?= base_url('customer-portal/bookings') ?>" class="btn btn-sm btn-primary">
                         View All
                     </a>
                 </div>
@@ -107,7 +107,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Recent Bookings</h5>
-                    <a href="<?= base_url('customer-portal/bookings') ?>" class="btn btn-sm btn-outline-primary">
+                    <a href="<?= base_url('customer-portal/bookings') ?>" class="btn btn-sm btn-primary">
                         View All
                     </a>
                 </div>

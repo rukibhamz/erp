@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0"><?= htmlspecialchars($item['item_name']) ?></h1>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('inventory/items/edit/' . $item['id']) ?>" class="btn btn-outline-primary">
+            <a href="<?= base_url('inventory/items/edit/' . $item['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
             <a href="<?= base_url('inventory/items') ?>" class="btn btn-outline-secondary">

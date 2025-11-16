@@ -12,7 +12,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </a>
             <?php endif; ?>
             <?php if (has_permission('budgets', 'read')): ?>
-                <a href="<?= base_url('budgets/report') ?>" class="btn btn-outline-primary">
+                <a href="<?= base_url('budgets/report') ?>" class="btn btn-primary">
                     <i class="bi bi-graph-up"></i> Budget vs Actual
                 </a>
             <?php endif; ?>
@@ -75,7 +75,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </td>
                                     <td>
                                         <?php if (has_permission('budgets', 'update')): ?>
-                                            <a href="<?= base_url('budgets/edit/' . $budget['id']) ?>" class="btn btn-sm btn-outline-primary">
+                                            <a href="<?= base_url('budgets/edit/' . $budget['id']) ?>" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                         <?php endif; ?>

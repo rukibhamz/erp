@@ -64,7 +64,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('tax/vat/view/' . $return['id']) ?>" class="btn btn-outline-dark" title="View">
+                                        <a href="<?= base_url('tax/vat/view/' . $return['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>

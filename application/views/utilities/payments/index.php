@@ -59,7 +59,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <td><?= htmlspecialchars($payment['reference_number'] ?? '-') ?></td>
                                 <td>
                                     <?php if (!empty($payment['bill_id'])): ?>
-                                        <a href="<?= base_url('utilities/bills/view/' . $payment['bill_id']) ?>" class="btn btn-sm btn-outline-dark">
+                                        <a href="<?= base_url('utilities/bills/view/' . $payment['bill_id']) ?>" class="btn btn-sm btn-primary">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     <?php endif; ?>

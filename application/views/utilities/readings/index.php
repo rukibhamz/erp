@@ -122,7 +122,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <?php if ($reading['photo_url']): ?>
-                                        <a href="<?= base_url($reading['photo_url']) ?>" target="_blank" class="btn btn-sm btn-outline-dark" title="View Photo">
+                                        <a href="<?= base_url($reading['photo_url']) ?>" target="_blank" class="btn btn-sm btn-primary" title="View Photo">
                                             <i class="bi bi-image"></i>
                                         </a>
                                     <?php endif; ?>

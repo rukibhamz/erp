@@ -91,7 +91,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </td>
                                     <td>
                                         <a href="<?= base_url('customer-portal/booking/' . $booking['id']) ?>" 
-                                           class="btn btn-sm btn-outline-primary">
+                                           class="btn btn-sm btn-primary">
                                             <i class="bi bi-eye"></i> View
                                         </a>
                                     </td>

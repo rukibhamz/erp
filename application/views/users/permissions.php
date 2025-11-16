@@ -64,7 +64,7 @@ $userPermissions = $userPermissions ?? [];
                                                 <td class="text-center">-</td>
                                             <?php endif; endforeach; ?>
                                             <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectModule('<?= $module ?>')">
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="selectModule('<?= $module ?>')">
                                                     All
                                                 </button>
                                             </td>
