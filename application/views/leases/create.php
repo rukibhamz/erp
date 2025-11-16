@@ -69,8 +69,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('leases/create') ?>
-            <?php echo csrf_field(); ?>" method="POST">
+        <form action="<?= base_url('leases/create') ?>" method="POST">
+            <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="space_id" class="form-label">Space <span class="text-danger">*</span></label>

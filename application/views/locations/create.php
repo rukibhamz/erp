@@ -73,9 +73,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="Location_code" class="form-label">Location Code <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="Location_code" name="Location_code" required>
-                    <small class="text-muted">Leave blank to auto-generate</small>
+                    <label for="Location_code" class="form-label">Location Code</label>
+                    <input type="text" class="form-control" id="Location_code" name="Location_code" placeholder="Leave blank for auto-generation">
+                    <small class="text-muted">Auto-generated if left blank</small>
                 </div>
                 
                 <div class="col-md-6">

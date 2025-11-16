@@ -173,6 +173,19 @@ class AutoMigration {
                 $this->executeMigration($adminLocationsFix, '002_ensure_admin_locations_permissions.sql');
             }
         } else {
+            // Check if properties table exists (needed for Locations controller)
+            try {
+                $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
+                $propertiesExists = $stmt->rowCount() > 0;
+                
+                if (!$propertiesExists) {
+                    error_log("AutoMigration: Properties table missing, creating it...");
+                    $this->createPropertiesTable();
+                }
+            } catch (Exception $e) {
+                error_log("AutoMigration: Error checking properties table: " . $e->getMessage());
+            }
+            
             // Even if main migration ran, check if admin locations fix is needed
             $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
             if (file_exists($adminLocationsFix) && !in_array('002_ensure_admin_locations_permissions.sql', $executed)) {
@@ -351,6 +364,46 @@ class AutoMigration {
             return ($result['max_batch'] ?? 0) + 1;
         } catch (Exception $e) {
             return 1;
+        }
+    }
+    
+    /**
+     * Create properties table if it doesn't exist
+     * This table is used by the Locations controller
+     */
+    private function createPropertiesTable() {
+        try {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}properties` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `property_code` varchar(50) NOT NULL UNIQUE,
+                `property_name` varchar(255) NOT NULL,
+                `property_type` enum('multi_purpose','standalone_building','land','other') DEFAULT 'multi_purpose',
+                `address` text DEFAULT NULL,
+                `city` varchar(100) DEFAULT NULL,
+                `state` varchar(100) DEFAULT NULL,
+                `country` varchar(100) DEFAULT NULL,
+                `postal_code` varchar(20) DEFAULT NULL,
+                `gps_latitude` decimal(10,8) DEFAULT NULL,
+                `gps_longitude` decimal(11,8) DEFAULT NULL,
+                `land_area` decimal(10,2) DEFAULT NULL COMMENT 'in square meters',
+                `built_area` decimal(10,2) DEFAULT NULL COMMENT 'in square meters',
+                `year_built` int(4) DEFAULT NULL,
+                `year_acquired` int(4) DEFAULT NULL,
+                `property_value` decimal(15,2) DEFAULT NULL,
+                `manager_id` int(11) DEFAULT NULL COMMENT 'user_id',
+                `status` enum('operational','under_construction','under_renovation','closed') DEFAULT 'operational',
+                `ownership_status` enum('owned','leased','joint_venture') DEFAULT 'owned',
+                `created_at` datetime NOT NULL,
+                `updated_at` datetime DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `property_code` (`property_code`),
+                KEY `manager_id` (`manager_id`),
+                KEY `status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            
+            error_log("AutoMigration: Properties table created successfully");
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error creating properties table: " . $e->getMessage());
         }
     }
 }

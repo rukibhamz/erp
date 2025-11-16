@@ -49,5 +49,13 @@ class Inventory extends Base_Controller {
         
         $this->loadView('inventory/index', $data);
     }
+    
+    /**
+     * Redirect to Items controller
+     * Handles requests to inventory/items
+     */
+    public function items() {
+        redirect('inventory/items');
+    }
 }
 
