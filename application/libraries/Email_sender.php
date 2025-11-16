@@ -11,8 +11,10 @@ class Email_sender {
     private $mail;
     private $config;
     private $usePhpMailer = false;
+    private $debugMode = false;
     
-    public function __construct() {
+    public function __construct($debugMode = false) {
+        $this->debugMode = $debugMode;
         $this->loadConfig();
         
         if (file_exists(BASEPATH . '../vendor/autoload.php')) {
@@ -125,9 +127,32 @@ class Email_sender {
             }
             
             $this->mail->Port = $this->config['smtp_port'];
-            $this->mail->setFrom($this->config['from_email'], $this->config['from_name']);
+            
+            // IMPORTANT: For Gmail, the "From" email must match the authenticated username
+            // Use SMTP username as From email if not set, or if they don't match
+            $fromEmail = $this->config['from_email'];
+            if (empty($fromEmail) || (strpos($this->config['smtp_host'], 'gmail') !== false && $fromEmail !== $this->config['smtp_user'])) {
+                $fromEmail = $this->config['smtp_user'];
+                error_log('Email_sender: Using SMTP username as From email for Gmail compatibility');
+            }
+            
+            $this->mail->setFrom($fromEmail, $this->config['from_name']);
             $this->mail->CharSet = 'UTF-8';
-            $this->mail->SMTPDebug = 0; // Set to 2 for debugging
+            $this->mail->SMTPDebug = $this->debugMode ? 2 : 0; // Enable debug if requested
+            $this->mail->Debugoutput = function($str, $level) {
+                error_log("PHPMailer Debug (Level {$level}): {$str}");
+            };
+            
+            // Additional Gmail-specific settings
+            if (strpos($this->config['smtp_host'], 'gmail') !== false) {
+                $this->mail->SMTPOptions = [
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ];
+            }
         } catch (Exception $e) {
             error_log('Email config error: ' . $e->getMessage());
         }
@@ -157,26 +182,57 @@ class Email_sender {
         }
         
         try {
+            // Reconfigure for each email to ensure fresh state
+            $this->configure();
+            
             // Reset for new email
             $this->mail->clearAddresses();
             $this->mail->clearAttachments();
+            $this->mail->clearReplyTos();
+            $this->mail->clearCustomHeaders();
+            $this->mail->clearAllRecipients();
             
+            // Add recipient
             $this->mail->addAddress($to);
+            
+            // Set content
             $this->mail->isHTML(true);
             $this->mail->Subject = $subject;
             $this->mail->Body = $body;
             $this->mail->AltBody = strip_tags($body);
             
+            // Add attachment if provided
             if ($pdfPath && file_exists($pdfPath)) {
                 $this->mail->addAttachment($pdfPath, $pdfName ?? 'invoice.pdf');
             }
             
-            $this->mail->send();
+            // Enable verbose error reporting if debug mode
+            $this->mail->SMTPDebug = $this->debugMode ? 2 : 0;
+            
+            // Attempt to send
+            $sent = $this->mail->send();
+            
+            // Check for errors even if send() returned true
+            if (!$sent || !empty($this->mail->ErrorInfo)) {
+                $errorMsg = $this->mail->ErrorInfo ?? 'Email send failed but no error message provided';
+                error_log('PHPMailer send failed: ' . $errorMsg);
+                error_log('PHPMailer details - To: ' . $to . ', From: ' . $this->config['from_email']);
+                return ['success' => false, 'error' => $errorMsg];
+            }
+            
+            // Log successful send
+            error_log('Email sent successfully to: ' . $to . ' via ' . $this->config['smtp_host']);
+            
             return ['success' => true, 'error' => null];
             
-        } catch (Exception $e) {
+        } catch (\PHPMailer\PHPMailer\Exception $e) {
             $errorMsg = $this->mail->ErrorInfo ?? $e->getMessage();
-            error_log('PHPMailer error: ' . $errorMsg);
+            error_log('PHPMailer exception: ' . $errorMsg);
+            error_log('PHPMailer exception details: ' . $e->getTraceAsString());
+            return ['success' => false, 'error' => $errorMsg];
+        } catch (Exception $e) {
+            $errorMsg = $e->getMessage();
+            error_log('Email send exception: ' . $errorMsg);
             return ['success' => false, 'error' => $errorMsg];
         }
     }

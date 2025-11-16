@@ -211,34 +211,49 @@ class System_settings extends Base_Controller {
         if (empty($this->session['user_id'])) {
             header('Content-Type: application/json');
             http_response_code(401);
-            echo json_encode(['success' => false, 'message' => 'Authentication required']);
+            echo json_encode(['success' => false, 'message' => 'Authentication required. Please log in.']);
             exit;
         }
         
         // SECURITY: Only super admin and admin can test email
         $userRole = $this->session['role'] ?? '';
+        $userId = $this->session['user_id'] ?? 'unknown';
+        
+        // Debug: Log role check for troubleshooting
+        error_log("testEmail role check - User ID: {$userId}, Role: {$userRole}");
+        
         if ($userRole !== 'super_admin' && $userRole !== 'admin') {
             header('Content-Type: application/json');
             http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'Access denied. Only administrators can test email.']);
-            exit;
-        }
-        
-        // SECURITY: Rate limiting - max 5 test emails per 15 minutes per user
-        require_once BASEPATH . 'helpers/security_helper.php';
-        $rateLimitKey = 'test_email_' . $this->session['user_id'];
-        if (!checkRateLimit($rateLimitKey, 5, 900)) {
-            header('Content-Type: application/json');
-            http_response_code(429);
             echo json_encode([
                 'success' => false, 
-                'message' => 'Too many test email requests. Please wait 15 minutes before trying again.'
+                'message' => 'Access denied. Only administrators (super_admin or admin) can test email. Your current role: ' . ($userRole ?: 'not set') . '. Please contact your system administrator.'
             ]);
             exit;
         }
         
-        // SECURITY: Validate CSRF token
+        // SECURITY: Validate CSRF token first (before rate limiting to avoid wasting rate limit on invalid requests)
+        // Note: check_csrf() will die with JSON response if validation fails
         check_csrf();
+        
+        // SECURITY: Rate limiting - max 5 test emails per 15 minutes per user
+        require_once BASEPATH . 'helpers/security_helper.php';
+        $rateLimitKey = 'test_email_' . $this->session['user_id'];
+        try {
+            if (!checkRateLimit($rateLimitKey, 5, 900)) {
+                header('Content-Type: application/json');
+                http_response_code(429);
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'Too many test email requests. Please wait 15 minutes before trying again.'
+                ]);
+                exit;
+            }
+        } catch (Exception $e) {
+            // If rate limiting fails (e.g., database error), log but allow the request
+            error_log('Rate limiting check failed: ' . $e->getMessage());
+            // Continue with the request - fail open for rate limiting to avoid blocking legitimate users
+        }
         
         header('Content-Type: application/json');
         
@@ -385,7 +400,8 @@ class System_settings extends Base_Controller {
             
             // Use Email_sender library - it now reads from database automatically
             require_once BASEPATH . 'libraries/Email_sender.php';
-            $emailSender = new Email_sender();
+            // Enable debug mode for test emails to help troubleshoot
+            $emailSender = new Email_sender(true); // Enable debug mode
             
             // Send test email using Email_sender library
             $result = $emailSender->sendInvoice(
