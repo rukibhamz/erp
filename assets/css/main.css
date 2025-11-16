@@ -646,82 +646,122 @@ footer .container-fluid {
     color: #ffffff !important;
 }
 
-/* Primary button - Uniform blue color */
+/* Primary button - Black background with white text */
 .btn-primary {
-    background: #0066cc !important;
+    background: #000000 !important;
     color: #ffffff !important;
-    border-color: #0066cc !important;
+    border-color: #000000 !important;
 }
 
 .btn-primary:hover {
-    background: #0052a3 !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
     transform: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary:focus,
 .btn-primary:active {
-    background: #003d7a !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
 }
 
-/* Dark button - Same uniform color */
+/* Dark button - Black background with white text */
 .btn-dark {
-    background: #0066cc !important;
+    background: #000000 !important;
     color: #ffffff !important;
-    border-color: #0066cc !important;
+    border-color: #000000 !important;
 }
 
 .btn-dark:hover {
-    background: #0052a3 !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
 }
 
 .btn-dark:focus,
 .btn-dark:active {
-    background: #003d7a !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
 }
 
-/* Outline buttons - White text on hover */
+/* Outline buttons - Black border, white on hover */
 .btn-outline-dark {
-    border: 1.5px solid #0066cc !important;
-    color: #0066cc !important;
+    border: 1.5px solid #000000 !important;
+    color: #000000 !important;
     background: transparent !important;
 }
 
 .btn-outline-dark:hover {
-    background: #0066cc !important;
+    background: #000000 !important;
     color: #ffffff !important;
 }
 
 .btn-outline-primary {
-    border: 1.5px solid #0066cc !important;
-    color: #0066cc !important;
+    border: 1.5px solid #000000 !important;
+    color: #000000 !important;
     background: transparent !important;
 }
 
 .btn-outline-primary:hover {
-    background: #0066cc !important;
+    background: #000000 !important;
     color: #ffffff !important;
 }
 
-/* Secondary button - Uniform color with white text */
+/* Secondary button - Black background with white text */
 .btn-secondary {
-    background: #0066cc !important;
+    background: #000000 !important;
     color: #ffffff !important;
-    border-color: #0066cc !important;
+    border-color: #000000 !important;
 }
 
 .btn-secondary:hover {
-    background: #0052a3 !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
 }
 
 .btn-secondary:focus,
 .btn-secondary:active {
-    background: #003d7a !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+}
+
+/* Ensure white text on all black/dark backgrounds */
+.bg-dark,
+.card-header.bg-dark,
+.modal-header.bg-dark {
+    color: #ffffff !important;
+}
+
+.bg-dark *,
+.card-header.bg-dark *,
+.modal-header.bg-dark * {
+    color: #ffffff !important;
+}
+
+.bg-dark h1,
+.bg-dark h2,
+.bg-dark h3,
+.bg-dark h4,
+.bg-dark h5,
+.bg-dark h6,
+.card-header.bg-dark h1,
+.card-header.bg-dark h2,
+.card-header.bg-dark h3,
+.card-header.bg-dark h4,
+.card-header.bg-dark h5,
+.card-header.bg-dark h6,
+.modal-header.bg-dark h1,
+.modal-header.bg-dark h2,
+.modal-header.bg-dark h3,
+.modal-header.bg-dark h4,
+.modal-header.bg-dark h5,
+.modal-header.bg-dark h6 {
     color: #ffffff !important;
 }
 

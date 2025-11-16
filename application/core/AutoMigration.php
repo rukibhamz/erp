@@ -162,6 +162,19 @@ class AutoMigration {
             }
         }
         
+        // Always check and create properties table if missing (needed for Locations controller)
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
+            $propertiesExists = $stmt->rowCount() > 0;
+            
+            if (!$propertiesExists) {
+                error_log("AutoMigration: Properties table missing, creating it...");
+                $this->createPropertiesTable();
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error checking properties table: " . $e->getMessage());
+        }
+        
         if ($needsMigration) {
             if (file_exists($migrationFile)) {
                 $this->executeMigration($migrationFile, '000_complete_system_migration.sql');
@@ -173,18 +186,6 @@ class AutoMigration {
                 $this->executeMigration($adminLocationsFix, '002_ensure_admin_locations_permissions.sql');
             }
         } else {
-            // Check if properties table exists (needed for Locations controller)
-            try {
-                $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
-                $propertiesExists = $stmt->rowCount() > 0;
-                
-                if (!$propertiesExists) {
-                    error_log("AutoMigration: Properties table missing, creating it...");
-                    $this->createPropertiesTable();
-                }
-            } catch (Exception $e) {
-                error_log("AutoMigration: Error checking properties table: " . $e->getMessage());
-            }
             
             // Even if main migration ran, check if admin locations fix is needed
             $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';

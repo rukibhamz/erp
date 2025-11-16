@@ -39,11 +39,8 @@ $is_settings = isset($uri_segments[1]) && $uri_segments[1] === 'settings';
         <a class="nav-link <?= $is_reports ? 'active' : '' ?>" href="<?= base_url('tax/reports') ?>">
             <i class="bi bi-graph-up"></i> Reports
         </a>
-        <a class="nav-link <?= $is_config ? 'active' : '' ?>" href="<?= base_url('tax/config') ?>">
-            <i class="bi bi-sliders"></i> Configuration
-        </a>
-        <a class="nav-link <?= $is_settings ? 'active' : '' ?>" href="<?= base_url('tax/settings') ?>">
-            <i class="bi bi-gear"></i> Settings
+        <a class="nav-link <?= ($is_settings || $is_config) ? 'active' : '' ?>" href="<?= base_url('tax/settings') ?>">
+            <i class="bi bi-gear"></i> Configuration
         </a>
     </nav>
 </div>

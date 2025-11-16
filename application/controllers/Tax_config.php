@@ -13,6 +13,8 @@ class Tax_config extends Base_Controller {
     }
     
     public function index() {
+        // Redirect to tax/settings (duplicate functionality removed)
+        redirect('tax/settings');
         $this->requirePermission('tax', 'read');
         
         try {

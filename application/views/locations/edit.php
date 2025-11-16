@@ -15,7 +15,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="Location-nav mb-4">
     <nav class="nav nav-pills nav-fill">
         <a class="nav-link" href="<?= base_url('locations') ?>">
-            <i class="bi bi-building"></i> locations
+            <i class="bi bi-building"></i> Locations
         </a>
         <a class="nav-link" href="<?= base_url('spaces') ?>">
             <i class="bi bi-door-open"></i> Spaces

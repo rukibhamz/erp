@@ -181,13 +181,14 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['tax/paye/view/(:num)'] = 'Paye/view/$1';
         $route['tax/reports'] = 'Tax_reports/index';
         $route['tax/reports/export'] = 'Tax_reports/export';
+        // Redirect tax/config to tax/settings (duplicate functionality removed)
         $route['tax/config'] = 'Tax_config/index';
-        $route['tax/config/updateRate'] = 'Tax_config/updateRate';
-        $route['tax/config/updateRates'] = 'Tax_config/updateRates';
-        $route['tax/config/create'] = 'Tax_config/create';
-        $route['tax/config/edit/(:num)'] = 'Tax_config/edit/$1';
-        $route['tax/config/delete/(:num)'] = 'Tax_config/delete/$1';
-        $route['tax/config/toggle/(:num)'] = 'Tax_config/toggleStatus/$1';
+        $route['tax/config/updateRate'] = 'Tax_config/index';
+        $route['tax/config/updateRates'] = 'Tax_config/index';
+        $route['tax/config/create'] = 'Tax_config/index';
+        $route['tax/config/edit/(:num)'] = 'Tax_config/index';
+        $route['tax/config/delete/(:num)'] = 'Tax_config/index';
+        $route['tax/config/toggle/(:num)'] = 'Tax_config/index';
         $route['tax/payments'] = 'Tax_payments/index';
         $route['tax/payments/create'] = 'Tax_payments/create';
         
