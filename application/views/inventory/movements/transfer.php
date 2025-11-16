@@ -79,7 +79,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             
             <div class="mt-4 d-flex justify-content-end gap-2">
-                <a href="<?= base_url('inventory') ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('inventory') ?>" class="btn btn-primary">Cancel</a>
                 <button type="submit" class="btn btn-info">
                     <i class="bi bi-check-circle"></i> Transfer Stock
                 </button>

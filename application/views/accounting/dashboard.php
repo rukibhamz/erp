@@ -17,7 +17,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-cash-coin"></i>
                 </div>
                 <div>
-                    <div class="stat-number"><?= format_currency($cash_balance ?? 0) ?></div>
+                    <div class="stat-number"><?= format_large_currency($cash_balance ?? 0) ?></div>
                     <div class="stat-label">Cash Balance</div>
                 </div>
             </div>
@@ -31,7 +31,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-arrow-down-circle"></i>
                 </div>
                 <div>
-                    <div class="stat-number"><?= format_currency($receivables ?? 0) ?></div>
+                    <div class="stat-number"><?= format_large_currency($receivables ?? 0) ?></div>
                     <div class="stat-label">Accounts Receivable</div>
                 </div>
             </div>
@@ -45,7 +45,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-arrow-up-circle"></i>
                 </div>
                 <div>
-                    <div class="stat-number"><?= format_currency($payables ?? 0) ?></div>
+                    <div class="stat-number"><?= format_large_currency($payables ?? 0) ?></div>
                     <div class="stat-label">Accounts Payable</div>
                 </div>
             </div>
@@ -59,7 +59,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-graph-up-arrow"></i>
                 </div>
                 <div>
-                    <div class="stat-number"><?= format_currency($profit_loss ?? 0) ?></div>
+                    <div class="stat-number"><?= format_large_currency($profit_loss ?? 0) ?></div>
                     <div class="stat-label">Profit/Loss (This Month)</div>
                 </div>
             </div>

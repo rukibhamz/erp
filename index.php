@@ -115,6 +115,7 @@ require_once BASEPATH . 'helpers/permission_helper.php';
 require_once BASEPATH . 'helpers/currency_helper.php';
 require_once BASEPATH . 'helpers/module_helper.php';
 require_once BASEPATH . 'helpers/csrf_helper.php';
+require_once BASEPATH . 'helpers/number_helper.php';
 
 // Initialize and run application
 try {
