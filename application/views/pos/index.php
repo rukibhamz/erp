@@ -68,7 +68,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card">
                 <div class="card-header bg-dark text-white d-flex justify-content-between">
                     <h6 class="mb-0">Cart</h6>
-                    <button class="btn btn-sm btn-light" onclick="clearCart()">Clear</button>
+                    <button class="btn btn-sm btn-primary" onclick="clearCart()">Clear</button>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">

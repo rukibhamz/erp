@@ -17,9 +17,6 @@ $deductions = $salaryStructure['deductions'] ?? [];
                     <i class="bi bi-pencil"></i> Edit
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('payroll') ?>" class="btn btn-outline-info">
-                <i class="bi bi-cash-stack"></i> Process Payroll
-            </a>
             <?= back_button('employees', 'Back to Employees') ?>
         </div>
     </div>

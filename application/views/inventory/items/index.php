@@ -64,7 +64,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </button>
             </div>
             <div class="col-md-12">
-                <a href="<?= base_url('inventory/items') ?>" class="btn btn-outline-secondary btn-sm">
+                <a href="<?= base_url('inventory/items') ?>" class="btn btn-primary btn-sm">
                     <i class="bi bi-x-circle"></i> Clear Filters
                 </a>
             </div>

@@ -11,7 +11,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-plus-circle"></i> Create Terminal
                 </button>
             <?php endif; ?>
-            <?= back_button('pos', 'Back to POS') ?>
         </div>
     </div>
 </div>

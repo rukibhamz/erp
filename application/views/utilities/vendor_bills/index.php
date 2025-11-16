@@ -35,7 +35,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </select>
             </div>
             <div class="col-md-8">
-                <a href="<?= base_url('utilities/vendor-bills') ?>" class="btn btn-outline-secondary">
+                <a href="<?= base_url('utilities/vendor-bills') ?>" class="btn btn-primary">
                     <i class="bi bi-x-circle"></i> Clear Filters
                 </a>
             </div>

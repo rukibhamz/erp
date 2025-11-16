@@ -12,9 +12,6 @@ include(BASEPATH . 'views/accounting/_nav.php');
                     <i class="bi bi-plus-circle"></i> Add Employee
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('payroll') ?>" class="btn btn-outline-secondary">
-                <i class="bi bi-cash-stack"></i> Payroll
-            </a>
         </div>
     </div>
 </div>

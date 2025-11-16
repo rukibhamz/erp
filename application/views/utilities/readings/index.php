@@ -44,7 +44,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="date" name="end_date" class="form-control" value="<?= $end_date ?>" onchange="this.form.submit()">
             </div>
             <div class="col-md-2">
-                <a href="<?= base_url('utilities/readings') ?>" class="btn btn-outline-secondary w-100">
+                <a href="<?= base_url('utilities/readings') ?>" class="btn btn-primary w-100">
                     <i class="bi bi-x-circle"></i> Clear
                 </a>
             </div>

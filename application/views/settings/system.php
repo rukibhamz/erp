@@ -179,7 +179,7 @@ $activeTab = $active_tab ?? 'company';
                 <!-- Test Email Section -->
                 <div class="card border-primary mb-3">
                     <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0"><i class="bi bi-envelope-check"></i> Test Email Configuration</h6>
+                        <h6 class="mb-0 text-white"><i class="bi bi-envelope-check"></i> Test Email Configuration</h6>
                     </div>
                     <div class="card-body">
                         <p class="text-muted small mb-3">Send a test email to verify your SMTP settings are working correctly.</p>

@@ -1572,14 +1572,20 @@ select:focus {
 /* Navigation active states - dark bg with white text */
 .accounting-nav .nav-link.active,
 .tax-nav .nav-link.active,
-.module-nav .nav-link.active {
+.module-nav .nav-link.active,
+.property-nav .nav-link.active,
+.utilities-nav .nav-link.active,
+.Location-nav .nav-link.active {
     background-color: var(--primary) !important;
     color: white !important;
 }
 
 .accounting-nav .nav-link.active *,
 .tax-nav .nav-link.active *,
-.module-nav .nav-link.active * {
+.module-nav .nav-link.active *,
+.property-nav .nav-link.active *,
+.utilities-nav .nav-link.active *,
+.Location-nav .nav-link.active * {
     color: white !important;
 }
 
@@ -1783,7 +1789,10 @@ select:focus {
 
 [data-theme="dark"] .accounting-nav .nav-link.active,
 [data-theme="dark"] .tax-nav .nav-link.active,
-[data-theme="dark"] .module-nav .nav-link.active {
+[data-theme="dark"] .module-nav .nav-link.active,
+[data-theme="dark"] .property-nav .nav-link.active,
+[data-theme="dark"] .utilities-nav .nav-link.active,
+[data-theme="dark"] .Location-nav .nav-link.active {
     background: var(--primary);
     color: var(--gray-50);
     border-color: var(--primary);

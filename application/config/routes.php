@@ -193,7 +193,8 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['tax/payments/create'] = 'Tax_payments/create';
         
         // POS System
-        $route['pos'] = 'Pos/index';
+        $route['pos'] = 'Pos/terminals';
+        $route['pos/index'] = 'Pos/index';
         $route['pos/process'] = 'Pos/processSale';
         $route['pos/receipt/(:num)'] = 'Pos/receipt/$1';
         $route['pos/terminals'] = 'Pos/terminals';

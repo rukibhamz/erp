@@ -30,7 +30,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card">
     <div class="card-body">
         <form action="<?= base_url('inventory/goods-receipts/create') ?>
-            <?php echo csrf_field(); ?>" method="POST" id="grnForm">
+            <?php echo csrf_field(); ?>"  id="grnForm">
             <input type="hidden" name="po_id" value="<?= $po['id'] ?? '' ?>">
             
             <div class="row g-3 mb-4">

@@ -69,7 +69,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('locations/create') ?>" method="POST">
+        <form action="<?= base_url('locations/create') ?>" >
             <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">

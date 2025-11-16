@@ -6,10 +6,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Bookings</h1>
         <div>
-            <a href="<?= base_url('booking-reports') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('booking-reports') ?>" class="btn btn-primary">
                 <i class="bi bi-graph-up"></i> Reports
             </a>
-            <a href="<?= base_url('bookings/calendar') ?>" class="btn btn-outline-info">
+            <a href="<?= base_url('bookings/calendar') ?>" class="btn btn-primary">
                 <i class="bi bi-calendar-month"></i> Calendar View
             </a>
             <?php if (has_permission('bookings', 'create')): ?>

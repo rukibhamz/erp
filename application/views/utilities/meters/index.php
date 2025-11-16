@@ -47,7 +47,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </select>
             </div>
             <div class="col-md-4">
-                <a href="<?= base_url('utilities/meters') ?>" class="btn btn-outline-secondary">
+                <a href="<?= base_url('utilities/meters') ?>" class="btn btn-primary">
                     <i class="bi bi-x-circle"></i> Clear Filters
                 </a>
             </div>

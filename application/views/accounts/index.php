@@ -33,7 +33,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="text" class="form-control" id="search" name="search" placeholder="Search by code or name..." value="<?= htmlspecialchars($search ?? '') ?>">
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-outline-secondary w-100">
+                <button type="submit" class="btn btn-primary w-100">
                     <i class="bi bi-search"></i> Search
                 </button>
             </div>

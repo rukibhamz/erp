@@ -22,7 +22,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('inventory/items/create') ?>" method="POST">
+        <form action="<?= base_url('inventory/items/create') ?>" >
             <?php echo csrf_field(); ?>
             <ul class="nav nav-tabs mb-4" role="tablist">
                 <li class="nav-item">
