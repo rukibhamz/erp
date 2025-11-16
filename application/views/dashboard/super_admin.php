@@ -52,7 +52,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Today's Revenue</div>
-                        <div class="stat-number"><?= format_currency($kpis['revenue_today'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_currency($kpis['revenue_today'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -100,7 +100,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Outstanding Receivables</div>
-                        <div class="stat-number"><?= format_currency($kpis['outstanding_receivables'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_currency($kpis['outstanding_receivables'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -116,7 +116,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Cash Balance</div>
-                        <div class="stat-number"><?= format_currency($kpis['cash_balance'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_currency($kpis['cash_balance'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -132,7 +132,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Inventory Value</div>
-                        <div class="stat-number"><?= format_currency($kpis['inventory_value'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_currency($kpis['inventory_value'] ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -148,7 +148,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Active Users</div>
-                        <div class="stat-number"><?= format_large_number($kpis['active_users'] ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_number($kpis['active_users'] ?? 0, 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -164,7 +164,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div>
                         <div class="stat-label">Tax Liability</div>
-                        <div class="stat-number"><?= format_currency($tax_liability ?? 0) ?></div>
+                        <div class="stat-number"><?= format_large_currency($tax_liability ?? 0) ?></div>
                     </div>
                 </div>
             </div>
@@ -232,8 +232,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h6 class="mb-0"><i class="bi bi-clock-history"></i> Pending Payments</h6>
             </div>
             <div class="card-body">
-                <h4 class="mb-1"><?= format_large_number($quick_stats['pending_payments']['count'] ?? 0) ?></h4>
-                <p class="text-muted mb-0 small"><?= format_currency($quick_stats['pending_payments']['amount'] ?? 0) ?></p>
+                <h4 class="mb-1"><?= format_large_number($quick_stats['pending_payments']['count'] ?? 0, 0) ?></h4>
+                <p class="text-muted mb-0 small"><?= format_large_currency($quick_stats['pending_payments']['amount'] ?? 0) ?></p>
                 <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-sm btn-primary mt-2">View All</a>
             </div>
         </div>

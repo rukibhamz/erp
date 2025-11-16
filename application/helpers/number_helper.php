@@ -22,7 +22,12 @@ if (!function_exists('format_large_number')) {
             $formatted = number_format($number / 1000000, $decimals) . 'M';
         } else {
             // Less than million - show full number
-            $formatted = number_format($number, $decimals);
+            // For integers (like user counts), use 0 decimals if decimals parameter is 0
+            if ($decimals == 0 && $number == intval($number)) {
+                $formatted = number_format($number, 0);
+            } else {
+                $formatted = number_format($number, $decimals);
+            }
             $fullNumber = $formatted; // No need for title if showing full number
         }
         
