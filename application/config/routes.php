@@ -262,6 +262,9 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
         $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
         
+        // Settings Routes
+        $route['settings/modules'] = 'Settings/modules';
+        
         // Payment Gateway Settings
         $route['settings/payment-gateways'] = 'Settings/paymentGateways';
         $route['settings/payment-gateways/edit/(:num)'] = 'Settings/editGateway/$1';
