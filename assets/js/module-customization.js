@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDragAndDrop();
     initializeEditButtons();
     initializeResetButtons();
+    initializeVisibilityToggles();
     initializeIconPreview();
     console.log('Module Customization - Initialized');
 });
@@ -323,6 +324,60 @@ function initializeResetButtons() {
                     showMessage('An error occurred', 'danger');
                 });
             }
+        });
+    });
+}
+
+/**
+ * Initialize visibility toggles
+ */
+function initializeVisibilityToggles() {
+    const toggles = document.querySelectorAll('.toggle-visibility');
+    
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const moduleCode = this.dataset.moduleCode;
+            const isActive = this.checked ? 1 : 0;
+            
+            // Disable toggle during request
+            this.disabled = true;
+            
+            fetch(BASE_URL + 'module_customization/toggleVisibility', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `module_code=${encodeURIComponent(moduleCode)}&is_active=${isActive}&csrf_token=${encodeURIComponent(CSRF_TOKEN)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Module visibility updated', 'success');
+                    // Update the module item appearance
+                    const moduleItem = this.closest('.module-item');
+                    if (moduleItem) {
+                        if (isActive) {
+                            moduleItem.classList.remove('module-inactive');
+                        } else {
+                            moduleItem.classList.add('module-inactive');
+                        }
+                    }
+                } else {
+                    // Revert toggle on error
+                    this.checked = !this.checked;
+                    showMessage('Failed to update visibility: ' + (data.error || 'Unknown error'), 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Revert toggle on error
+                this.checked = !this.checked;
+                showMessage('An error occurred while updating visibility', 'danger');
+            })
+            .finally(() => {
+                // Re-enable toggle
+                this.disabled = false;
+            });
         });
     });
 }

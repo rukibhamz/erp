@@ -19,12 +19,12 @@ $page_title = $title ?? 'Module Customization';
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">Navigation Modules</h2>
-            <p class="text-muted mb-0">Drag to reorder, click to edit. Note: Module visibility cannot be changed from this page.</p>
+            <p class="text-muted mb-0">Drag to reorder, click to edit. Toggle visibility to show/hide modules in navigation.</p>
         </div>
         <div class="card-body">
             <div id="module-list" class="module-list">
                 <?php foreach ($modules as $module): ?>
-                <div class="module-item" 
+                <div class="module-item <?= (!($module['is_active'] ?? 1)) ? 'module-inactive' : '' ?>" 
                      data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
                      data-order="<?= htmlspecialchars($module['display_order'] ?? '0') ?>">
                     <div class="module-item-drag">
@@ -54,6 +54,14 @@ $page_title = $title ?? 'Module Customization';
                         <?php endif; ?>
                     </div>
                     <div class="module-item-actions">
+                        <!-- Toggle Visibility Switch -->
+                        <label class="toggle-switch" title="<?= ($module['is_active'] ?? 1) ? 'Hide module' : 'Show module' ?>">
+                            <input type="checkbox" 
+                                   class="toggle-visibility" 
+                                   data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"
+                                   <?= ($module['is_active'] ?? 1) ? 'checked' : '' ?>>
+                            <span class="toggle-slider"></span>
+                        </label>
                         <!-- Edit Button -->
                         <button class="btn btn-sm btn-ghost edit-module"
                                 data-module-code="<?= htmlspecialchars($module['module_code'] ?? '') ?>"

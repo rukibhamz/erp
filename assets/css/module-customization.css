@@ -68,6 +68,19 @@
   border-color: var(--color-primary);
 }
 
+.module-item.module-inactive {
+  opacity: 0.6;
+  background-color: var(--bg-tertiary);
+}
+
+.module-item.module-inactive .module-item-label strong {
+  color: var(--text-muted);
+}
+
+.module-item.module-inactive .module-item-icon {
+  opacity: 0.5;
+}
+
 .module-item-drag {
   color: var(--text-muted);
   cursor: grab;
@@ -166,6 +179,11 @@
 
 .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(20px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Modal */
