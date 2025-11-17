@@ -39,7 +39,7 @@ class Locations extends Base_Controller {
             $data = [
                 'property_code' => sanitize_input($_POST['Location_code'] ?? $_POST['property_code'] ?? ''),
                 'property_name' => sanitize_input($_POST['Location_name'] ?? $_POST['property_name'] ?? ''),
-                'property_type' => sanitize_input($_POST['property_type'] ?? 'multi_purpose'),
+                'property_type' => sanitize_input($_POST['Location_type'] ?? $_POST['property_type'] ?? 'multi_purpose'),
                 'address' => sanitize_input($_POST['address'] ?? ''),
                 'city' => sanitize_input($_POST['city'] ?? ''),
                 'state' => sanitize_input($_POST['state'] ?? ''),
