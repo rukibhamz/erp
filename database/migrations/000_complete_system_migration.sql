@@ -346,6 +346,36 @@ AND NOT EXISTS (
 -- PART 2: BUSINESS MODULE TABLES
 -- ============================================================================
 
+-- PROPERTIES TABLE (for location/property management)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `erp_properties` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `property_code` VARCHAR(50) NOT NULL UNIQUE,
+    `property_name` VARCHAR(255) NOT NULL,
+    `property_type` ENUM('multi_purpose','standalone_building','land','other') DEFAULT 'multi_purpose',
+    `address` TEXT DEFAULT NULL,
+    `city` VARCHAR(100) DEFAULT NULL,
+    `state` VARCHAR(100) DEFAULT NULL,
+    `country` VARCHAR(100) DEFAULT NULL,
+    `postal_code` VARCHAR(20) DEFAULT NULL,
+    `gps_latitude` DECIMAL(10,8) DEFAULT NULL,
+    `gps_longitude` DECIMAL(11,8) DEFAULT NULL,
+    `land_area` DECIMAL(10,2) DEFAULT NULL COMMENT 'in square meters',
+    `built_area` DECIMAL(10,2) DEFAULT NULL COMMENT 'in square meters',
+    `year_built` INT(4) DEFAULT NULL,
+    `year_acquired` INT(4) DEFAULT NULL,
+    `property_value` DECIMAL(15,2) DEFAULT NULL,
+    `manager_id` INT(11) DEFAULT NULL COMMENT 'user_id',
+    `status` ENUM('operational','under_construction','under_renovation','closed') DEFAULT 'operational',
+    `ownership_status` ENUM('owned','leased','joint_venture') DEFAULT 'owned',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_property_code` (`property_code`),
+    KEY `idx_manager_id` (`manager_id`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- SPACES TABLE (for property management and occupancy tracking)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS `erp_spaces` (
@@ -645,7 +675,7 @@ SELECT 'Business Module Tables' as check_type,
        COUNT(*) as tables_found
 FROM information_schema.tables 
 WHERE table_schema = DATABASE()
-AND table_name IN ('erp_spaces', 'erp_stock_levels', 'erp_items', 'erp_leases', 
+AND table_name IN ('erp_properties', 'erp_spaces', 'erp_stock_levels', 'erp_items', 'erp_leases', 
                    'erp_work_orders', 'erp_tax_deadlines', 'erp_utility_bills');
 
 -- Check role permissions count
@@ -681,6 +711,6 @@ ORDER BY p.module, p.permission;
 -- ✅ Manager: All business modules + Accounting sub-modules + POS (Tax excluded)
 -- ✅ Staff: POS, Bookings, Inventory, Utilities (read, update, create)
 -- ✅ Accountant: All accounting permissions
--- ✅ All business module tables (spaces, stock_levels, items, leases, work_orders, tax_deadlines, utility_bills)
+-- ✅ All business module tables (properties, spaces, stock_levels, items, leases, work_orders, tax_deadlines, utility_bills)
 -- ============================================================================
 

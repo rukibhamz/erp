@@ -162,17 +162,32 @@ class AutoMigration {
             }
         }
         
-        // Always check and create properties table if missing (needed for Locations controller)
+        // ALWAYS check and create properties table if missing (needed for Locations controller)
+        // This must run regardless of migration status to ensure table exists
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
             $propertiesExists = $stmt->rowCount() > 0;
             
             if (!$propertiesExists) {
-                error_log("AutoMigration: Properties table missing, creating it...");
+                error_log("AutoMigration: Properties table missing, creating it immediately...");
                 $this->createPropertiesTable();
+                // Verify it was created
+                $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
+                if ($stmt->rowCount() > 0) {
+                    error_log("AutoMigration: Properties table created successfully");
+                } else {
+                    error_log("AutoMigration: WARNING - Properties table creation may have failed");
+                }
             }
         } catch (Exception $e) {
-            error_log("AutoMigration: Error checking properties table: " . $e->getMessage());
+            error_log("AutoMigration: CRITICAL ERROR checking/creating properties table: " . $e->getMessage());
+            error_log("AutoMigration: Attempting to create properties table despite error...");
+            // Try to create anyway, even if check failed
+            try {
+                $this->createPropertiesTable();
+            } catch (Exception $e2) {
+                error_log("AutoMigration: Failed to create properties table: " . $e2->getMessage());
+            }
         }
         
         if ($needsMigration) {
@@ -371,10 +386,12 @@ class AutoMigration {
     /**
      * Create properties table if it doesn't exist
      * This table is used by the Locations controller
+     * CRITICAL: This must always succeed for the Locations module to work
      */
     private function createPropertiesTable() {
         try {
-            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}properties` (
+            // Use CREATE TABLE IF NOT EXISTS to be safe
+            $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}properties` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `property_code` varchar(50) NOT NULL UNIQUE,
                 `property_name` varchar(255) NOT NULL,
@@ -394,17 +411,38 @@ class AutoMigration {
                 `manager_id` int(11) DEFAULT NULL COMMENT 'user_id',
                 `status` enum('operational','under_construction','under_renovation','closed') DEFAULT 'operational',
                 `ownership_status` enum('owned','leased','joint_venture') DEFAULT 'owned',
-                `created_at` datetime NOT NULL,
-                `updated_at` datetime DEFAULT NULL,
+                `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
-                UNIQUE KEY `property_code` (`property_code`),
-                KEY `manager_id` (`manager_id`),
-                KEY `status` (`status`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                UNIQUE KEY `unique_property_code` (`property_code`),
+                KEY `idx_manager_id` (`manager_id`),
+                KEY `idx_status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
             
-            error_log("AutoMigration: Properties table created successfully");
+            $this->pdo->exec($sql);
+            
+            // Verify table was created
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
+            if ($stmt->rowCount() > 0) {
+                error_log("AutoMigration: Properties table created/verified successfully");
+                return true;
+            } else {
+                error_log("AutoMigration: WARNING - Properties table creation SQL executed but table not found");
+                return false;
+            }
+        } catch (PDOException $e) {
+            // Check if error is "table already exists" - that's OK
+            if (stripos($e->getMessage(), 'already exists') !== false || 
+                stripos($e->getMessage(), 'Duplicate') !== false) {
+                error_log("AutoMigration: Properties table already exists (this is OK)");
+                return true;
+            }
+            error_log("AutoMigration: CRITICAL ERROR creating properties table: " . $e->getMessage());
+            error_log("AutoMigration: SQL was: " . substr($sql, 0, 200) . "...");
+            throw $e; // Re-throw so caller knows it failed
         } catch (Exception $e) {
-            error_log("AutoMigration: Error creating properties table: " . $e->getMessage());
+            error_log("AutoMigration: CRITICAL ERROR creating properties table: " . $e->getMessage());
+            throw $e; // Re-throw so caller knows it failed
         }
     }
 }
