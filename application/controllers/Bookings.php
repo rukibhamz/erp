@@ -16,6 +16,8 @@ class Bookings extends Base_Controller {
     private $cancellationPolicyModel;
     private $paymentScheduleModel;
     private $bookingModificationModel;
+    private $locationModel;
+    private $spaceModel;
 
     public function __construct() {
         parent::__construct();
@@ -34,6 +36,8 @@ class Bookings extends Base_Controller {
         $this->cancellationPolicyModel = $this->loadModel('Cancellation_policy_model');
         $this->paymentScheduleModel = $this->loadModel('Payment_schedule_model');
         $this->bookingModificationModel = $this->loadModel('Booking_modification_model');
+        $this->locationModel = $this->loadModel('Location_model');
+        $this->spaceModel = $this->loadModel('Space_model');
     }
 
     public function index() {
@@ -92,11 +96,46 @@ class Bookings extends Base_Controller {
         $this->requirePermission('bookings', 'create');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
+            
+            $locationId = intval($_POST['location_id'] ?? 0);
+            $spaceId = intval($_POST['space_id'] ?? 0);
             $facilityId = intval($_POST['facility_id'] ?? 0);
             $bookingDate = sanitize_input($_POST['booking_date'] ?? '');
             $startTime = sanitize_input($_POST['start_time'] ?? '');
             $endTime = sanitize_input($_POST['end_time'] ?? '');
             $bookingType = sanitize_input($_POST['booking_type'] ?? 'hourly');
+
+            // Validate location and space
+            if (!$locationId || !$spaceId) {
+                $this->setFlashMessage('danger', 'Please select both location and space.');
+                redirect('bookings/create');
+            }
+
+            // Get space and its facility_id
+            $space = $this->spaceModel->getWithProperty($spaceId);
+            if (!$space || !$space['is_bookable']) {
+                $this->setFlashMessage('danger', 'Selected space is not available for booking.');
+                redirect('bookings/create');
+            }
+
+            // Use facility_id from space, or get it
+            if (!$facilityId && !empty($space['facility_id'])) {
+                $facilityId = $space['facility_id'];
+            } else if (!$facilityId) {
+                // Auto-sync space to get facility_id
+                try {
+                    $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
+                    if (!$facilityId) {
+                        $this->setFlashMessage('danger', 'Space is not properly configured for booking. Please contact administrator.');
+                        redirect('bookings/create');
+                    }
+                } catch (Exception $e) {
+                    error_log('Booking create auto-sync error: ' . $e->getMessage());
+                    $this->setFlashMessage('danger', 'Error configuring space for booking.');
+                    redirect('bookings/create');
+                }
+            }
 
             // Check availability
             if (!$this->facilityModel->checkAvailability($facilityId, $bookingDate, $startTime, $endTime)) {
@@ -110,7 +149,7 @@ class Bookings extends Base_Controller {
                 redirect('bookings/create');
             }
 
-            // Calculate price
+            // Calculate price based on space's booking type
             $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType);
             
             // Calculate duration
@@ -167,6 +206,22 @@ class Bookings extends Base_Controller {
                 'special_requests' => sanitize_input($_POST['special_requests'] ?? ''),
                 'created_by' => $this->session['user_id']
             ];
+            
+            // Add space_id and location_id if columns exist (for future use)
+            // Check if columns exist before adding
+            try {
+                $columns = $this->db->fetchAll("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "bookings` LIKE 'space_id'");
+                if (!empty($columns)) {
+                    $data['space_id'] = $spaceId;
+                }
+                $columns = $this->db->fetchAll("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "bookings` LIKE 'location_id'");
+                if (!empty($columns)) {
+                    $data['location_id'] = $locationId;
+                }
+            } catch (Exception $e) {
+                // Columns don't exist, that's OK - we'll use facility_id
+                error_log('Bookings create: space_id/location_id columns not found, using facility_id only');
+            }
 
             try {
                 $pdo = $this->db->getConnection();
@@ -205,18 +260,132 @@ class Bookings extends Base_Controller {
         }
 
         try {
-            $facilities = $this->facilityModel->getActive();
+            // Load locations (properties) with bookable spaces
+            $locations = $this->locationModel->getActive();
+            
+            // Get all bookable spaces grouped by location
+            $spacesByLocation = [];
+            foreach ($locations as $location) {
+                $spaces = $this->spaceModel->getBookableSpaces($location['id']);
+                if (!empty($spaces)) {
+                    // Get booking types for each space
+                    foreach ($spaces as &$space) {
+                        $config = $this->spaceModel->getBookableConfig($space['id']);
+                        if ($config && !empty($config['booking_types'])) {
+                            $space['booking_types'] = json_decode($config['booking_types'], true) ?: ['hourly', 'daily'];
+                        } else {
+                            $space['booking_types'] = ['hourly', 'daily']; // Default
+                        }
+                        
+                        // Get pricing info
+                        if ($config && !empty($config['pricing_rules'])) {
+                            $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+                            $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
+                            $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+                            $space['half_day_rate'] = $pricingRules['half_day'] ?? 0;
+                            $space['weekly_rate'] = $pricingRules['weekly'] ?? 0;
+                            $space['security_deposit'] = $pricingRules['deposit'] ?? 0;
+                        }
+                        
+                        // Get facility_id if synced
+                        if (!empty($space['facility_id'])) {
+                            $facility = $this->facilityModel->getById($space['facility_id']);
+                            if ($facility) {
+                                $space['facility_id'] = $facility['id'];
+                                $space['hourly_rate'] = $space['hourly_rate'] ?? $facility['hourly_rate'] ?? 0;
+                                $space['daily_rate'] = $space['daily_rate'] ?? $facility['daily_rate'] ?? 0;
+                            }
+                        }
+                    }
+                    unset($space);
+                    $spacesByLocation[$location['id']] = $spaces;
+                }
+            }
         } catch (Exception $e) {
-            $facilities = [];
+            error_log('Bookings create load error: ' . $e->getMessage());
+            $locations = [];
+            $spacesByLocation = [];
         }
 
         $data = [
             'page_title' => 'Create Booking',
-            'facilities' => $facilities,
+            'locations' => $locations,
+            'spaces_by_location' => $spacesByLocation,
             'flash' => $this->getFlashMessage()
         ];
 
         $this->loadView('bookings/create', $data);
+    }
+    
+    /**
+     * AJAX endpoint to get spaces for a location
+     */
+    public function getSpacesForLocation() {
+        $this->requirePermission('bookings', 'read');
+        
+        header('Content-Type: application/json');
+        
+        $locationId = intval($_GET['location_id'] ?? 0);
+        if (!$locationId) {
+            echo json_encode(['success' => false, 'error' => 'Location ID required']);
+            exit;
+        }
+        
+        try {
+            $spaces = $this->spaceModel->getBookableSpaces($locationId);
+            $spacesData = [];
+            
+            foreach ($spaces as $space) {
+                $config = $this->spaceModel->getBookableConfig($space['id']);
+                $bookingTypes = ['hourly', 'daily']; // Default
+                
+                if ($config && !empty($config['booking_types'])) {
+                    $bookingTypes = json_decode($config['booking_types'], true) ?: $bookingTypes;
+                }
+                
+                // Get pricing
+                $pricingRules = [];
+                if ($config && !empty($config['pricing_rules'])) {
+                    $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+                }
+                
+                // Get facility if synced
+                $facilityId = null;
+                $hourlyRate = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
+                $dailyRate = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+                
+                if (!empty($space['facility_id'])) {
+                    $facilityId = $space['facility_id'];
+                    $facility = $this->facilityModel->getById($facilityId);
+                    if ($facility) {
+                        $hourlyRate = $hourlyRate ?: ($facility['hourly_rate'] ?? 0);
+                        $dailyRate = $dailyRate ?: ($facility['daily_rate'] ?? 0);
+                    }
+                }
+                
+                $spacesData[] = [
+                    'id' => $space['id'],
+                    'space_name' => $space['space_name'],
+                    'space_number' => $space['space_number'] ?? '',
+                    'capacity' => $space['capacity'] ?? 0,
+                    'facility_id' => $facilityId,
+                    'booking_types' => $bookingTypes,
+                    'hourly_rate' => floatval($hourlyRate),
+                    'daily_rate' => floatval($dailyRate),
+                    'half_day_rate' => floatval($pricingRules['half_day'] ?? 0),
+                    'weekly_rate' => floatval($pricingRules['weekly'] ?? 0),
+                    'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
+                    'minimum_duration' => intval($config['minimum_duration'] ?? 1),
+                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null
+                ];
+            }
+            
+            echo json_encode(['success' => true, 'spaces' => $spacesData]);
+        } catch (Exception $e) {
+            error_log('getSpacesForLocation error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
     }
 
     public function view($id) {

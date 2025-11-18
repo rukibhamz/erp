@@ -232,6 +232,7 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         // Booking System - Bookings
         $route['bookings'] = 'Bookings/index';
         $route['bookings/create'] = 'Bookings/create';
+        $route['bookings/getSpacesForLocation'] = 'Bookings/getSpacesForLocation';
         $route['bookings/calendar'] = 'Bookings/calendar';
         $route['bookings/view/(:num)'] = 'Bookings/view/$1';
         $route['bookings/payment'] = 'Bookings/recordPayment';
