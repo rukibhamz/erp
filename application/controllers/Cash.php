@@ -121,6 +121,7 @@ class Cash extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $cashAccountId = intval($_POST['cash_account_id'] ?? 0);
             $amount = floatval($_POST['amount'] ?? 0);
             $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
@@ -199,6 +200,7 @@ class Cash extends Base_Controller {
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $cashAccountId = intval($_POST['cash_account_id'] ?? 0);
             $amount = floatval($_POST['amount'] ?? 0);
             $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
@@ -209,6 +211,11 @@ class Cash extends Base_Controller {
             $cashAccount = $this->cashAccountModel->getById($cashAccountId);
             if (!$cashAccount) {
                 $this->setFlashMessage('danger', 'Cash account not found.');
+                redirect('cash/payments');
+            }
+            
+            if ($cashAccount['current_balance'] < $amount) {
+                $this->setFlashMessage('danger', 'Insufficient balance in cash account.');
                 redirect('cash/payments');
             }
             

@@ -15,7 +15,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">Journal Entry Details</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('ledger/create') ?><?php echo csrf_field(); ?>" id="journalEntryForm">
+                <form method="POST" action="<?= base_url('ledger/create') ?>" id="journalEntryForm">
+                    <?php echo csrf_field(); ?>
                     <div class="row mb-3">
                         <div class="col-md-3">
                             <label for="entry_date" class="form-label">Entry Date <span class="text-danger">*</span></label>
