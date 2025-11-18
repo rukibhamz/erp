@@ -30,7 +30,8 @@ class Spaces extends Base_Controller {
                 $spaces = $this->spaceModel->getByProperty($propertyId);
                 $location = $this->locationModel->getById($propertyId);
             } else {
-                $spaces = [];
+                // Show all spaces when no filter is selected
+                $spaces = $this->spaceModel->getAll();
                 $location = null;
             }
             

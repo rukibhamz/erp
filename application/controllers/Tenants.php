@@ -95,9 +95,34 @@ class Tenants extends Base_Controller {
             
             if ($tenantId) {
                 $this->activityModel->log($this->session['user_id'], 'create', 'Tenants', 'Created tenant: ' . ($data['business_name'] ?: $data['contact_person']));
+                
+                // Check if this is an AJAX request (from modal)
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                    header('Content-Type: application/json');
+                    $tenant = $this->tenantModel->getById($tenantId);
+                    echo json_encode([
+                        'success' => true,
+                        'tenant_id' => $tenantId,
+                        'business_name' => $tenant['business_name'] ?? '',
+                        'contact_person' => $tenant['contact_person'] ?? '',
+                        'message' => 'Tenant created successfully.'
+                    ]);
+                    exit;
+                }
+                
                 $this->setFlashMessage('success', 'Tenant created successfully.');
                 redirect('tenants/view/' . $tenantId);
             } else {
+                // Check if this is an AJAX request
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Failed to create tenant.'
+                    ]);
+                    exit;
+                }
+                
                 $this->setFlashMessage('danger', 'Failed to create tenant.');
             }
         }

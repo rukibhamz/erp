@@ -90,14 +90,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 
                 <div class="col-md-6">
                     <label for="tenant_id" class="form-label">Tenant <span class="text-danger">*</span></label>
-                    <select class="form-select" id="tenant_id" name="tenant_id" required>
-                        <option value="">Select Tenant</option>
-                        <?php foreach ($tenants as $tenant): ?>
-                            <option value="<?= $tenant['id'] ?>" <?= ($preselected_tenant_id ?? null) == $tenant['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($tenant['business_name'] ?: $tenant['contact_person']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="input-group">
+                        <select class="form-select" id="tenant_id" name="tenant_id" required>
+                            <option value="">Select Tenant</option>
+                            <?php foreach ($tenants as $tenant): ?>
+                                <option value="<?= $tenant['id'] ?>" <?= ($preselected_tenant_id ?? null) == $tenant['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($tenant['business_name'] ?: $tenant['contact_person']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTenantModal">
+                            <i class="bi bi-plus-circle"></i> New
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="col-md-6">
@@ -181,4 +186,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
 </div>
+
+<?php $this->load->view('leases/create_tenant_modal'); ?>
 

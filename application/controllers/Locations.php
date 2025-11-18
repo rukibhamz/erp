@@ -169,7 +169,10 @@ class Locations extends Base_Controller {
         
         $userModel = $this->loadModel('User_model');
         try {
-            $managers = $userModel->getByRole(['manager', 'admin', 'super_admin']);
+            $allUsers = $userModel->getAll();
+            $managers = array_filter($allUsers, function($user) {
+                return in_array($user['role'], ['manager', 'admin', 'super_admin']);
+            });
         } catch (Exception $e) {
             $managers = [];
         }

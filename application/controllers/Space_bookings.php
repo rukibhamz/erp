@@ -107,7 +107,8 @@ class Space_bookings extends Base_Controller {
         }
         
         try {
-            $spaces = $this->spaceModel->getAll();
+            // Get bookable spaces (synced with booking system)
+            $spaces = $this->spaceModel->getBookableSpaces();
             $tenants = $this->tenantModel->getAll();
             
             $selectedSpace = null;

@@ -1196,6 +1196,14 @@ select:focus {
     letter-spacing: -0.025em;
 }
 
+/* White text for page-title on dark backgrounds */
+.page-header.bg-primary .page-title,
+.page-header.bg-dark .page-title,
+.bg-primary .page-title,
+.bg-dark .page-title {
+    color: #fff !important;
+}
+
 /* Dropdown */
 .dropdown-menu {
     border: 1px solid var(--gray-200);
