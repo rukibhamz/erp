@@ -99,6 +99,12 @@ class Spaces extends Base_Controller {
                 // If marked as bookable, create bookable config and sync to booking module
                 if (!empty($_POST['is_bookable'])) {
                     $this->createBookableConfig($spaceId, $_POST);
+                    // Auto-sync to booking module
+                    try {
+                        $this->spaceModel->syncToBookingModule($spaceId);
+                    } catch (Exception $e) {
+                        error_log('Spaces create auto-sync error: ' . $e->getMessage());
+                    }
                 }
                 
                 $this->activityModel->log($this->session['user_id'], 'create', 'Spaces', 'Created space: ' . $data['space_name']);
@@ -191,9 +197,36 @@ class Spaces extends Base_Controller {
                 // Update bookable config if needed
                 if (!empty($_POST['is_bookable'])) {
                     $this->updateBookableConfig($id, $_POST);
-                } elseif ($wasBookable) {
-                    // If space was bookable but now isn't, deactivate in booking module
-                    $this->deactivateInBookingModule($id);
+                    // Auto-sync to booking module
+                    try {
+                        $this->spaceModel->syncToBookingModule($id);
+                    } catch (Exception $e) {
+                        error_log('Spaces edit auto-sync error: ' . $e->getMessage());
+                    }
+                }
+                
+                // If still bookable, update sync
+                if (!empty($_POST['is_bookable']) && $wasBookable) {
+                    try {
+                        $this->spaceModel->syncToBookingModule($id);
+                    } catch (Exception $e) {
+                        error_log('Spaces edit update-sync error: ' . $e->getMessage());
+                    }
+                }
+                
+                // If unmarked as bookable, remove from booking module
+                if (empty($_POST['is_bookable']) && $wasBookable) {
+                    try {
+                        $currentSpace = $this->spaceModel->getById($id);
+                        if ($currentSpace && !empty($currentSpace['facility_id'])) {
+                            $this->facilityModel->update($currentSpace['facility_id'], [
+                                'status' => 'inactive',
+                                'is_bookable' => 0
+                            ]);
+                        }
+                    } catch (Exception $e) {
+                        error_log('Spaces edit remove-sync error: ' . $e->getMessage());
+                    }
                 }
                 
                 $this->activityModel->log($this->session['user_id'], 'update', 'Spaces', 'Updated space: ' . $data['space_name']);

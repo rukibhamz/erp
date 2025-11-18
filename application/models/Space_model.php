@@ -114,8 +114,42 @@ class Space_model extends Base_Model {
             }
             
             $config = $this->getBookableConfig($spaceId);
+            // If no config exists, create a default one
             if (!$config) {
-                return false;
+                $defaultConfig = [
+                    'space_id' => $spaceId,
+                    'is_bookable' => 1,
+                    'booking_types' => json_encode(['hourly', 'daily']),
+                    'minimum_duration' => 1,
+                    'maximum_duration' => null,
+                    'advance_booking_days' => 365,
+                    'pricing_rules' => json_encode([
+                        'base_hourly' => floatval($space['hourly_rate'] ?? 5000),
+                        'base_daily' => floatval($space['hourly_rate'] ?? 5000) * 8,
+                        'half_day' => floatval($space['hourly_rate'] ?? 5000) * 4,
+                        'weekly' => floatval($space['hourly_rate'] ?? 5000) * 40,
+                        'deposit' => 0
+                    ]),
+                    'availability_rules' => json_encode([
+                        'operating_hours' => ['start' => '08:00', 'end' => '22:00'],
+                        'days_available' => [0,1,2,3,4,5,6],
+                        'blackout_dates' => []
+                    ]),
+                    'setup_time_buffer' => 0,
+                    'cleanup_time_buffer' => 0,
+                    'simultaneous_limit' => 1
+                ];
+                
+                try {
+                    require_once BASEPATH . 'models/Bookable_config_model.php';
+                    $configModel = new Bookable_config_model($this->db);
+                    $configModel->create($defaultConfig);
+                    $config = $this->getBookableConfig($spaceId);
+                } catch (Exception $e) {
+                    error_log('Space_model syncToBookingModule create default config error: ' . $e->getMessage());
+                    // Continue with default values
+                    $config = $defaultConfig;
+                }
             }
             
             // Load Facility_model using database connection

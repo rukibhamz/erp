@@ -96,7 +96,17 @@ class Stock_movements extends Base_Controller {
         
         try {
             $items = $this->itemModel->getByType('inventory');
-            $locations = $this->locationModel->getActive();
+            $locationsRaw = $this->locationModel->getActive();
+            // Map locations for view compatibility
+            $locations = [];
+            foreach ($locationsRaw as $loc) {
+                $mapped = $this->locationModel->mapFieldsForView($loc);
+                $locations[] = [
+                    'id' => $mapped['id'],
+                    'location_name' => $mapped['Location_name'] ?? $mapped['property_name'] ?? 'N/A',
+                    'location_code' => $mapped['Location_code'] ?? $mapped['property_code'] ?? ''
+                ];
+            }
         } catch (Exception $e) {
             $items = [];
             $locations = [];

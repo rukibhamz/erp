@@ -230,7 +230,7 @@ function get_user_accessible_modules() {
  * @param string $class Additional CSS classes
  * @return string HTML for back button
  */
-function back_button($url = null, $text = 'Back', $class = '') {
+function back_button($url = null, $text = 'Back', $class = 'btn-primary') {
     if ($url === null) {
         // Try to determine module from current URL
         $currentUrl = $_GET['url'] ?? '';
@@ -244,7 +244,7 @@ function back_button($url = null, $text = 'Back', $class = '') {
         $url = base_url($url);
     }
     
-    $classes = 'btn btn-outline-secondary ' . $class;
+    $classes = 'btn ' . ($class ?: 'btn-primary');
     return '<a href="' . htmlspecialchars($url) . '" class="' . trim($classes) . '">
         <i class="bi bi-arrow-left"></i> ' . htmlspecialchars($text) . '
     </a>';

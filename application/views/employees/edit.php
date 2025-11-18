@@ -106,8 +106,8 @@ $basicSalary = $salaryStructure['basic_salary'] ?? 0;
             </div>
 
             <div class="d-flex justify-content-end gap-2">
-                <a href="<?= base_url('employees') ?>" class="btn btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-dark">Update Employee</button>
+                <a href="<?= base_url('employees') ?>" class="btn btn-primary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Update Employee</button>
             </div>
         </form>
     </div>

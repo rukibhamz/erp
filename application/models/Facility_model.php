@@ -21,15 +21,89 @@ class Facility_model extends Base_Model {
     
     public function getActive() {
         try {
-            return $this->db->fetchAll(
-                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE status = 'active' 
-                 ORDER BY facility_name"
+            // Get facilities from facilities table AND synced spaces from locations
+            $facilities = $this->db->fetchAll(
+                "SELECT f.*, 'facility' as source_type
+                 FROM `" . $this->db->getPrefix() . $this->table . "` f
+                 WHERE f.status = 'active' AND f.is_bookable = 1
+                 ORDER BY f.facility_name"
             );
+            
+            // Also get bookable spaces that are synced (have facility_id)
+            $spaces = $this->db->fetchAll(
+                "SELECT s.*, p.property_name as location_name, p.property_code as location_code,
+                        f.facility_code, f.facility_name, f.hourly_rate, f.daily_rate,
+                        f.capacity as facility_capacity, f.description as facility_description,
+                        'space' as source_type
+                 FROM `" . $this->db->getPrefix() . "spaces` s
+                 JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                 LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` f ON s.facility_id = f.id
+                 WHERE s.is_bookable = 1 
+                 AND s.operational_status = 'active'
+                 AND s.facility_id IS NOT NULL
+                 ORDER BY p.property_name, s.space_name"
+            );
+            
+            // Merge and format for booking portal
+            $allResources = [];
+            
+            // Add facilities
+            foreach ($facilities as $facility) {
+                $allResources[] = [
+                    'id' => $facility['id'],
+                    'facility_id' => $facility['id'],
+                    'facility_code' => $facility['facility_code'],
+                    'facility_name' => $facility['facility_name'],
+                    'description' => $facility['description'] ?? '',
+                    'capacity' => $facility['capacity'] ?? 0,
+                    'hourly_rate' => $facility['hourly_rate'] ?? 0,
+                    'daily_rate' => $facility['daily_rate'] ?? 0,
+                    'resource_type' => $facility['resource_type'] ?? 'other',
+                    'category' => $facility['category'] ?? '',
+                    'status' => $facility['status'],
+                    'source_type' => 'facility'
+                ];
+            }
+            
+            // Add spaces (as facilities for booking portal)
+            foreach ($spaces as $space) {
+                $allResources[] = [
+                    'id' => $space['facility_id'] ?? $space['id'],
+                    'facility_id' => $space['facility_id'] ?? $space['id'],
+                    'space_id' => $space['id'],
+                    'facility_code' => $space['facility_code'] ?? ($space['space_number'] ?? 'SP-' . $space['id']),
+                    'facility_name' => $space['facility_name'] ?? $space['space_name'],
+                    'description' => $space['facility_description'] ?? $space['description'] ?? '',
+                    'capacity' => $space['facility_capacity'] ?? $space['capacity'] ?? 0,
+                    'hourly_rate' => $space['hourly_rate'] ?? 0,
+                    'daily_rate' => $space['daily_rate'] ?? 0,
+                    'resource_type' => $this->mapSpaceCategoryToResourceType($space['category'] ?? 'other'),
+                    'category' => $space['category'] ?? '',
+                    'location_name' => $space['location_name'] ?? '',
+                    'location_code' => $space['location_code'] ?? '',
+                    'status' => 'available',
+                    'source_type' => 'space'
+                ];
+            }
+            
+            return $allResources;
         } catch (Exception $e) {
             error_log('Facility_model getActive error: ' . $e->getMessage());
             return [];
         }
+    }
+    
+    private function mapSpaceCategoryToResourceType($category) {
+        $mapping = [
+            'event_space' => 'hall',
+            'commercial' => 'meeting_room',
+            'hospitality' => 'other',
+            'storage' => 'equipment',
+            'parking' => 'other',
+            'residential' => 'other',
+            'other' => 'other'
+        ];
+        return $mapping[$category] ?? 'other';
     }
     
     public function getWithPhotos($facilityId) {
@@ -257,12 +331,54 @@ class Facility_model extends Base_Model {
     
     public function getByType($type) {
         try {
-            return $this->db->fetchAll(
+            // Get facilities of this type
+            $facilities = $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE resource_type = ? AND status = 'available'
+                 WHERE resource_type = ? AND status IN ('active', 'available') AND is_bookable = 1
                  ORDER BY facility_name",
                 [$type]
             );
+            
+            // Also get spaces mapped to this resource type
+            $spaces = $this->db->fetchAll(
+                "SELECT s.*, p.property_name as location_name, p.property_code as location_code,
+                        f.facility_code, f.facility_name, f.hourly_rate, f.daily_rate,
+                        f.capacity as facility_capacity, f.description as facility_description
+                 FROM `" . $this->db->getPrefix() . "spaces` s
+                 JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                 LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` f ON s.facility_id = f.id
+                 WHERE s.is_bookable = 1 
+                 AND s.operational_status = 'active'
+                 AND s.facility_id IS NOT NULL
+                 AND f.resource_type = ?
+                 ORDER BY p.property_name, s.space_name",
+                [$type]
+            );
+            
+            // Merge results
+            $allResources = [];
+            foreach ($facilities as $facility) {
+                $allResources[] = $facility;
+            }
+            foreach ($spaces as $space) {
+                $allResources[] = [
+                    'id' => $space['facility_id'] ?? $space['id'],
+                    'facility_id' => $space['facility_id'] ?? $space['id'],
+                    'space_id' => $space['id'],
+                    'facility_code' => $space['facility_code'] ?? ($space['space_number'] ?? 'SP-' . $space['id']),
+                    'facility_name' => $space['facility_name'] ?? $space['space_name'],
+                    'description' => $space['facility_description'] ?? $space['description'] ?? '',
+                    'capacity' => $space['facility_capacity'] ?? $space['capacity'] ?? 0,
+                    'hourly_rate' => $space['hourly_rate'] ?? 0,
+                    'daily_rate' => $space['daily_rate'] ?? 0,
+                    'resource_type' => $type,
+                    'category' => $space['category'] ?? '',
+                    'status' => 'available',
+                    'source_type' => 'space'
+                ];
+            }
+            
+            return $allResources;
         } catch (Exception $e) {
             error_log('Facility_model getByType error: ' . $e->getMessage());
             return [];
@@ -271,12 +387,54 @@ class Facility_model extends Base_Model {
     
     public function getByCategory($category) {
         try {
-            return $this->db->fetchAll(
+            // Get facilities of this category
+            $facilities = $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE category = ? AND status = 'available'
+                 WHERE category = ? AND status IN ('active', 'available') AND is_bookable = 1
                  ORDER BY facility_name",
                 [$category]
             );
+            
+            // Also get spaces of this category
+            $spaces = $this->db->fetchAll(
+                "SELECT s.*, p.property_name as location_name, p.property_code as location_code,
+                        f.facility_code, f.facility_name, f.hourly_rate, f.daily_rate,
+                        f.capacity as facility_capacity, f.description as facility_description
+                 FROM `" . $this->db->getPrefix() . "spaces` s
+                 JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                 LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` f ON s.facility_id = f.id
+                 WHERE s.is_bookable = 1 
+                 AND s.operational_status = 'active'
+                 AND s.facility_id IS NOT NULL
+                 AND s.category = ?
+                 ORDER BY p.property_name, s.space_name",
+                [$category]
+            );
+            
+            // Merge results
+            $allResources = [];
+            foreach ($facilities as $facility) {
+                $allResources[] = $facility;
+            }
+            foreach ($spaces as $space) {
+                $allResources[] = [
+                    'id' => $space['facility_id'] ?? $space['id'],
+                    'facility_id' => $space['facility_id'] ?? $space['id'],
+                    'space_id' => $space['id'],
+                    'facility_code' => $space['facility_code'] ?? ($space['space_number'] ?? 'SP-' . $space['id']),
+                    'facility_name' => $space['facility_name'] ?? $space['space_name'],
+                    'description' => $space['facility_description'] ?? $space['description'] ?? '',
+                    'capacity' => $space['facility_capacity'] ?? $space['capacity'] ?? 0,
+                    'hourly_rate' => $space['hourly_rate'] ?? 0,
+                    'daily_rate' => $space['daily_rate'] ?? 0,
+                    'resource_type' => $space['resource_type'] ?? 'other',
+                    'category' => $category,
+                    'status' => 'available',
+                    'source_type' => 'space'
+                ];
+            }
+            
+            return $allResources;
         } catch (Exception $e) {
             error_log('Facility_model getByCategory error: ' . $e->getMessage());
             return [];

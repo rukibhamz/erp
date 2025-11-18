@@ -8,7 +8,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
         <h1 class="page-title mb-0">Employees</h1>
         <div class="d-flex gap-2">
             <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('employees/create') ?>" class="btn btn-dark">
+                <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Add Employee
                 </a>
             <?php endif; ?>
@@ -29,7 +29,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
             <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No employees found.</p>
             <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('employees/create') ?>" class="btn btn-dark">
+                <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Add First Employee
                 </a>
             <?php endif; ?>

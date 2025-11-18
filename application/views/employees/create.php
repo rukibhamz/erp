@@ -101,8 +101,8 @@ include(BASEPATH . 'views/accounting/_nav.php');
             </div>
 
             <div class="d-flex justify-content-end gap-2">
-                <a href="<?= base_url('employees') ?>" class="btn btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-dark">Create Employee</button>
+                <a href="<?= base_url('employees') ?>" class="btn btn-primary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Create Employee</button>
             </div>
         </form>
     </div>
