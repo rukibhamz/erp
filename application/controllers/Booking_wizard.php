@@ -16,6 +16,8 @@ class Booking_wizard extends Base_Controller {
     private $cashAccountModel;
     private $activityModel;
     private $gatewayModel;
+    private $locationModel;
+    private $spaceModel;
 
     public function __construct() {
         parent::__construct();
@@ -34,6 +36,8 @@ class Booking_wizard extends Base_Controller {
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
         $this->activityModel = $this->loadModel('Activity_model');
         $this->gatewayModel = $this->loadModel('Payment_gateway_model');
+        $this->locationModel = $this->loadModel('Location_model');
+        $this->spaceModel = $this->loadModel('Space_model');
     }
     
     protected function checkAuth() {
@@ -51,84 +55,229 @@ class Booking_wizard extends Base_Controller {
     }
 
     /**
-     * Step 1: Select Resource
+     * Step 1: Select Location and Space
      */
     public function step1() {
-        $resourceType = $_GET['type'] ?? 'all';
-        $category = $_GET['category'] ?? 'all';
+        $locationId = $_GET['location_id'] ?? null;
         $date = $_GET['date'] ?? date('Y-m-d');
         
         try {
-            if ($resourceType !== 'all') {
-                $resources = $this->facilityModel->getByType($resourceType);
-            } elseif ($category !== 'all') {
-                $resources = $this->facilityModel->getByCategory($category);
-            } else {
-                $resources = $this->facilityModel->getActive();
-            }
+            // Load all locations with bookable spaces
+            $locations = $this->locationModel->getActive();
             
-            // Get photos for each resource
-            foreach ($resources as &$resource) {
-                try {
-                    $resource['photos'] = $this->facilityModel->getPhotos($resource['id']);
-                } catch (Exception $e) {
-                    $resource['photos'] = [];
+            // Get spaces grouped by location
+            $spacesByLocation = [];
+            foreach ($locations as $location) {
+                $spaces = $this->spaceModel->getBookableSpaces($location['id']);
+                if (!empty($spaces)) {
+                    // Get booking types and pricing for each space
+                    foreach ($spaces as &$space) {
+                        $config = $this->spaceModel->getBookableConfig($space['id']);
+                        if ($config && !empty($config['booking_types'])) {
+                            $space['booking_types'] = json_decode($config['booking_types'], true) ?: ['hourly', 'daily'];
+                        } else {
+                            $space['booking_types'] = ['hourly', 'daily']; // Default
+                        }
+                        
+                        // Get pricing info
+                        if ($config && !empty($config['pricing_rules'])) {
+                            $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+                            $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
+                            $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+                            $space['half_day_rate'] = $pricingRules['half_day'] ?? 0;
+                            $space['weekly_rate'] = $pricingRules['weekly'] ?? 0;
+                        }
+                        
+                        // Get facility_id if synced
+                        if (!empty($space['facility_id'])) {
+                            $facility = $this->facilityModel->getById($space['facility_id']);
+                            if ($facility) {
+                                $space['facility_id'] = $facility['id'];
+                                $space['hourly_rate'] = $space['hourly_rate'] ?? $facility['hourly_rate'] ?? 0;
+                                $space['daily_rate'] = $space['daily_rate'] ?? $facility['daily_rate'] ?? 0;
+                            }
+                        }
+                        
+                        // Get photos
+                        try {
+                            $space['photos'] = $this->spaceModel->getPhotos($space['id']);
+                        } catch (Exception $e) {
+                            $space['photos'] = [];
+                        }
+                    }
+                    unset($space);
+                    $spacesByLocation[$location['id']] = $spaces;
                 }
             }
-            unset($resource); // Break reference
-            
-            // Get categories and types for filters
-            $allResources = $this->facilityModel->getAll();
-            $categories = array_unique(array_filter(array_column($allResources, 'category')));
-            $types = ['hall', 'meeting_room', 'equipment', 'vehicle', 'staff', 'other'];
         } catch (Exception $e) {
-            $resources = [];
-            $categories = [];
-            $types = [];
+            error_log('Booking_wizard step1 error: ' . $e->getMessage());
+            $locations = [];
+            $spacesByLocation = [];
         }
 
         $data = [
-            'page_title' => 'Select Resource',
-            'resources' => $resources,
-            'categories' => $categories,
-            'types' => $types,
-            'selected_type' => $resourceType,
-            'selected_category' => $category,
+            'page_title' => 'Select Location & Space',
+            'locations' => $locations,
+            'spaces_by_location' => $spacesByLocation,
+            'selected_location_id' => $locationId,
             'selected_date' => $date,
             'flash' => $this->getFlashMessage()
         ];
 
         $this->loadView('booking_wizard/step1_select_resource', $data);
     }
+    
+    /**
+     * AJAX endpoint to get spaces for a location
+     */
+    public function getSpacesForLocation() {
+        header('Content-Type: application/json');
+        
+        $locationId = intval($_GET['location_id'] ?? 0);
+        if (!$locationId) {
+            echo json_encode(['success' => false, 'error' => 'Location ID required']);
+            exit;
+        }
+        
+        try {
+            $spaces = $this->spaceModel->getBookableSpaces($locationId);
+            $spacesData = [];
+            
+            foreach ($spaces as $space) {
+                $config = $this->spaceModel->getBookableConfig($space['id']);
+                $bookingTypes = ['hourly', 'daily']; // Default
+                
+                if ($config && !empty($config['booking_types'])) {
+                    $bookingTypes = json_decode($config['booking_types'], true) ?: $bookingTypes;
+                }
+                
+                // Get pricing
+                $pricingRules = [];
+                if ($config && !empty($config['pricing_rules'])) {
+                    $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+                }
+                
+                // Get facility if synced
+                $facilityId = null;
+                $hourlyRate = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
+                $dailyRate = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+                
+                if (!empty($space['facility_id'])) {
+                    $facilityId = $space['facility_id'];
+                    $facility = $this->facilityModel->getById($facilityId);
+                    if ($facility) {
+                        $hourlyRate = $hourlyRate ?: ($facility['hourly_rate'] ?? 0);
+                        $dailyRate = $dailyRate ?: ($facility['daily_rate'] ?? 0);
+                    }
+                }
+                
+                // Get photos
+                $photos = [];
+                try {
+                    $photos = $this->spaceModel->getPhotos($space['id']);
+                } catch (Exception $e) {
+                    // Ignore
+                }
+                
+                $spacesData[] = [
+                    'id' => $space['id'],
+                    'space_name' => $space['space_name'],
+                    'space_number' => $space['space_number'] ?? '',
+                    'capacity' => $space['capacity'] ?? 0,
+                    'description' => $space['description'] ?? '',
+                    'facility_id' => $facilityId,
+                    'booking_types' => $bookingTypes,
+                    'hourly_rate' => floatval($hourlyRate),
+                    'daily_rate' => floatval($dailyRate),
+                    'half_day_rate' => floatval($pricingRules['half_day'] ?? 0),
+                    'weekly_rate' => floatval($pricingRules['weekly'] ?? 0),
+                    'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
+                    'minimum_duration' => intval($config['minimum_duration'] ?? 1),
+                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null,
+                    'photos' => $photos
+                ];
+            }
+            
+            echo json_encode(['success' => true, 'spaces' => $spacesData]);
+        } catch (Exception $e) {
+            error_log('getSpacesForLocation error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
 
     /**
-     * Step 2: Choose Date and Time
+     * Step 2: Choose Date, Time, and Booking Type
      */
-    public function step2($resourceId) {
+    public function step2($spaceId) {
         try {
-            $resource = $this->facilityModel->getById($resourceId);
-            if (!$resource || $resource['status'] !== 'available') {
-                $this->setFlashMessage('danger', 'Resource not available.');
+            // Get space with location info
+            $space = $this->spaceModel->getWithProperty($spaceId);
+            if (!$space || !$space['is_bookable']) {
+                $this->setFlashMessage('danger', 'Space not available for booking.');
                 redirect('booking-wizard/step1');
             }
             
-            $photos = $this->facilityModel->getPhotos($resourceId);
-            $amenities = $this->facilityModel->getAmenities($resourceId);
+            // Get booking config
+            $config = $this->spaceModel->getBookableConfig($spaceId);
+            $bookingTypes = ['hourly', 'daily']; // Default
+            if ($config && !empty($config['booking_types'])) {
+                $bookingTypes = json_decode($config['booking_types'], true) ?: $bookingTypes;
+            }
+            
+            // Get pricing
+            $pricingRules = [];
+            if ($config && !empty($config['pricing_rules'])) {
+                $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+            }
+            
+            // Get facility if synced
+            $facility = null;
+            if (!empty($space['facility_id'])) {
+                $facility = $this->facilityModel->getById($space['facility_id']);
+            }
+            
+            // Merge pricing from facility if available
+            if ($facility) {
+                $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? ($facility['hourly_rate'] ?? 0);
+                $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? ($facility['daily_rate'] ?? 0);
+                $space['security_deposit'] = $pricingRules['deposit'] ?? ($facility['security_deposit'] ?? 0);
+            } else {
+                $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
+                $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+                $space['security_deposit'] = $pricingRules['deposit'] ?? 0;
+            }
+            
+            $photos = $this->spaceModel->getPhotos($spaceId);
+            $amenities = json_decode($space['amenities'] ?? '[]', true) ?: [];
+            
+            // Map location fields for view
+            $location = $this->locationModel->mapFieldsForView([
+                'id' => $space['property_id'],
+                'property_name' => $space['property_name'] ?? '',
+                'property_code' => $space['property_code'] ?? ''
+            ]);
         } catch (Exception $e) {
-            $resource = null;
+            error_log('Booking_wizard step2 error: ' . $e->getMessage());
+            $space = null;
             $photos = [];
             $amenities = [];
+            $bookingTypes = [];
+            $location = null;
         }
 
-        if (!$resource) {
+        if (!$space) {
             redirect('booking-wizard/step1');
         }
 
         $data = [
-            'page_title' => 'Select Date & Time',
-            'resource' => $resource,
+            'page_title' => 'Select Date, Time & Booking Type',
+            'space' => $space,
+            'location' => $location,
+            'facility' => $facility,
             'photos' => $photos,
             'amenities' => $amenities,
+            'booking_types' => $bookingTypes,
             'flash' => $this->getFlashMessage()
         ];
 

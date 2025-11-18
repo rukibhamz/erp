@@ -252,6 +252,7 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['booking-wizard/step4'] = 'Booking_wizard/step4';
         $route['booking-wizard/step5'] = 'Booking_wizard/step5';
         $route['booking-wizard/get-time-slots'] = 'Booking_wizard/getTimeSlots';
+        $route['booking-wizard/getSpacesForLocation'] = 'Booking_wizard/getSpacesForLocation';
         $route['booking-wizard/save-step'] = 'Booking_wizard/saveStep';
         $route['booking-wizard/validate-promo'] = 'Booking_wizard/validatePromoCode';
         $route['booking-wizard/finalize'] = 'Booking_wizard/finalize';

@@ -29,7 +29,33 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="col-lg-8">
                     <div class="card mb-4">
                         <div class="card-body">
-                            <h4 class="card-title mb-4"><?= htmlspecialchars($resource['facility_name'] ?? 'Resource') ?></h4>
+                            <h4 class="card-title mb-4">
+                                <?= htmlspecialchars($space['space_name'] ?? 'Space') ?>
+                                <?php if ($location): ?>
+                                    <small class="text-muted">at <?= htmlspecialchars($location['Location_name'] ?? $location['property_name'] ?? '') ?></small>
+                                <?php endif; ?>
+                            </h4>
+                            
+                            <!-- Booking Type Selection -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Booking Type <span class="text-danger">*</span></label>
+                                <select id="booking_type" class="form-select form-select-lg" required>
+                                    <option value="">Select Booking Type</option>
+                                    <?php 
+                                    $typeLabels = [
+                                        'hourly' => 'Hourly',
+                                        'daily' => 'Daily',
+                                        'half_day' => 'Half Day',
+                                        'weekly' => 'Weekly',
+                                        'multi_day' => 'Multi-Day'
+                                    ];
+                                    foreach ($booking_types ?? [] as $type): ?>
+                                        <option value="<?= htmlspecialchars($type) ?>">
+                                            <?= $typeLabels[$type] ?? ucfirst(str_replace('_', ' ', $type)) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                             
                             <!-- Date Picker -->
                             <div class="mb-4">
@@ -67,17 +93,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <!-- Resource Info Sidebar -->
                     <div class="card sticky-top" style="top: 20px;">
                         <div class="card-body">
-                            <h5 class="card-title">Resource Details</h5>
+                            <h5 class="card-title">Space Details</h5>
                             
                             <?php if (!empty($photos)): ?>
-                                <img src="<?= base_url($photos[0]['photo_path'] ?? '') ?>" class="img-fluid rounded mb-3" alt="Resource Image">
+                                <img src="<?= base_url($photos[0]['photo_path'] ?? '') ?>" class="img-fluid rounded mb-3" alt="Space Image">
                             <?php endif; ?>
                             
-                            <p class="text-muted small"><?= htmlspecialchars($resource['description'] ?? '') ?></p>
+                            <?php if ($location): ?>
+                                <p class="text-muted small mb-2">
+                                    <strong>Location:</strong> <?= htmlspecialchars($location['Location_name'] ?? $location['property_name'] ?? '') ?>
+                                </p>
+                            <?php endif; ?>
+                            
+                            <p class="text-muted small"><?= htmlspecialchars($space['description'] ?? '') ?></p>
                             
                             <div class="mb-3">
-                                <strong>Capacity:</strong> <?= $resource['capacity'] ?? 'N/A' ?> people<br>
-                                <strong>Min Duration:</strong> <?= $resource['minimum_duration'] ?? 1 ?> hour(s)
+                                <strong>Capacity:</strong> <?= $space['capacity'] ?? 'N/A' ?> people<br>
+                                <?php if (!empty($booking_types)): ?>
+                                    <strong>Available Types:</strong> <?= implode(', ', array_map(function($t) { return ucfirst(str_replace('_', ' ', $t)); }, $booking_types)) ?><br>
+                                <?php endif; ?>
                             </div>
                             
                             <?php if (!empty($amenities)): ?>
@@ -90,9 +124,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endif; ?>
                             
                             <div class="mt-3">
-                                <strong>Starting from:</strong><br>
-                                <span class="h4 text-primary"><?= format_currency($resource['hourly_rate'] ?? 0) ?></span>
+                                <strong>Pricing:</strong><br>
+                                <span class="h5 text-primary"><?= format_currency($space['hourly_rate'] ?? 0) ?></span>
                                 <small class="text-muted">/hour</small>
+                                <?php if (!empty($space['daily_rate']) && $space['daily_rate'] > 0): ?>
+                                    <br><small>or <?= format_currency($space['daily_rate']) ?>/day</small>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -123,29 +160,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedTimeSpan = document.getElementById('selected-time');
     const selectedTimeSummary = document.getElementById('selected-time-summary');
     
-    const resourceId = <?= $resource['id'] ?? 0 ?>;
+    const spaceId = <?= $space['id'] ?? 0 ?>;
     let selectedDate = '';
     let selectedStartTime = '';
     let selectedEndTime = '';
+    let selectedBookingType = '';
 
-    // Load time slots when date changes
+    // Load time slots when date or booking type changes
     bookingDate.addEventListener('change', function() {
         const date = this.value;
         if (!date) return;
         
         selectedDate = date;
-        loadTimeSlots(resourceId, date);
+        if (selectedBookingType) {
+            loadTimeSlots(spaceId, date);
+        }
+    });
+    
+    const bookingTypeSelect = document.getElementById('booking_type');
+    bookingTypeSelect.addEventListener('change', function() {
+        selectedBookingType = this.value;
+        if (selectedDate) {
+            loadTimeSlots(spaceId, selectedDate);
+        }
     });
 
-    // Load initial slots
-    if (bookingDate.value) {
-        loadTimeSlots(resourceId, bookingDate.value);
+    // Load initial slots if date and booking type are selected
+    if (bookingDate.value && bookingTypeSelect.value) {
+        selectedBookingType = bookingTypeSelect.value;
+        loadTimeSlots(spaceId, bookingDate.value);
     }
 
-    function loadTimeSlots(resourceId, date) {
+    function loadTimeSlots(spaceId, date) {
+        if (!selectedBookingType) {
+            timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
+            return;
+        }
+        
         timeSlotsContainer.innerHTML = '<div class="col-12"><div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div></div>';
         
-        fetch(`<?= base_url('booking-wizard/get-time-slots') ?>?resource_id=${resourceId}&date=${date}`)
+        fetch(`<?= base_url('booking-wizard/get-time-slots') ?>?space_id=${spaceId}&date=${date}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.slots.length > 0) {
@@ -205,23 +259,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Continue button handler
     continueBtn.addEventListener('click', function() {
+        const bookingType = document.getElementById('booking_type').value;
+        if (!bookingType) {
+            alert('Please select a booking type');
+            return;
+        }
         if (!selectedDate || !selectedStartTime || !selectedEndTime) {
             alert('Please select a date and time slot');
             return;
         }
 
         // Save to session via AJAX
+        
         fetch('<?= base_url('booking-wizard/save-step') ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `step=2&data[resource_id]=${resourceId}&data[date]=${selectedDate}&data[start_time]=${selectedStartTime}&data[end_time]=${selectedEndTime}`
+            body: `step=2&data[space_id]=${spaceId}&data[location_id]=<?= $space['property_id'] ?? 0 ?>&data[booking_type]=${bookingType}&data[date]=${selectedDate}&data[start_time]=${selectedStartTime}&data[end_time]=${selectedEndTime}`
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                window.location.href = `<?= base_url('booking-wizard/step3/') ?>${resourceId}`;
+                window.location.href = `<?= base_url('booking-wizard/step3/') ?>${spaceId}`;
             } else {
                 alert('Error saving data. Please try again.');
             }
