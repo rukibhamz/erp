@@ -198,8 +198,8 @@ class Router {
             $regexPattern = str_replace('\\(:any\\)', '(.+)', $regexPattern);
             $regex = '#^' . $regexPattern . '$#i'; // Added 'i' flag for case-insensitive matching
             
-            // Try matching against both original path and lowercase path
-            if (preg_match($regex, $path, $matches) || preg_match($regex, strtolower($path), $matches)) {
+            // Match against lowercase path (already normalized)
+            if (preg_match($regex, $path, $matches)) {
                 array_shift($matches); // Remove full match
                 
                 $routeParts = explode('/', $route);
@@ -225,6 +225,47 @@ class Router {
         
         // No route match, use direct controller/method parsing
         // Handle underscore controllers (e.g., tax_compliance -> Tax_compliance)
+        // Special handling for booking-wizard routes (MUST be before general parsing)
+        if (count($urlParts) >= 1 && strtolower($urlParts[0]) === 'booking-wizard') {
+            // Map booking-wizard routes to Booking_wizard controller
+            $this->controller = 'Booking_wizard';
+            if (isset($urlParts[1]) && !empty($urlParts[1])) {
+                $method = strtolower($urlParts[1]);
+                // Map step methods
+                if ($method === 'step1') {
+                    $this->method = 'step1';
+                } elseif ($method === 'step2' && isset($urlParts[2])) {
+                    $this->method = 'step2';
+                    $this->params = [intval($urlParts[2])];
+                } elseif ($method === 'step3' && isset($urlParts[2])) {
+                    $this->method = 'step3';
+                    $this->params = [intval($urlParts[2])];
+                } elseif ($method === 'step4') {
+                    $this->method = 'step4';
+                } elseif ($method === 'step5') {
+                    $this->method = 'step5';
+                } elseif ($method === 'get-time-slots') {
+                    $this->method = 'getTimeSlots';
+                } elseif ($method === 'getspacesforlocation') {
+                    $this->method = 'getSpacesForLocation';
+                } elseif ($method === 'save-step') {
+                    $this->method = 'saveStep';
+                } elseif ($method === 'validate-promo') {
+                    $this->method = 'validatePromoCode';
+                } elseif ($method === 'finalize') {
+                    $this->method = 'finalize';
+                } elseif ($method === 'confirmation' && isset($urlParts[2])) {
+                    $this->method = 'confirmation';
+                    $this->params = [intval($urlParts[2])];
+                } else {
+                    $this->method = 'step1'; // Default to step1
+                }
+            } else {
+                $this->method = 'step1';
+            }
+            return;
+        }
+        
         // Special handling for tax/compliance routes (MUST be before general tax parsing)
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'tax' && strtolower($urlParts[1]) === 'compliance') {
             // Handle tax/compliance routes - map to Tax_compliance controller
@@ -262,12 +303,26 @@ class Router {
         $controllerFile = BASEPATH . 'controllers/' . $controllerName . '.php';
         
         if (!file_exists($controllerFile)) {
-            $this->controller = 'Error404';
-            $this->method = 'index';
-            $controllerFile = BASEPATH . 'controllers/Error404.php';
+            // Try to find Error404 controller
+            $error404File = BASEPATH . 'controllers/Error404.php';
+            if (file_exists($error404File)) {
+                require_once $error404File;
+                if (class_exists('Error404')) {
+                    $this->controller = 'Error404';
+                    $this->method = 'index';
+                    $controllerName = 'Error404';
+                    $controllerFile = $error404File;
+                } else {
+                    http_response_code(404);
+                    die("404 - Page not found. Controller '{$this->controller}' not found. Error404 class also not found.");
+                }
+            } else {
+                http_response_code(404);
+                die("404 - Page not found. Controller '{$this->controller}' not found.");
+            }
+        } else {
+            require_once $controllerFile;
         }
-        
-        require_once $controllerFile;
         
         // Try exact match first, then case-insensitive match
         if (!class_exists($controllerName)) {
@@ -281,7 +336,8 @@ class Router {
             }
             
             if (!class_exists($controllerName)) {
-                die("Controller {$this->controller} not found.");
+                http_response_code(404);
+                die("Controller '{$this->controller}' class not found in file.");
             }
         }
         
