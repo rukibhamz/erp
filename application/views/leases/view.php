@@ -9,27 +9,27 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('rent-invoices/generate/' . $lease['id']) ?>" class="btn btn-success" onclick="return confirm('Generate rent invoice for this month?')">
                 <i class="bi bi-receipt"></i> Generate Invoice
             </a>
-            <a href="<?= base_url('leases') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('leases') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
     </div>
 </div>
 
-<!-- Property Management Navigation -->
-<div class="property-nav mb-4">
+<!-- Location Management Navigation -->
+<div class="Location-nav mb-4">
     <nav class="nav nav-pills nav-fill">
-        <a class="nav-link" href="<?= base_url('properties') ?>">
-            <i class="bi bi-building"></i> Properties
+        <a class="nav-link" href="<?= base_url('locations') ?>">
+            <i class="bi bi-building"></i> Locations
         </a>
         <a class="nav-link" href="<?= base_url('spaces') ?>">
             <i class="bi bi-door-open"></i> Spaces
         </a>
-        <a class="nav-link" href="<?= base_url('tenants') ?>">
-            <i class="bi bi-people"></i> Tenants
-        </a>
         <a class="nav-link active" href="<?= base_url('leases') ?>">
             <i class="bi bi-file-earmark-text"></i> Leases
+        </a>
+        <a class="nav-link" href="<?= base_url('tenants') ?>">
+            <i class="bi bi-people"></i> Tenants
         </a>
         <a class="nav-link" href="<?= base_url('rent-invoices') ?>">
             <i class="bi bi-receipt"></i> Rent Invoices
@@ -38,29 +38,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <style>
-.property-nav {
+.Location-nav {
     background: #f8f9fa;
     padding: 1rem;
     border-radius: 0.5rem;
 }
 
-.property-nav .nav-link {
+.Location-nav .nav-link {
     color: #495057;
     border: 1px solid #dee2e6;
 }
 
-.property-nav .nav-link:hover {
+.Location-nav .nav-link:hover {
     background-color: #e9ecef;
     color: #000;
 }
 
-.property-nav .nav-link.active {
+.Location-nav .nav-link.active {
     background-color: #000;
     color: #fff;
     border-color: #000;
 }
 
-.property-nav .nav-link i {
+.Location-nav .nav-link i {
     margin-right: 0.5rem;
 }
 </style>
@@ -74,19 +74,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="row g-3">
     <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Lease Details</h5>
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text"></i> Lease Details</h5>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-4">Lease Number:</dt>
                     <dd class="col-sm-8"><strong><?= htmlspecialchars($lease['lease_number']) ?></strong></dd>
                     
-                    <dt class="col-sm-4">Property:</dt>
+                    <dt class="col-sm-4">Location:</dt>
                     <dd class="col-sm-8">
-                        <a href="<?= base_url('properties/view/' . $lease['property_id']) ?>">
-                            <?= htmlspecialchars($lease['property_name']) ?>
+                        <a href="<?= base_url('locations/view/' . $lease['property_id']) ?>">
+                            <?= htmlspecialchars($lease['Location_name'] ?? $lease['property_name'] ?? 'N/A') ?>
                         </a>
                     </dd>
                     

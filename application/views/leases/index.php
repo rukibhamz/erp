@@ -83,64 +83,72 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <?php if (empty($leases)): ?>
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
-            <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No leases found. Create your first lease to get started.</p>
+            <i class="bi bi-file-earmark-text" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No Leases Found</h5>
+            <p class="text-muted">Create your first lease to get started.</p>
             <a href="<?= base_url('leases/create') ?>" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Create Lease
             </a>
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Lease #</th>
-                            <th>Space</th>
-                            <th>Property</th>
-                            <th>Tenant</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Rent Amount</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($leases as $lease): ?>
-                            <tr>
-                                <td><strong><?= htmlspecialchars($lease['lease_number']) ?></strong></td>
-                                <td><?= htmlspecialchars($lease['space_name']) ?></td>
-                                <td><?= htmlspecialchars($lease['property_name']) ?></td>
-                                <td><?= htmlspecialchars($lease['business_name'] ?? $lease['contact_person']) ?></td>
-                                <td><?= date('M d, Y', strtotime($lease['start_date'])) ?></td>
-                                <td>
-                                    <?= $lease['end_date'] ? date('M d, Y', strtotime($lease['end_date'])) : 'Ongoing' ?>
-                                    <?php if ($lease['end_date'] && strtotime($lease['end_date']) < strtotime('+90 days')): ?>
-                                        <span class="badge bg-warning ms-1">Expiring</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?= format_currency($lease['rent_amount']) ?></td>
-                                <td>
-                                    <span class="badge bg-<?= $lease['status'] === 'active' ? 'success' : 'secondary' ?>">
-                                        <?= ucfirst($lease['status']) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="<?= base_url('leases/view/' . $lease['id']) ?>" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye"></i> View
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+    <div class="row g-4">
+        <?php foreach ($leases as $lease): ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-file-earmark-text"></i> <?= htmlspecialchars($lease['lease_number']) ?></h6>
+                        <span class="badge bg-<?= $lease['status'] === 'active' ? 'success' : 'secondary' ?>">
+                            <?= ucfirst($lease['status']) ?>
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <p class="mb-2">
+                                <strong><i class="bi bi-building"></i> Property:</strong><br>
+                                <small class="text-muted"><?= htmlspecialchars($lease['property_name']) ?></small>
+                            </p>
+                            <p class="mb-2">
+                                <strong><i class="bi bi-door-open"></i> Space:</strong><br>
+                                <small class="text-muted"><?= htmlspecialchars($lease['space_name']) ?></small>
+                            </p>
+                            <p class="mb-2">
+                                <strong><i class="bi bi-people"></i> Tenant:</strong><br>
+                                <small class="text-muted"><?= htmlspecialchars($lease['business_name'] ?? $lease['contact_person']) ?></small>
+                            </p>
+                            <div class="row g-2 mt-2">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Start Date</small>
+                                    <strong><?= date('M d, Y', strtotime($lease['start_date'])) ?></strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">End Date</small>
+                                    <strong>
+                                        <?= $lease['end_date'] ? date('M d, Y', strtotime($lease['end_date'])) : 'Ongoing' ?>
+                                        <?php if ($lease['end_date'] && strtotime($lease['end_date']) < strtotime('+90 days')): ?>
+                                            <span class="badge bg-warning ms-1">Expiring</span>
+                                        <?php endif; ?>
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="border-top pt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted">Monthly Rent:</span>
+                                <strong class="text-primary"><?= format_currency($lease['rent_amount']) ?></strong>
+                            </div>
+                            
+                            <a href="<?= base_url('leases/view/' . $lease['id']) ?>" class="btn btn-primary btn-sm w-100">
+                                <i class="bi bi-eye"></i> View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        <?php endforeach; ?>
     </div>
 <?php endif; ?>
 

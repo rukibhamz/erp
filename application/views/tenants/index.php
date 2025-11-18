@@ -68,66 +68,71 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <?php if (empty($tenants)): ?>
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
-            <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No tenants found. Create your first tenant to get started.</p>
+            <i class="bi bi-people" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No Tenants Found</h5>
+            <p class="text-muted">Create your first tenant to get started.</p>
             <a href="<?= base_url('tenants/create') ?>" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Tenant
             </a>
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Tenant Code</th>
-                            <th>Business Name</th>
-                            <th>Contact Person</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($tenants as $tenant): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($tenant['tenant_code']) ?></td>
-                                <td>
-                                    <a href="<?= base_url('tenants/view/' . $tenant['id']) ?>">
-                                        <?= htmlspecialchars($tenant['business_name'] ?: $tenant['contact_person']) ?>
-                                    </a>
-                                </td>
-                                <td><?= htmlspecialchars($tenant['contact_person']) ?></td>
-                                <td><?= htmlspecialchars($tenant['email']) ?></td>
-                                <td><?= htmlspecialchars($tenant['phone']) ?></td>
-                                <td><?= ucfirst(str_replace('_', ' ', $tenant['tenant_type'])) ?></td>
-                                <td>
-                                    <span class="badge bg-<?= $tenant['status'] === 'active' ? 'success' : 'secondary' ?>">
-                                        <?= ucfirst($tenant['status']) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('tenants/view/' . $tenant['id']) ?>" class="btn btn-primary" title="View">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary" title="Edit">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+    <div class="row g-4">
+        <?php foreach ($tenants as $tenant): ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-people"></i> <?= htmlspecialchars($tenant['business_name'] ?: $tenant['contact_person']) ?></h6>
+                        <span class="badge bg-<?= $tenant['status'] === 'active' ? 'success' : 'secondary' ?>">
+                            <?= ucfirst($tenant['status']) ?>
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-2">
+                                <i class="bi bi-hash"></i> Code: <strong><?= htmlspecialchars($tenant['tenant_code']) ?></strong>
+                            </small>
+                            <p class="mb-1">
+                                <strong><i class="bi bi-person"></i> Contact:</strong><br>
+                                <small class="text-muted"><?= htmlspecialchars($tenant['contact_person']) ?></small>
+                            </p>
+                            <p class="mb-1 text-muted small">
+                                <i class="bi bi-envelope"></i> <?= htmlspecialchars($tenant['email']) ?>
+                            </p>
+                            <p class="mb-1 text-muted small">
+                                <i class="bi bi-telephone"></i> <?= htmlspecialchars($tenant['phone']) ?>
+                            </p>
+                            <?php if ($tenant['city'] || $tenant['state']): ?>
+                                <p class="mb-0 text-muted small">
+                                    <i class="bi bi-geo-alt"></i> 
+                                    <?= htmlspecialchars($tenant['city'] ?? '') ?><?= $tenant['city'] && $tenant['state'] ? ', ' : '' ?><?= htmlspecialchars($tenant['state'] ?? '') ?>
+                                </p>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="badge bg-info"><?= ucfirst(str_replace('_', ' ', $tenant['tenant_type'])) ?></span>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="<?= base_url('tenants/view/' . $tenant['id']) ?>" class="btn btn-primary btn-sm">
+                                <i class="bi bi-eye"></i> View Details
+                            </a>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="<?= base_url('leases/create?tenant_id=' . $tenant['id']) ?>" class="btn btn-primary" title="Create Lease">
+                                    <i class="bi bi-file-earmark-plus"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        <?php endforeach; ?>
     </div>
 <?php endif; ?>
 

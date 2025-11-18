@@ -5,26 +5,26 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Create Lease</h1>
-        <a href="<?= base_url('leases') ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('leases') ?>" class="btn btn-primary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
 </div>
 
-<!-- Property Management Navigation -->
-<div class="property-nav mb-4">
+<!-- Location Management Navigation -->
+<div class="Location-nav mb-4">
     <nav class="nav nav-pills nav-fill">
-        <a class="nav-link" href="<?= base_url('properties') ?>">
-            <i class="bi bi-building"></i> Properties
+        <a class="nav-link" href="<?= base_url('locations') ?>">
+            <i class="bi bi-building"></i> Locations
         </a>
         <a class="nav-link" href="<?= base_url('spaces') ?>">
             <i class="bi bi-door-open"></i> Spaces
         </a>
-        <a class="nav-link" href="<?= base_url('tenants') ?>">
-            <i class="bi bi-people"></i> Tenants
-        </a>
         <a class="nav-link active" href="<?= base_url('leases') ?>">
             <i class="bi bi-file-earmark-text"></i> Leases
+        </a>
+        <a class="nav-link" href="<?= base_url('tenants') ?>">
+            <i class="bi bi-people"></i> Tenants
         </a>
         <a class="nav-link" href="<?= base_url('rent-invoices') ?>">
             <i class="bi bi-receipt"></i> Rent Invoices
@@ -33,29 +33,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <style>
-.property-nav {
+.Location-nav {
     background: #f8f9fa;
     padding: 1rem;
     border-radius: 0.5rem;
 }
 
-.property-nav .nav-link {
+.Location-nav .nav-link {
     color: #495057;
     border: 1px solid #dee2e6;
 }
 
-.property-nav .nav-link:hover {
+.Location-nav .nav-link:hover {
     background-color: #e9ecef;
     color: #000;
 }
 
-.property-nav .nav-link.active {
+.Location-nav .nav-link.active {
     background-color: #000;
     color: #fff;
     border-color: #000;
 }
 
-.property-nav .nav-link i {
+.Location-nav .nav-link i {
     margin-right: 0.5rem;
 }
 </style>
@@ -67,9 +67,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<div class="card">
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0"><i class="bi bi-file-earmark-plus"></i> Lease Information</h5>
+    </div>
     <div class="card-body">
-        <form action="<?= base_url('leases/create') ?>" >
+        <form action="<?= base_url('leases/create') ?>" method="POST">
             <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -170,7 +173,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             
             <div class="mt-4 d-flex justify-content-end gap-2">
-                <a href="<?= base_url('leases') ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('leases') ?>" class="btn btn-primary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle"></i> Create Lease
                 </button>

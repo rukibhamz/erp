@@ -12,7 +12,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
-            <a href="<?= base_url('locations') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('locations') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
@@ -49,9 +49,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="row g-3">
     <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Location Details</h5>
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-building"></i> Location Details</h5>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -99,18 +99,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <dd class="col-sm-8"><?= $Location['year_built'] ?></dd>
                     <?php endif; ?>
                     
-                    <?php if ($Location['Location_value']): ?>
+                    <?php if (!empty($Location['Location_value']) || !empty($Location['property_value'])): ?>
                         <dt class="col-sm-4">Location Value:</dt>
-                        <dd class="col-sm-8"><?= format_currency($Location['Location_value']) ?></dd>
+                        <dd class="col-sm-8"><?= format_currency($Location['Location_value'] ?? $Location['property_value'] ?? 0) ?></dd>
                     <?php endif; ?>
                 </dl>
             </div>
         </div>
         
         <!-- Spaces Section -->
-        <div class="card mt-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Spaces (<?= count($Location['spaces'] ?? []) ?>)</h5>
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-door-open"></i> Spaces (<?= count($Location['spaces'] ?? []) ?>)</h5>
                 <a href="<?= base_url('spaces/create/' . $Location['id']) ?>" class="btn btn-sm btn-primary">
                     <i class="bi bi-plus-circle"></i> Add Space
                 </a>
@@ -163,9 +163,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
     
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Quick Stats</h5>
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-bar-chart"></i> Quick Stats</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">

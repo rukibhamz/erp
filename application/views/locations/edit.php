@@ -67,9 +67,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<div class="card">
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0"><i class="bi bi-pencil-square"></i> Edit Location Information</h5>
+    </div>
     <div class="card-body">
-        <form action="<?= base_url('locations/edit/' . $Location['id']) ?>" >
+        <form action="<?= base_url('locations/edit/' . $Location['id']) ?>" method="POST">
             <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -183,7 +186,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             
             <div class="mt-4 d-flex justify-content-end gap-2">
-                <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-primary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle"></i> Update Location
                 </button>

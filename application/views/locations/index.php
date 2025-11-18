@@ -67,39 +67,39 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 }
 </style>
 
-<div class="row g-3">
-    <?php if (empty($locations)): ?>
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-building" style="font-size: 3rem; color: #ccc;"></i>
-                    <p class="text-muted mt-3">No locations found. Create your first Location to get started.</p>
-                    <a href="<?= base_url('locations/create') ?>" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Location
-                    </a>
-                </div>
-            </div>
+<?php if (empty($locations)): ?>
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-building" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No Locations Found</h5>
+            <p class="text-muted">Create your first location to get started with property management.</p>
+            <a href="<?= base_url('locations/create') ?>" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Location
+            </a>
         </div>
-    <?php else: ?>
+    </div>
+<?php else: ?>
+    <div class="row g-4">
         <?php foreach ($locations as $Location): ?>
             <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-building"></i> <?= htmlspecialchars($Location['Location_name']) ?></h6>
+                        <span class="badge bg-<?= $Location['status'] === 'operational' ? 'success' : ($Location['status'] === 'under_construction' ? 'warning' : 'secondary') ?>">
+                            <?= ucfirst(str_replace('_', ' ', $Location['status'])) ?>
+                        </span>
+                    </div>
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <h5 class="card-title mb-1"><?= htmlspecialchars($Location['Location_name']) ?></h5>
-                                <small class="text-muted"><?= htmlspecialchars($Location['Location_code']) ?></small>
-                            </div>
-                            <span class="badge bg-<?= $Location['status'] === 'operational' ? 'success' : ($Location['status'] === 'under_construction' ? 'warning' : 'secondary') ?>">
-                                <?= ucfirst(str_replace('_', ' ', $Location['status'])) ?>
-                            </span>
-                        </div>
-                        
                         <div class="mb-3">
-                            <p class="mb-1 text-muted small">
-                                <i class="bi bi-geo-alt"></i> 
-                                <?= htmlspecialchars($Location['city'] ?? '') ?>, <?= htmlspecialchars($Location['state'] ?? '') ?>
-                            </p>
+                            <small class="text-muted d-block mb-2">
+                                <i class="bi bi-hash"></i> Code: <strong><?= htmlspecialchars($Location['Location_code']) ?></strong>
+                            </small>
+                            <?php if ($Location['city'] || $Location['state']): ?>
+                                <p class="mb-1 text-muted small">
+                                    <i class="bi bi-geo-alt"></i> 
+                                    <?= htmlspecialchars($Location['city'] ?? '') ?><?= $Location['city'] && $Location['state'] ? ', ' : '' ?><?= htmlspecialchars($Location['state'] ?? '') ?>
+                                </p>
+                            <?php endif; ?>
                             <?php if ($Location['built_area']): ?>
                                 <p class="mb-1 text-muted small">
                                     <i class="bi bi-rulers"></i> 
@@ -114,21 +114,23 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endif; ?>
                         </div>
                         
-                        <div class="d-flex gap-2">
-                            <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-sm btn-primary">
-                                <i class="bi bi-eye"></i> View
+                        <div class="d-grid gap-2">
+                            <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-primary btn-sm">
+                                <i class="bi bi-eye"></i> View Details
                             </a>
-                            <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-sm btn-primary">
-                                <i class="bi bi-pencil"></i> Edit
-                            </a>
-                            <a href="<?= base_url('spaces?Location_id=' . $Location['id']) ?>" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-door-open"></i> Spaces
-                            </a>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="<?= base_url('spaces?property_id=' . $Location['id']) ?>" class="btn btn-primary" title="View Spaces">
+                                    <i class="bi bi-door-open"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         <?php endforeach; ?>
-    <?php endif; ?>
-</div>
+    </div>
+<?php endif; ?>
 

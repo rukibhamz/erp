@@ -73,18 +73,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-6">
-                <label for="property_filter" class="form-label">Filter by Property</label>
+                <label for="property_filter" class="form-label">Filter by Location</label>
                 <select name="property_id" id="property_filter" class="form-select" onchange="this.form.submit()">
-                    <option value="">All Properties</option>
+                    <option value="">All Locations</option>
                     <?php foreach ($properties as $prop): ?>
                         <option value="<?= $prop['id'] ?>" <?= $selected_property_id == $prop['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($prop['property_name']) ?>
+                            <?= htmlspecialchars($prop['Location_name'] ?? $prop['property_name'] ?? 'N/A') ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-6">
-                <a href="<?= base_url('spaces') ?>" class="btn btn-outline-secondary">Clear Filter</a>
+                <a href="<?= base_url('spaces') ?>" class="btn btn-primary">Clear Filter</a>
             </div>
         </form>
     </div>
@@ -92,83 +92,79 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <?php if (empty($spaces)): ?>
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
-            <i class="bi bi-door-open" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No spaces found. Create your first space to get started.</p>
+            <i class="bi bi-door-open" style="font-size: 4rem; color: #dee2e6;"></i>
+            <h5 class="mt-3 text-muted">No Spaces Found</h5>
+            <p class="text-muted">Create your first space to get started.</p>
             <a href="<?= base_url('spaces/create') ?>" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Space
             </a>
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Space #</th>
-                            <th>Space Name</th>
-                            <th>Property</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Mode</th>
-                            <th>Bookable</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($spaces as $space): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($space['space_number'] ?? '-') ?></td>
-                                <td>
-                                    <a href="<?= base_url('spaces/view/' . $space['id']) ?>">
-                                        <?= htmlspecialchars($space['space_name']) ?>
+    <div class="row g-4">
+        <?php foreach ($spaces as $space): ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-door-open"></i> <?= htmlspecialchars($space['space_name']) ?></h6>
+                        <span class="badge bg-<?= $space['operational_status'] === 'active' ? 'success' : 'warning' ?>">
+                            <?= ucfirst(str_replace('_', ' ', $space['operational_status'])) ?>
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block mb-2">
+                                <i class="bi bi-hash"></i> Space #: <strong><?= htmlspecialchars($space['space_number'] ?? 'N/A') ?></strong>
+                            </small>
+                            <p class="mb-1 text-muted small">
+                                <i class="bi bi-building"></i> 
+                                <?= htmlspecialchars($space['Location_name'] ?? $space['property_name'] ?? 'N/A') ?>
+                            </p>
+                            <p class="mb-1 text-muted small">
+                                <i class="bi bi-tag"></i> 
+                                <?= ucfirst(str_replace('_', ' ', $space['category'])) ?>
+                            </p>
+                            <p class="mb-1 text-muted small">
+                                <i class="bi bi-gear"></i> 
+                                Mode: <?= ucfirst(str_replace('_', ' ', $space['operational_mode'])) ?>
+                            </p>
+                            <?php if ($space['area']): ?>
+                                <p class="mb-0 text-muted small">
+                                    <i class="bi bi-rulers"></i> 
+                                    <?= number_format($space['area'], 2) ?> sqm
+                                </p>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <?php if ($space['is_bookable']): ?>
+                                <span class="badge bg-info"><i class="bi bi-calendar-check"></i> Bookable</span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Not Bookable</span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="<?= base_url('spaces/view/' . $space['id']) ?>" class="btn btn-primary btn-sm">
+                                <i class="bi bi-eye"></i> View Details
+                            </a>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="<?= base_url('spaces/edit/' . $space['id']) ?>" class="btn btn-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <?php if ($space['is_bookable']): ?>
+                                    <a href="<?= base_url('spaces/syncToBooking/' . $space['id']) ?>" class="btn btn-primary" title="Sync to Booking">
+                                        <i class="bi bi-arrow-repeat"></i>
                                     </a>
-                                </td>
-                                <td>
-                                    <?php if ($property): ?>
-                                        <?= htmlspecialchars($property['property_name']) ?>
-                                    <?php else: ?>
-                                        <small class="text-muted">N/A</small>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?= ucfirst(str_replace('_', ' ', $space['category'])) ?></td>
-                                <td>
-                                    <span class="badge bg-<?= $space['operational_status'] === 'active' ? 'success' : 'warning' ?>">
-                                        <?= ucfirst(str_replace('_', ' ', $space['operational_status'])) ?>
-                                    </span>
-                                </td>
-                                <td><?= ucfirst(str_replace('_', ' ', $space['operational_mode'])) ?></td>
-                                <td>
-                                    <?php if ($space['is_bookable']): ?>
-                                        <span class="badge bg-info">Yes</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary">No</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('spaces/view/' . $space['id']) ?>" class="btn btn-primary" title="View">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="<?= base_url('spaces/edit/' . $space['id']) ?>" class="btn btn-primary" title="Edit">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <?php if ($space['is_bookable']): ?>
-                                            <a href="<?= base_url('spaces/sync/' . $space['id']) ?>" class="btn btn-outline-info" title="Sync to Booking">
-                                                <i class="bi bi-arrow-repeat"></i>
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        <?php endforeach; ?>
     </div>
 <?php endif; ?>
 

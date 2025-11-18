@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
-            <a href="<?= base_url('tenants') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('tenants') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
@@ -74,9 +74,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="row g-3">
     <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Tenant Details</h5>
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-people"></i> Tenant Details</h5>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -134,9 +134,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
         
         <!-- Leases Section -->
-        <div class="card mt-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Active Leases (<?= count($tenant['leases'] ?? []) ?>)</h5>
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bi bi-file-earmark-text"></i> Active Leases (<?= count($tenant['leases'] ?? []) ?>)</h5>
                 <a href="<?= base_url('leases/create?tenant_id=' . $tenant['id']) ?>" class="btn btn-sm btn-primary">
                     <i class="bi bi-plus-circle"></i> New Lease
                 </a>
@@ -189,9 +189,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
     
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Quick Actions</h5>
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
             </div>
             <div class="card-body">
                 <a href="<?= base_url('leases/create?tenant_id=' . $tenant['id']) ?>" class="btn btn-primary w-100 mb-2">

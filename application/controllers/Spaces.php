@@ -59,6 +59,7 @@ class Spaces extends Base_Controller {
         $this->requirePermission('locations', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $propertyId = intval($_POST['property_id'] ?? 0);
             
             $amenities = [];
@@ -152,6 +153,7 @@ class Spaces extends Base_Controller {
         $this->requirePermission('locations', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $amenities = [];
             if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
                 $amenities = $_POST['amenities'];

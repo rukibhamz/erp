@@ -51,6 +51,7 @@ class Leases extends Base_Controller {
         $this->requirePermission('locations', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $spaceId = intval($_POST['space_id'] ?? 0);
             $tenantId = intval($_POST['tenant_id'] ?? 0);
             

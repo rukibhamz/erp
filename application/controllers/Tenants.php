@@ -34,6 +34,7 @@ class Tenants extends Base_Controller {
         $this->requirePermission('locations', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'tenant_code' => sanitize_input($_POST['tenant_code'] ?? ''),
                 'tenant_type' => sanitize_input($_POST['tenant_type'] ?? 'commercial'),
@@ -134,6 +135,7 @@ class Tenants extends Base_Controller {
         $this->requirePermission('locations', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'tenant_type' => sanitize_input($_POST['tenant_type'] ?? 'commercial'),
                 'business_name' => sanitize_input($_POST['business_name'] ?? ''),
