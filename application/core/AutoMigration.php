@@ -190,6 +190,32 @@ class AutoMigration {
             }
         }
         
+        // ALWAYS check and create space_bookings table if missing (needed for Space bookings)
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
+            $bookingsExists = $stmt->rowCount() > 0;
+            
+            if (!$bookingsExists) {
+                error_log("AutoMigration: Space_bookings table missing, creating it immediately...");
+                $this->createSpaceBookingsTable();
+                // Verify it was created
+                $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
+                if ($stmt->rowCount() > 0) {
+                    error_log("AutoMigration: Space_bookings table created successfully");
+                } else {
+                    error_log("AutoMigration: WARNING - Space_bookings table creation may have failed");
+                }
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR checking/creating space_bookings table: " . $e->getMessage());
+            // Try to create anyway
+            try {
+                $this->createSpaceBookingsTable();
+            } catch (Exception $e2) {
+                error_log("AutoMigration: Failed to create space_bookings table: " . $e2->getMessage());
+            }
+        }
+        
         if ($needsMigration) {
             if (file_exists($migrationFile)) {
                 $this->executeMigration($migrationFile, '000_complete_system_migration.sql');
@@ -380,6 +406,76 @@ class AutoMigration {
             return ($result['max_batch'] ?? 0) + 1;
         } catch (Exception $e) {
             return 1;
+        }
+    }
+    
+    /**
+     * Create space_bookings table if it doesn't exist
+     * This table is used for time-slot based space bookings
+     */
+    private function createSpaceBookingsTable() {
+        try {
+            $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}space_bookings` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `booking_number` varchar(50) NOT NULL UNIQUE,
+                `space_id` int(11) NOT NULL,
+                `tenant_id` int(11) NOT NULL,
+                `booking_date` date NOT NULL,
+                `start_time` time NOT NULL,
+                `end_time` time NOT NULL,
+                `duration_hours` decimal(10,2) DEFAULT 0.00,
+                `number_of_guests` int(11) DEFAULT 0,
+                `booking_type` enum('hourly','daily','multi_day') DEFAULT 'hourly',
+                `base_amount` decimal(15,2) DEFAULT 0.00,
+                `discount_amount` decimal(15,2) DEFAULT 0.00,
+                `tax_amount` decimal(15,2) DEFAULT 0.00,
+                `total_amount` decimal(15,2) DEFAULT 0.00,
+                `paid_amount` decimal(15,2) DEFAULT 0.00,
+                `balance_amount` decimal(15,2) DEFAULT 0.00,
+                `currency` varchar(3) DEFAULT 'NGN',
+                `status` enum('pending','confirmed','cancelled','completed') DEFAULT 'pending',
+                `payment_status` enum('unpaid','partial','paid') DEFAULT 'unpaid',
+                `booking_notes` text DEFAULT NULL,
+                `special_requests` text DEFAULT NULL,
+                `cancellation_reason` text DEFAULT NULL,
+                `confirmed_at` datetime DEFAULT NULL,
+                `cancelled_at` datetime DEFAULT NULL,
+                `completed_at` datetime DEFAULT NULL,
+                `created_by` int(11) DEFAULT NULL,
+                `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `booking_number` (`booking_number`),
+                KEY `space_id` (`space_id`),
+                KEY `tenant_id` (`tenant_id`),
+                KEY `booking_date` (`booking_date`),
+                KEY `status` (`status`),
+                KEY `idx_space_date_time` (`space_id`, `booking_date`, `start_time`, `end_time`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+            
+            $this->pdo->exec($sql);
+            
+            // Verify table was created
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
+            if ($stmt->rowCount() > 0) {
+                error_log("AutoMigration: Space_bookings table created/verified successfully");
+                return true;
+            } else {
+                error_log("AutoMigration: WARNING - Space_bookings table creation SQL executed but table not found");
+                return false;
+            }
+        } catch (PDOException $e) {
+            // Check if error is "table already exists" - that's OK
+            if (stripos($e->getMessage(), 'already exists') !== false || 
+                stripos($e->getMessage(), 'Duplicate') !== false) {
+                error_log("AutoMigration: Space_bookings table already exists (this is OK)");
+                return true;
+            }
+            error_log("AutoMigration: CRITICAL ERROR creating space_bookings table: " . $e->getMessage());
+            throw $e;
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR creating space_bookings table: " . $e->getMessage());
+            throw $e;
         }
     }
     

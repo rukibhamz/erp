@@ -840,6 +840,45 @@ footer .container-fluid {
     color: white !important;
 }
 
+/* Primary (black) backgrounds must have white text */
+.bg-primary {
+    background-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.bg-primary *,
+.bg-primary a,
+.bg-primary h1,
+.bg-primary h2,
+.bg-primary h3,
+.bg-primary h4,
+.bg-primary h5,
+.bg-primary h6 {
+    color: #fff !important;
+}
+
+.card-header.bg-primary {
+    background-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.card-header.bg-primary *,
+.card-header.bg-primary a,
+.card-header.bg-primary h1,
+.card-header.bg-primary h2,
+.card-header.bg-primary h3,
+.card-header.bg-primary h4,
+.card-header.bg-primary h5,
+.card-header.bg-primary h6,
+.card-header.bg-primary .card-title {
+    color: #fff !important;
+}
+
+.card-header.bg-primary a:hover {
+    color: #fff !important;
+    opacity: 0.9;
+}
+
 /* Ensure badge text is readable */
 .badge.bg-dark {
     background: var(--gray-800) !important;

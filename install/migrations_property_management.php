@@ -554,6 +554,49 @@ function runPropertyManagementMigrations($pdo, $prefix = 'erp_') {
             CONSTRAINT `{$prefix}lease_renewal_notices_ibfk_1` FOREIGN KEY (`lease_id`) REFERENCES `{$prefix}leases` (`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // Space Bookings table (for time-slot based bookings)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `{$prefix}space_bookings` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `booking_number` varchar(50) NOT NULL UNIQUE,
+            `space_id` int(11) NOT NULL,
+            `tenant_id` int(11) NOT NULL,
+            `booking_date` date NOT NULL,
+            `start_time` time NOT NULL,
+            `end_time` time NOT NULL,
+            `duration_hours` decimal(10,2) DEFAULT 0.00,
+            `number_of_guests` int(11) DEFAULT 0,
+            `booking_type` enum('hourly','daily','multi_day') DEFAULT 'hourly',
+            `base_amount` decimal(15,2) DEFAULT 0.00,
+            `discount_amount` decimal(15,2) DEFAULT 0.00,
+            `tax_amount` decimal(15,2) DEFAULT 0.00,
+            `total_amount` decimal(15,2) DEFAULT 0.00,
+            `paid_amount` decimal(15,2) DEFAULT 0.00,
+            `balance_amount` decimal(15,2) DEFAULT 0.00,
+            `currency` varchar(3) DEFAULT 'NGN',
+            `status` enum('pending','confirmed','cancelled','completed') DEFAULT 'pending',
+            `payment_status` enum('unpaid','partial','paid') DEFAULT 'unpaid',
+            `booking_notes` text DEFAULT NULL,
+            `special_requests` text DEFAULT NULL,
+            `cancellation_reason` text DEFAULT NULL,
+            `confirmed_at` datetime DEFAULT NULL,
+            `cancelled_at` datetime DEFAULT NULL,
+            `completed_at` datetime DEFAULT NULL,
+            `created_by` int(11) DEFAULT NULL,
+            `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `booking_number` (`booking_number`),
+            KEY `space_id` (`space_id`),
+            KEY `tenant_id` (`tenant_id`),
+            KEY `booking_date` (`booking_date`),
+            KEY `status` (`status`),
+            KEY `idx_space_date_time` (`space_id`, `booking_date`, `start_time`, `end_time`),
+            CONSTRAINT `{$prefix}space_bookings_ibfk_1` FOREIGN KEY (`space_id`) 
+                REFERENCES `{$prefix}spaces` (`id`) ON DELETE RESTRICT,
+            CONSTRAINT `{$prefix}space_bookings_ibfk_2` FOREIGN KEY (`tenant_id`) 
+                REFERENCES `{$prefix}tenants` (`id`) ON DELETE RESTRICT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         echo "Property management tables created successfully.\n";
         return true;
     } catch (PDOException $e) {

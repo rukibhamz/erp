@@ -172,8 +172,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     
     <div class="col-md-4">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Quick Actions</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
             </div>
             <div class="card-body">
                 <?php if ($space['operational_mode'] === 'vacant'): ?>
@@ -183,10 +183,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <?php endif; ?>
                 
                 <?php if ($space['is_bookable']): ?>
-                    <a href="<?= base_url('bookings/create?facility_id=' . $space['facility_id']) ?>" class="btn btn-info w-100 mb-2">
-                        <i class="bi bi-calendar-plus"></i> Create Booking
+                    <a href="<?= base_url('space-bookings/create/' . $space['id']) ?>" class="btn btn-primary w-100 mb-2">
+                        <i class="bi bi-calendar-plus"></i> Book Space
                     </a>
                 <?php endif; ?>
+                <a href="<?= base_url('space-bookings/calendar/' . $space['id']) ?>" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-calendar-month"></i> View Calendar
+                </a>
             </div>
         </div>
     </div>

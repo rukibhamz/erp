@@ -324,6 +324,17 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['rent-invoices/view/(:num)'] = 'Rent_invoices/view/$1';
         $route['rent-invoices/record-payment'] = 'Rent_invoices/recordPayment';
         
+        // Space Bookings (Time-slot based bookings)
+        $route['space-bookings'] = 'Space_bookings/index';
+        $route['space-bookings/create'] = 'Space_bookings/create';
+        $route['space-bookings/create/(:num)'] = 'Space_bookings/create/$1';
+        $route['space-bookings/view/(:num)'] = 'Space_bookings/view/$1';
+        $route['space-bookings/calendar'] = 'Space_bookings/calendar';
+        $route['space-bookings/calendar/(:num)'] = 'Space_bookings/calendar/$1';
+        $route['space-bookings/check-availability'] = 'Space_bookings/checkAvailability';
+        $route['space-bookings/confirm/(:num)'] = 'Space_bookings/confirm/$1';
+        $route['space-bookings/cancel/(:num)'] = 'Space_bookings/cancel/$1';
+        
         // Utilities Management
         $route['utilities'] = 'Utilities/index';
         $route['utilities/meters'] = 'Meters/index';

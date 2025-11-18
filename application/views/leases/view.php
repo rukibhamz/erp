@@ -150,8 +150,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         
         <!-- Invoices Section -->
         <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Rent Invoices</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-receipt"></i> Rent Invoices</h5>
             </div>
             <div class="card-body">
                 <?php if (empty($invoices)): ?>
@@ -213,8 +213,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     
     <div class="col-md-4">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Financial Summary</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-bar-chart"></i> Financial Summary</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">
