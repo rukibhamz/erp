@@ -71,7 +71,7 @@ class Router {
         }
         
         $urlParts = explode('/', $url);
-        $path = $url;
+        $path = strtolower($url); // Normalize path to lowercase for consistent matching
         
         // SPECIAL CASE: Handle tax/compliance routes BEFORE route matching
         // This ensures tax/compliance/* routes are handled correctly
@@ -192,13 +192,14 @@ class Router {
         foreach ($patternRoutes as $pattern => $routeData) {
             $route = $routeData['route'];
             
-            // Convert route pattern to regex
+            // Convert route pattern to regex (case-insensitive for better matching)
             $regexPattern = preg_quote($pattern, '#');
             $regexPattern = str_replace('\\(:num\\)', '([0-9]+)', $regexPattern);
             $regexPattern = str_replace('\\(:any\\)', '(.+)', $regexPattern);
-            $regex = '#^' . $regexPattern . '$#';
+            $regex = '#^' . $regexPattern . '$#i'; // Added 'i' flag for case-insensitive matching
             
-            if (preg_match($regex, $path, $matches)) {
+            // Try matching against both original path and lowercase path
+            if (preg_match($regex, $path, $matches) || preg_match($regex, strtolower($path), $matches)) {
                 array_shift($matches); // Remove full match
                 
                 $routeParts = explode('/', $route);
