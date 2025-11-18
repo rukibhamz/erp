@@ -513,4 +513,81 @@ class Payables extends Base_Controller {
         
         $this->loadView('payables/aging', $data);
     }
+    
+    /**
+     * Delete vendor
+     */
+    public function deleteVendor($id) {
+        $this->requirePermission('payables', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('payables/vendors');
+            return;
+        }
+        
+        check_csrf(); // CSRF Protection
+        
+        $vendor = $this->vendorModel->getById($id);
+        if (!$vendor) {
+            $this->setFlashMessage('danger', 'Vendor not found.');
+            redirect('payables/vendors');
+            return;
+        }
+        
+        // Check if vendor has outstanding bills
+        $outstanding = $this->vendorModel->getTotalOutstanding($id);
+        if ($outstanding > 0) {
+            $this->setFlashMessage('danger', 'Cannot delete vendor with outstanding balance. Please settle all bills first.');
+            redirect('payables/vendors');
+            return;
+        }
+        
+        if ($this->vendorModel->delete($id)) {
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Payables', 'Deleted vendor: ' . $vendor['company_name']);
+            $this->setFlashMessage('success', 'Vendor deleted successfully.');
+        } else {
+            $this->setFlashMessage('danger', 'Failed to delete vendor.');
+        }
+        
+        redirect('payables/vendors');
+    }
+    
+    /**
+     * Delete bill
+     */
+    public function deleteBill($id) {
+        $this->requirePermission('payables', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('payables/bills');
+            return;
+        }
+        
+        check_csrf(); // CSRF Protection
+        
+        $bill = $this->billModel->getById($id);
+        if (!$bill) {
+            $this->setFlashMessage('danger', 'Bill not found.');
+            redirect('payables/bills');
+            return;
+        }
+        
+        // Only allow deletion of draft bills or bills with no payments
+        if ($bill['status'] !== 'draft' && $bill['paid_amount'] > 0) {
+            $this->setFlashMessage('danger', 'Cannot delete bill that has been paid. Please cancel or reverse payments first.');
+            redirect('payables/bills');
+            return;
+        }
+        
+        if ($this->billModel->delete($id)) {
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Payables', 'Deleted bill: ' . $bill['bill_number']);
+            $this->setFlashMessage('success', 'Bill deleted successfully.');
+        } else {
+            $this->setFlashMessage('danger', 'Failed to delete bill.');
+        }
+        
+        redirect('payables/bills');
+    }
 }

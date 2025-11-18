@@ -5,7 +5,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Create Booking</h1>
-        <a href="<?= base_url('bookings') ?>" class="btn btn-secondary">
+        <a href="<?= base_url('bookings') ?>" class="btn btn-primary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
@@ -139,7 +139,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">
-                    <a href="<?= base_url('bookings') ?>" class="btn btn-secondary">Cancel</a>
+                    <a href="<?= base_url('bookings') ?>" class="btn btn-primary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Create Booking</button>
                 </div>
             </form>

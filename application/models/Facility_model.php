@@ -29,20 +29,51 @@ class Facility_model extends Base_Model {
                  ORDER BY f.facility_name"
             );
             
-            // Also get bookable spaces that are synced (have facility_id)
+            // Also get bookable spaces (even if not synced yet - auto-sync on demand)
             $spaces = $this->db->fetchAll(
                 "SELECT s.*, p.property_name as location_name, p.property_code as location_code,
                         f.facility_code, f.facility_name, f.hourly_rate, f.daily_rate,
                         f.capacity as facility_capacity, f.description as facility_description,
+                        bc.pricing_rules, bc.minimum_duration, bc.maximum_duration,
                         'space' as source_type
                  FROM `" . $this->db->getPrefix() . "spaces` s
                  JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                  LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` f ON s.facility_id = f.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "bookable_config` bc ON s.id = bc.space_id
                  WHERE s.is_bookable = 1 
                  AND s.operational_status = 'active'
-                 AND s.facility_id IS NOT NULL
                  ORDER BY p.property_name, s.space_name"
             );
+            
+            // Auto-sync spaces that don't have facility_id yet
+            foreach ($spaces as &$space) {
+                if (empty($space['facility_id'])) {
+                    try {
+                        require_once BASEPATH . 'models/Space_model.php';
+                        $spaceModel = new Space_model($this->db);
+                        $facilityId = $spaceModel->syncToBookingModule($space['id']);
+                        if ($facilityId) {
+                            // Reload space with facility data
+                            $spaceReload = $this->db->fetchOne(
+                                "SELECT s.*, p.property_name as location_name, p.property_code as location_code,
+                                        f.facility_code, f.facility_name, f.hourly_rate, f.daily_rate,
+                                        f.capacity as facility_capacity, f.description as facility_description
+                                 FROM `" . $this->db->getPrefix() . "spaces` s
+                                 JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                                 LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` f ON s.facility_id = f.id
+                                 WHERE s.id = ?",
+                                [$space['id']]
+                            );
+                            if ($spaceReload) {
+                                $space = array_merge($space, $spaceReload);
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log('Facility_model auto-sync error: ' . $e->getMessage());
+                    }
+                }
+            }
+            unset($space);
             
             // Merge and format for booking portal
             $allResources = [];
@@ -67,6 +98,16 @@ class Facility_model extends Base_Model {
             
             // Add spaces (as facilities for booking portal)
             foreach ($spaces as $space) {
+                // Parse pricing rules if available
+                $pricingRules = [];
+                if (!empty($space['pricing_rules'])) {
+                    $pricingRules = json_decode($space['pricing_rules'], true) ?: [];
+                }
+                
+                // Use facility rates if available, otherwise use space rates or defaults
+                $hourlyRate = $space['hourly_rate'] ?? $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? ($space['hourly_rate'] ?? 5000);
+                $dailyRate = $space['daily_rate'] ?? $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? ($hourlyRate * 8);
+                
                 $allResources[] = [
                     'id' => $space['facility_id'] ?? $space['id'],
                     'facility_id' => $space['facility_id'] ?? $space['id'],
@@ -75,8 +116,13 @@ class Facility_model extends Base_Model {
                     'facility_name' => $space['facility_name'] ?? $space['space_name'],
                     'description' => $space['facility_description'] ?? $space['description'] ?? '',
                     'capacity' => $space['facility_capacity'] ?? $space['capacity'] ?? 0,
-                    'hourly_rate' => $space['hourly_rate'] ?? 0,
-                    'daily_rate' => $space['daily_rate'] ?? 0,
+                    'hourly_rate' => floatval($hourlyRate),
+                    'daily_rate' => floatval($dailyRate),
+                    'half_day_rate' => floatval($pricingRules['half_day'] ?? ($hourlyRate * 4)),
+                    'weekly_rate' => floatval($pricingRules['weekly'] ?? ($hourlyRate * 40)),
+                    'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
+                    'minimum_duration' => intval($space['minimum_duration'] ?? 1),
+                    'maximum_duration' => !empty($space['maximum_duration']) ? intval($space['maximum_duration']) : null,
                     'resource_type' => $this->mapSpaceCategoryToResourceType($space['category'] ?? 'other'),
                     'category' => $space['category'] ?? '',
                     'location_name' => $space['location_name'] ?? '',
@@ -176,6 +222,66 @@ class Facility_model extends Base_Model {
         }
     }
     
+    /**
+     * Override getById to handle both facilities and spaces
+     */
+    public function getById($id) {
+        // First try regular facility
+        $facility = parent::getById($id);
+        if ($facility) {
+            return $facility;
+        }
+        
+        // If not found, check if it's a space with this facility_id
+        try {
+            $space = $this->db->fetchOne(
+                "SELECT s.*, f.*, bc.pricing_rules, bc.minimum_duration, bc.maximum_duration,
+                        p.property_name as location_name, p.property_code as location_code
+                 FROM `" . $this->db->getPrefix() . "spaces` s
+                 JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                 LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` f ON s.facility_id = f.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "bookable_config` bc ON s.id = bc.space_id
+                 WHERE (s.facility_id = ? OR f.id = ?)
+                 AND s.is_bookable = 1
+                 AND s.operational_status = 'active'",
+                [$id, $id]
+            );
+            
+            if ($space) {
+                // Format as facility
+                $pricingRules = [];
+                if (!empty($space['pricing_rules'])) {
+                    $pricingRules = json_decode($space['pricing_rules'], true) ?: [];
+                }
+                
+                return [
+                    'id' => $space['facility_id'] ?? $space['id'],
+                    'facility_id' => $space['facility_id'] ?? $space['id'],
+                    'space_id' => $space['id'],
+                    'facility_code' => $space['facility_code'] ?? ($space['space_number'] ?? 'SP-' . $space['id']),
+                    'facility_name' => $space['facility_name'] ?? $space['space_name'],
+                    'description' => $space['facility_description'] ?? $space['description'] ?? '',
+                    'capacity' => $space['facility_capacity'] ?? $space['capacity'] ?? 0,
+                    'hourly_rate' => floatval($space['hourly_rate'] ?? $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 5000),
+                    'daily_rate' => floatval($space['daily_rate'] ?? $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 40000),
+                    'half_day_rate' => floatval($pricingRules['half_day'] ?? 20000),
+                    'weekly_rate' => floatval($pricingRules['weekly'] ?? 200000),
+                    'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
+                    'minimum_duration' => intval($space['minimum_duration'] ?? 1),
+                    'maximum_duration' => !empty($space['maximum_duration']) ? intval($space['maximum_duration']) : null,
+                    'resource_type' => $this->mapSpaceCategoryToResourceType($space['category'] ?? 'other'),
+                    'category' => $space['category'] ?? '',
+                    'status' => 'available',
+                    'source_type' => 'space'
+                ];
+            }
+        } catch (Exception $e) {
+            error_log('Facility_model getById space lookup error: ' . $e->getMessage());
+        }
+        
+        return null;
+    }
+    
     public function checkAvailability($facilityId, $bookingDate, $startTime, $endTime, $excludeBookingId = null) {
         try {
             $sql = "SELECT COUNT(*) as count 
@@ -206,7 +312,9 @@ class Facility_model extends Base_Model {
     
     public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly', $quantity = 1, $isMember = false) {
         try {
+            // getById now handles both facilities and spaces
             $facility = $this->getById($facilityId);
+            
             if (!$facility) {
                 return 0;
             }

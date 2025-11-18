@@ -12,7 +12,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('receivables/invoices/pdf/' . $invoice['id']) ?>" target="_blank" class="btn btn-primary">
                 <i class="bi bi-file-pdf"></i> PDF
             </a>
-            <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-secondary">
+            <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

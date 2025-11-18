@@ -22,11 +22,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <i class="bi bi-envelope"></i> Send Email
                     </a>
                 <?php endif; ?>
-                <a href="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" class="btn btn-outline-secondary">
+                <a href="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" class="btn btn-primary">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-secondary">
+            <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

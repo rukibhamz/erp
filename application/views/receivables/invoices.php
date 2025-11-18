@@ -42,12 +42,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-outline-secondary w-100">
+                <button type="submit" class="btn btn-primary w-100">
                     <i class="bi bi-search"></i> Filter
                 </button>
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-outline-secondary w-100">
+                <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-primary w-100">
                     <i class="bi bi-arrow-clockwise"></i> Reset
                 </a>
             </div>
@@ -121,7 +121,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 <i class="bi bi-eye"></i>
                                             </a>
                                             <?php if (hasPermission('receivables', 'update')): ?>
-                                                <a href="<?= base_url('receivables/invoices/edit/' . intval($invoice['id'])) ?>" class="btn btn-outline-secondary" title="Edit">
+                                                <a href="<?= base_url('receivables/invoices/edit/' . intval($invoice['id'])) ?>" class="btn btn-primary" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                             <?php endif; ?>
