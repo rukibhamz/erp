@@ -282,20 +282,34 @@ class Facility_model extends Base_Model {
         return null;
     }
     
-    public function checkAvailability($facilityId, $bookingDate, $startTime, $endTime, $excludeBookingId = null) {
+    public function checkAvailability($facilityId, $bookingDate, $startTime, $endTime, $excludeBookingId = null, $endDate = null) {
         try {
+            // Use endDate if provided (for multi-day bookings), otherwise use bookingDate
+            $checkEndDate = $endDate ?? $bookingDate;
+            
+            // Add 1-hour buffer: start 1 hour before, end 1 hour after
+            $bufferStart = new DateTime($bookingDate . ' ' . $startTime);
+            $bufferStart->modify('-1 hour');
+            $bufferEnd = new DateTime($checkEndDate . ' ' . $endTime);
+            $bufferEnd->modify('+1 hour');
+            
+            // Get all bookings that overlap with the buffered time range
             $sql = "SELECT COUNT(*) as count 
                     FROM `" . $this->db->getPrefix() . "bookings` 
                     WHERE facility_id = ? 
-                    AND booking_date = ? 
-                    AND status NOT IN ('cancelled', 'refunded')
+                    AND status NOT IN ('cancelled', 'refunded', 'no_show')
                     AND (
-                        (start_time <= ? AND end_time > ?) 
-                        OR (start_time < ? AND end_time >= ?)
-                        OR (start_time >= ? AND end_time <= ?)
+                        (booking_date = ? AND start_time < ? AND end_time > ?)
+                        OR (booking_date = ? AND start_time < ? AND end_time > ?)
+                        OR (booking_date BETWEEN ? AND ?)
                     )";
             
-            $params = [$facilityId, $bookingDate, $startTime, $startTime, $endTime, $endTime, $startTime, $endTime];
+            $params = [
+                $facilityId,
+                $bufferStart->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s'),
+                $bufferEnd->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s'),
+                $bufferStart->format('Y-m-d'), $bufferEnd->format('Y-m-d')
+            ];
             
             if ($excludeBookingId) {
                 $sql .= " AND id != ?";
@@ -303,7 +317,39 @@ class Facility_model extends Base_Model {
             }
             
             $result = $this->db->fetchOne($sql, $params);
-            return ($result['count'] ?? 0) == 0;
+            $hasConflict = ($result['count'] ?? 0) > 0;
+            
+            // Also check recurring bookings
+            if (!$hasConflict) {
+                $bookingModel = $this->loadModel('Booking_model');
+                $currentDate = new DateTime($bookingDate);
+                $finalDate = new DateTime($checkEndDate);
+                
+                while ($currentDate <= $finalDate) {
+                    $recurringBookings = $bookingModel->getRecurringBookingsForDate($facilityId, $currentDate->format('Y-m-d'));
+                    foreach ($recurringBookings as $recurring) {
+                        if ($excludeBookingId && $recurring['id'] == $excludeBookingId) {
+                            continue;
+                        }
+                        $recurringStart = new DateTime($currentDate->format('Y-m-d') . ' ' . $recurring['start_time']);
+                        $recurringEnd = new DateTime($currentDate->format('Y-m-d') . ' ' . $recurring['end_time']);
+                        
+                        // Add buffer to recurring booking
+                        $recurringBufferStart = clone $recurringStart;
+                        $recurringBufferStart->modify('-1 hour');
+                        $recurringBufferEnd = clone $recurringEnd;
+                        $recurringBufferEnd->modify('+1 hour');
+                        
+                        // Check if buffered times overlap
+                        if (!($bufferEnd <= $recurringBufferStart || $bufferStart >= $recurringBufferEnd)) {
+                            return false; // Conflict found
+                        }
+                    }
+                    $currentDate->modify('+1 day');
+                }
+            }
+            
+            return !$hasConflict;
         } catch (Exception $e) {
             error_log('Facility_model checkAvailability error: ' . $e->getMessage());
             return false;

@@ -21,13 +21,18 @@ class Booking_model extends Base_Model {
     
     public function getByDateRange($startDate, $endDate, $facilityId = null) {
         try {
+            // Get bookings that overlap with the date range
+            // This includes bookings that start before endDate and end after startDate
             $sql = "SELECT b.*, f.facility_name, f.facility_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` b
                     JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
-                    WHERE b.booking_date >= ? AND b.booking_date <= ?
-                    AND b.status NOT IN ('cancelled')";
+                    WHERE (
+                        (b.booking_date >= ? AND b.booking_date <= ?)
+                        OR (b.booking_date <= ? AND DATE_ADD(b.booking_date, INTERVAL TIME_TO_SEC(b.end_time) - TIME_TO_SEC(b.start_time) SECOND) >= ?)
+                    )
+                    AND b.status NOT IN ('cancelled', 'refunded', 'no_show')";
             
-            $params = [$startDate, $endDate];
+            $params = [$startDate, $endDate, $startDate, $startDate];
             
             if ($facilityId) {
                 $sql .= " AND b.facility_id = ?";
@@ -40,6 +45,161 @@ class Booking_model extends Base_Model {
         } catch (Exception $e) {
             error_log('Booking_model getByDateRange error: ' . $e->getMessage());
             return [];
+        }
+    }
+    
+    /**
+     * Get recurring bookings that fall on a specific date
+     */
+    public function getRecurringBookingsForDate($facilityId, $date) {
+        try {
+            // Get all recurring bookings for this facility
+            $recurringBookings = $this->db->fetchAll(
+                "SELECT b.*, f.facility_name, f.facility_code 
+                 FROM `" . $this->db->getPrefix() . $this->table . "` b
+                 JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                 WHERE b.facility_id = ?
+                 AND b.is_recurring = 1
+                 AND b.status NOT IN ('cancelled', 'refunded', 'no_show')
+                 AND b.recurring_pattern IS NOT NULL
+                 AND b.booking_date <= ?",
+                [$facilityId, $date]
+            );
+            
+            $matchingBookings = [];
+            $targetDayOfWeek = date('w', strtotime($date));
+            $targetDate = new DateTime($date);
+            
+            foreach ($recurringBookings as $booking) {
+                $bookingDate = new DateTime($booking['booking_date']);
+                $pattern = $booking['recurring_pattern'] ?? 'weekly';
+                
+                // Check if this date matches the recurring pattern
+                $matches = false;
+                
+                if ($pattern === 'weekly') {
+                    // Check if same day of week
+                    $bookingDayOfWeek = date('w', strtotime($booking['booking_date']));
+                    if ($targetDayOfWeek == $bookingDayOfWeek && $targetDate >= $bookingDate) {
+                        // Check if within recurring end date (if set)
+                        $recurringEndDate = !empty($booking['recurring_end_date']) ? new DateTime($booking['recurring_end_date']) : null;
+                        if (!$recurringEndDate || $targetDate <= $recurringEndDate) {
+                            $matches = true;
+                        }
+                    }
+                } elseif ($pattern === 'daily') {
+                    // Every day from booking_date onwards
+                    if ($targetDate >= $bookingDate) {
+                        $recurringEndDate = !empty($booking['recurring_end_date']) ? new DateTime($booking['recurring_end_date']) : null;
+                        if (!$recurringEndDate || $targetDate <= $recurringEndDate) {
+                            $matches = true;
+                        }
+                    }
+                } elseif ($pattern === 'monthly') {
+                    // Same day of month, every month
+                    if ($targetDate >= $bookingDate && 
+                        $targetDate->format('d') == $bookingDate->format('d')) {
+                        $recurringEndDate = !empty($booking['recurring_end_date']) ? new DateTime($booking['recurring_end_date']) : null;
+                        if (!$recurringEndDate || $targetDate <= $recurringEndDate) {
+                            $matches = true;
+                        }
+                    }
+                }
+                
+                if ($matches) {
+                    // Create a booking record for this specific date
+                    $matchingBookings[] = [
+                        'id' => $booking['id'],
+                        'booking_number' => $booking['booking_number'],
+                        'facility_id' => $booking['facility_id'],
+                        'customer_name' => $booking['customer_name'],
+                        'customer_email' => $booking['customer_email'],
+                        'customer_phone' => $booking['customer_phone'],
+                        'booking_date' => $date, // Use target date
+                        'start_time' => $booking['start_time'],
+                        'end_time' => $booking['end_time'],
+                        'status' => $booking['status'],
+                        'is_recurring' => 1,
+                        'recurring_pattern' => $booking['recurring_pattern']
+                    ];
+                }
+            }
+            
+            return $matchingBookings;
+        } catch (Exception $e) {
+            error_log('Booking_model getRecurringBookingsForDate error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Check availability with 1-hour buffer between bookings
+     */
+    public function checkAvailabilityWithBuffer($facilityId, $startDate, $startTime, $endDate, $endTime, $excludeBookingId = null) {
+        try {
+            // Add 1-hour buffer: start 1 hour before, end 1 hour after
+            $bufferStart = new DateTime($startDate . ' ' . $startTime);
+            $bufferStart->modify('-1 hour');
+            $bufferEnd = new DateTime($endDate . ' ' . $endTime);
+            $bufferEnd->modify('+1 hour');
+            
+            // Get all bookings that overlap with the buffered time range
+            $sql = "SELECT COUNT(*) as count 
+                    FROM `" . $this->db->getPrefix() . $this->table . "` 
+                    WHERE facility_id = ? 
+                    AND status NOT IN ('cancelled', 'refunded', 'no_show')
+                    AND (
+                        (booking_date = ? AND start_time < ? AND end_time > ?)
+                        OR (booking_date = ? AND start_time < ? AND end_time > ?)
+                        OR (booking_date BETWEEN ? AND ?)
+                    )";
+            
+            $params = [
+                $facilityId,
+                $bufferStart->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s'),
+                $bufferEnd->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s'),
+                $bufferStart->format('Y-m-d'), $bufferEnd->format('Y-m-d')
+            ];
+            
+            if ($excludeBookingId) {
+                $sql .= " AND id != ?";
+                $params[] = $excludeBookingId;
+            }
+            
+            // Also check recurring bookings
+            $recurringBookings = $this->getRecurringBookingsForDate($facilityId, $startDate);
+            $currentDate = new DateTime($startDate);
+            $finalDate = new DateTime($endDate);
+            
+            while ($currentDate <= $finalDate) {
+                $dayRecurring = $this->getRecurringBookingsForDate($facilityId, $currentDate->format('Y-m-d'));
+                foreach ($dayRecurring as $recurring) {
+                    if ($excludeBookingId && $recurring['id'] == $excludeBookingId) {
+                        continue;
+                    }
+                    $recurringStart = new DateTime($currentDate->format('Y-m-d') . ' ' . $recurring['start_time']);
+                    $recurringEnd = new DateTime($currentDate->format('Y-m-d') . ' ' . $recurring['end_time']);
+                    
+                    // Add buffer to recurring booking
+                    $recurringBufferStart = clone $recurringStart;
+                    $recurringBufferStart->modify('-1 hour');
+                    $recurringBufferEnd = clone $recurringEnd;
+                    $recurringBufferEnd->modify('+1 hour');
+                    
+                    // Check if buffered times overlap
+                    if (!($bufferEnd <= $recurringBufferStart || $bufferStart >= $recurringBufferEnd)) {
+                        $result = $this->db->fetchOne($sql, $params);
+                        return ($result['count'] ?? 0) == 0 ? false : false; // Conflict found
+                    }
+                }
+                $currentDate->modify('+1 day');
+            }
+            
+            $result = $this->db->fetchOne($sql, $params);
+            return ($result['count'] ?? 0) == 0;
+        } catch (Exception $e) {
+            error_log('Booking_model checkAvailabilityWithBuffer error: ' . $e->getMessage());
+            return false;
         }
     }
     
@@ -127,11 +287,15 @@ class Booking_model extends Base_Model {
         }
     }
     
-    public function createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endTime) {
+    public function createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endDate = null, $endTime = null) {
         try {
+            // Handle multi-day bookings: if endDate is provided, use it; otherwise use bookingDate
+            $actualEndDate = $endDate ?? $bookingDate;
+            $actualEndTime = $endTime ?? $startTime; // If endTime not provided, assume same day booking
+            
             // Create time slots for the booking duration
             $start = new DateTime($bookingDate . ' ' . $startTime);
-            $end = new DateTime($bookingDate . ' ' . $endTime);
+            $end = new DateTime($actualEndDate . ' ' . $actualEndTime);
             
             // If booking spans multiple days, create slots for each day
             $current = clone $start;

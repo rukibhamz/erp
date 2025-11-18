@@ -57,21 +57,55 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </select>
                             </div>
                             
-                            <!-- Date Picker -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Select Date</label>
-                                <input type="date" id="booking_date" class="form-control form-control-lg" 
-                                       min="<?= date('Y-m-d') ?>" 
-                                       value="<?= date('Y-m-d') ?>">
+                            <!-- Recurring Booking Option -->
+                            <div class="mb-4" id="recurring-option" style="display: none;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_recurring">
+                                    <label class="form-check-label" for="is_recurring">
+                                        Make this a recurring booking (lease)
+                                    </label>
+                                </div>
+                                <div id="recurring-details" style="display: none;" class="mt-3">
+                                    <label class="form-label">Recurring Pattern</label>
+                                    <select id="recurring_pattern" class="form-select">
+                                        <option value="weekly">Weekly (Same day each week)</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="monthly">Monthly (Same date each month)</option>
+                                    </select>
+                                    <label class="form-label mt-2">End Date (Optional)</label>
+                                    <input type="date" id="recurring_end_date" class="form-control" 
+                                           min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                                    <small class="text-muted">Leave blank for ongoing lease</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Date Pickers -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Start Date <span class="text-danger">*</span></label>
+                                    <input type="date" id="booking_date" class="form-control form-control-lg" 
+                                           min="<?= date('Y-m-d') ?>" 
+                                           value="<?= date('Y-m-d') ?>">
+                                </div>
+                                <div class="col-md-6" id="end-date-container" style="display: none;">
+                                    <label class="form-label fw-bold">End Date <span class="text-danger">*</span></label>
+                                    <input type="date" id="booking_end_date" class="form-control form-control-lg" 
+                                           min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                                </div>
                             </div>
 
                             <!-- Time Slot Selection -->
                             <div class="mb-4">
-                                <label class="form-label fw-bold">Available Time Slots</label>
+                                <label class="form-label fw-bold">Time Slots</label>
+                                <div class="mb-2">
+                                    <span class="badge bg-success me-2">Available</span>
+                                    <span class="badge bg-danger me-2">Occupied</span>
+                                    <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
+                                </div>
                                 <div id="time-slots-container" class="row g-2">
                                     <div class="col-12">
                                         <div class="alert alert-info">
-                                            <i class="bi bi-info-circle"></i> Please select a date to see available time slots
+                                            <i class="bi bi-info-circle"></i> Please select a date and booking type to see available time slots
                                         </div>
                                     </div>
                                 </div>
@@ -79,10 +113,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                             <!-- Selected Time Summary -->
                             <div id="selected-time-summary" class="alert alert-success" style="display: none;">
-                                <h6><i class="bi bi-check-circle"></i> Selected Time Slot</h6>
+                                <h6><i class="bi bi-check-circle"></i> Selected Booking Details</h6>
                                 <p class="mb-0">
-                                    <strong>Date:</strong> <span id="selected-date"></span><br>
-                                    <strong>Time:</strong> <span id="selected-time"></span>
+                                    <strong>Type:</strong> <span id="selected-type"></span><br>
+                                    <strong>Start Date:</strong> <span id="selected-date"></span><br>
+                                    <span id="selected-end-date-container" style="display: none;">
+                                        <strong>End Date:</strong> <span id="selected-end-date"></span><br>
+                                    </span>
+                                    <strong>Time:</strong> <span id="selected-time"></span><br>
+                                    <span id="selected-recurring-container" style="display: none;">
+                                        <strong>Recurring:</strong> <span id="selected-recurring"></span>
+                                    </span>
                                 </p>
                             </div>
                         </div>
@@ -162,26 +203,81 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const spaceId = <?= $space['id'] ?? 0 ?>;
     let selectedDate = '';
+    let selectedEndDate = '';
     let selectedStartTime = '';
     let selectedEndTime = '';
     let selectedBookingType = '';
+    let isRecurring = false;
+    let recurringPattern = '';
+    let recurringEndDate = '';
 
-    // Load time slots when date or booking type changes
+    const bookingTypeSelect = document.getElementById('booking_type');
+    const endDateContainer = document.getElementById('end-date-container');
+    const bookingEndDate = document.getElementById('booking_end_date');
+    const recurringOption = document.getElementById('recurring-option');
+    const isRecurringCheckbox = document.getElementById('is_recurring');
+    const recurringDetails = document.getElementById('recurring-details');
+    const recurringPatternSelect = document.getElementById('recurring_pattern');
+    const recurringEndDateInput = document.getElementById('recurring_end_date');
+
+    // Show/hide end date based on booking type
+    bookingTypeSelect.addEventListener('change', function() {
+        selectedBookingType = this.value;
+        const isMultiDay = this.value === 'multi_day' || this.value === 'weekly';
+        endDateContainer.style.display = isMultiDay ? 'block' : 'none';
+        recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
+        
+        if (selectedDate) {
+            loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
+        }
+    });
+
+    // Handle recurring booking checkbox
+    isRecurringCheckbox.addEventListener('change', function() {
+        isRecurring = this.checked;
+        recurringDetails.style.display = isRecurring ? 'block' : 'none';
+        if (!isRecurring) {
+            recurringPattern = '';
+            recurringEndDate = '';
+        }
+    });
+
+    recurringPatternSelect.addEventListener('change', function() {
+        recurringPattern = this.value;
+    });
+
+    recurringEndDateInput.addEventListener('change', function() {
+        recurringEndDate = this.value;
+    });
+
+    // Load time slots when date changes
     bookingDate.addEventListener('change', function() {
         const date = this.value;
         if (!date) return;
         
         selectedDate = date;
+        if (bookingEndDate.value) {
+            selectedEndDate = bookingEndDate.value;
+        }
+        
         if (selectedBookingType) {
-            loadTimeSlots(spaceId, date);
+            loadTimeSlots(spaceId, date, selectedEndDate || date);
+        }
+        
+        // Update end date minimum
+        if (bookingEndDate) {
+            bookingEndDate.min = date;
+            if (!bookingEndDate.value || bookingEndDate.value < date) {
+                bookingEndDate.value = date;
+                selectedEndDate = date;
+            }
         }
     });
-    
-    const bookingTypeSelect = document.getElementById('booking_type');
-    bookingTypeSelect.addEventListener('change', function() {
-        selectedBookingType = this.value;
-        if (selectedDate) {
-            loadTimeSlots(spaceId, selectedDate);
+
+    bookingEndDate.addEventListener('change', function() {
+        selectedEndDate = this.value;
+        if (selectedBookingType && selectedDate) {
+            loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
         }
     });
 
@@ -191,54 +287,98 @@ document.addEventListener('DOMContentLoaded', function() {
         loadTimeSlots(spaceId, bookingDate.value);
     }
 
-    function loadTimeSlots(spaceId, date) {
+    function loadTimeSlots(spaceId, date, endDate = null) {
         if (!selectedBookingType) {
             timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
             return;
         }
         
+        const checkEndDate = endDate || date;
         timeSlotsContainer.innerHTML = '<div class="col-12"><div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div></div>';
         
-        fetch(`<?= base_url('booking-wizard/get-time-slots') ?>?space_id=${spaceId}&date=${date}`)
+        fetch(`<?= base_url('booking-wizard/get-time-slots') ?>?space_id=${spaceId}&date=${date}&end_date=${checkEndDate}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success && data.slots.length > 0) {
+                if (data.success) {
                     let html = '';
-                    data.slots.forEach(slot => {
-                        html += `
-                            <div class="col-md-6 col-lg-4">
-                                <button type="button" class="btn btn-primary w-100 time-slot-btn" 
-                                        data-start="${slot.start}" 
-                                        data-end="${slot.end}"
-                                        style="min-height: 60px;">
-                                    ${slot.display}
-                                </button>
-                            </div>
-                        `;
-                    });
+                    
+                    // Show available slots
+                    if (data.slots && data.slots.length > 0) {
+                        data.slots.forEach(slot => {
+                            html += `
+                                <div class="col-md-6 col-lg-4">
+                                    <button type="button" class="btn btn-success w-100 time-slot-btn available-slot" 
+                                            data-start="${slot.start}" 
+                                            data-end="${slot.end}"
+                                            data-date="${slot.date}"
+                                            style="min-height: 60px;">
+                                        <small class="d-block">${slot.date === date ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
+                                        ${slot.display}
+                                    </button>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    // Show occupied slots (for reference)
+                    if (data.occupied && data.occupied.length > 0) {
+                        data.occupied.forEach(slot => {
+                            html += `
+                                <div class="col-md-6 col-lg-4">
+                                    <button type="button" class="btn btn-danger w-100 time-slot-btn occupied-slot" 
+                                            disabled
+                                            style="min-height: 60px; opacity: 0.7; cursor: not-allowed;"
+                                            title="Occupied by: ${slot.occupied_by || 'Another booking'}">
+                                        <small class="d-block">${slot.date === date ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
+                                        ${slot.display}
+                                        <br><small><i class="bi bi-lock"></i> Occupied</small>
+                                    </button>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    if (html === '') {
+                        html = '<div class="col-12"><div class="alert alert-warning">No time slots available for the selected date range. Please select another date.</div></div>';
+                    }
+                    
                     timeSlotsContainer.innerHTML = html;
                     
-                    // Add click handlers
-                    document.querySelectorAll('.time-slot-btn').forEach(btn => {
+                    // Add click handlers for available slots only
+                    document.querySelectorAll('.available-slot').forEach(btn => {
                         btn.addEventListener('click', function() {
                             // Remove active class from all buttons
                             document.querySelectorAll('.time-slot-btn').forEach(b => {
                                 b.classList.remove('active');
-                                b.classList.remove('btn-primary');
-                                b.classList.add('btn-primary');
                             });
                             
                             // Add active class to selected
                             this.classList.add('active');
-                            this.classList.remove('btn-primary');
-                            this.classList.add('btn-primary');
                             
                             selectedStartTime = this.dataset.start;
                             selectedEndTime = this.dataset.end;
+                            const slotDate = this.dataset.date || selectedDate;
                             
                             // Update summary
-                            selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString();
+                            document.getElementById('selected-type').textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex].text;
+                            selectedDateSpan.textContent = new Date(slotDate).toLocaleDateString();
                             selectedTimeSpan.textContent = `${selectedStartTime} - ${selectedEndTime}`;
+                            
+                            if (selectedEndDate && selectedEndDate !== selectedDate) {
+                                document.getElementById('selected-end-date').textContent = new Date(selectedEndDate).toLocaleDateString();
+                                document.getElementById('selected-end-date-container').style.display = 'block';
+                            } else {
+                                document.getElementById('selected-end-date-container').style.display = 'none';
+                            }
+                            
+                            if (isRecurring && recurringPattern) {
+                                document.getElementById('selected-recurring').textContent = recurringPatternSelect.options[recurringPatternSelect.selectedIndex].text + 
+                                    (recurringEndDate ? ' until ' + new Date(recurringEndDate).toLocaleDateString() : ' (ongoing)');
+                                document.getElementById('selected-recurring-container').style.display = 'block';
+                            } else {
+                                document.getElementById('selected-recurring-container').style.display = 'none';
+                            }
+                            
                             selectedTimeSummary.style.display = 'block';
                             
                             // Enable continue button
@@ -259,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Continue button handler
     continueBtn.addEventListener('click', function() {
-        const bookingType = document.getElementById('booking_type').value;
+        const bookingType = bookingTypeSelect.value;
         if (!bookingType) {
             alert('Please select a booking type');
             return;
@@ -268,15 +408,45 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select a date and time slot');
             return;
         }
-
-        // Save to session via AJAX
         
+        // Validate end date for multi-day bookings
+        if ((bookingType === 'multi_day' || bookingType === 'weekly') && (!selectedEndDate || selectedEndDate < selectedDate)) {
+            alert('Please select a valid end date');
+            return;
+        }
+        
+        // Validate recurring booking
+        if (isRecurring && !recurringPattern) {
+            alert('Please select a recurring pattern');
+            return;
+        }
+
+        // Build request body
+        const requestData = {
+            step: 2,
+            data: {
+                space_id: spaceId,
+                location_id: <?= $space['property_id'] ?? 0 ?>,
+                booking_type: bookingType,
+                date: selectedDate,
+                end_date: selectedEndDate || selectedDate,
+                start_time: selectedStartTime,
+                end_time: selectedEndTime,
+                is_recurring: isRecurring ? 1 : 0,
+                recurring_pattern: recurringPattern || '',
+                recurring_end_date: recurringEndDate || ''
+            }
+        };
+        
+        // Save to session via AJAX
         fetch('<?= base_url('booking-wizard/save-step') ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `step=2&data[space_id]=${spaceId}&data[location_id]=<?= $space['property_id'] ?? 0 ?>&data[booking_type]=${bookingType}&data[date]=${selectedDate}&data[start_time]=${selectedStartTime}&data[end_time]=${selectedEndTime}`
+            body: Object.keys(requestData.data).map(key => 
+                `data[${key}]=${encodeURIComponent(requestData.data[key])}`
+            ).join('&') + `&step=${requestData.step}`
         })
         .then(response => response.json())
         .then(data => {
