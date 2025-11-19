@@ -40,13 +40,15 @@ class Cash extends Base_Controller {
         try {
             $cashAccounts = $this->cashAccountModel->getActive();
         } catch (Exception $e) {
+            error_log('Cash accounts error: ' . $e->getMessage());
             $cashAccounts = [];
         }
         
         $data = [
             'page_title' => 'Cash Accounts',
             'cash_accounts' => $cashAccounts,
-            'flash' => $this->getFlashMessage()
+            'flash' => $this->getFlashMessage(),
+            'session' => $this->session // Explicitly pass session for role checks
         ];
         
         $this->loadView('cash/accounts', $data);

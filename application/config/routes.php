@@ -155,19 +155,26 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['reports/trial-balance'] = 'Reports/trialBalance';
         $route['reports/general-ledger'] = 'Reports/generalLedger';
 
-        // Payroll
-        $route['payroll'] = 'Payroll/index';
-        $route['payroll/employees'] = 'Payroll/employees';
-        $route['payroll/employees/create'] = 'Payroll/createEmployee';
-        $route['payroll/process'] = 'Payroll/processPayroll';
-        $route['payroll/view/(:num)'] = 'Payroll/view/$1';
-        $route['payroll/post/(:num)'] = 'Payroll/postPayroll/$1';
+        // Staff Management (Payroll and Employees moved here)
+        $route['staff_management'] = 'Staff_management/index';
+        $route['staff_management/employees'] = 'Staff_management/employees';
+        $route['staff_management/employees/create'] = 'Staff_management/createEmployee';
+        $route['staff_management/employees/edit/(:num)'] = 'Staff_management/editEmployee/$1';
+        $route['staff_management/employees/view/(:num)'] = 'Staff_management/viewEmployee/$1';
+        $route['staff_management/payroll'] = 'Staff_management/payroll';
+        $route['staff_management/payroll/process'] = 'Staff_management/processPayroll';
+        $route['staff_management/payroll/view/(:num)'] = 'Staff_management/viewPayroll/$1';
         
-        // Employees (standalone module linked to Payroll)
-        $route['employees'] = 'Employees/index';
-        $route['employees/create'] = 'Employees/create';
-        $route['employees/edit/(:num)'] = 'Employees/edit/$1';
-        $route['employees/view/(:num)'] = 'Employees/view/$1';
+        // Legacy routes for backward compatibility (redirect to staff_management)
+        $route['payroll'] = 'Staff_management/payroll';
+        $route['payroll/employees'] = 'Staff_management/employees';
+        $route['payroll/employees/create'] = 'Staff_management/createEmployee';
+        $route['payroll/process'] = 'Staff_management/processPayroll';
+        $route['payroll/view/(:num)'] = 'Staff_management/viewPayroll/$1';
+        $route['employees'] = 'Staff_management/employees';
+        $route['employees/create'] = 'Staff_management/createEmployee';
+        $route['employees/edit/(:num)'] = 'Staff_management/editEmployee/$1';
+        $route['employees/view/(:num)'] = 'Staff_management/viewEmployee/$1';
 
         // Tax Management
         $route['tax'] = 'Tax/index';

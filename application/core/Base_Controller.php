@@ -108,8 +108,9 @@ class Base_Controller {
             'Estimates' => 'accounting',
             'Templates' => 'accounting',
             'Banking' => 'accounting',
-            'Payroll' => 'accounting',
-            'Employees' => 'accounting', // Employees module linked to payroll/accounting
+            'Staff_management' => 'staff_management',
+            'Payroll' => 'staff_management', // Legacy mapping
+            'Employees' => 'staff_management', // Legacy mapping
             'Bookings' => 'bookings',
             'Facilities' => 'bookings',
             'Resource_management' => 'bookings',
