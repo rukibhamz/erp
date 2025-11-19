@@ -568,12 +568,24 @@ class Receivables extends Base_Controller {
     public function viewInvoice($id) {
         $this->requirePermission('receivables', 'read');
         
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid invoice ID.');
+            redirect('receivables/invoices');
+            return;
+        }
+        
         try {
             $invoice = $this->invoiceModel->getWithCustomer($id);
             if (!$invoice) {
+                error_log("Receivables viewInvoice: Invoice not found for ID: {$id}");
                 $this->setFlashMessage('danger', 'Invoice not found.');
                 redirect('receivables/invoices');
+                return;
             }
+            
+            error_log("Receivables viewInvoice: Successfully loaded invoice ID: {$id}");
             
             $items = $this->invoiceModel->getItems($id);
             

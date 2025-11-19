@@ -207,23 +207,81 @@ class Router {
                 $this->method = $routeParts[1] ?? 'index';
                 
                 // Extract parameters from route string ($1, $2, etc.)
+                // CRITICAL FIX: Properly map route parameters to URL matches
                 $params = [];
+                
+                // First, collect all parameter placeholders from route (e.g., $1, $2)
+                $paramPlaceholders = [];
                 foreach ($routeParts as $part) {
                     if (preg_match('#\$(\d+)#', $part, $paramMatch)) {
-                        $paramIndex = intval($paramMatch[1]) - 1;
-                        if (isset($matches[$paramIndex])) {
-                            $params[] = $matches[$paramIndex];
+                        $paramPlaceholders[] = intval($paramMatch[1]);
+                    }
+                }
+                
+                // Sort placeholders to ensure correct order
+                sort($paramPlaceholders);
+                
+                // Map each placeholder to its corresponding match
+                foreach ($paramPlaceholders as $placeholderIndex) {
+                    $matchIndex = $placeholderIndex - 1; // $1 -> index 0, $2 -> index 1, etc.
+                    if (isset($matches[$matchIndex])) {
+                        // Convert numeric parameters to integers for better type safety
+                        $paramValue = $matches[$matchIndex];
+                        if (preg_match('/^[0-9]+$/', $paramValue)) {
+                            $params[] = intval($paramValue);
+                        } else {
+                            $params[] = $paramValue;
                         }
                     }
                 }
-                // Add any remaining matches
-                $params = array_merge($params, array_slice($matches, count($params)));
+                
+                // If no placeholders found but we have matches, use matches directly
+                if (empty($paramPlaceholders) && !empty($matches)) {
+                    $params = $matches;
+                }
+                
                 $this->params = $params;
+                
+                // Log successful route match for debugging
+                error_log("Router: Matched pattern '{$pattern}' -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                
                 return;
             }
         }
         
         // No route match, use direct controller/method parsing
+        // CRITICAL FIX: Handle multi-segment module URLs (e.g., inventory/items/view/123)
+        // Check if this looks like a module/controller/method/param pattern
+        if (count($urlParts) >= 3) {
+            // Common module prefixes that should be stripped
+            $modulePrefixes = ['inventory', 'receivables', 'payables', 'utilities', 'accounting', 'tax', 'locations', 'bookings'];
+            $firstPart = strtolower($urlParts[0]);
+            
+            // If first part is a known module prefix, treat second part as controller
+            if (in_array($firstPart, $modulePrefixes)) {
+                $controllerPart = $urlParts[1];
+                $methodPart = $urlParts[2] ?? 'index';
+                
+                // Convert controller name (e.g., items -> Items)
+                $parts = explode('_', $controllerPart);
+                $parts = array_map('ucfirst', $parts);
+                $this->controller = implode('_', $parts);
+                $this->method = $methodPart;
+                
+                // Remaining parts are parameters
+                if (count($urlParts) > 3) {
+                    $this->params = array_slice($urlParts, 3);
+                    // Convert numeric parameters to integers
+                    $this->params = array_map(function($param) {
+                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                    }, $this->params);
+                }
+                
+                error_log("Router: Multi-segment URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                return;
+            }
+        }
+        
         // Handle underscore controllers (e.g., tax_compliance -> Tax_compliance)
         // Special handling for booking-wizard routes (MUST be before general parsing)
         if (count($urlParts) >= 1 && strtolower($urlParts[0]) === 'booking-wizard') {
@@ -294,10 +352,20 @@ class Router {
         
         if (count($urlParts) > 2) {
             $this->params = array_slice($urlParts, 2);
+            // Convert numeric parameters to integers for type safety
+            $this->params = array_map(function($param) {
+                return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+            }, $this->params);
         }
+        
+        // Log fallback parsing result
+        error_log("Router: Fallback parsing -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
     }
     
     public function dispatch() {
+        // Log routing information for debugging
+        error_log("Router dispatch: Controller={$this->controller}, Method={$this->method}, Params=" . json_encode($this->params));
+        
         // Handle underscore controllers (e.g., Tax_compliance)
         $controllerName = $this->controller;
         $controllerFile = BASEPATH . 'controllers/' . $controllerName . '.php';
@@ -312,12 +380,15 @@ class Router {
                     $this->method = 'index';
                     $controllerName = 'Error404';
                     $controllerFile = $error404File;
+                    error_log("Router: Controller file not found, using Error404");
                 } else {
                     http_response_code(404);
+                    error_log("Router ERROR: Controller '{$this->controller}' not found and Error404 class not found.");
                     die("404 - Page not found. Controller '{$this->controller}' not found. Error404 class also not found.");
                 }
             } else {
                 http_response_code(404);
+                error_log("Router ERROR: Controller file '{$controllerFile}' not found.");
                 die("404 - Page not found. Controller '{$this->controller}' not found.");
             }
         } else {
@@ -331,24 +402,52 @@ class Router {
             foreach ($classes as $class) {
                 if (strtolower($class) === strtolower($controllerName)) {
                     $controllerName = $class;
+                    error_log("Router: Found controller class via case-insensitive lookup: {$controllerName}");
                     break;
                 }
             }
             
             if (!class_exists($controllerName)) {
                 http_response_code(404);
+                error_log("Router ERROR: Controller class '{$controllerName}' not found in file '{$controllerFile}'");
                 die("Controller '{$this->controller}' class not found in file.");
             }
         }
         
         // Use the actual class name (may have been corrected by case-insensitive lookup)
-        $controller = new $controllerName();
+        try {
+            $controller = new $controllerName();
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Router ERROR: Failed to instantiate controller '{$controllerName}': " . $e->getMessage());
+            die("Error instantiating controller: " . $e->getMessage());
+        }
         
         if (!method_exists($controller, $this->method)) {
+            http_response_code(404);
+            error_log("Router ERROR: Method '{$this->method}' not found in controller '{$controllerName}'. Available methods: " . implode(', ', get_class_methods($controller)));
             die("Method {$this->method} not found in {$controllerName}.");
         }
         
-        call_user_func_array([$controller, $this->method], $this->params);
+        // Log method call details
+        error_log("Router: Calling {$controllerName}::{$this->method}(" . implode(', ', array_map(function($p) {
+            return is_scalar($p) ? var_export($p, true) : gettype($p);
+        }, $this->params)) . ")");
+        
+        // Call the controller method with parameters
+        try {
+            call_user_func_array([$controller, $this->method], $this->params);
+        } catch (TypeError $e) {
+            http_response_code(500);
+            error_log("Router ERROR: Type error calling {$controllerName}::{$this->method}: " . $e->getMessage());
+            error_log("Router ERROR: Expected parameters: " . json_encode($this->params));
+            die("Type error: " . $e->getMessage());
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Router ERROR: Exception calling {$controllerName}::{$this->method}: " . $e->getMessage());
+            error_log("Router ERROR: Stack trace: " . $e->getTraceAsString());
+            die("Error: " . $e->getMessage());
+        }
     }
 }
 
