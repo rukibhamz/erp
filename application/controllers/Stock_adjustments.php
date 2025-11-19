@@ -95,17 +95,11 @@ class Stock_adjustments extends Base_Controller {
         }
         
         try {
-            // Get all active inventory items
-            $items = $this->itemModel->getByType('inventory');
-            // Fallback to all active items if no inventory items found
-            if (empty($items)) {
-                $allItems = $this->itemModel->getAllActive();
-                $items = array_filter($allItems, function($item) {
-                    return ($item['item_type'] ?? '') === 'inventory';
-                });
-            }
+            // Get all active inventory items using unified method
+            $items = $this->itemModel->getInventoryItems();
             $locations = $this->locationModel->getActive();
         } catch (Exception $e) {
+            error_log('Stock_adjustments create error: ' . $e->getMessage());
             $items = [];
             $locations = [];
         }

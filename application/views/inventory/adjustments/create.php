@@ -32,7 +32,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <option value="">Select Item</option>
                         <?php foreach ($items ?? [] as $item): ?>
                             <option value="<?= $item['id'] ?>" <?= ($selected_item_id ?? null) == $item['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($item['item_name']) ?> (<?= htmlspecialchars($item['item_code']) ?>)
+                                <?= htmlspecialchars($item['sku'] ?? '') ?> - <?= htmlspecialchars($item['item_name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

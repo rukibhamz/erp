@@ -117,8 +117,9 @@ class Purchase_orders extends Base_Controller {
         
         try {
             $suppliers = $this->supplierModel->getActive();
-            $items = $this->itemModel->getByType('inventory');
+            $items = $this->itemModel->getInventoryItems();
         } catch (Exception $e) {
+            error_log('Purchase_orders create error: ' . $e->getMessage());
             $suppliers = [];
             $items = [];
         }

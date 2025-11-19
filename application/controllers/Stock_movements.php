@@ -95,15 +95,8 @@ class Stock_movements extends Base_Controller {
         }
         
         try {
-            // Get all active inventory items
-            $items = $this->itemModel->getByType('inventory');
-            // Fallback to all active items if no inventory items found
-            if (empty($items)) {
-                $allItems = $this->itemModel->getAllActive();
-                $items = array_filter($allItems, function($item) {
-                    return ($item['item_type'] ?? '') === 'inventory';
-                });
-            }
+            // Get all active inventory items using unified method
+            $items = $this->itemModel->getInventoryItems();
             $locationsRaw = $this->locationModel->getActive();
             // Map locations for view compatibility
             $locations = [];
@@ -196,9 +189,10 @@ class Stock_movements extends Base_Controller {
         }
         
         try {
-            $items = $this->itemModel->getByType('inventory');
+            $items = $this->itemModel->getInventoryItems();
             $locations = $this->locationModel->getActive();
         } catch (Exception $e) {
+            error_log('Stock_movements issue error: ' . $e->getMessage());
             $items = [];
             $locations = [];
         }
@@ -274,9 +268,10 @@ class Stock_movements extends Base_Controller {
         }
         
         try {
-            $items = $this->itemModel->getByType('inventory');
+            $items = $this->itemModel->getInventoryItems();
             $locations = $this->locationModel->getActive();
         } catch (Exception $e) {
+            error_log('Stock_movements transfer error: ' . $e->getMessage());
             $items = [];
             $locations = [];
         }

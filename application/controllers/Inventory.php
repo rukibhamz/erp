@@ -20,12 +20,14 @@ class Inventory extends Base_Controller {
     
     public function index() {
         try {
-            $totalItems = count($this->itemModel->getByType('inventory'));
+            $inventoryItems = $this->itemModel->getInventoryItems();
+            $totalItems = count($inventoryItems);
             $totalValue = $this->itemModel->getTotalInventoryValue();
             $lowStockItems = $this->itemModel->getLowStock();
             $outOfStockItems = $this->itemModel->getOutOfStock();
             $locations = $this->locationModel->getActive();
         } catch (Exception $e) {
+            error_log('Inventory index error: ' . $e->getMessage());
             $totalItems = 0;
             $totalValue = 0;
             $lowStockItems = [];
