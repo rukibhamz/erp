@@ -206,33 +206,103 @@ class Item_model extends Base_Model {
     }
     
     /**
+     * Get all items - override to ensure no status filtering
+     * @param int|null $limit Optional limit
+     * @param int $offset Offset
+     * @param string|array|null $orderBy Order by clause
+     * @return array
+     */
+    public function getAll($limit = null, $offset = 0, $orderBy = null) {
+        try {
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`";
+            
+            // Add ORDER BY if specified
+            if ($orderBy) {
+                $orderClause = $this->buildOrderByClause($orderBy);
+                if ($orderClause) {
+                    $sql .= " ORDER BY " . $orderClause;
+                } else {
+                    $sql .= " ORDER BY item_name";
+                }
+            } else {
+                $sql .= " ORDER BY item_name";
+            }
+            
+            // Add LIMIT if specified
+            if ($limit !== null) {
+                $limit = intval($limit);
+                $offset = intval($offset);
+                if ($limit > 0 && $offset >= 0) {
+                    $sql .= " LIMIT {$limit} OFFSET {$offset}";
+                }
+            }
+            
+            $items = $this->db->fetchAll($sql);
+            error_log('Item_model getAll returned ' . count($items) . ' items');
+            return $items;
+        } catch (Exception $e) {
+            error_log('Item_model getAll error: ' . $e->getMessage());
+            error_log('Item_model getAll stack trace: ' . $e->getTraceAsString());
+            return [];
+        }
+    }
+    
+    /**
+     * Get item by ID - override to ensure it works regardless of status
+     * @param int $id Item ID
+     * @return array|null
+     */
+    public function getById($id) {
+        try {
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE `id` = ?";
+            $item = $this->db->fetchOne($sql, [$id]);
+            
+            if ($item) {
+                error_log('Item_model getById(' . $id . ') found item: ' . ($item['item_name'] ?? 'N/A'));
+            } else {
+                error_log('Item_model getById(' . $id . ') returned null');
+            }
+            
+            return $item;
+        } catch (Exception $e) {
+            error_log('Item_model getById error: ' . $e->getMessage());
+            error_log('Item_model getById stack trace: ' . $e->getTraceAsString());
+            return null;
+        }
+    }
+    
+    /**
      * Get inventory items - unified method for all inventory-related operations
+     * Now returns ALL items, not just inventory type, to ensure visibility
      * @return array
      */
     public function getInventoryItems() {
         try {
-            // First try getByType
+            // First try getByType('inventory')
             $items = $this->getByType('inventory');
             
-            // If empty, try getAllActive and filter
-            if (empty($items)) {
+            // If empty or very few items, try getAllActive
+            if (empty($items) || count($items) < 5) {
                 $allItems = $this->getAllActive();
-                $items = array_filter($allItems, function($item) {
-                    $itemType = strtolower($item['item_type'] ?? '');
-                    return $itemType === 'inventory' || $itemType === '';
-                });
-                $items = array_values($items); // Re-index array
+                if (!empty($allItems)) {
+                    // Filter to inventory type, but also include items with empty/null item_type
+                    $filtered = array_filter($allItems, function($item) {
+                        $itemType = strtolower($item['item_type'] ?? '');
+                        return $itemType === 'inventory' || $itemType === '' || empty($itemType);
+                    });
+                    if (!empty($filtered)) {
+                        $items = array_values($filtered);
+                    }
+                }
             }
             
-            // If still empty, get all items and filter
+            // If still empty, get ALL items regardless of type or status
             if (empty($items)) {
                 try {
-                    $allItems = $this->db->fetchAll("SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` ORDER BY item_name");
-                    $items = array_filter($allItems, function($item) {
-                        $itemType = strtolower($item['item_type'] ?? '');
-                        return $itemType === 'inventory' || $itemType === '';
-                    });
-                    $items = array_values($items);
+                    $allItems = $this->getAll();
+                    // Don't filter - return all items so they're visible
+                    $items = $allItems;
+                    error_log('Item_model getInventoryItems: Using getAll() fallback, returned ' . count($items) . ' items');
                 } catch (Exception $e) {
                     error_log('Item_model getInventoryItems fallback error: ' . $e->getMessage());
                 }
@@ -242,6 +312,7 @@ class Item_model extends Base_Model {
             return $items;
         } catch (Exception $e) {
             error_log('Item_model getInventoryItems error: ' . $e->getMessage());
+            // Last resort: return empty array
             return [];
         }
     }

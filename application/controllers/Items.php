@@ -30,9 +30,16 @@ class Items extends Base_Controller {
             $allItems = [];
             if ($search) {
                 $allItems = $this->itemModel->search($search);
+                // If search returns empty, try getAll as fallback
+                if (empty($allItems)) {
+                    $allItems = $this->itemModel->getAll();
+                }
             } else {
+                // Use getAll() which returns all items regardless of status
                 $allItems = $this->itemModel->getAll();
             }
+            
+            error_log('Items index: Retrieved ' . count($allItems) . ' items');
             
             // Apply filters
             $items = $allItems;
@@ -166,19 +173,43 @@ class Items extends Base_Controller {
     
     public function view($id) {
         try {
+            $id = intval($id);
+            if (!$id) {
+                $this->setFlashMessage('danger', 'Invalid item ID.');
+                redirect('inventory/items');
+            }
+            
             $item = $this->itemModel->getById($id);
             if (!$item) {
+                error_log('Items view: Item not found for ID: ' . $id);
                 $this->setFlashMessage('danger', 'Item not found.');
                 redirect('inventory/items');
             }
             
+            error_log('Items view: Successfully loaded item ID: ' . $id . ', Name: ' . ($item['item_name'] ?? 'N/A'));
+            
             $item['specifications'] = json_decode($item['specifications'] ?? '{}', true);
             
-            $stockLevels = $this->stockLevelModel->getByItem($id);
-            $transactions = $this->transactionModel->getByItem($id, 20);
+            // Get stock levels - handle errors gracefully
+            try {
+                $stockLevels = $this->stockLevelModel->getByItem($id);
+            } catch (Exception $e) {
+                error_log('Items view: Error loading stock levels: ' . $e->getMessage());
+                $stockLevels = [];
+            }
+            
+            // Get transactions - handle errors gracefully
+            try {
+                $transactions = $this->transactionModel->getByItem($id, 20);
+            } catch (Exception $e) {
+                error_log('Items view: Error loading transactions: ' . $e->getMessage());
+                $transactions = [];
+            }
             
         } catch (Exception $e) {
-            $this->setFlashMessage('danger', 'Error loading item.');
+            error_log('Items view error: ' . $e->getMessage());
+            error_log('Items view stack trace: ' . $e->getTraceAsString());
+            $this->setFlashMessage('danger', 'Error loading item: ' . $e->getMessage());
             redirect('inventory/items');
         }
         
@@ -284,11 +315,20 @@ class Items extends Base_Controller {
         }
         
         try {
+            $id = intval($id);
+            if (!$id) {
+                $this->setFlashMessage('danger', 'Invalid item ID.');
+                redirect('inventory/items');
+            }
+            
             $item = $this->itemModel->getById($id);
             if (!$item) {
+                error_log('Items edit: Item not found for ID: ' . $id);
                 $this->setFlashMessage('danger', 'Item not found.');
                 redirect('inventory/items');
             }
+            
+            error_log('Items edit: Successfully loaded item ID: ' . $id . ', Name: ' . ($item['item_name'] ?? 'N/A'));
             
             $item['specifications'] = json_decode($item['specifications'] ?? '{}', true);
             
@@ -299,7 +339,8 @@ class Items extends Base_Controller {
             
         } catch (Exception $e) {
             error_log('Items edit load error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error loading item.');
+            error_log('Items edit load stack trace: ' . $e->getTraceAsString());
+            $this->setFlashMessage('danger', 'Error loading item: ' . $e->getMessage());
             redirect('inventory/items');
         }
         
