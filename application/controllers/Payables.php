@@ -110,10 +110,29 @@ class Payables extends Base_Controller {
     public function editVendor($id) {
         $this->requirePermission('payables', 'update');
         
-        $vendor = $this->vendorModel->getById($id);
-        if (!$vendor) {
-            $this->setFlashMessage('danger', 'Vendor not found.');
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid vendor ID.');
             redirect('payables/vendors');
+            return;
+        }
+        
+        try {
+            $vendor = $this->vendorModel->getById($id);
+            if (!$vendor) {
+                error_log("Payables editVendor: Vendor not found for ID: {$id}");
+                $this->setFlashMessage('danger', 'Vendor not found.');
+                redirect('payables/vendors');
+                return;
+            }
+            
+            error_log("Payables editVendor: Successfully loaded vendor ID: {$id}");
+        } catch (Exception $e) {
+            error_log('Payables editVendor load error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading vendor.');
+            redirect('payables/vendors');
+            return;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -48,11 +48,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('receivables/customers/edit/' . $customer['id']) ?>" class="btn btn-outline-secondary">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a href="<?= base_url('receivables/invoices?customer_id=' . $customer['id']) ?>" class="btn btn-outline-info" title="View Invoices">
+                                        <?php if (hasPermission('receivables', 'update')): ?>
+                                            <a href="<?= base_url('receivables/customers/edit/' . intval($customer['id'])) ?>" class="btn btn-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="<?= base_url('receivables/invoices?customer_id=' . intval($customer['id'])) ?>" class="btn btn-primary" title="View Invoices">
                                             <i class="bi bi-file-text"></i>
+                                        </a>
+                                        <a href="<?= base_url('receivables/invoices/create?customer_id=' . intval($customer['id'])) ?>" class="btn btn-success" title="Create Invoice">
+                                            <i class="bi bi-plus-circle"></i>
                                         </a>
                                     </div>
                                 </td>

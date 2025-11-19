@@ -113,10 +113,29 @@ class Receivables extends Base_Controller {
     public function editCustomer($id) {
         $this->requirePermission('receivables', 'update');
         
-        $customer = $this->customerModel->getById($id);
-        if (!$customer) {
-            $this->setFlashMessage('danger', 'Customer not found.');
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid customer ID.');
             redirect('receivables/customers');
+            return;
+        }
+        
+        try {
+            $customer = $this->customerModel->getById($id);
+            if (!$customer) {
+                error_log("Receivables editCustomer: Customer not found for ID: {$id}");
+                $this->setFlashMessage('danger', 'Customer not found.');
+                redirect('receivables/customers');
+                return;
+            }
+            
+            error_log("Receivables editCustomer: Successfully loaded customer ID: {$id}");
+        } catch (Exception $e) {
+            error_log('Receivables editCustomer load error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading customer.');
+            redirect('receivables/customers');
+            return;
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -306,6 +306,7 @@ class Cash extends Base_Controller {
         // Validate ID parameter
         $id = intval($id);
         if ($id <= 0) {
+            error_log("Cash editAccount: Invalid account ID: {$id}");
             $this->setFlashMessage('danger', 'Invalid account ID.');
             redirect('cash/accounts');
             return;
@@ -361,13 +362,17 @@ class Cash extends Base_Controller {
         try {
             $cashAccount = $this->cashAccountModel->getById($id);
             if (!$cashAccount) {
+                error_log("Cash editAccount: Cash account not found for ID: {$id}");
                 $this->setFlashMessage('danger', 'Cash account not found.');
                 redirect('cash/accounts');
                 return;
             }
+            
+            error_log("Cash editAccount: Successfully loaded cash account ID: {$id}");
         } catch (Exception $e) {
             error_log('Cash editAccount load error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error loading cash account.');
+            error_log('Cash editAccount stack trace: ' . $e->getTraceAsString());
+            $this->setFlashMessage('danger', 'Error loading cash account: ' . $e->getMessage());
             redirect('cash/accounts');
             return;
         }

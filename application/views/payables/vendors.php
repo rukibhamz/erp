@@ -48,11 +48,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('payables/vendors/edit/' . $vendor['id']) ?>" class="btn btn-outline-secondary">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a href="<?= base_url('payables/bills?vendor_id=' . $vendor['id']) ?>" class="btn btn-outline-info" title="View Bills">
+                                        <?php if (hasPermission('payables', 'update')): ?>
+                                            <a href="<?= base_url('payables/vendors/edit/' . intval($vendor['id'])) ?>" class="btn btn-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="<?= base_url('payables/bills?vendor_id=' . intval($vendor['id'])) ?>" class="btn btn-primary" title="View Bills">
                                             <i class="bi bi-file-text"></i>
+                                        </a>
+                                        <a href="<?= base_url('payables/bills/create?vendor_id=' . intval($vendor['id'])) ?>" class="btn btn-success" title="Create Bill">
+                                            <i class="bi bi-plus-circle"></i>
                                         </a>
                                     </div>
                                 </td>
