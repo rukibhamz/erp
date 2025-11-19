@@ -48,6 +48,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
+                                        <a href="<?= base_url('receivables/customers/view/' . intval($customer['id'])) ?>" class="btn btn-primary" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
                                         <?php if (hasPermission('receivables', 'update')): ?>
                                             <a href="<?= base_url('receivables/customers/edit/' . intval($customer['id'])) ?>" class="btn btn-primary" title="Edit">
                                                 <i class="bi bi-pencil"></i>

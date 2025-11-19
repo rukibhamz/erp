@@ -109,6 +109,7 @@ $route['accounts/delete/(:num)'] = 'Accounts/delete/$1';
 $route['receivables'] = 'Receivables/customers';
 $route['receivables/customers'] = 'Receivables/customers';
 $route['receivables/customers/create'] = 'Receivables/createCustomer';
+$route['receivables/customers/view/(:num)'] = 'Receivables/viewCustomer/$1';
 $route['receivables/customers/edit/(:num)'] = 'Receivables/editCustomer/$1';
 $route['receivables/invoices'] = 'Receivables/invoices';
 $route['receivables/invoices/create'] = 'Receivables/createInvoice';

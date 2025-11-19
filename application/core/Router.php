@@ -193,13 +193,23 @@ class Router {
             $route = $routeData['route'];
             
             // Convert route pattern to regex (case-insensitive for better matching)
-            $regexPattern = preg_quote($pattern, '#');
-            $regexPattern = str_replace('\\(:num\\)', '([0-9]+)', $regexPattern);
-            $regexPattern = str_replace('\\(:any\\)', '(.+)', $regexPattern);
+            // CRITICAL FIX: Properly escape and convert route patterns
+            // First, replace parameter placeholders with regex groups (before escaping)
+            $regexPattern = $pattern;
+            $regexPattern = str_replace('(:num)', '([0-9]+)', $regexPattern);
+            $regexPattern = str_replace('(:any)', '(.+)', $regexPattern);
+            // Now escape remaining special regex characters (but not the groups we just added)
+            $regexPattern = preg_quote($regexPattern, '#');
+            // Unescape the regex groups we added (they need to remain as groups)
+            $regexPattern = str_replace('\\(\[0-9\]\+\)', '([0-9]+)', $regexPattern);
+            $regexPattern = str_replace('\\(\.\+\)', '(.+)', $regexPattern);
+            // Unescape forward slashes (they're safe in our context)
+            $regexPattern = str_replace('\\/', '/', $regexPattern);
             $regex = '#^' . $regexPattern . '$#i'; // Added 'i' flag for case-insensitive matching
             
             // Match against lowercase path (already normalized)
             if (preg_match($regex, $path, $matches)) {
+                error_log("Router: Pattern '{$pattern}' MATCHED path '{$path}' with regex '{$regex}'");
                 array_shift($matches); // Remove full match
                 
                 $routeParts = explode('/', $route);

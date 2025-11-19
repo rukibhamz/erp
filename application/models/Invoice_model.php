@@ -22,6 +22,20 @@ class Invoice_model extends Base_Model {
         return $this->db->fetchOne($sql, [$invoiceId]);
     }
     
+    public function getByCustomer($customerId) {
+        try {
+            $sql = "SELECT i.*, c.company_name, c.currency as customer_currency
+                    FROM `" . $this->db->getPrefix() . $this->table . "` i
+                    JOIN `" . $this->db->getPrefix() . "customers` c ON i.customer_id = c.id
+                    WHERE i.customer_id = ?
+                    ORDER BY i.invoice_date DESC, i.id DESC";
+            return $this->db->fetchAll($sql, [$customerId]);
+        } catch (Exception $e) {
+            error_log('Invoice_model getByCustomer error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
     public function getItems($invoiceId) {
         return $this->db->fetchAll(
             "SELECT * FROM `" . $this->db->getPrefix() . "invoice_items` WHERE invoice_id = ? ORDER BY id",

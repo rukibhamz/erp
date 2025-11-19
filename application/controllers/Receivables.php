@@ -110,6 +110,51 @@ class Receivables extends Base_Controller {
         $this->loadView('receivables/create_customer', $data);
     }
     
+    public function viewCustomer($id) {
+        $this->requirePermission('receivables', 'read');
+        
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid customer ID.');
+            redirect('receivables/customers');
+            return;
+        }
+        
+        try {
+            $customer = $this->customerModel->getById($id);
+            if (!$customer) {
+                error_log("Receivables viewCustomer: Customer not found for ID: {$id}");
+                $this->setFlashMessage('danger', 'Customer not found.');
+                redirect('receivables/customers');
+                return;
+            }
+            
+            error_log("Receivables viewCustomer: Successfully loaded customer ID: {$id}");
+            
+            // Get customer's invoices
+            $invoices = $this->invoiceModel->getByCustomer($id);
+            
+            // Get outstanding balance
+            $outstanding = $this->customerModel->getTotalOutstanding($id);
+            
+            $data = [
+                'page_title' => 'Customer: ' . ($customer['company_name'] ?? 'N/A'),
+                'customer' => $customer,
+                'invoices' => $invoices,
+                'outstanding' => $outstanding,
+                'flash' => $this->getFlashMessage()
+            ];
+            
+            $this->loadView('receivables/view_customer', $data);
+            
+        } catch (Exception $e) {
+            error_log('Receivables viewCustomer error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading customer.');
+            redirect('receivables/customers');
+        }
+    }
+    
     public function editCustomer($id) {
         $this->requirePermission('receivables', 'update');
         
@@ -229,6 +274,9 @@ class Receivables extends Base_Controller {
     public function createInvoice() {
         $this->requirePermission('receivables', 'create');
         
+        // Get customer_id from query string if provided (when creating from customer list)
+        $preselectedCustomerId = intval($_GET['customer_id'] ?? 0);
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // CSRF Protection
             $customerId = intval($_POST['customer_id'] ?? 0);
@@ -325,6 +373,7 @@ class Receivables extends Base_Controller {
             'customers' => $customers,
             'revenue_accounts' => $revenueAccounts,
             'currencies' => get_all_currencies(),
+            'preselected_customer_id' => $preselectedCustomerId,
             'flash' => $this->getFlashMessage()
         ];
         

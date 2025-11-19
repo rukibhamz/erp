@@ -3,7 +3,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
 <div class="page-header">
-    <h1 class="page-title mb-0">Create Invoice</h1>
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Create Invoice</h1>
+        <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
 </div>
 
 <?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
@@ -15,7 +20,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">Invoice Details</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="<?= base_url('receivables/invoices/create') ?><?php echo csrf_field(); ?>" id="invoiceForm">
+                <form method="POST" action="<?= base_url('receivables/invoices/create') ?>" id="invoiceForm">
+                    <?php echo csrf_field(); ?>
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="customer_id" class="form-label">Customer <span class="text-danger">*</span></label>
@@ -23,7 +29,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <option value="">Select Customer</option>
                                 <?php if (!empty($customers)): ?>
                                     <?php foreach ($customers as $customer): ?>
-                                        <option value="<?= $customer['id'] ?>">
+                                        <option value="<?= $customer['id'] ?>" <?= (isset($preselected_customer_id) && $preselected_customer_id == $customer['id']) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($customer['company_name']) ?> (<?= htmlspecialchars($customer['customer_code']) ?>)
                                         </option>
                                     <?php endforeach; ?>
