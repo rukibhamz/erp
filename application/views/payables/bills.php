@@ -116,9 +116,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="<?= base_url('payables/bills/edit/' . $bill['id']) ?>" class="btn btn-outline-secondary" title="View/Edit">
+                                        <a href="<?= base_url('payables/bills/view/' . $bill['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        <?php if (hasPermission('payables', 'update')): ?>
+                                            <a href="<?= base_url('payables/bills/edit/' . $bill['id']) ?>" class="btn btn-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

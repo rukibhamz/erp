@@ -292,5 +292,155 @@ class Cash extends Base_Controller {
         
         $this->loadView('cash/payments', $data);
     }
+    
+    public function editAccount($id) {
+        // Only allow admin and super_admin
+        if (!isset($this->session['role']) || !in_array($this->session['role'], ['admin', 'super_admin'])) {
+            $this->setFlashMessage('danger', 'You do not have permission to edit cash accounts.');
+            redirect('cash/accounts');
+            return;
+        }
+        
+        $this->requirePermission('cash', 'update');
+        
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid account ID.');
+            redirect('cash/accounts');
+            return;
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            
+            try {
+                $cashAccount = $this->cashAccountModel->getById($id);
+                if (!$cashAccount) {
+                    $this->setFlashMessage('danger', 'Cash account not found.');
+                    redirect('cash/accounts');
+                    return;
+                }
+                
+                $accountData = [
+                    'account_name' => sanitize_input($_POST['account_name'] ?? ''),
+                    'account_type' => sanitize_input($_POST['account_type'] ?? 'bank_account'),
+                    'bank_name' => sanitize_input($_POST['bank_name'] ?? ''),
+                    'account_number' => sanitize_input($_POST['account_number'] ?? ''),
+                    'routing_number' => sanitize_input($_POST['routing_number'] ?? ''),
+                    'swift_code' => sanitize_input($_POST['swift_code'] ?? ''),
+                    'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
+                    'status' => sanitize_input($_POST['status'] ?? 'active'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+                
+                // Update cash account
+                if ($this->cashAccountModel->update($id, $accountData)) {
+                    // Also update the linked account if account_id exists
+                    if (!empty($cashAccount['account_id'])) {
+                        $this->accountModel->update($cashAccount['account_id'], [
+                            'account_name' => $accountData['account_name'],
+                            'currency' => $accountData['currency'],
+                            'status' => $accountData['status'],
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                    
+                    $this->activityModel->log($this->session['user_id'], 'update', 'Cash', 'Updated cash account: ' . $accountData['account_name']);
+                    $this->setFlashMessage('success', 'Cash account updated successfully.');
+                    redirect('cash/accounts');
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to update cash account.');
+                }
+            } catch (Exception $e) {
+                error_log('Cash editAccount error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Error updating cash account: ' . $e->getMessage());
+            }
+        }
+        
+        try {
+            $cashAccount = $this->cashAccountModel->getById($id);
+            if (!$cashAccount) {
+                $this->setFlashMessage('danger', 'Cash account not found.');
+                redirect('cash/accounts');
+                return;
+            }
+        } catch (Exception $e) {
+            error_log('Cash editAccount load error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading cash account.');
+            redirect('cash/accounts');
+            return;
+        }
+        
+        $data = [
+            'page_title' => 'Edit Cash Account',
+            'account' => $cashAccount,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('cash/edit_account', $data);
+    }
+    
+    public function deleteAccount($id) {
+        // Only allow admin and super_admin
+        if (!isset($this->session['role']) || !in_array($this->session['role'], ['admin', 'super_admin'])) {
+            $this->setFlashMessage('danger', 'You do not have permission to delete cash accounts.');
+            redirect('cash/accounts');
+            return;
+        }
+        
+        $this->requirePermission('cash', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('cash/accounts');
+            return;
+        }
+        
+        check_csrf();
+        
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid account ID.');
+            redirect('cash/accounts');
+            return;
+        }
+        
+        try {
+            $cashAccount = $this->cashAccountModel->getById($id);
+            if (!$cashAccount) {
+                $this->setFlashMessage('danger', 'Cash account not found.');
+                redirect('cash/accounts');
+                return;
+            }
+            
+            // Check if account has transactions
+            $transactions = $this->transactionModel->getByAccount($cashAccount['account_id'] ?? 0);
+            if (!empty($transactions)) {
+                $this->setFlashMessage('danger', 'Cannot delete cash account with existing transactions. Please deactivate it instead.');
+                redirect('cash/accounts');
+                return;
+            }
+            
+            // Delete cash account
+            if ($this->cashAccountModel->delete($id)) {
+                // Also delete linked account if account_id exists
+                if (!empty($cashAccount['account_id'])) {
+                    $this->accountModel->delete($cashAccount['account_id']);
+                }
+                
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Cash', 'Deleted cash account: ' . $cashAccount['account_name']);
+                $this->setFlashMessage('success', 'Cash account deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete cash account.');
+            }
+        } catch (Exception $e) {
+            error_log('Cash deleteAccount error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting cash account: ' . $e->getMessage());
+        }
+        
+        redirect('cash/accounts');
+    }
 }
 

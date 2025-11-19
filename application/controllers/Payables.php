@@ -304,21 +304,152 @@ class Payables extends Base_Controller {
         $this->loadView('payables/create_bill', $data);
     }
     
+    public function viewBill($id) {
+        $this->requirePermission('payables', 'read');
+        
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid bill ID.');
+            redirect('payables/bills');
+            return;
+        }
+        
+        try {
+            $bill = $this->billModel->getById($id);
+            if (!$bill) {
+                error_log("Payables viewBill: Bill not found for ID: {$id}");
+                $this->setFlashMessage('danger', 'Bill not found.');
+                redirect('payables/bills');
+                return;
+            }
+            
+            error_log("Payables viewBill: Successfully loaded bill ID: {$id}");
+            
+            $items = $this->billModel->getItems($id);
+            $vendor = $this->vendorModel->getById($bill['vendor_id']);
+            $payments = $this->paymentModel->getByBill($id);
+            
+        } catch (Exception $e) {
+            error_log('Payables viewBill error: ' . $e->getMessage());
+            error_log('Payables viewBill stack trace: ' . $e->getTraceAsString());
+            $this->setFlashMessage('danger', 'Error loading bill: ' . $e->getMessage());
+            redirect('payables/bills');
+            return;
+        }
+        
+        $data = [
+            'page_title' => 'Bill: ' . $bill['bill_number'],
+            'bill' => $bill,
+            'items' => $items ?? [],
+            'vendor' => $vendor,
+            'payments' => $payments ?? [],
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('payables/view_bill', $data);
+    }
+    
     public function editBill($id) {
         $this->requirePermission('payables', 'update');
         
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid bill ID.');
+            redirect('payables/bills');
+            return;
+        }
+        
         $bill = $this->billModel->getById($id);
         if (!$bill) {
+            error_log("Payables editBill: Bill not found for ID: {$id}");
             $this->setFlashMessage('danger', 'Bill not found.');
             redirect('payables/bills');
+            return;
+        }
+        
+        // Handle POST request for updating bill
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            
+            try {
+                $billDate = sanitize_input($_POST['bill_date'] ?? $bill['bill_date']);
+                $dueDate = sanitize_input($_POST['due_date'] ?? $bill['due_date']);
+                $taxRate = floatval($_POST['tax_rate'] ?? $bill['tax_rate']);
+                $reference = sanitize_input($_POST['reference'] ?? '');
+                $currency = sanitize_input($_POST['currency'] ?? $bill['currency']);
+                $terms = sanitize_input($_POST['terms'] ?? '');
+                $notes = sanitize_input($_POST['notes'] ?? '');
+                $status = sanitize_input($_POST['status'] ?? $bill['status']);
+                
+                // Calculate totals from items
+                $items = $_POST['items'] ?? [];
+                $subtotal = 0;
+                foreach ($items as $item) {
+                    $quantity = floatval($item['quantity'] ?? 0);
+                    $unitPrice = floatval($item['unit_price'] ?? 0);
+                    $lineTotal = $quantity * $unitPrice;
+                    $subtotal += $lineTotal;
+                }
+                
+                $taxAmount = $subtotal * ($taxRate / 100);
+                $discountAmount = floatval($_POST['discount_amount'] ?? 0);
+                $totalAmount = $subtotal + $taxAmount - $discountAmount;
+                $balanceAmount = $totalAmount - floatval($bill['paid_amount'] ?? 0);
+                
+                $billData = [
+                    'bill_date' => $billDate,
+                    'due_date' => $dueDate,
+                    'reference' => $reference,
+                    'subtotal' => $subtotal,
+                    'tax_rate' => $taxRate,
+                    'tax_amount' => $taxAmount,
+                    'discount_amount' => $discountAmount,
+                    'total_amount' => $totalAmount,
+                    'balance_amount' => $balanceAmount,
+                    'currency' => $currency,
+                    'terms' => $terms,
+                    'notes' => $notes,
+                    'status' => $status,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+                
+                if ($this->billModel->update($id, $billData)) {
+                    // Update bill items
+                    $this->billModel->deleteItems($id);
+                    foreach ($items as $item) {
+                        if (!empty($item['description']) && floatval($item['quantity'] ?? 0) > 0) {
+                            $this->billModel->addItem($id, [
+                                'description' => sanitize_input($item['description']),
+                                'quantity' => floatval($item['quantity']),
+                                'unit_price' => floatval($item['unit_price']),
+                                'line_total' => floatval($item['quantity']) * floatval($item['unit_price'])
+                            ]);
+                        }
+                    }
+                    
+                    $this->activityModel->log($this->session['user_id'], 'update', 'Payables', 'Updated bill: ' . $bill['bill_number']);
+                    $this->setFlashMessage('success', 'Bill updated successfully.');
+                    redirect('payables/bills/view/' . $id);
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to update bill.');
+                }
+            } catch (Exception $e) {
+                error_log('Payables editBill POST error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Error updating bill: ' . $e->getMessage());
+            }
         }
         
         try {
             $items = $this->billModel->getItems($id);
             $vendor = $this->vendorModel->getById($bill['vendor_id']);
+            $expenseAccounts = $this->accountModel->getByType('Expenses');
         } catch (Exception $e) {
+            error_log('Payables editBill load error: ' . $e->getMessage());
             $items = [];
             $vendor = null;
+            $expenseAccounts = [];
         }
         
         $data = [
@@ -326,6 +457,8 @@ class Payables extends Base_Controller {
             'bill' => $bill,
             'items' => $items,
             'vendor' => $vendor,
+            'expense_accounts' => $expenseAccounts,
+            'currencies' => get_all_currencies(),
             'flash' => $this->getFlashMessage()
         ];
         

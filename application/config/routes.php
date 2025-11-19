@@ -97,11 +97,13 @@ $route['accounts/edit/(:num)'] = 'Accounts/edit/$1';
 $route['accounts/delete/(:num)'] = 'Accounts/delete/$1';
 
 // Cash Management
-$route['cash'] = 'Cash/index';
-$route['cash/accounts'] = 'Cash/accounts';
-$route['cash/accounts/create'] = 'Cash/createAccount';
-$route['cash/receipts'] = 'Cash/receipts';
-$route['cash/payments'] = 'Cash/payments';
+        $route['cash'] = 'Cash/index';
+        $route['cash/accounts'] = 'Cash/accounts';
+        $route['cash/accounts/create'] = 'Cash/createAccount';
+        $route['cash/accounts/edit/(:num)'] = 'Cash/editAccount/$1';
+        $route['cash/accounts/delete/(:num)'] = 'Cash/deleteAccount/$1';
+        $route['cash/receipts'] = 'Cash/receipts';
+        $route['cash/payments'] = 'Cash/payments';
 
 // Accounts Receivable
 $route['receivables'] = 'Receivables/customers';
@@ -126,10 +128,11 @@ $route['payables/vendors'] = 'Payables/vendors';
 $route['payables/vendors/create'] = 'Payables/createVendor';
 $route['payables/vendors/edit/(:num)'] = 'Payables/editVendor/$1';
 $route['payables/vendors/delete/(:num)'] = 'Payables/deleteVendor/$1';
-$route['payables/bills'] = 'Payables/bills';
-$route['payables/bills/create'] = 'Payables/createBill';
-$route['payables/bills/edit/(:num)'] = 'Payables/editBill/$1';
-$route['payables/bills/delete/(:num)'] = 'Payables/deleteBill/$1';
+        $route['payables/bills'] = 'Payables/bills';
+        $route['payables/bills/create'] = 'Payables/createBill';
+        $route['payables/bills/view/(:num)'] = 'Payables/viewBill/$1';
+        $route['payables/bills/edit/(:num)'] = 'Payables/editBill/$1';
+        $route['payables/bills/delete/(:num)'] = 'Payables/deleteBill/$1';
 $route['payables/batch-payment'] = 'Payables/batchPayment';
 $route['payables/aging'] = 'Payables/aging';
 

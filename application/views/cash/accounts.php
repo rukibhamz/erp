@@ -61,6 +61,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <a href="<?= base_url('cash/payments?account=' . $account['id']) ?>" class="btn btn-outline-danger" title="Record Payment">
                                             <i class="bi bi-arrow-up-circle"></i>
                                         </a>
+                                        <?php if (isset($session['role']) && in_array($session['role'], ['admin', 'super_admin'])): ?>
+                                            <a href="<?= base_url('cash/accounts/edit/' . $account['id']) ?>" class="btn btn-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form method="POST" action="<?= base_url('cash/accounts/delete/' . $account['id']) ?>" 
+                                                  style="display: inline;" 
+                                                  onsubmit="return confirm('Are you sure you want to delete this cash account? This action cannot be undone.');">
+                                                <?php echo csrf_field(); ?>
+                                                <button type="submit" class="btn btn-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
