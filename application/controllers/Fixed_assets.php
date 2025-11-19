@@ -45,6 +45,7 @@ class Fixed_assets extends Base_Controller {
         $this->requirePermission('inventory', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $assetName = sanitize_input($_POST['asset_name'] ?? '');
             $assetCategory = sanitize_input($_POST['asset_category'] ?? 'equipment');
             $purchaseCost = floatval($_POST['purchase_cost'] ?? 0);
@@ -146,6 +147,7 @@ class Fixed_assets extends Base_Controller {
         $this->requirePermission('inventory', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $assetName = sanitize_input($_POST['asset_name'] ?? '');
             $assetCategory = sanitize_input($_POST['asset_category'] ?? 'equipment');
             $locationId = intval($_POST['location_id'] ?? 0);

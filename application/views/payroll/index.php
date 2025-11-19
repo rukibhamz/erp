@@ -35,7 +35,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
                 <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($selected_period ?? date('Y-m')) ?>" onchange="this.form.submit()">
             </div>
             <div class="col-md-9">
-                <a href="<?= base_url('payroll') ?>" class="btn btn-outline-secondary">
+                <a href="<?= base_url('payroll') ?>" class="btn btn-primary">
                     <i class="bi bi-x-circle"></i> Clear Filter
                 </a>
             </div>

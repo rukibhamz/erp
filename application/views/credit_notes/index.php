@@ -34,7 +34,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-outline-secondary">Filter</button>
-                    <a href="<?= base_url('credit-notes') ?>" class="btn btn-outline-secondary">Clear</a>
+                    <a href="<?= base_url('credit-notes') ?>" class="btn btn-primary">Clear</a>
                 </div>
             </form>
         </div>

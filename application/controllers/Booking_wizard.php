@@ -326,7 +326,7 @@ class Booking_wizard extends Base_Controller {
                 $availabilityRules = json_decode($config['availability_rules'], true) ?: [];
             }
             
-            $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '22:00'];
+            $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '21:00'];
             $startHour = intval(substr($operatingHours['start'], 0, 2));
             $endHour = intval(substr($operatingHours['end'], 0, 2));
             
