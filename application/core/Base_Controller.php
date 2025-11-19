@@ -96,6 +96,7 @@ class Base_Controller {
         $controllerModuleMap = [
             'Accounting' => 'accounting',
             'Accounts' => 'accounting',
+            'Transactions' => 'accounting',
             'Cash' => 'accounting',
             'Receivables' => 'accounting',
             'Payables' => 'accounting',

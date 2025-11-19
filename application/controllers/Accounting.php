@@ -34,7 +34,6 @@ class Accounting extends Base_Controller {
         $overdueInvoices = [];
         $overdueBills = [];
         
-        // Check if tables exist before querying
         try {
             // Get financial KPIs
             $cashBalance = $this->getCashBalance();
@@ -50,7 +49,6 @@ class Accounting extends Base_Controller {
             $overdueBills = $this->getOverdueBills(5);
         } catch (Exception $e) {
             error_log('Accounting Dashboard Error: ' . $e->getMessage());
-            // Use default values
         }
         
         $data = [

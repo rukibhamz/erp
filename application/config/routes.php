@@ -94,7 +94,32 @@ $route['accounting/dashboard'] = 'Accounting/index';
 $route['accounts'] = 'Accounts/index';
 $route['accounts/create'] = 'Accounts/create';
 $route['accounts/edit/(:num)'] = 'Accounts/edit/$1';
+$route['accounts/view/(:num)'] = 'Accounts/view/$1';
 $route['accounts/delete/(:num)'] = 'Accounts/delete/$1';
+
+// Transactions
+$route['transactions'] = 'Transactions/index';
+$route['transactions/create'] = 'Transactions/create';
+$route['transactions/edit/(:num)'] = 'Transactions/edit/$1';
+$route['transactions/view/(:num)'] = 'Transactions/view/$1';
+$route['transactions/delete/(:num)'] = 'Transactions/delete/$1';
+
+// Journal Entries (Ledger)
+$route['ledger'] = 'Ledger/index';
+$route['ledger/create'] = 'Ledger/create';
+$route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
+$route['ledger/view/(:num)'] = 'Ledger/view/$1';
+$route['ledger/approve/(:num)'] = 'Ledger/approve/$1';
+$route['ledger/post/(:num)'] = 'Ledger/post/$1';
+$route['ledger/delete/(:num)'] = 'Ledger/delete/$1';
+
+// Financial Reports
+$route['reports'] = 'Reports/index';
+$route['reports/trial-balance'] = 'Reports/trialBalance';
+$route['reports/general-ledger'] = 'Reports/generalLedger';
+$route['reports/profit-loss'] = 'Reports/profitLoss';
+$route['reports/balance-sheet'] = 'Reports/balanceSheet';
+$route['reports/cash-flow'] = 'Reports/cashFlow';
 
 // Cash Management
         $route['cash'] = 'Cash/index';
