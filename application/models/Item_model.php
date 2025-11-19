@@ -245,5 +245,50 @@ class Item_model extends Base_Model {
             return [];
         }
     }
+    
+    /**
+     * Update item with proper status synchronization
+     * @param int $id Item ID
+     * @param array $data Data to update
+     * @return bool Success status
+     */
+    public function update($id, $data) {
+        try {
+            // Ensure status columns are synchronized
+            if (isset($data['item_status'])) {
+                $itemStatus = $data['item_status'];
+                if ($itemStatus === 'active') {
+                    $data['status'] = 'active';
+                } elseif ($itemStatus === 'discontinued' || $itemStatus === 'out_of_stock') {
+                    $data['status'] = 'inactive';
+                }
+            } elseif (isset($data['status'])) {
+                // If status is set but item_status is not, sync it
+                if ($data['status'] === 'active') {
+                    $data['item_status'] = 'active';
+                } else {
+                    $data['item_status'] = 'discontinued';
+                }
+            }
+            
+            // Always set updated_at
+            $data['updated_at'] = date('Y-m-d H:i:s');
+            
+            // Use parent update method
+            $result = parent::update($id, $data);
+            
+            if ($result) {
+                error_log('Item_model update successful for item ID: ' . $id);
+            } else {
+                error_log('Item_model update returned false for item ID: ' . $id);
+            }
+            
+            return $result;
+        } catch (Exception $e) {
+            error_log('Item_model update error: ' . $e->getMessage());
+            error_log('Item_model update stack trace: ' . $e->getTraceAsString());
+            return false;
+        }
+    }
 }
 

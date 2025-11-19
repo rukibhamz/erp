@@ -7,6 +7,7 @@ class Items extends Base_Controller {
     private $locationModel;
     private $supplierModel;
     private $activityModel;
+    private $transactionModel;
     
     public function __construct() {
         parent::__construct();
@@ -16,6 +17,7 @@ class Items extends Base_Controller {
         $this->locationModel = $this->loadModel('Location_model');
         $this->supplierModel = $this->loadModel('Supplier_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->transactionModel = $this->loadModel('Stock_transaction_model');
     }
     
     public function index() {
@@ -196,52 +198,88 @@ class Items extends Base_Controller {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // CSRF Protection
-            $data = [
-                'sku' => sanitize_input($_POST['sku'] ?? ''),
-                'item_name' => sanitize_input($_POST['item_name'] ?? ''),
-                'description' => sanitize_input($_POST['description'] ?? ''),
-                'item_type' => sanitize_input($_POST['item_type'] ?? 'inventory'),
-                'category' => sanitize_input($_POST['category'] ?? ''),
-                'subcategory' => sanitize_input($_POST['subcategory'] ?? ''),
-                'brand' => sanitize_input($_POST['brand'] ?? ''),
-                'manufacturer' => sanitize_input($_POST['manufacturer'] ?? ''),
-                'model_number' => sanitize_input($_POST['model_number'] ?? ''),
-                'barcode' => sanitize_input($_POST['barcode'] ?? ''),
-                'unit_of_measure' => sanitize_input($_POST['unit_of_measure'] ?? 'each'),
-                'reorder_point' => floatval($_POST['reorder_point'] ?? 0),
-                'reorder_quantity' => floatval($_POST['reorder_quantity'] ?? 0),
-                'safety_stock' => floatval($_POST['safety_stock'] ?? 0),
-                'max_stock' => !empty($_POST['max_stock']) ? floatval($_POST['max_stock']) : null,
-                'lead_time_days' => intval($_POST['lead_time_days'] ?? 0),
-                'item_status' => sanitize_input($_POST['item_status'] ?? 'active'),
-                'cost_price' => floatval($_POST['cost_price'] ?? 0),
-                'selling_price' => floatval($_POST['selling_price'] ?? 0),
-                'retail_price' => floatval($_POST['retail_price'] ?? 0),
-                'wholesale_price' => floatval($_POST['wholesale_price'] ?? 0),
-                'costing_method' => sanitize_input($_POST['costing_method'] ?? 'weighted_average'),
-                'track_serial' => !empty($_POST['track_serial']) ? 1 : 0,
-                'track_batch' => !empty($_POST['track_batch']) ? 1 : 0,
-                'expiry_tracking' => !empty($_POST['expiry_tracking']) ? 1 : 0,
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
             
-            // Handle specifications JSON
-            if (!empty($_POST['specifications'])) {
-                $specs = [];
-                foreach ($_POST['specifications'] as $key => $value) {
-                    if (!empty($value)) {
-                        $specs[$key] = sanitize_input($value);
-                    }
+            try {
+                // Get current item data for comparison
+                $currentItem = $this->itemModel->getById($id);
+                if (!$currentItem) {
+                    $this->setFlashMessage('danger', 'Item not found.');
+                    redirect('inventory/items');
                 }
-                $data['specifications'] = json_encode($specs);
-            }
-            
-            if ($this->itemModel->update($id, $data)) {
-                $this->activityModel->log($this->session['user_id'], 'update', 'Items', 'Updated item: ' . $id);
-                $this->setFlashMessage('success', 'Item updated successfully.');
-                redirect('inventory/items/view/' . $id);
-            } else {
-                $this->setFlashMessage('danger', 'Failed to update item.');
+                
+                $data = [
+                    'item_name' => sanitize_input($_POST['item_name'] ?? ''),
+                    'description' => sanitize_input($_POST['description'] ?? ''),
+                    'item_type' => sanitize_input($_POST['item_type'] ?? 'inventory'),
+                    'category' => sanitize_input($_POST['category'] ?? ''),
+                    'subcategory' => sanitize_input($_POST['subcategory'] ?? ''),
+                    'brand' => sanitize_input($_POST['brand'] ?? ''),
+                    'manufacturer' => sanitize_input($_POST['manufacturer'] ?? ''),
+                    'model_number' => sanitize_input($_POST['model_number'] ?? ''),
+                    'barcode' => sanitize_input($_POST['barcode'] ?? ''),
+                    'unit_of_measure' => sanitize_input($_POST['unit_of_measure'] ?? 'each'),
+                    'reorder_point' => floatval($_POST['reorder_point'] ?? 0),
+                    'reorder_quantity' => floatval($_POST['reorder_quantity'] ?? 0),
+                    'safety_stock' => floatval($_POST['safety_stock'] ?? 0),
+                    'max_stock' => !empty($_POST['max_stock']) ? floatval($_POST['max_stock']) : null,
+                    'lead_time_days' => intval($_POST['lead_time_days'] ?? 0),
+                    'item_status' => sanitize_input($_POST['item_status'] ?? 'active'),
+                    'cost_price' => floatval($_POST['cost_price'] ?? 0),
+                    'selling_price' => floatval($_POST['selling_price'] ?? 0),
+                    'retail_price' => floatval($_POST['retail_price'] ?? 0),
+                    'wholesale_price' => floatval($_POST['wholesale_price'] ?? 0),
+                    'costing_method' => sanitize_input($_POST['costing_method'] ?? 'weighted_average'),
+                    'track_serial' => !empty($_POST['track_serial']) ? 1 : 0,
+                    'track_batch' => !empty($_POST['track_batch']) ? 1 : 0,
+                    'expiry_tracking' => !empty($_POST['expiry_tracking']) ? 1 : 0,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+                
+                // Sync status column with item_status
+                $itemStatus = $data['item_status'];
+                if ($itemStatus === 'active') {
+                    $data['status'] = 'active';
+                } elseif ($itemStatus === 'discontinued' || $itemStatus === 'out_of_stock') {
+                    $data['status'] = 'inactive';
+                }
+                
+                // Handle specifications JSON
+                if (!empty($_POST['specifications'])) {
+                    $specs = [];
+                    foreach ($_POST['specifications'] as $key => $value) {
+                        if (!empty($value)) {
+                            $specs[$key] = sanitize_input($value);
+                        }
+                    }
+                    $data['specifications'] = json_encode($specs);
+                }
+                
+                // Update item using model's update method
+                $updated = $this->itemModel->update($id, $data);
+                
+                if ($updated) {
+                    // Sync with stock levels if reorder_point changed
+                    if ($currentItem['reorder_point'] != $data['reorder_point']) {
+                        $this->syncStockLevelsReorderPoint($id, $data['reorder_point']);
+                    }
+                    
+                    // Log activity
+                    $this->activityModel->log(
+                        $this->session['user_id'], 
+                        'update', 
+                        'Items', 
+                        'Updated item: ' . $currentItem['item_name'] . ' (ID: ' . $id . ')'
+                    );
+                    
+                    $this->setFlashMessage('success', 'Item updated successfully.');
+                    redirect('inventory/items/view/' . $id);
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to update item. Please try again.');
+                }
+            } catch (Exception $e) {
+                error_log('Items edit error: ' . $e->getMessage());
+                error_log('Items edit stack trace: ' . $e->getTraceAsString());
+                $this->setFlashMessage('danger', 'Error updating item: ' . $e->getMessage());
             }
         }
         
@@ -254,7 +292,13 @@ class Items extends Base_Controller {
             
             $item['specifications'] = json_decode($item['specifications'] ?? '{}', true);
             
+            // Ensure status columns are consistent
+            if (empty($item['status']) && !empty($item['item_status'])) {
+                $item['status'] = ($item['item_status'] === 'active') ? 'active' : 'inactive';
+            }
+            
         } catch (Exception $e) {
+            error_log('Items edit load error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error loading item.');
             redirect('inventory/items');
         }
@@ -266,6 +310,22 @@ class Items extends Base_Controller {
         ];
         
         $this->loadView('inventory/items/edit', $data);
+    }
+    
+    /**
+     * Sync reorder point across all stock levels for an item
+     */
+    private function syncStockLevelsReorderPoint($itemId, $reorderPoint) {
+        try {
+            $stockLevels = $this->stockLevelModel->getByItem($itemId);
+            foreach ($stockLevels as $stockLevel) {
+                $this->stockLevelModel->update($stockLevel['id'], [
+                    'reorder_point' => $reorderPoint
+                ]);
+            }
+        } catch (Exception $e) {
+            error_log('Items syncStockLevelsReorderPoint error: ' . $e->getMessage());
+        }
     }
 }
 

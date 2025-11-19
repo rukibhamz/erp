@@ -22,7 +22,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('inventory/items/edit/' . $item['id']) ?>" >
+        <form action="<?= base_url('inventory/items/edit/' . $item['id']) ?>" method="POST" id="editItemForm">
             <?php echo csrf_field(); ?>
             <ul class="nav nav-tabs mb-4" role="tablist">
                 <li class="nav-item">
@@ -227,7 +227,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             
             <div class="mt-4 d-flex justify-content-end gap-2">
-                <a href="<?= base_url('inventory/items/view/' . $item['id']) ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('inventory/items/view/' . $item['id']) ?>" class="btn btn-primary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle"></i> Update Item
                 </button>
