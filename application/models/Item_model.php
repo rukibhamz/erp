@@ -39,19 +39,6 @@ class Item_model extends Base_Model {
         }
     }
     
-    public function getAllActive() {
-        try {
-            return $this->db->fetchAll(
-                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE (item_status = 'active' OR status = 'active')
-                 ORDER BY item_name"
-            );
-        } catch (Exception $e) {
-            error_log('Item_model getAllActive error: ' . $e->getMessage());
-            return [];
-        }
-    }
-    
     public function getLowStock($locationId = null) {
         try {
             $sql = "SELECT i.*, sl.location_id, sl.quantity, sl.reorder_point,
@@ -137,8 +124,9 @@ class Item_model extends Base_Model {
     public function getAllActive($limit = null) {
         try {
             // Check both item_status and status columns (table has both)
+            // Use OR to include items where either column is active
             $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                    WHERE item_status = 'active' AND status = 'active'
+                    WHERE (item_status = 'active' OR status = 'active')
                     ORDER BY item_name";
             
             if ($limit !== null && is_numeric($limit) && $limit > 0) {
