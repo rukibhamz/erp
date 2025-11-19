@@ -85,7 +85,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <label class="form-label fw-bold">Start Date <span class="text-danger">*</span></label>
                                     <input type="date" id="booking_date" class="form-control form-control-lg" 
                                            min="<?= date('Y-m-d') ?>" 
-                                           value="<?= date('Y-m-d') ?>">
+                                           value="<?= date('Y-m-d') ?>" disabled>
+                                    <small class="text-muted d-block mt-1">Select booking type first</small>
                                 </div>
                                 <div class="col-md-6" id="end-date-container" style="display: none;">
                                     <label class="form-label fw-bold">End Date <span class="text-danger">*</span></label>
@@ -194,7 +195,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const bookingDate = document.getElementById('booking_date');
     const timeSlotsContainer = document.getElementById('time-slots-container');
     const continueBtn = document.getElementById('continue-btn');
     const selectedDateSpan = document.getElementById('selected-date');
@@ -212,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let recurringEndDate = '';
 
     const bookingTypeSelect = document.getElementById('booking_type');
+    const bookingDate = document.getElementById('booking_date');
     const endDateContainer = document.getElementById('end-date-container');
     const bookingEndDate = document.getElementById('booking_end_date');
     const recurringOption = document.getElementById('recurring-option');
@@ -219,6 +220,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const recurringDetails = document.getElementById('recurring-details');
     const recurringPatternSelect = document.getElementById('recurring_pattern');
     const recurringEndDateInput = document.getElementById('recurring_end_date');
+    
+    // Initially disable date input until booking type is selected
+    if (bookingDate) {
+        bookingDate.disabled = true;
+    }
 
     // Show/hide end date based on booking type
     bookingTypeSelect.addEventListener('change', function() {
@@ -227,7 +233,15 @@ document.addEventListener('DOMContentLoaded', function() {
         endDateContainer.style.display = isMultiDay ? 'block' : 'none';
         recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
         
-        if (selectedDate) {
+        // Enable date input when booking type is selected
+        if (selectedBookingType) {
+            bookingDate.removeAttribute('disabled');
+        } else {
+            bookingDate.setAttribute('disabled', 'disabled');
+            timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
+        }
+        
+        if (selectedBookingType && selectedDate) {
             loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
         }
     });
@@ -258,6 +272,11 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedDate = date;
         if (bookingEndDate.value) {
             selectedEndDate = bookingEndDate.value;
+        }
+        
+        if (!selectedBookingType) {
+            timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
+            return;
         }
         
         if (selectedBookingType) {
@@ -401,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function() {
     continueBtn.addEventListener('click', function() {
         const bookingType = bookingTypeSelect.value;
         if (!bookingType) {
-            alert('Please select a booking type');
+            alert('Please select a booking type and date');
             return;
         }
         if (!selectedDate || !selectedStartTime || !selectedEndTime) {

@@ -36,6 +36,7 @@ class Vat extends Base_Controller {
         $this->requirePermission('tax', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $periodStart = sanitize_input($_POST['period_start'] ?? '');
             $periodEnd = sanitize_input($_POST['period_end'] ?? '');
             

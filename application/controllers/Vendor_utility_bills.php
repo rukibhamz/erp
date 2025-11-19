@@ -68,6 +68,7 @@ class Vendor_utility_bills extends Base_Controller {
         $this->requirePermission('utilities', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'vendor_bill_number' => sanitize_input($_POST['vendor_bill_number'] ?? ''),
                 'provider_id' => intval($_POST['provider_id'] ?? 0),

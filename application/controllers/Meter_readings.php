@@ -55,6 +55,7 @@ class Meter_readings extends Base_Controller {
         $meterId = $_GET['meter_id'] ?? null;
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'meter_id' => intval($_POST['meter_id'] ?? 0),
                 'reading_date' => sanitize_input($_POST['reading_date'] ?? date('Y-m-d')),

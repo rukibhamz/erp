@@ -24,8 +24,8 @@ include(BASEPATH . 'views/tax/_nav.php');
         <h5 class="mb-0"><i class="bi bi-calculator"></i> CIT Calculation</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="<?= base_url('tax/cit/calculate') ?>
-<?php echo csrf_field(); ?>" id="citForm">
+        <form method="POST" action="<?= base_url('tax/cit/calculate') ?>" id="citForm">
+            <?php echo csrf_field(); ?>
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label class="form-label">Financial Year <span class="text-danger">*</span></label>

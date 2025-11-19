@@ -29,12 +29,25 @@ class Item_model extends Base_Model {
         try {
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE item_type = ? AND item_status = 'active'
+                 WHERE item_type = ? AND (item_status = 'active' OR status = 'active')
                  ORDER BY item_name",
                 [$type]
             );
         } catch (Exception $e) {
             error_log('Item_model getByType error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    public function getAllActive() {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE (item_status = 'active' OR status = 'active')
+                 ORDER BY item_name"
+            );
+        } catch (Exception $e) {
+            error_log('Item_model getAllActive error: ' . $e->getMessage());
             return [];
         }
     }

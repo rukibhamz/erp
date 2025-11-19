@@ -45,6 +45,7 @@ class Utility_providers extends Base_Controller {
         $this->requirePermission('utilities', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'provider_name' => sanitize_input($_POST['provider_name'] ?? ''),
                 'utility_type_id' => intval($_POST['utility_type_id'] ?? 0),
@@ -110,6 +111,7 @@ class Utility_providers extends Base_Controller {
         $this->requirePermission('utilities', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'provider_name' => sanitize_input($_POST['provider_name'] ?? ''),
                 'utility_type_id' => intval($_POST['utility_type_id'] ?? 0),

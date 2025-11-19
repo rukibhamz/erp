@@ -215,6 +215,38 @@ class AutoMigration {
                 error_log("AutoMigration: Failed to create space_bookings table: " . $e2->getMessage());
             }
         }
+
+        // ALWAYS check and create utilities tables if missing
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}meters'");
+            if ($stmt->rowCount() == 0) {
+                error_log("AutoMigration: Utilities tables missing, creating them...");
+                $this->createUtilitiesTables();
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR checking/creating utilities tables: " . $e->getMessage());
+            try {
+                $this->createUtilitiesTables();
+            } catch (Exception $e2) {
+                error_log("AutoMigration: Failed to create utilities tables: " . $e2->getMessage());
+            }
+        }
+
+        // ALWAYS check and create tax tables if missing
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}vat_returns'");
+            if ($stmt->rowCount() == 0) {
+                error_log("AutoMigration: Tax tables missing, creating them...");
+                $this->createTaxTables();
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR checking/creating tax tables: " . $e->getMessage());
+            try {
+                $this->createTaxTables();
+            } catch (Exception $e2) {
+                error_log("AutoMigration: Failed to create tax tables: " . $e2->getMessage());
+            }
+        }
         
         if ($needsMigration) {
             if (file_exists($migrationFile)) {
@@ -539,6 +571,52 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: CRITICAL ERROR creating properties table: " . $e->getMessage());
             throw $e; // Re-throw so caller knows it failed
+        }
+    }
+    
+    /**
+     * Create utilities tables if they don't exist
+     */
+    private function createUtilitiesTables() {
+        try {
+            // Load utilities migration function
+            $migrationFile = __DIR__ . '/../../install/migrations_utilities.php';
+            if (file_exists($migrationFile)) {
+                require_once $migrationFile;
+                if (function_exists('runUtilitiesMigrations')) {
+                    runUtilitiesMigrations($this->pdo, $this->prefix);
+                    error_log("AutoMigration: Utilities tables created successfully");
+                    return true;
+                }
+            }
+            error_log("AutoMigration: WARNING - Utilities migration file or function not found");
+            return false;
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR creating utilities tables: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Create tax tables if they don't exist
+     */
+    private function createTaxTables() {
+        try {
+            // Load tax migration function
+            $migrationFile = __DIR__ . '/../../install/migrations_tax.php';
+            if (file_exists($migrationFile)) {
+                require_once $migrationFile;
+                if (function_exists('runTaxMigrations')) {
+                    runTaxMigrations($this->pdo, $this->prefix);
+                    error_log("AutoMigration: Tax tables created successfully");
+                    return true;
+                }
+            }
+            error_log("AutoMigration: WARNING - Tax migration file or function not found");
+            return false;
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR creating tax tables: " . $e->getMessage());
+            return false;
         }
     }
 }

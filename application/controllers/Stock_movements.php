@@ -95,7 +95,15 @@ class Stock_movements extends Base_Controller {
         }
         
         try {
+            // Get all active inventory items
             $items = $this->itemModel->getByType('inventory');
+            // Fallback to all active items if no inventory items found
+            if (empty($items)) {
+                $allItems = $this->itemModel->getAllActive();
+                $items = array_filter($allItems, function($item) {
+                    return ($item['item_type'] ?? '') === 'inventory';
+                });
+            }
             $locationsRaw = $this->locationModel->getActive();
             // Map locations for view compatibility
             $locations = [];

@@ -78,6 +78,7 @@ class Utility_bills extends Base_Controller {
         $meterId = $meterId ?: intval($_GET['meter_id'] ?? 0);
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $meterId = intval($_POST['meter_id'] ?? 0);
             $periodStart = sanitize_input($_POST['billing_period_start'] ?? '');
             $periodEnd = sanitize_input($_POST['billing_period_end'] ?? '');

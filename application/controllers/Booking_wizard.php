@@ -220,9 +220,12 @@ class Booking_wizard extends Base_Controller {
             
             // Get booking config
             $config = $this->spaceModel->getBookableConfig($spaceId);
-            $bookingTypes = ['hourly', 'daily']; // Default
+            $bookingTypes = ['hourly', 'daily', 'multi_day']; // Default - always include common types
             if ($config && !empty($config['booking_types'])) {
-                $bookingTypes = json_decode($config['booking_types'], true) ?: $bookingTypes;
+                $configTypes = json_decode($config['booking_types'], true);
+                if (is_array($configTypes) && !empty($configTypes)) {
+                    $bookingTypes = $configTypes;
+                }
             }
             
             // Get pricing

@@ -59,6 +59,7 @@ class Meters extends Base_Controller {
         $this->requirePermission('utilities', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'meter_number' => sanitize_input($_POST['meter_number'] ?? ''),
                 'utility_type_id' => intval($_POST['utility_type_id'] ?? 0),
@@ -169,6 +170,7 @@ class Meters extends Base_Controller {
         $this->requirePermission('utilities', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'utility_type_id' => intval($_POST['utility_type_id'] ?? 0),
                 'meter_type' => sanitize_input($_POST['meter_type'] ?? 'master'),

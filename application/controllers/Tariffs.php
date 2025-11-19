@@ -48,6 +48,7 @@ class Tariffs extends Base_Controller {
         $this->requirePermission('utilities', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             // Build tariff structure JSON
             $structure = [
                 'fixed_charge' => floatval($_POST['fixed_charge'] ?? 0),
@@ -128,6 +129,7 @@ class Tariffs extends Base_Controller {
         $this->requirePermission('utilities', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             // Build tariff structure JSON
             $structure = [
                 'fixed_charge' => floatval($_POST['fixed_charge'] ?? 0),

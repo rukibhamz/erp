@@ -37,6 +37,7 @@ class Wht extends Base_Controller {
         $this->requirePermission('tax', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $month = intval($_POST['month'] ?? date('m'));
             $year = intval($_POST['year'] ?? date('Y'));
             
