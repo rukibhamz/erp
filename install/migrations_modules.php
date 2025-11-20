@@ -27,16 +27,23 @@ function migrations_modules($prefix) {
         "
     ];
     
-    // Insert default modules
+    // Insert default modules (works for both new and existing installations)
     $inserts = [
-        "INSERT IGNORE INTO `{$prefix}modules` (`module_key`, `display_name`, `description`, `is_active`, `sort_order`, `icon`) VALUES
+        "INSERT INTO `{$prefix}modules` (`module_key`, `display_name`, `description`, `is_active`, `sort_order`, `icon`) VALUES
         ('accounting', 'Accounting', 'Financial management, accounts, ledgers, and reports', 1, 1, 'bi-calculator'),
-        ('bookings', 'Bookings', 'Facility and resource booking management', 1, 2, 'bi-calendar-check'),
-        ('properties', 'Properties', 'Property, space, and lease management', 1, 3, 'bi-building'),
-        ('utilities', 'Utilities', 'Utility bills, meters, and consumption tracking', 1, 4, 'bi-lightning-charge'),
-        ('inventory', 'Inventory', 'Stock management, items, and inventory tracking', 1, 5, 'bi-boxes'),
-        ('tax', 'Tax', 'Tax compliance, VAT, PAYE, CIT, WHT management', 1, 6, 'bi-file-earmark-text'),
-        ('pos', 'POS', 'Point of Sale system for retail transactions', 1, 7, 'bi-cash-register');"
+        ('staff_management', 'Staff Management', 'Employee and payroll management', 1, 2, 'bi-people-fill'),
+        ('bookings', 'Bookings', 'Facility and resource booking management', 1, 3, 'bi-calendar-check'),
+        ('properties', 'Properties', 'Property, space, and lease management', 1, 4, 'bi-building'),
+        ('utilities', 'Utilities', 'Utility bills, meters, and consumption tracking', 1, 5, 'bi-lightning-charge'),
+        ('inventory', 'Inventory', 'Stock management, items, and inventory tracking', 1, 6, 'bi-boxes'),
+        ('tax', 'Tax', 'Tax compliance, VAT, PAYE, CIT, WHT management', 1, 7, 'bi-file-earmark-text'),
+        ('pos', 'POS', 'Point of Sale system for retail transactions', 1, 8, 'bi-cash-register')
+        ON DUPLICATE KEY UPDATE 
+            `display_name` = VALUES(`display_name`),
+            `description` = VALUES(`description`),
+            `icon` = VALUES(`icon`),
+            `is_active` = VALUES(`is_active`),
+            `sort_order` = VALUES(`sort_order`);"
     ];
     
     return [

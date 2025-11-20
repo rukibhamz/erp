@@ -94,6 +94,8 @@ class AutoMigration {
                 // Check for entities and locations module labels (added in this update)
                 $entitiesLabelExists = false;
                 $locationsLabelExists = false;
+                $staffManagementLabelExists = false;
+                $staffManagementModuleExists = false;
                 $entitiesPermsExist = false;
                 $locationsPermsExist = false;
                 
@@ -109,6 +111,22 @@ class AutoMigration {
                     $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'locations'");
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     $locationsLabelExists = ($result['cnt'] ?? 0) > 0;
+                } catch (Exception $e) {
+                    // Table might not exist yet
+                }
+                
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'staff_management'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $staffManagementLabelExists = ($result['cnt'] ?? 0) > 0;
+                } catch (Exception $e) {
+                    // Table might not exist yet
+                }
+                
+                try {
+                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}modules` WHERE module_key = 'staff_management'");
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $staffManagementModuleExists = ($result['cnt'] ?? 0) > 0;
                 } catch (Exception $e) {
                     // Table might not exist yet
                 }
@@ -144,11 +162,13 @@ class AutoMigration {
                 }
                 
                 // Re-run migration if any critical updates are missing
-                if (!$taxTypesExists || !$entitiesLabelExists || !$locationsLabelExists || !$entitiesPermsExist || !$locationsPermsExist || !$adminHasLocationsPerms) {
+                if (!$taxTypesExists || !$entitiesLabelExists || !$locationsLabelExists || !$staffManagementLabelExists || !$staffManagementModuleExists || !$entitiesPermsExist || !$locationsPermsExist || !$adminHasLocationsPerms) {
                     $missing = [];
                     if (!$taxTypesExists) $missing[] = 'tax_types table';
                     if (!$entitiesLabelExists) $missing[] = 'entities module label';
                     if (!$locationsLabelExists) $missing[] = 'locations module label';
+                    if (!$staffManagementLabelExists) $missing[] = 'staff_management module label';
+                    if (!$staffManagementModuleExists) $missing[] = 'staff_management module';
                     if (!$entitiesPermsExist) $missing[] = 'entities permissions';
                     if (!$locationsPermsExist) $missing[] = 'locations permissions';
                     if (!$adminHasLocationsPerms) $missing[] = 'admin locations permissions';
@@ -245,6 +265,18 @@ class AutoMigration {
                 $this->createTaxTables();
             } catch (Exception $e2) {
                 error_log("AutoMigration: Failed to create tax tables: " . $e2->getMessage());
+            }
+        }
+
+        // ALWAYS check and ensure modules table and staff_management module exist
+        try {
+            $this->ensureModulesTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR ensuring modules table: " . $e->getMessage());
+            try {
+                $this->ensureModulesTable();
+            } catch (Exception $e2) {
+                error_log("AutoMigration: Failed to ensure modules table: " . $e2->getMessage());
             }
         }
         
@@ -616,6 +648,101 @@ class AutoMigration {
             return false;
         } catch (Exception $e) {
             error_log("AutoMigration: CRITICAL ERROR creating tax tables: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure modules table exists and staff_management module is registered
+     * Works for both new and existing installations
+     */
+    private function ensureModulesTable() {
+        try {
+            // Check if modules table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}modules'");
+            $modulesTableExists = $stmt->rowCount() > 0;
+
+            // Load modules migration function
+            $migrationFile = __DIR__ . '/../../install/migrations_modules.php';
+            if (file_exists($migrationFile)) {
+                require_once $migrationFile;
+                if (function_exists('migrations_modules')) {
+                    $modulesMigration = migrations_modules($this->prefix);
+                    
+                    // Create modules table if it doesn't exist
+                    if (!$modulesTableExists && isset($modulesMigration['tables']['modules'])) {
+                        $this->pdo->exec($modulesMigration['tables']['modules']);
+                        error_log("AutoMigration: Modules table created successfully");
+                    }
+                    
+                    // Insert/update modules (INSERT IGNORE handles existing installations)
+                    if (!empty($modulesMigration['inserts'])) {
+                        foreach ($modulesMigration['inserts'] as $insertSql) {
+                            try {
+                                $this->pdo->exec($insertSql);
+                            } catch (Exception $e) {
+                                // Ignore duplicate key errors (module already exists)
+                                if (stripos($e->getMessage(), 'duplicate') === false) {
+                                    error_log("AutoMigration: Warning inserting module: " . $e->getMessage());
+                                }
+                            }
+                        }
+                        error_log("AutoMigration: Modules inserted/updated successfully");
+                    }
+                }
+            }
+
+            // Also ensure staff_management exists in erp_module_labels (handled by main migration)
+            // But check and add if missing for existing installations
+            try {
+                $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'staff_management'");
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $staffManagementLabelExists = ($result['cnt'] ?? 0) > 0;
+                
+                if (!$staffManagementLabelExists) {
+                    // Insert staff_management into module_labels
+                    $insertSql = "INSERT INTO `{$this->prefix}module_labels` 
+                        (module_code, default_label, icon_class, display_order, is_active) 
+                        VALUES ('staff_management', 'Staff Management', 'bi-people-fill', 3, 1)
+                        ON DUPLICATE KEY UPDATE 
+                            default_label = 'Staff Management',
+                            icon_class = 'bi-people-fill',
+                            is_active = 1";
+                    $this->pdo->exec($insertSql);
+                    error_log("AutoMigration: Staff Management module label added to module_labels");
+                }
+            } catch (Exception $e) {
+                // Table might not exist yet, that's OK - main migration will handle it
+                error_log("AutoMigration: Note - module_labels check: " . $e->getMessage());
+            }
+
+            // Verify staff_management exists in modules table
+            try {
+                $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}modules` WHERE module_key = 'staff_management'");
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $staffManagementExists = ($result['cnt'] ?? 0) > 0;
+                
+                if (!$staffManagementExists) {
+                    // Insert staff_management into modules table
+                    $insertSql = "INSERT INTO `{$this->prefix}modules` 
+                        (module_key, display_name, description, is_active, sort_order, icon) 
+                        VALUES ('staff_management', 'Staff Management', 'Employee and payroll management', 1, 2, 'bi-people-fill')
+                        ON DUPLICATE KEY UPDATE 
+                            display_name = 'Staff Management',
+                            description = 'Employee and payroll management',
+                            icon = 'bi-people-fill',
+                            is_active = 1";
+                    $this->pdo->exec($insertSql);
+                    error_log("AutoMigration: Staff Management module added to modules table");
+                }
+            } catch (Exception $e) {
+                // Table might not exist yet, that's OK - migration will handle it
+                error_log("AutoMigration: Note - modules check: " . $e->getMessage());
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: CRITICAL ERROR ensuring modules table: " . $e->getMessage());
             return false;
         }
     }

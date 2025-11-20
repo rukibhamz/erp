@@ -80,7 +80,8 @@
                     // Get modules user has permission to access (filters by permissions)
                     $activeModules = get_user_accessible_modules();
                     $moduleRoutes = [
-                        'accounting' => ['accounting', 'accounts', 'cash', 'receivables', 'payables', 'payroll', 'ledger', 'reports'],
+                        'accounting' => ['accounting', 'accounts', 'transactions', 'cash', 'receivables', 'payables', 'ledger', 'reports'],
+                        'staff_management' => ['staff_management', 'payroll', 'employees'],
                         'bookings' => ['bookings', 'facilities'],
                         'locations' => ['locations', 'properties', 'spaces', 'leases', 'rent-invoices'], // Locations (formerly Properties)
                         'properties' => ['locations', 'properties', 'spaces', 'leases', 'rent-invoices'], // Legacy compatibility

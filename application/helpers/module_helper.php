@@ -126,6 +126,7 @@ function get_user_accessible_modules() {
         // Map module keys to permission module names
         $modulePermissionMap = [
             'accounting' => 'accounting',
+            'staff_management' => 'staff_management',
             'bookings' => 'bookings',
             'locations' => 'locations', // Locations (formerly Properties)
             'properties' => 'locations', // Legacy: properties maps to locations permissions

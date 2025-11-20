@@ -39,18 +39,19 @@ CREATE TABLE IF NOT EXISTS `erp_module_labels` (
 INSERT INTO erp_module_labels (module_code, default_label, icon_class, display_order, is_active) VALUES
 ('dashboard', 'Dashboard', 'bi-speedometer2', 1, 1),
 ('accounting', 'Accounting', 'bi-calculator', 2, 1),
-('bookings', 'Bookings', 'bi-calendar', 3, 1),
-('locations', 'Locations', 'bi-building', 4, 1), -- Locations (formerly Properties)
-('properties', 'Properties', 'bi-building', 4, 1), -- Legacy compatibility
-('inventory', 'Inventory', 'bi-box-seam', 5, 1),
-('utilities', 'Utilities', 'bi-lightning', 6, 1),
-('reports', 'Reports', 'bi-bar-chart', 7, 1),
-('settings', 'Settings', 'bi-gear', 8, 1),
-('users', 'User Management', 'bi-people', 9, 1),
-('notifications', 'Notifications', 'bi-bell', 10, 1),
-('pos', 'Point of Sale', 'bi-cart', 11, 1),
-('tax', 'Tax Management', 'bi-file-text', 12, 1),
-('entities', 'Entities', 'bi-diagram-3', 13, 1) -- Entities (formerly Companies)
+('staff_management', 'Staff Management', 'bi-people-fill', 3, 1),
+('bookings', 'Bookings', 'bi-calendar', 4, 1),
+('locations', 'Locations', 'bi-building', 5, 1), -- Locations (formerly Properties)
+('properties', 'Properties', 'bi-building', 5, 1), -- Legacy compatibility
+('inventory', 'Inventory', 'bi-box-seam', 6, 1),
+('utilities', 'Utilities', 'bi-lightning', 7, 1),
+('reports', 'Reports', 'bi-bar-chart', 8, 1),
+('settings', 'Settings', 'bi-gear', 9, 1),
+('users', 'User Management', 'bi-people', 10, 1),
+('notifications', 'Notifications', 'bi-bell', 11, 1),
+('pos', 'Point of Sale', 'bi-cart', 12, 1),
+('tax', 'Tax Management', 'bi-file-text', 13, 1),
+('entities', 'Entities', 'bi-diagram-3', 14, 1) -- Entities (formerly Companies)
 ON DUPLICATE KEY UPDATE default_label = VALUES(default_label);
 
 -- ============================================================================
