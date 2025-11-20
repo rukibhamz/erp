@@ -688,11 +688,27 @@ class Receivables extends Base_Controller {
     public function pdfInvoice($id) {
         $this->requirePermission('receivables', 'read');
         
+        // Validate ID
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid invoice ID.');
+            redirect('receivables/invoices');
+            return;
+        }
+        
         $invoice = $this->invoiceModel->getWithCustomer($id);
-        if (!$invoice) die('Invoice not found.');
+        if (!$invoice) {
+            $this->setFlashMessage('danger', 'Invoice not found.');
+            redirect('receivables/invoices');
+            return;
+        }
         
         $items = $this->invoiceModel->getItems($id);
-        if (empty($items)) die('Invoice has no items.');
+        if (empty($items)) {
+            $this->setFlashMessage('warning', 'Invoice has no items. Please add items to the invoice before generating PDF.');
+            redirect('receivables/invoices/view/' . $id);
+            return;
+        }
         
         // Get company info
         $entities = $this->entityModel->getAll();

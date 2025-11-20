@@ -58,7 +58,10 @@ if (!function_exists('format_large_currency')) {
         // Get full formatted currency for hover
         $fullCurrency = $symbol . number_format($amount, 2);
         
-        if ($amount >= 1000000000) {
+        if ($amount >= 1000000000000) {
+            // Trillions
+            $formatted = $symbol . number_format($amount / 1000000000000, $decimals) . 'T';
+        } elseif ($amount >= 1000000000) {
             // Billions
             $formatted = $symbol . number_format($amount / 1000000000, $decimals) . 'B';
         } elseif ($amount >= 1000000) {

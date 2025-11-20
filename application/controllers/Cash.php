@@ -77,13 +77,27 @@ class Cash extends Base_Controller {
             $accountId = $this->accountModel->create($accountData);
             
             if ($accountId) {
+                // Validate account_number (10 digits, numbers only)
+                $accountNumber = sanitize_input($_POST['account_number'] ?? '');
+                if (!empty($accountNumber)) {
+                    // Remove any non-numeric characters
+                    $accountNumber = preg_replace('/[^0-9]/', '', $accountNumber);
+                    // Validate length (minimum 10, maximum 10 digits)
+                    if (strlen($accountNumber) < 10 || strlen($accountNumber) > 10) {
+                        $this->accountModel->delete($accountId);
+                        $this->setFlashMessage('danger', 'Account number must be exactly 10 digits (numbers only).');
+                        redirect('cash/accounts/create');
+                        return;
+                    }
+                }
+                
                 // Create cash account
                 $cashAccountData = [
                     'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                     'account_type' => sanitize_input($_POST['account_type'] ?? 'bank_account'),
                     'account_id' => $accountId,
                     'bank_name' => sanitize_input($_POST['bank_name'] ?? ''),
-                    'account_number' => sanitize_input($_POST['account_number'] ?? ''),
+                    'account_number' => $accountNumber,
                     'routing_number' => sanitize_input($_POST['routing_number'] ?? ''),
                     'swift_code' => sanitize_input($_POST['swift_code'] ?? ''),
                     'opening_balance' => floatval($_POST['opening_balance'] ?? 0),
@@ -325,11 +339,24 @@ class Cash extends Base_Controller {
                     return;
                 }
                 
+                // Validate account_number (10 digits, numbers only)
+                $accountNumber = sanitize_input($_POST['account_number'] ?? '');
+                if (!empty($accountNumber)) {
+                    // Remove any non-numeric characters
+                    $accountNumber = preg_replace('/[^0-9]/', '', $accountNumber);
+                    // Validate length (minimum 10, maximum 10 digits)
+                    if (strlen($accountNumber) < 10 || strlen($accountNumber) > 10) {
+                        $this->setFlashMessage('danger', 'Account number must be exactly 10 digits (numbers only).');
+                        redirect('cash/accounts/edit/' . $id);
+                        return;
+                    }
+                }
+                
                 $accountData = [
                     'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                     'account_type' => sanitize_input($_POST['account_type'] ?? 'bank_account'),
                     'bank_name' => sanitize_input($_POST['bank_name'] ?? ''),
-                    'account_number' => sanitize_input($_POST['account_number'] ?? ''),
+                    'account_number' => $accountNumber,
                     'routing_number' => sanitize_input($_POST['routing_number'] ?? ''),
                     'swift_code' => sanitize_input($_POST['swift_code'] ?? ''),
                     'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
@@ -337,23 +364,45 @@ class Cash extends Base_Controller {
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
                 
+                // Only include account_number if it's not empty and the column exists
+                // Remove account_number from update if it's empty to avoid errors
+                if (empty($accountData['account_number'])) {
+                    unset($accountData['account_number']);
+                }
+                
                 // Update cash account
-                if ($this->cashAccountModel->update($id, $accountData)) {
-                    // Also update the linked account if account_id exists
-                    if (!empty($cashAccount['account_id'])) {
-                        $this->accountModel->update($cashAccount['account_id'], [
-                            'account_name' => $accountData['account_name'],
-                            'currency' => $accountData['currency'],
-                            'status' => $accountData['status'],
-                            'updated_at' => date('Y-m-d H:i:s')
-                        ]);
+                try {
+                    if ($this->cashAccountModel->update($id, $accountData)) {
+                        // Also update the linked account if account_id exists
+                        if (!empty($cashAccount['account_id'])) {
+                            $this->accountModel->update($cashAccount['account_id'], [
+                                'account_name' => $accountData['account_name'],
+                                'currency' => $accountData['currency'],
+                                'status' => $accountData['status'],
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+                        
+                        $this->activityModel->log($this->session['user_id'], 'update', 'Cash', 'Updated cash account: ' . $accountData['account_name']);
+                        $this->setFlashMessage('success', 'Cash account updated successfully.');
+                        redirect('cash/accounts');
+                    } else {
+                        $this->setFlashMessage('danger', 'Failed to update cash account.');
                     }
-                    
-                    $this->activityModel->log($this->session['user_id'], 'update', 'Cash', 'Updated cash account: ' . $accountData['account_name']);
-                    $this->setFlashMessage('success', 'Cash account updated successfully.');
-                    redirect('cash/accounts');
-                } else {
-                    $this->setFlashMessage('danger', 'Failed to update cash account.');
+                } catch (Exception $updateException) {
+                    error_log('Cash editAccount update error: ' . $updateException->getMessage());
+                    // If account_number column doesn't exist, try updating without it
+                    if (stripos($updateException->getMessage(), 'account_number') !== false) {
+                        unset($accountData['account_number']);
+                        if ($this->cashAccountModel->update($id, $accountData)) {
+                            $this->setFlashMessage('success', 'Cash account updated successfully (account number field skipped).');
+                            redirect('cash/accounts');
+                        } else {
+                            $this->setFlashMessage('danger', 'Failed to update cash account.');
+                        }
+                    } else {
+                        $this->setFlashMessage('danger', 'Error updating cash account: ' . $updateException->getMessage());
+                    }
                 }
             } catch (Exception $e) {
                 error_log('Cash editAccount error: ' . $e->getMessage());

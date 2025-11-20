@@ -21,7 +21,51 @@ class Staff_management extends Base_Controller {
     }
 
     public function index() {
-        redirect('staff_management/employees');
+        // Get dashboard statistics
+        try {
+            // Count active employees
+            $totalEmployeesResult = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "employees` WHERE status = 'active'"
+            );
+            $totalEmployees = intval($totalEmployeesResult['count'] ?? 0);
+            
+            // Count total payroll runs
+            $totalPayrollRunsResult = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "payroll_runs`"
+            );
+            $totalPayrollRuns = intval($totalPayrollRunsResult['count'] ?? 0);
+            
+            // Get current month payroll total
+            $currentPeriod = date('Y-m');
+            $currentPayroll = $this->payrollModel->getByPeriod($currentPeriod);
+            $monthlyPayrollTotal = 0;
+            foreach ($currentPayroll as $run) {
+                $monthlyPayrollTotal += floatval($run['total_amount'] ?? 0);
+            }
+            
+            // Get pending payroll (draft status)
+            $pendingPayrollResult = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "payroll_runs` WHERE status = 'draft'"
+            );
+            $pendingPayroll = intval($pendingPayrollResult['count'] ?? 0);
+        } catch (Exception $e) {
+            error_log('Staff_management index error: ' . $e->getMessage());
+            $totalEmployees = 0;
+            $totalPayrollRuns = 0;
+            $monthlyPayrollTotal = 0;
+            $pendingPayroll = 0;
+        }
+        
+        $data = [
+            'page_title' => 'Staff Management Dashboard',
+            'total_employees' => $totalEmployees,
+            'total_payroll_runs' => $totalPayrollRuns,
+            'monthly_payroll_total' => $monthlyPayrollTotal,
+            'pending_payroll' => $pendingPayroll,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('staff_management/index', $data);
     }
 
     // Employee Management Methods (moved from Employees controller)

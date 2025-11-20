@@ -46,9 +46,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                    value="<?= htmlspecialchars($account['bank_name'] ?? '') ?>">
                         </div>
                         <div class="col-md-6">
-                            <label for="account_number" class="form-label">Account Number</label>
+                            <label for="account_number" class="form-label">Account Number <small class="text-muted">(10 digits, numbers only)</small></label>
                             <input type="text" class="form-control" id="account_number" name="account_number" 
-                                   value="<?= htmlspecialchars($account['account_number'] ?? '') ?>">
+                                   value="<?= htmlspecialchars($account['account_number'] ?? '') ?>"
+                                   pattern="[0-9]{10}" 
+                                   maxlength="10"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10)"
+                                   title="Account number must be exactly 10 digits (numbers only)">
                         </div>
                     </div>
                     

@@ -74,7 +74,7 @@ include(BASEPATH . 'views/staff_management/_nav.php');
                             <tr>
                                 <td><strong><?= htmlspecialchars($run['period']) ?></strong></td>
                                 <td><?= date('M d, Y', strtotime($run['processed_date'])) ?></td>
-                                <td><?= format_currency($run['total_amount'] ?? 0) ?></td>
+                                <td class="fw-bold"><?= format_large_currency($run['total_amount'] ?? 0, 'NGN', 1) ?></td>
                                 <td>
                                     <span class="badge bg-<?= $run['status'] === 'posted' ? 'success' : ($run['status'] === 'processed' ? 'info' : 'secondary') ?>">
                                         <?= ucfirst($run['status']) ?>
