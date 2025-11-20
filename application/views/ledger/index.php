@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('ledger') ?>" class="row g-3">
             <div class="col-md-4">
@@ -44,7 +44,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <!-- Journal Entries Table -->
-<div class="card">
+<div class="card shadow-sm">
     <div class="card-header">
         <h5 class="card-title mb-0">All Journal Entries</h5>
     </div>
@@ -111,8 +111,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                No journal entries found. <a href="<?= base_url('ledger/create') ?>">Create your first entry</a>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="bi bi-journal-text"></i>
+                                    <p class="mb-0">No journal entries found.</p>
+                                    <a href="<?= base_url('ledger/create') ?>" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create First Entry
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endif; ?>

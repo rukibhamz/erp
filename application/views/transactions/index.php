@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('transactions') ?>" class="row g-3">
             <div class="col-md-3">
@@ -63,7 +63,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <!-- Transactions Table -->
-<div class="card">
+<div class="card shadow-sm">
     <div class="card-header">
         <h5 class="card-title mb-0">All Transactions</h5>
     </div>
@@ -135,8 +135,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
-                                No transactions found. <a href="<?= base_url('transactions/create') ?>">Create your first transaction</a>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    <p class="mb-0">No transactions found.</p>
+                                    <a href="<?= base_url('transactions/create') ?>" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create First Transaction
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endif; ?>

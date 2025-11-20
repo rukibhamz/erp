@@ -21,7 +21,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-3">
@@ -73,17 +73,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <?php if (empty($items)): ?>
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="bi bi-box" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No items found.</p>
-            <a href="<?= base_url('inventory/items/create') ?>" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Add First Item
-            </a>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="empty-state">
+                <i class="bi bi-box"></i>
+                <p class="mb-0">No items found.</p>
+                <a href="<?= base_url('inventory/items/create') ?>" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add First Item
+                </a>
+            </div>
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">

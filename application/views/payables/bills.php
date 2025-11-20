@@ -13,8 +13,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
+<?php if (isset($flash) && $flash): ?>
+    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
+        <?= htmlspecialchars($flash['message']) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('payables/bills') ?>" class="row g-3">
             <div class="col-md-4">
@@ -56,7 +63,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <!-- Bills Table -->
-<div class="card">
+<div class="card shadow-sm">
     <div class="card-header">
         <h5 class="card-title mb-0">All Bills</h5>
     </div>
@@ -130,8 +137,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
-                                No bills found. <a href="<?= base_url('payables/bills/create') ?>">Create your first bill</a>
+                            <td colspan="9" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="bi bi-receipt"></i>
+                                    <p class="mb-0">No bills found.</p>
+                                    <a href="<?= base_url('payables/bills/create') ?>" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create First Bill
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endif; ?>

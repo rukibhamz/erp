@@ -13,7 +13,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
-<div class="card">
+<?php if (isset($flash) && $flash): ?>
+    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
+        <?= htmlspecialchars($flash['message']) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<div class="card shadow-sm">
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -68,8 +75,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
-                                No customers found. <a href="<?= base_url('receivables/customers/create') ?>">Create your first customer</a>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="bi bi-people"></i>
+                                    <p class="mb-0">No customers found.</p>
+                                    <a href="<?= base_url('receivables/customers/create') ?>" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create First Customer
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endif; ?>

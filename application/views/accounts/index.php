@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('accounts') ?>" class="row g-3">
             <div class="col-md-4">
@@ -50,7 +50,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <!-- Accounts Table -->
-<div class="card">
+<div class="card shadow-sm">
     <div class="card-header">
         <h5 class="card-title mb-0">Accounts</h5>
     </div>
@@ -118,8 +118,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
-                                No accounts found. <a href="<?= base_url('accounts/create') ?>">Create your first account</a>
+                            <td colspan="<?= ($account_number_enabled ?? false) ? 9 : 8 ?>" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="bi bi-list-ul"></i>
+                                    <p class="mb-0">No accounts found.</p>
+                                    <a href="<?= base_url('accounts/create') ?>" class="btn btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create First Account
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endif; ?>

@@ -24,19 +24,21 @@ include(BASEPATH . 'views/staff_management/_nav.php');
 <?php endif; ?>
 
 <?php if (empty($employees)): ?>
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No employees found.</p>
-            <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add First Employee
-                </a>
-            <?php endif; ?>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <p class="mb-0">No employees found.</p>
+                <?php if (hasPermission('payroll', 'create')): ?>
+                    <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add First Employee
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover">
