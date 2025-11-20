@@ -38,11 +38,11 @@ $is_payables = isset($uri_segments[0]) && $uri_segments[0] === 'payables';
         <a class="nav-link <?= $is_cash ? 'active' : '' ?>" href="<?= base_url('cash/accounts') ?>">
             <i class="bi bi-wallet2"></i> Cash Accounts
         </a>
-        <a class="nav-link <?= $is_receivables ? 'active' : '' ?>" href="<?= base_url('receivables/invoices') ?>">
-            <i class="bi bi-file-earmark-text"></i> Invoices
+        <a class="nav-link <?= $is_receivables ? 'active' : '' ?>" href="<?= base_url('receivables') ?>">
+            <i class="bi bi-people"></i> Receivables
         </a>
-        <a class="nav-link <?= $is_payables ? 'active' : '' ?>" href="<?= base_url('payables/bills') ?>">
-            <i class="bi bi-receipt"></i> Bills
+        <a class="nav-link <?= $is_payables ? 'active' : '' ?>" href="<?= base_url('payables') ?>">
+            <i class="bi bi-building"></i> Payables
         </a>
     </nav>
 </div>

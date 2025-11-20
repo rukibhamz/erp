@@ -264,7 +264,7 @@ class Router {
         // Check if this looks like a module/controller/method/param pattern
         if (count($urlParts) >= 3) {
             // Common module prefixes that should be stripped
-            $modulePrefixes = ['inventory', 'receivables', 'payables', 'utilities', 'accounting', 'tax', 'locations', 'bookings'];
+            $modulePrefixes = ['inventory', 'receivables', 'payables', 'utilities', 'accounting', 'tax', 'locations', 'bookings', 'cash'];
             $firstPart = strtolower($urlParts[0]);
             
             // If first part is a known module prefix, treat second part as controller
