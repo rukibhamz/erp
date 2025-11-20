@@ -3,12 +3,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Accounts extends Base_Controller {
     private $accountModel;
+    private $transactionModel;
     private $activityModel;
     
     public function __construct() {
         parent::__construct();
         $this->requirePermission('accounts', 'read');
         $this->accountModel = $this->loadModel('Account_model');
+        $this->transactionModel = $this->loadModel('Transaction_model');
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
