@@ -260,11 +260,127 @@ class Router {
         }
         
         // No route match, use direct controller/method parsing
+        // CRITICAL FIX: Special handling for receivables and payables
+        // These modules use the module name as the controller (Receivables, Payables)
+        // not a sub-controller like inventory/items
+        $firstPart = strtolower($urlParts[0] ?? '');
+        
+        if ($firstPart === 'receivables') {
+            // Receivables module - map directly to Receivables controller
+            $this->controller = 'Receivables';
+            
+            if (count($urlParts) >= 3) {
+                // Handle method names like "editCustomer", "viewCustomer", "createInvoice"
+                $methodPart = $urlParts[1] ?? '';
+                $actionPart = $urlParts[2] ?? '';
+                
+                // Map common patterns: customers/edit -> editCustomer, invoices/view -> viewInvoice
+                if ($methodPart === 'customers' && $actionPart === 'edit') {
+                    $this->method = 'editCustomer';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'customers' && $actionPart === 'view') {
+                    $this->method = 'viewCustomer';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'customers' && $actionPart === 'create') {
+                    $this->method = 'createCustomer';
+                    $this->params = [];
+                } elseif ($methodPart === 'invoices' && $actionPart === 'edit') {
+                    $this->method = 'editInvoice';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'invoices' && $actionPart === 'view') {
+                    $this->method = 'viewInvoice';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'invoices' && $actionPart === 'create') {
+                    $this->method = 'createInvoice';
+                    $this->params = [];
+                } elseif ($methodPart === 'invoices' && $actionPart === 'payment') {
+                    $this->method = 'recordPayment';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'payments' && $actionPart === 'create') {
+                    $this->method = 'createPayment';
+                    $this->params = [];
+                } else {
+                    // Generic mapping: receivables/method/param
+                    $this->method = $actionPart ?: ($methodPart ?: 'customers');
+                    $this->params = count($urlParts) > 3 ? array_slice($urlParts, 3) : [];
+                }
+            } elseif (count($urlParts) === 2) {
+                // receivables/customers or receivables/invoices
+                $this->method = $urlParts[1] ?? 'customers';
+                $this->params = [];
+            } else {
+                // receivables only
+                $this->method = 'customers';
+                $this->params = [];
+            }
+            
+            // Convert numeric parameters to integers
+            $this->params = array_map(function($param) {
+                return is_string($param) && preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+            }, $this->params);
+            error_log("Router: Receivables URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            return;
+        }
+        
+        if ($firstPart === 'payables') {
+            // Payables module - map directly to Payables controller
+            $this->controller = 'Payables';
+            
+            if (count($urlParts) >= 3) {
+                // Handle method names like "editVendor", "viewBill", "createBill"
+                $methodPart = $urlParts[1] ?? '';
+                $actionPart = $urlParts[2] ?? '';
+                
+                // Map common patterns: vendors/edit -> editVendor, bills/view -> viewBill
+                if ($methodPart === 'vendors' && $actionPart === 'edit') {
+                    $this->method = 'editVendor';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'vendors' && $actionPart === 'delete') {
+                    $this->method = 'deleteVendor';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'vendors' && $actionPart === 'create') {
+                    $this->method = 'createVendor';
+                    $this->params = [];
+                } elseif ($methodPart === 'bills' && $actionPart === 'edit') {
+                    $this->method = 'editBill';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'bills' && $actionPart === 'view') {
+                    $this->method = 'viewBill';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'bills' && $actionPart === 'create') {
+                    $this->method = 'createBill';
+                    $this->params = [];
+                } elseif ($methodPart === 'bills' && $actionPart === 'delete') {
+                    $this->method = 'deleteBill';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } else {
+                    // Generic mapping: payables/method/param
+                    $this->method = $actionPart ?: ($methodPart ?: 'vendors');
+                    $this->params = count($urlParts) > 3 ? array_slice($urlParts, 3) : [];
+                }
+            } elseif (count($urlParts) === 2) {
+                // payables/vendors or payables/bills
+                $this->method = $urlParts[1] ?? 'vendors';
+                $this->params = [];
+            } else {
+                // payables only
+                $this->method = 'vendors';
+                $this->params = [];
+            }
+            
+            // Convert numeric parameters to integers
+            $this->params = array_map(function($param) {
+                return is_string($param) && preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+            }, $this->params);
+            error_log("Router: Payables URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            return;
+        }
+        
         // CRITICAL FIX: Handle multi-segment module URLs (e.g., inventory/items/view/123)
         // Check if this looks like a module/controller/method/param pattern
         if (count($urlParts) >= 3) {
             // Common module prefixes that should be stripped
-            $modulePrefixes = ['inventory', 'receivables', 'payables', 'utilities', 'accounting', 'tax', 'locations', 'bookings', 'cash'];
+            $modulePrefixes = ['inventory', 'utilities', 'accounting', 'tax', 'locations', 'bookings', 'cash'];
             $firstPart = strtolower($urlParts[0]);
             
             // If first part is a known module prefix, treat second part as controller
