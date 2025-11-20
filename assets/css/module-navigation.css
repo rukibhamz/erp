@@ -8,7 +8,9 @@
 .module-nav,
 .property-nav,
 .tax-nav,
-.utilities-nav {
+.utilities-nav,
+.accounting-nav,
+.staff-management-nav {
     background: var(--bg-secondary, #f8f9fa);
     padding: var(--space-md, 1rem);
     border-radius: var(--radius-lg, 0.5rem);
@@ -18,34 +20,46 @@
 .module-nav .nav-link,
 .property-nav .nav-link,
 .tax-nav .nav-link,
-.utilities-nav .nav-link {
+.utilities-nav .nav-link,
+.accounting-nav .nav-link,
+.staff-management-nav .nav-link {
     color: var(--text-secondary, #495057);
     border: 1px solid var(--border-color, #dee2e6);
     transition: all var(--transition-base, 200ms);
+    font-weight: var(--font-weight-medium, 500);
 }
 
 .module-nav .nav-link:hover,
 .property-nav .nav-link:hover,
 .tax-nav .nav-link:hover,
-.utilities-nav .nav-link:hover {
+.utilities-nav .nav-link:hover,
+.accounting-nav .nav-link:hover,
+.staff-management-nav .nav-link:hover {
     background-color: var(--bg-hover, #e9ecef);
     color: var(--text-primary, #000);
+    border-color: var(--border-color-hover, #adb5bd);
 }
 
 .module-nav .nav-link.active,
 .property-nav .nav-link.active,
 .tax-nav .nav-link.active,
-.utilities-nav .nav-link.active {
+.utilities-nav .nav-link.active,
+.accounting-nav .nav-link.active,
+.staff-management-nav .nav-link.active {
     background-color: var(--color-primary, #0066cc);
     color: var(--text-inverse, #fff);
     border-color: var(--color-primary, #0066cc);
+    font-weight: var(--font-weight-semibold, 600);
 }
 
 .module-nav .nav-link i,
 .property-nav .nav-link i,
 .tax-nav .nav-link i,
-.utilities-nav .nav-link i {
+.utilities-nav .nav-link i,
+.accounting-nav .nav-link i,
+.staff-management-nav .nav-link i {
     margin-right: var(--space-sm, 0.5rem);
+    font-size: 1rem;
 }
 
 /* Calendar Styles */

@@ -1,6 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-include(BASEPATH . 'views/accounting/_nav.php');
+include(BASEPATH . 'views/staff_management/_nav.php');
 
 $salaryStructure = json_decode($employee['salary_structure'] ?? '{}', true);
 $basicSalary = $salaryStructure['basic_salary'] ?? 0;

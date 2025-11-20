@@ -1,6 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-include(BASEPATH . 'views/accounting/_nav.php');
+include(BASEPATH . 'views/staff_management/_nav.php');
 ?>
 
 <div class="page-header">
