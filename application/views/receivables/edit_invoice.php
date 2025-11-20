@@ -82,11 +82,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <label for="reference" class="form-label">Reference</label>
                             <input type="text" class="form-control" id="reference" name="reference" value="<?= htmlspecialchars($invoice['reference'] ?? '') ?>" placeholder="PO Number, etc.">
                         </div>
-                        <div class="col-md-3">
-                            <label for="tax_rate" class="form-label">Tax Rate (%)</label>
-                            <input type="number" step="0.01" class="form-control" id="tax_rate" name="tax_rate" value="<?= $invoice['tax_rate'] ?? 0 ?>" onchange="calculateTotals()">
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label for="discount_amount" class="form-label">Discount Amount</label>
                             <input type="number" step="0.01" class="form-control" id="discount_amount" name="discount_amount" value="<?= $invoice['discount_amount'] ?? 0 ?>" onchange="calculateTotals()">
                         </div>
@@ -270,7 +266,10 @@ function calculateLineTotal(index) {
     
     const quantity = parseFloat(row.querySelector(`input[name="items[${index}][quantity]"]`).value) || 0;
     const unitPrice = parseFloat(row.querySelector(`input[name="items[${index}][unit_price]"]`).value) || 0;
-    const lineTotal = quantity * unitPrice;
+    const taxRate = parseFloat(row.querySelector(`input[name="items[${index}][tax_rate]"]`).value) || 0;
+    const lineSubtotal = quantity * unitPrice;
+    const lineTax = lineSubtotal * (taxRate / 100);
+    const lineTotal = lineSubtotal + lineTax;
     
     row.querySelector(`[data-index="${index}"]`).textContent = lineTotal.toFixed(2);
     calculateTotals();
@@ -278,18 +277,32 @@ function calculateLineTotal(index) {
 
 function calculateTotals() {
     let subtotal = 0;
+    let totalTax = 0;
     
-    document.querySelectorAll('.line-total').forEach(span => {
-        subtotal += parseFloat(span.textContent) || 0;
+    // Calculate subtotal and tax from each item
+    document.querySelectorAll('#invoiceItemsBody tr').forEach(row => {
+        const quantityInput = row.querySelector('input[name*="[quantity]"]');
+        const unitPriceInput = row.querySelector('input[name*="[unit_price]"]');
+        const taxRateInput = row.querySelector('input[name*="[tax_rate]"]');
+        
+        if (quantityInput && unitPriceInput && taxRateInput) {
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const unitPrice = parseFloat(unitPriceInput.value) || 0;
+            const taxRate = parseFloat(taxRateInput.value) || 0;
+            
+            const lineSubtotal = quantity * unitPrice;
+            const lineTax = lineSubtotal * (taxRate / 100);
+            
+            subtotal += lineSubtotal;
+            totalTax += lineTax;
+        }
     });
     
-    const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
     const discountAmount = parseFloat(document.getElementById('discount_amount').value) || 0;
-    const taxAmount = subtotal * (taxRate / 100);
-    const totalAmount = subtotal + taxAmount - discountAmount;
+    const totalAmount = subtotal + totalTax - discountAmount;
     
     document.getElementById('subtotal').textContent = subtotal.toFixed(2);
-    document.getElementById('taxAmount').textContent = taxAmount.toFixed(2);
+    document.getElementById('taxAmount').textContent = totalTax.toFixed(2);
     document.getElementById('discountDisplay').textContent = discountAmount.toFixed(2);
     document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
 }

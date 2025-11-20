@@ -428,26 +428,31 @@ class Receivables extends Base_Controller {
             
             $invoiceDate = sanitize_input($_POST['invoice_date'] ?? $invoice['invoice_date']);
             $dueDate = sanitize_input($_POST['due_date'] ?? $invoice['due_date']);
-            $taxRate = floatval($_POST['tax_rate'] ?? $invoice['tax_rate']);
             $reference = sanitize_input($_POST['reference'] ?? '');
             $currency = sanitize_input($_POST['currency'] ?? $invoice['currency']);
             $terms = sanitize_input($_POST['terms'] ?? '');
             $notes = sanitize_input($_POST['notes'] ?? '');
             $status = sanitize_input($_POST['status'] ?? $invoice['status']);
             
-            // Calculate totals from items
+            // Calculate totals from items (including individual item tax rates)
             $items = $_POST['items'] ?? [];
             $subtotal = 0;
+            $totalTax = 0;
             foreach ($items as $item) {
                 $quantity = floatval($item['quantity'] ?? 0);
                 $unitPrice = floatval($item['unit_price'] ?? 0);
-                $lineTotal = $quantity * $unitPrice;
-                $subtotal += $lineTotal;
+                $itemTaxRate = floatval($item['tax_rate'] ?? 0);
+                $lineSubtotal = $quantity * $unitPrice;
+                $lineTax = $lineSubtotal * ($itemTaxRate / 100);
+                $subtotal += $lineSubtotal;
+                $totalTax += $lineTax;
             }
             
-            $taxAmount = $subtotal * ($taxRate / 100);
+            // Calculate average tax rate for display purposes
+            $taxRate = $subtotal > 0 ? ($totalTax / $subtotal) * 100 : 0;
+            
             $discountAmount = floatval($_POST['discount_amount'] ?? 0);
-            $totalAmount = $subtotal + $taxAmount - $discountAmount;
+            $totalAmount = $subtotal + $totalTax - $discountAmount;
             $balanceAmount = $totalAmount - floatval($invoice['paid_amount'] ?? 0);
             
             // Update invoice
@@ -457,7 +462,7 @@ class Receivables extends Base_Controller {
                 'reference' => $reference,
                 'subtotal' => $subtotal,
                 'tax_rate' => $taxRate,
-                'tax_amount' => $taxAmount,
+                'tax_amount' => $totalTax,
                 'discount_amount' => $discountAmount,
                 'total_amount' => $totalAmount,
                 'balance_amount' => max(0, $balanceAmount),
@@ -476,8 +481,10 @@ class Receivables extends Base_Controller {
                 foreach ($items as $item) {
                     $quantity = floatval($item['quantity'] ?? 0);
                     $unitPrice = floatval($item['unit_price'] ?? 0);
-                    $itemTaxRate = floatval($item['tax_rate'] ?? $taxRate);
-                    $lineTotal = $quantity * $unitPrice;
+                    $itemTaxRate = floatval($item['tax_rate'] ?? 0);
+                    $lineSubtotal = $quantity * $unitPrice;
+                    $lineTax = $lineSubtotal * ($itemTaxRate / 100);
+                    $lineTotal = $lineSubtotal + $lineTax;
                     
                     $itemData = [
                         'product_id' => !empty($item['product_id']) ? intval($item['product_id']) : null,
@@ -485,7 +492,7 @@ class Receivables extends Base_Controller {
                         'quantity' => $quantity,
                         'unit_price' => $unitPrice,
                         'tax_rate' => $itemTaxRate,
-                        'tax_amount' => $lineTotal * ($itemTaxRate / 100),
+                        'tax_amount' => $lineTax,
                         'discount_rate' => floatval($item['discount_rate'] ?? 0),
                         'discount_amount' => floatval($item['discount_amount'] ?? 0),
                         'line_total' => $lineTotal,
