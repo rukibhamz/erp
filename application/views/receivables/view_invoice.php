@@ -63,6 +63,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <strong>Balance:</strong> <span class="fs-5 <?= ($invoice['balance_amount'] ?? 0) > 0 ? 'text-danger' : 'text-success' ?>">
                             <?= format_currency($invoice['balance_amount'], $invoice['currency']) ?>
                         </span>
+                        <?php if ($invoice['tax_rate'] > 0): ?>
+                            <br><small class="text-muted">Tax Rate: <?= number_format($invoice['tax_rate'], 2) ?>%</small>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
@@ -80,25 +83,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <tbody>
                             <?php foreach ($items as $item): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['item_description']) ?></td>
-                                    <td class="text-end"><?= number_format($item['quantity'], 2) ?></td>
-                                    <td class="text-end"><?= format_currency($item['unit_price'], $invoice['currency']) ?></td>
-                                    <td class="text-end"><?= format_currency($item['line_total'], $invoice['currency']) ?></td>
+                                    <td><?= htmlspecialchars($item['item_description'] ?? '') ?></td>
+                                    <td class="text-end"><?= number_format($item['quantity'] ?? 0, 2) ?></td>
+                                    <td class="text-end"><?= format_currency($item['unit_price'] ?? 0, $invoice['currency']) ?></td>
+                                    <td class="text-end"><?= format_currency($item['line_total'] ?? 0, $invoice['currency']) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                         <tfoot>
                             <tr>
                                 <td colspan="3" class="text-end fw-bold">Subtotal:</td>
-                                <td class="text-end fw-bold"><?= format_currency($invoice['subtotal'], $invoice['currency']) ?></td>
+                                <td class="text-end fw-bold"><?= format_currency($invoice['subtotal'] ?? 0, $invoice['currency']) ?></td>
                             </tr>
-                            <?php if ($invoice['tax_amount'] > 0): ?>
+                            <?php if (($invoice['tax_amount'] ?? 0) > 0): ?>
                             <tr>
-                                <td colspan="3" class="text-end">Tax (<?= $invoice['tax_rate'] ?>%):</td>
+                                <td colspan="3" class="text-end">Tax:</td>
                                 <td class="text-end"><?= format_currency($invoice['tax_amount'], $invoice['currency']) ?></td>
                             </tr>
                             <?php endif; ?>
-                            <?php if ($invoice['discount_amount'] > 0): ?>
+                            <?php if (($invoice['discount_amount'] ?? 0) > 0): ?>
                             <tr>
                                 <td colspan="3" class="text-end">Discount:</td>
                                 <td class="text-end"><?= format_currency($invoice['discount_amount'], $invoice['currency']) ?></td>
@@ -110,6 +113,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+                <?php else: ?>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> No items found for this invoice. 
+                    <a href="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" class="alert-link">Add items</a> to generate PDF.
                 </div>
                 <?php endif; ?>
                 

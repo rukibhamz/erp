@@ -693,9 +693,14 @@ class Receivables extends Base_Controller {
                 return;
             }
             
-            error_log("Receivables viewInvoice: Successfully loaded invoice ID: {$id}");
-            
+            // Load invoice items - ensure we get all items
             $items = $this->invoiceModel->getItems($id);
+            error_log("Receivables viewInvoice: Successfully loaded invoice ID: {$id} with " . count($items) . " items");
+            
+            // If no items found, log a warning
+            if (empty($items)) {
+                error_log("Receivables viewInvoice: WARNING - No items found for invoice ID: {$id}");
+            }
             
             // Check for existing PDF
             $pdfPattern = BASEPATH . '../uploads/invoices/invoice_' . 
@@ -743,8 +748,17 @@ class Receivables extends Base_Controller {
             return;
         }
         
-        $items = $this->invoiceModel->getItems($id);
+        // Load invoice items with error handling
+        try {
+            $items = $this->invoiceModel->getItems($id);
+            error_log("Receivables pdfInvoice: Loaded " . count($items) . " items for invoice ID: {$id}");
+        } catch (Exception $e) {
+            error_log("Receivables pdfInvoice: Error loading items: " . $e->getMessage());
+            $items = [];
+        }
+        
         if (empty($items)) {
+            error_log("Receivables pdfInvoice: WARNING - No items found for invoice ID: {$id}");
             $this->setFlashMessage('warning', 'Invoice has no items. Please add items to the invoice before generating PDF.');
             redirect('receivables/invoices/view/' . $id);
             return;
