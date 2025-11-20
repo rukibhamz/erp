@@ -34,6 +34,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <dt>Account Name</dt>
                     <dd><?= htmlspecialchars($account['account_name'] ?? 'N/A') ?></dd>
                     
+                    <?php if ($account_number_enabled ?? false): ?>
+                    <dt>Account Number</dt>
+                    <dd><?= htmlspecialchars($account['account_number'] ?? '-') ?></dd>
+                    <?php endif; ?>
+                    
                     <dt>Account Type</dt>
                     <dd><span class="badge bg-secondary"><?= htmlspecialchars($account['account_type'] ?? '') ?></span></dd>
                     

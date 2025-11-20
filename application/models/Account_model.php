@@ -3,6 +3,28 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Account_model extends Base_Model {
     protected $table = 'accounts';
+    private static $accountNumberColumnExists = null;
+    
+    /**
+     * Check if account_number column exists (cached per request)
+     */
+    public function hasAccountNumberColumn() {
+        if (self::$accountNumberColumnExists !== null) {
+            return self::$accountNumberColumnExists;
+        }
+        
+        try {
+            $table = $this->db->getPrefix() . $this->table;
+            $sql = "SHOW COLUMNS FROM `{$table}` LIKE 'account_number'";
+            $result = $this->db->fetchOne($sql);
+            self::$accountNumberColumnExists = !empty($result);
+        } catch (Exception $e) {
+            error_log('Account_model hasAccountNumberColumn error: ' . $e->getMessage());
+            self::$accountNumberColumnExists = false;
+        }
+        
+        return self::$accountNumberColumnExists;
+    }
     
     public function getByType($type) {
         try {

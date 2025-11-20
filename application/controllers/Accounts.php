@@ -3,6 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Accounts extends Base_Controller {
     private $accountModel;
+    private $accountNumberEnabled;
     private $transactionModel;
     private $activityModel;
     
@@ -10,6 +11,7 @@ class Accounts extends Base_Controller {
         parent::__construct();
         $this->requirePermission('accounts', 'read');
         $this->accountModel = $this->loadModel('Account_model');
+        $this->accountNumberEnabled = $this->accountModel->hasAccountNumberColumn();
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->activityModel = $this->loadModel('Activity_model');
     }
@@ -36,6 +38,7 @@ class Accounts extends Base_Controller {
             'accounts' => $accounts,
             'selected_type' => $type,
             'search' => $search,
+            'account_number_enabled' => $this->accountNumberEnabled,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -54,13 +57,18 @@ class Accounts extends Base_Controller {
                 'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                 'account_type' => sanitize_input($_POST['account_type'] ?? 'Assets'),
                 'parent_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
+                'description' => sanitize_input($_POST['description'] ?? ''),
                 'opening_balance' => floatval($_POST['opening_balance'] ?? 0),
                 'balance' => floatval($_POST['opening_balance'] ?? 0),
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
-                'description' => sanitize_input($_POST['description'] ?? ''),
                 'status' => sanitize_input($_POST['status'] ?? 'active'),
                 'created_by' => $this->session['user_id']
             ];
+            
+            if ($this->accountNumberEnabled) {
+                $accountNumber = sanitize_input($_POST['account_number'] ?? '');
+                $data['account_number'] = $accountNumber !== '' ? $accountNumber : null;
+            }
             
             // Auto-generate account code if empty
             if (empty($data['account_code'])) {
@@ -85,6 +93,7 @@ class Accounts extends Base_Controller {
         $data = [
             'page_title' => 'Create Account',
             'parent_accounts' => $parentAccounts,
+            'account_number_enabled' => $this->accountNumberEnabled,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -118,6 +127,9 @@ class Accounts extends Base_Controller {
             $account['opening_balance'] = $account['opening_balance'] ?? 0;
             $account['balance'] = $account['balance'] ?? 0;
             $account['currency'] = $account['currency'] ?? 'USD';
+            if ($this->accountNumberEnabled) {
+                $account['account_number'] = $account['account_number'] ?? '';
+            }
             $account['description'] = $account['description'] ?? '';
             $account['status'] = $account['status'] ?? 'active';
             
@@ -143,6 +155,11 @@ class Accounts extends Base_Controller {
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
+            if ($this->accountNumberEnabled) {
+                $accountNumber = sanitize_input($_POST['account_number'] ?? '');
+                $data['account_number'] = $accountNumber !== '' ? $accountNumber : null;
+            }
+            
             if ($this->accountModel->update($id, $data)) {
                 $this->activityModel->log($this->session['user_id'], 'update', 'Accounts', 'Updated account: ' . $data['account_name']);
                 $this->setFlashMessage('success', 'Account updated successfully.');
@@ -162,6 +179,7 @@ class Accounts extends Base_Controller {
             'page_title' => 'Edit Account',
             'account' => $account,
             'parent_accounts' => $parentAccounts,
+            'account_number_enabled' => $this->accountNumberEnabled,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -184,6 +202,10 @@ class Accounts extends Base_Controller {
                 return;
             }
             
+            if ($this->accountNumberEnabled) {
+                $account['account_number'] = $account['account_number'] ?? '';
+            }
+            
             // Get account transactions
             $transactions = $this->transactionModel->getByAccount($id);
             
@@ -201,6 +223,7 @@ class Accounts extends Base_Controller {
             'account' => $account,
             'transactions' => $transactions,
             'ledger' => $ledger,
+            'account_number_enabled' => $this->accountNumberEnabled,
             'flash' => $this->getFlashMessage()
         ];
         

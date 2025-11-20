@@ -59,6 +59,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                     </div>
                     
+                    <?php if ($account_number_enabled ?? false): ?>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="account_number" class="form-label">Account Number</label>
+                            <input type="text" class="form-control" id="account_number" name="account_number" 
+                                   placeholder="Optional account number">
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="currency" class="form-label">Currency <span class="text-danger">*</span></label>

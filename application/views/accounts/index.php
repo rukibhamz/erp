@@ -61,6 +61,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <tr>
                         <th>Code</th>
                         <th>Account Name</th>
+                        <?php if ($account_number_enabled ?? false): ?>
+                        <th>Account Number</th>
+                        <?php endif; ?>
                         <th>Type</th>
                         <th class="text-end">Opening Balance</th>
                         <th class="text-end">Current Balance</th>
@@ -75,6 +78,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <tr>
                                 <td><strong><?= htmlspecialchars($account['account_code'] ?? '') ?></strong></td>
                                 <td><?= htmlspecialchars($account['account_name'] ?? '') ?></td>
+                                <?php if ($account_number_enabled ?? false): ?>
+                                <td><?= htmlspecialchars($account['account_number'] ?? '-') ?></td>
+                                <?php endif; ?>
                                 <td>
                                     <span class="badge bg-secondary"><?= htmlspecialchars($account['account_type'] ?? '') ?></span>
                                 </td>
