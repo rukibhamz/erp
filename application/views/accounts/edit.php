@@ -66,11 +66,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="account_number" class="form-label">Account Number</label>
-                            <input type="text" class="form-control" id="account_number" name="account_number" 
-                                   value="<?= htmlspecialchars($account['account_number'] ?? '') ?>">
-                        </div>
-                        <div class="col-md-6">
                             <label for="currency" class="form-label">Currency <span class="text-danger">*</span></label>
                             <select class="form-select" id="currency" name="currency" required>
                                 <?php
@@ -84,9 +79,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-select" id="status" name="status" required>
@@ -94,8 +86,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <option value="inactive" <?= ($account['status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Inactive</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <div class="alert alert-info mt-4">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Optional description for this account"><?= htmlspecialchars($account['description'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
                                 <strong>Note:</strong> Opening balance and current balance cannot be edited. 
                                 Use transactions to adjust balances.
                             </div>

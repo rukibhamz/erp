@@ -61,11 +61,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="account_number" class="form-label">Account Number</label>
-                            <input type="text" class="form-control" id="account_number" name="account_number" 
-                                   placeholder="Optional account number">
-                        </div>
-                        <div class="col-md-6">
                             <label for="currency" class="form-label">Currency <span class="text-danger">*</span></label>
                             <select class="form-select" id="currency" name="currency" required>
                                 <?php
@@ -78,14 +73,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="opening_balance" class="form-label">Opening Balance</label>
                             <input type="number" step="0.01" class="form-control" id="opening_balance" name="opening_balance" 
                                    value="0" required>
                         </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Optional description for this account"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-select" id="status" name="status" required>

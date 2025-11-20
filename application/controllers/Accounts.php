@@ -52,10 +52,10 @@ class Accounts extends Base_Controller {
                 'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                 'account_type' => sanitize_input($_POST['account_type'] ?? 'Assets'),
                 'parent_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
-                'account_number' => !empty($_POST['account_number']) ? sanitize_input($_POST['account_number']) : null,
                 'opening_balance' => floatval($_POST['opening_balance'] ?? 0),
                 'balance' => floatval($_POST['opening_balance'] ?? 0),
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
+                'description' => sanitize_input($_POST['description'] ?? ''),
                 'status' => sanitize_input($_POST['status'] ?? 'active'),
                 'created_by' => $this->session['user_id']
             ];
@@ -135,8 +135,8 @@ class Accounts extends Base_Controller {
                 'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                 'account_type' => sanitize_input($_POST['account_type'] ?? 'Assets'),
                 'parent_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
-                'account_number' => !empty($_POST['account_number']) ? sanitize_input($_POST['account_number']) : null,
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
+                'description' => sanitize_input($_POST['description'] ?? ''),
                 'status' => sanitize_input($_POST['status'] ?? 'active'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
