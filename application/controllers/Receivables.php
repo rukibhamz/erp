@@ -167,6 +167,7 @@ class Receivables extends Base_Controller {
         }
         
         try {
+            // Load complete customer data with all columns
             $customer = $this->customerModel->getById($id);
             if (!$customer) {
                 error_log("Receivables editCustomer: Customer not found for ID: {$id}");
@@ -175,7 +176,24 @@ class Receivables extends Base_Controller {
                 return;
             }
             
-            error_log("Receivables editCustomer: Successfully loaded customer ID: {$id}");
+            // Ensure all fields are present with defaults
+            $customer['customer_code'] = $customer['customer_code'] ?? '';
+            $customer['company_name'] = $customer['company_name'] ?? '';
+            $customer['contact_name'] = $customer['contact_name'] ?? '';
+            $customer['email'] = $customer['email'] ?? '';
+            $customer['phone'] = $customer['phone'] ?? '';
+            $customer['address'] = $customer['address'] ?? '';
+            $customer['city'] = $customer['city'] ?? '';
+            $customer['state'] = $customer['state'] ?? '';
+            $customer['zip_code'] = $customer['zip_code'] ?? '';
+            $customer['country'] = $customer['country'] ?? '';
+            $customer['tax_id'] = $customer['tax_id'] ?? '';
+            $customer['credit_limit'] = $customer['credit_limit'] ?? 0;
+            $customer['payment_terms'] = $customer['payment_terms'] ?? '';
+            $customer['currency'] = $customer['currency'] ?? 'USD';
+            $customer['status'] = $customer['status'] ?? 'active';
+            
+            error_log("Receivables editCustomer: Successfully loaded customer ID: {$id} with all fields");
         } catch (Exception $e) {
             error_log('Receivables editCustomer load error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error loading customer.');
@@ -489,6 +507,7 @@ class Receivables extends Base_Controller {
             }
         }
         
+        // Load complete invoice data with customer information
         $invoice = $this->invoiceModel->getWithCustomer($id);
         if (!$invoice) {
             $this->setFlashMessage('danger', 'Invoice not found.');
@@ -496,7 +515,28 @@ class Receivables extends Base_Controller {
             return;
         }
         
+        // Ensure all invoice fields are present with defaults
+        $invoice['invoice_number'] = $invoice['invoice_number'] ?? '';
+        $invoice['invoice_date'] = $invoice['invoice_date'] ?? date('Y-m-d');
+        $invoice['due_date'] = $invoice['due_date'] ?? date('Y-m-d');
+        $invoice['customer_id'] = $invoice['customer_id'] ?? 0;
+        $invoice['reference'] = $invoice['reference'] ?? '';
+        $invoice['subtotal'] = $invoice['subtotal'] ?? 0;
+        $invoice['tax_rate'] = $invoice['tax_rate'] ?? 0;
+        $invoice['tax_amount'] = $invoice['tax_amount'] ?? 0;
+        $invoice['discount_amount'] = $invoice['discount_amount'] ?? 0;
+        $invoice['total_amount'] = $invoice['total_amount'] ?? 0;
+        $invoice['paid_amount'] = $invoice['paid_amount'] ?? 0;
+        $invoice['balance_amount'] = $invoice['balance_amount'] ?? 0;
+        $invoice['currency'] = $invoice['currency'] ?? 'USD';
+        $invoice['terms'] = $invoice['terms'] ?? '';
+        $invoice['notes'] = $invoice['notes'] ?? '';
+        $invoice['status'] = $invoice['status'] ?? 'draft';
+        
+        // Load invoice items
         $items = $this->invoiceModel->getItems($id);
+        
+        error_log("Receivables editInvoice: Successfully loaded invoice ID: {$id} with all fields and " . count($items) . " items");
         
         // Get customers and accounts for dropdowns
         try {

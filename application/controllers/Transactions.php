@@ -157,6 +157,7 @@ class Transactions extends Base_Controller {
         }
         
         try {
+            // Load complete transaction data with all columns
             $transaction = $this->transactionModel->getById($id);
             if (!$transaction) {
                 $this->setFlashMessage('danger', 'Transaction not found.');
@@ -170,6 +171,20 @@ class Transactions extends Base_Controller {
                 redirect('transactions');
                 return;
             }
+            
+            // Ensure all fields are present with defaults
+            $transaction['transaction_date'] = $transaction['transaction_date'] ?? date('Y-m-d');
+            $transaction['transaction_type'] = $transaction['transaction_type'] ?? 'manual';
+            $transaction['account_id'] = $transaction['account_id'] ?? 0;
+            $transaction['description'] = $transaction['description'] ?? '';
+            $transaction['debit'] = $transaction['debit'] ?? 0;
+            $transaction['credit'] = $transaction['credit'] ?? 0;
+            $transaction['reference'] = $transaction['reference'] ?? '';
+            $transaction['reference_type'] = $transaction['reference_type'] ?? '';
+            $transaction['reference_id'] = $transaction['reference_id'] ?? null;
+            $transaction['status'] = $transaction['status'] ?? 'draft';
+            
+            error_log("Transactions edit: Successfully loaded transaction ID: {$id} with all fields");
         } catch (Exception $e) {
             error_log('Transactions edit load error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error loading transaction.');

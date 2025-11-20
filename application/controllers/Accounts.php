@@ -100,12 +100,26 @@ class Accounts extends Base_Controller {
         }
         
         try {
+            // Load complete account data with all columns
             $account = $this->accountModel->getById($id);
             if (!$account) {
                 $this->setFlashMessage('danger', 'Account not found.');
                 redirect('accounts');
                 return;
             }
+            
+            // Ensure all fields are present with defaults
+            $account['account_code'] = $account['account_code'] ?? '';
+            $account['account_name'] = $account['account_name'] ?? '';
+            $account['account_type'] = $account['account_type'] ?? 'Assets';
+            $account['parent_id'] = $account['parent_id'] ?? null;
+            $account['opening_balance'] = $account['opening_balance'] ?? 0;
+            $account['balance'] = $account['balance'] ?? 0;
+            $account['currency'] = $account['currency'] ?? 'USD';
+            $account['description'] = $account['description'] ?? '';
+            $account['status'] = $account['status'] ?? 'active';
+            
+            error_log("Accounts edit: Successfully loaded account ID: {$id} with all fields");
         } catch (Exception $e) {
             error_log('Accounts edit load error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error loading account.');

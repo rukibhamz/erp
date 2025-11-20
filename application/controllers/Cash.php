@@ -411,6 +411,7 @@ class Cash extends Base_Controller {
         }
         
         try {
+            // Load complete cash account data with all columns
             $cashAccount = $this->cashAccountModel->getById($id);
             if (!$cashAccount) {
                 error_log("Cash editAccount: Cash account not found for ID: {$id}");
@@ -419,7 +420,29 @@ class Cash extends Base_Controller {
                 return;
             }
             
-            error_log("Cash editAccount: Successfully loaded cash account ID: {$id}");
+            // Also load related account data if account_id exists
+            if (!empty($cashAccount['account_id'])) {
+                $linkedAccount = $this->accountModel->getById($cashAccount['account_id']);
+                if ($linkedAccount) {
+                    // Merge linked account data for reference (don't overwrite cash account data)
+                    $cashAccount['linked_account_code'] = $linkedAccount['account_code'] ?? '';
+                    $cashAccount['linked_account_name'] = $linkedAccount['account_name'] ?? '';
+                }
+            }
+            
+            // Ensure all fields are present with defaults
+            $cashAccount['account_name'] = $cashAccount['account_name'] ?? '';
+            $cashAccount['account_type'] = $cashAccount['account_type'] ?? 'bank_account';
+            $cashAccount['bank_name'] = $cashAccount['bank_name'] ?? '';
+            $cashAccount['account_number'] = $cashAccount['account_number'] ?? '';
+            $cashAccount['routing_number'] = $cashAccount['routing_number'] ?? '';
+            $cashAccount['swift_code'] = $cashAccount['swift_code'] ?? '';
+            $cashAccount['currency'] = $cashAccount['currency'] ?? 'USD';
+            $cashAccount['status'] = $cashAccount['status'] ?? 'active';
+            $cashAccount['opening_balance'] = $cashAccount['opening_balance'] ?? 0;
+            $cashAccount['current_balance'] = $cashAccount['current_balance'] ?? 0;
+            
+            error_log("Cash editAccount: Successfully loaded cash account ID: {$id} with all fields");
         } catch (Exception $e) {
             error_log('Cash editAccount load error: ' . $e->getMessage());
             error_log('Cash editAccount stack trace: ' . $e->getTraceAsString());

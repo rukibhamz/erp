@@ -119,6 +119,7 @@ class Payables extends Base_Controller {
         }
         
         try {
+            // Load complete vendor data with all columns
             $vendor = $this->vendorModel->getById($id);
             if (!$vendor) {
                 error_log("Payables editVendor: Vendor not found for ID: {$id}");
@@ -127,7 +128,23 @@ class Payables extends Base_Controller {
                 return;
             }
             
-            error_log("Payables editVendor: Successfully loaded vendor ID: {$id}");
+            // Ensure all fields are present with defaults
+            $vendor['company_name'] = $vendor['company_name'] ?? '';
+            $vendor['contact_name'] = $vendor['contact_name'] ?? '';
+            $vendor['email'] = $vendor['email'] ?? '';
+            $vendor['phone'] = $vendor['phone'] ?? '';
+            $vendor['address'] = $vendor['address'] ?? '';
+            $vendor['city'] = $vendor['city'] ?? '';
+            $vendor['state'] = $vendor['state'] ?? '';
+            $vendor['zip_code'] = $vendor['zip_code'] ?? '';
+            $vendor['country'] = $vendor['country'] ?? '';
+            $vendor['tax_id'] = $vendor['tax_id'] ?? '';
+            $vendor['credit_limit'] = $vendor['credit_limit'] ?? 0;
+            $vendor['payment_terms'] = $vendor['payment_terms'] ?? '';
+            $vendor['currency'] = $vendor['currency'] ?? 'USD';
+            $vendor['status'] = $vendor['status'] ?? 'active';
+            
+            error_log("Payables editVendor: Successfully loaded vendor ID: {$id} with all fields");
         } catch (Exception $e) {
             error_log('Payables editVendor load error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error loading vendor.');
@@ -380,6 +397,7 @@ class Payables extends Base_Controller {
             return;
         }
         
+        // Load complete bill data with all columns
         $bill = $this->billModel->getById($id);
         if (!$bill) {
             error_log("Payables editBill: Bill not found for ID: {$id}");
@@ -387,6 +405,26 @@ class Payables extends Base_Controller {
             redirect('payables/bills');
             return;
         }
+        
+        // Ensure all bill fields are present with defaults
+        $bill['bill_number'] = $bill['bill_number'] ?? '';
+        $bill['bill_date'] = $bill['bill_date'] ?? date('Y-m-d');
+        $bill['due_date'] = $bill['due_date'] ?? date('Y-m-d');
+        $bill['vendor_id'] = $bill['vendor_id'] ?? 0;
+        $bill['reference'] = $bill['reference'] ?? '';
+        $bill['subtotal'] = $bill['subtotal'] ?? 0;
+        $bill['tax_rate'] = $bill['tax_rate'] ?? 0;
+        $bill['tax_amount'] = $bill['tax_amount'] ?? 0;
+        $bill['discount_amount'] = $bill['discount_amount'] ?? 0;
+        $bill['total_amount'] = $bill['total_amount'] ?? 0;
+        $bill['paid_amount'] = $bill['paid_amount'] ?? 0;
+        $bill['balance_amount'] = $bill['balance_amount'] ?? 0;
+        $bill['currency'] = $bill['currency'] ?? 'USD';
+        $bill['terms'] = $bill['terms'] ?? '';
+        $bill['notes'] = $bill['notes'] ?? '';
+        $bill['status'] = $bill['status'] ?? 'draft';
+        
+        error_log("Payables editBill: Successfully loaded bill ID: {$id} with all fields");
         
         // Handle POST request for updating bill
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

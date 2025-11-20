@@ -132,6 +132,7 @@ class Ledger extends Base_Controller {
         }
         
         try {
+            // Load complete journal entry data with all columns
             $entry = $this->journalModel->getById($id);
             if (!$entry) {
                 $this->setFlashMessage('danger', 'Journal entry not found.');
@@ -146,7 +147,19 @@ class Ledger extends Base_Controller {
                 return;
             }
             
+            // Ensure all entry fields are present with defaults
+            $entry['entry_number'] = $entry['entry_number'] ?? '';
+            $entry['entry_date'] = $entry['entry_date'] ?? date('Y-m-d');
+            $entry['reference'] = $entry['reference'] ?? '';
+            $entry['description'] = $entry['description'] ?? '';
+            $entry['status'] = $entry['status'] ?? 'draft';
+            $entry['total_debit'] = $entry['total_debit'] ?? 0;
+            $entry['total_credit'] = $entry['total_credit'] ?? 0;
+            
+            // Load journal entry lines
             $lines = $this->journalModel->getLines($id);
+            
+            error_log("Ledger edit: Successfully loaded journal entry ID: {$id} with all fields and " . count($lines) . " lines");
         } catch (Exception $e) {
             error_log('Ledger edit load error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error loading journal entry.');

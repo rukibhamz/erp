@@ -321,6 +321,7 @@ class Items extends Base_Controller {
                 redirect('inventory/items');
             }
             
+            // Load complete item data with all columns
             $item = $this->itemModel->getById($id);
             if (!$item) {
                 error_log('Items edit: Item not found for ID: ' . $id);
@@ -328,14 +329,31 @@ class Items extends Base_Controller {
                 redirect('inventory/items');
             }
             
-            error_log('Items edit: Successfully loaded item ID: ' . $id . ', Name: ' . ($item['item_name'] ?? 'N/A'));
-            
+            // Ensure all item fields are present with defaults
+            $item['item_code'] = $item['item_code'] ?? '';
+            $item['sku'] = $item['sku'] ?? '';
+            $item['item_name'] = $item['item_name'] ?? '';
+            $item['item_type'] = $item['item_type'] ?? 'inventory';
+            $item['category'] = $item['category'] ?? '';
+            $item['unit_of_measure'] = $item['unit_of_measure'] ?? 'pcs';
+            $item['purchase_price'] = $item['purchase_price'] ?? 0;
+            $item['selling_price'] = $item['selling_price'] ?? 0;
+            $item['average_cost'] = $item['average_cost'] ?? 0;
+            $item['reorder_point'] = $item['reorder_point'] ?? 0;
+            $item['reorder_quantity'] = $item['reorder_quantity'] ?? 0;
+            $item['description'] = $item['description'] ?? '';
             $item['specifications'] = json_decode($item['specifications'] ?? '{}', true);
+            $item['tax_rate'] = $item['tax_rate'] ?? 0;
+            $item['currency'] = $item['currency'] ?? 'USD';
             
             // Ensure status columns are consistent
             if (empty($item['status']) && !empty($item['item_status'])) {
                 $item['status'] = ($item['item_status'] === 'active') ? 'active' : 'inactive';
+            } else {
+                $item['status'] = $item['status'] ?? 'active';
             }
+            
+            error_log('Items edit: Successfully loaded item ID: ' . $id . ', Name: ' . ($item['item_name'] ?? 'N/A') . ' with all fields');
             
         } catch (Exception $e) {
             error_log('Items edit load error: ' . $e->getMessage());
