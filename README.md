@@ -4,14 +4,125 @@ A modern, installable PHP business management application built with MVC archite
 
 ## Features
 
+### Core System Features
+
 - **Modular MVC Architecture** - Clean, maintainable code structure
 - **Installation Wizard** - Easy setup process similar to WordPress/Perfex CRM
 - **Bootstrap 5.3 UI** - Modern, responsive, minimalist design
-- **User Management** - Complete user system with roles and permissions
-- **Company Management** - Manage multiple companies
-- **Activity Logging** - Track all user actions
-- **Security** - Built-in security features (XSS protection, CSRF tokens, password hashing)
-- **Mobile-First** - Fully responsive design
+- **Mobile-First Design** - Fully responsive design that works on all devices
+- **Automatic Database Migrations** - Database migrations run automatically on startup
+- **Module System** - Activate/deactivate and customize module names dynamically
+- **Activity Logging** - Track all user actions and system events
+- **Comprehensive Security** - Built-in security features (XSS protection, CSRF tokens, password hashing, SQL injection protection)
+
+### User & Access Management
+
+- **User Management** - Complete user system with profile management
+- **Role-Based Access Control (RBAC)** - Flexible permission system with roles and permissions
+- **Pre-defined Roles** - Super Admin, Admin, Manager, Staff, Accountant, User roles
+- **Permission System** - Granular permissions (Create, Read, Update, Delete) per module
+- **Company/Entity Management** - Manage multiple companies and entities
+- **User Profiles** - Customizable user profiles with settings
+
+### Accounting & Financial Management
+
+- **Chart of Accounts** - Complete account structure management
+- **Cash Management** - Track and manage cash transactions
+- **Accounts Receivable** - Manage customer invoices and payments
+- **Accounts Payable** - Track vendor bills and payments
+- **General Ledger** - Complete financial ledger system
+- **Payroll Management** - Employee payroll processing
+- **Financial Reports** - Comprehensive financial reporting
+- **Multi-Currency Support** - Handle multiple currencies
+- **Transaction Management** - Track all financial transactions
+
+### Inventory Management
+
+- **Item Management** - Complete product/item catalog
+- **Stock Levels** - Real-time inventory tracking
+- **Stock Movements** - Track inventory movements and transfers
+- **Stock Adjustments** - Adjust inventory levels
+- **Stock Takes** - Physical inventory counting
+- **Goods Receipts** - Manage incoming inventory
+- **Inventory Reports** - Detailed inventory analytics
+- **Product Management** - Product catalog with variants
+
+### Bookings & Resource Management
+
+- **Resource Booking** - Book facilities, spaces, and resources
+- **Booking Wizard** - Step-by-step booking process
+- **Space Management** - Manage bookable spaces and facilities
+- **Booking Reports** - Analytics and reporting for bookings
+- **Resource Scheduling** - Schedule and manage resource availability
+
+### Property & Lease Management
+
+- **Property Management** - Manage properties and locations
+- **Space Management** - Track and manage spaces within properties
+- **Lease Management** - Complete lease lifecycle management
+- **Tenant Management** - Manage tenant information and relationships
+- **Rent Invoices** - Generate and manage rent invoices
+- **Entity Management** - Manage business entities and locations
+
+### Utilities Management
+
+- **Utility Bills** - Track and manage utility bills
+- **Meter Management** - Manage utility meters
+- **Meter Readings** - Record and track meter readings
+- **Utility Providers** - Manage utility service providers
+- **Utility Payments** - Track utility bill payments
+- **Utility Allocations** - Allocate utility costs to tenants/spaces
+- **Utility Alerts** - Automated alerts for bills and payments
+- **Utility Reports** - Comprehensive utility analytics
+- **Tariff Management** - Manage utility tariffs and rates
+
+### Tax Management
+
+- **Tax Compliance** - Complete tax management system
+- **VAT Management** - Value Added Tax tracking and reporting
+- **PAYE Management** - Pay As You Earn tax management
+- **CIT Management** - Corporate Income Tax handling
+- **WHT Management** - Withholding Tax management
+- **Tax Configuration** - Flexible tax settings and rules
+- **Tax Payments** - Track tax payments and deadlines
+- **Tax Reports** - Comprehensive tax reporting and compliance
+
+### Point of Sale (POS)
+
+- **POS System** - Complete point of sale functionality
+- **Sales Transactions** - Process sales and transactions
+- **Receipt Generation** - Generate sales receipts
+- **Payment Processing** - Handle multiple payment methods
+
+### Staff & Human Resources
+
+- **Employee Management** - Complete employee database
+- **Staff Management** - Manage staff information and assignments
+- **Payroll Integration** - Integrated payroll processing
+
+### Reporting & Analytics
+
+- **Report Builder** - Custom report creation tool
+- **Financial Reports** - Accounting and financial analytics
+- **Inventory Reports** - Stock and inventory analytics
+- **Booking Reports** - Booking and resource utilization reports
+- **Utility Reports** - Utility consumption and cost reports
+- **Tax Reports** - Tax compliance and reporting
+- **Custom Reports** - Build custom reports with filters
+
+### Additional Features
+
+- **Customer Portal** - Self-service portal for customers
+- **Notifications System** - Real-time notifications and alerts
+- **Search Functionality** - Global search across the system
+- **Import/Export** - Data import and export capabilities
+- **Backup System** - System backup and restore functionality
+- **Fixed Assets** - Track and manage fixed assets
+- **Purchase Orders** - Manage purchase orders and procurement
+- **Facilities Management** - Manage facilities and maintenance
+- **Resource Management** - Track and allocate resources
+- **Settings Management** - Comprehensive system settings
+- **Module Customization** - Customize module names and visibility
 
 ## Requirements
 

@@ -54,6 +54,14 @@
                     </li>
                     <?php if (isset($current_user['role']) && $current_user['role'] === 'super_admin'): ?>
                     <li class="nav-item">
+                        <a href="<?= base_url('activity') ?>" class="nav-link <?= strpos($current_url, 'activity') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-file-text"></i>
+                            <span class="nav-text">Activity Log</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
+                    <?php if (isset($current_user['role']) && $current_user['role'] === 'super_admin'): ?>
+                    <li class="nav-item">
                         <a href="<?= base_url('entities') ?>" class="nav-link <?= (strpos($current_url, 'entities') === 0 || strpos($current_url, 'companies') === 0) ? 'active' : '' ?>">
                             <i class="bi <?= get_module_icon('entities') ?>"></i>
                             <span class="nav-text"><?= get_module_name('entities') ?></span>
@@ -65,14 +73,6 @@
                         <a href="<?= base_url('users') ?>" class="nav-link <?= strpos($current_url, 'users') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-people"></i>
                             <span class="nav-text">Users</span>
-                        </a>
-                    </li>
-                    <?php endif; ?>
-                    <?php if (isset($current_user['role']) && $current_user['role'] === 'super_admin'): ?>
-                    <li class="nav-item">
-                        <a href="<?= base_url('activity') ?>" class="nav-link <?= strpos($current_url, 'activity') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-file-text"></i>
-                            <span class="nav-text">Activity Log</span>
                         </a>
                     </li>
                     <?php endif; ?>

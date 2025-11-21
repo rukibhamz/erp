@@ -204,15 +204,11 @@ function get_user_accessible_modules() {
             }
         }
         
-        // Sort by display_order from module_labels (use labelKey for lookup)
-        usort($accessibleModules, function($a, $b) use ($moduleLabels, $moduleLabelMap) {
-            $labelKeyA = $moduleLabelMap[$a['module_key']] ?? $a['module_key'];
-            $labelKeyB = $moduleLabelMap[$b['module_key']] ?? $b['module_key'];
-            $orderA = isset($moduleLabels[$labelKeyA]) && isset($moduleLabels[$labelKeyA]['display_order']) 
-                ? $moduleLabels[$labelKeyA]['display_order'] : 999;
-            $orderB = isset($moduleLabels[$labelKeyB]) && isset($moduleLabels[$labelKeyB]['display_order']) 
-                ? $moduleLabels[$labelKeyB]['display_order'] : 999;
-            return $orderA <=> $orderB;
+        // Sort alphabetically by display_name
+        usort($accessibleModules, function($a, $b) {
+            $nameA = strtolower($a['display_name'] ?? '');
+            $nameB = strtolower($b['display_name'] ?? '');
+            return strcmp($nameA, $nameB);
         });
         
         return $accessibleModules;
