@@ -28,10 +28,34 @@ class Currencies extends Base_Controller {
         $this->loadView('currencies/index', $data);
     }
 
+    public function view($id) {
+        $this->requirePermission('settings', 'read');
+
+        try {
+            $currency = $this->currencyModel->getById($id);
+            if (!$currency) {
+                $this->setFlashMessage('danger', 'Currency not found.');
+                redirect('currencies');
+            }
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading currency.');
+            redirect('currencies');
+        }
+
+        $data = [
+            'page_title' => 'Currency Details',
+            'currency' => $currency,
+            'flash' => $this->getFlashMessage()
+        ];
+
+        $this->loadView('currencies/view', $data);
+    }
+
     public function create() {
         $this->requirePermission('settings', 'create');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'currency_code' => strtoupper(sanitize_input($_POST['currency_code'] ?? '')),
                 'currency_name' => sanitize_input($_POST['currency_name'] ?? ''),
@@ -78,6 +102,7 @@ class Currencies extends Base_Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'currency_code' => strtoupper(sanitize_input($_POST['currency_code'] ?? '')),
                 'currency_name' => sanitize_input($_POST['currency_name'] ?? ''),
@@ -123,6 +148,7 @@ class Currencies extends Base_Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $fromCurrency = sanitize_input($_POST['from_currency'] ?? '');
             $toCurrency = sanitize_input($_POST['to_currency'] ?? '');
             $rate = floatval($_POST['rate'] ?? 1.0);
@@ -144,6 +170,37 @@ class Currencies extends Base_Controller {
         ];
 
         $this->loadView('currencies/rates', $data);
+    }
+
+    public function delete($id) {
+        $this->requirePermission('settings', 'delete');
+
+        try {
+            $currency = $this->currencyModel->getById($id);
+            if (!$currency) {
+                $this->setFlashMessage('danger', 'Currency not found.');
+                redirect('currencies');
+            }
+
+            // Check if currency is base currency
+            $baseCurrency = $this->currencyModel->getBaseCurrency();
+            if ($baseCurrency && $baseCurrency['id'] == $id) {
+                $this->setFlashMessage('danger', 'Cannot delete base currency. Please set another currency as base first.');
+                redirect('currencies');
+            }
+
+            if ($this->currencyModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Currencies', 'Deleted currency: ' . $currency['currency_code']);
+                $this->setFlashMessage('success', 'Currency deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete currency.');
+            }
+        } catch (Exception $e) {
+            error_log('Currency delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'An error occurred while deleting currency.');
+        }
+
+        redirect('currencies');
     }
 }
 

@@ -37,7 +37,24 @@ $page_title = $page_title ?? 'Entities';
                                 <td><?= htmlspecialchars($entity['currency'] ?? 'USD') ?></td>
                                 <td><?= $entity['created_at'] ? date('M d, Y', strtotime($entity['created_at'])) : '-' ?></td>
                                 <td>
-                                    <a href="<?= base_url('entities/edit/' . $entity['id']) ?>" class="btn btn-sm btn-primary">Edit</a>
+                                    <div class="btn-group btn-group-sm">
+                                        <?php if (has_permission('entities', 'read')): ?>
+                                            <a href="<?= base_url('entities/view/' . $entity['id']) ?>" class="btn btn-primary" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        <?php if (has_permission('entities', 'update')): ?>
+                                            <a href="<?= base_url('entities/edit/' . $entity['id']) ?>" class="btn btn-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        <?php if (has_permission('entities', 'delete')): ?>
+                                            <a href="<?= base_url('entities/delete/' . $entity['id']) ?>" class="btn btn-danger" 
+                                               title="Delete" onclick="return confirm('Are you sure you want to delete this entity?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

@@ -2,15 +2,16 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Products & Services</h1>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Products & Services</h1>
         <?php if (has_permission('products', 'create')): ?>
             <a href="<?= base_url('products/create') ?>" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Product/Service
             </a>
         <?php endif; ?>
     </div>
+</div>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
@@ -85,17 +86,24 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         </span>
                                     </td>
                                     <td>
-                                        <?php if (has_permission('products', 'update')): ?>
-                                            <a href="<?= base_url('products/edit/' . $product['id']) ?>" class="btn btn-sm btn-primary">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                        <?php endif; ?>
-                                        <?php if (has_permission('products', 'delete')): ?>
-                                            <a href="<?= base_url('products/delete/' . $product['id']) ?>" class="btn btn-sm btn-outline-danger" 
-                                               onclick="return confirm('Are you sure you want to delete this product?')">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
-                                        <?php endif; ?>
+                                        <div class="btn-group btn-group-sm">
+                                            <?php if (has_permission('products', 'read')): ?>
+                                                <a href="<?= base_url('products/view/' . $product['id']) ?>" class="btn btn-primary" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <?php if (has_permission('products', 'update')): ?>
+                                                <a href="<?= base_url('products/edit/' . $product['id']) ?>" class="btn btn-primary" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <?php if (has_permission('products', 'delete')): ?>
+                                                <a href="<?= base_url('products/delete/' . $product['id']) ?>" class="btn btn-danger" 
+                                                   title="Delete" onclick="return confirm('Are you sure you want to delete this product?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

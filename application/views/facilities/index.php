@@ -2,15 +2,16 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Facilities</h1>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Resources & Facilities</h1>
         <?php if (has_permission('bookings', 'create')): ?>
             <a href="<?= base_url('facilities/create') ?>" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Facility
             </a>
         <?php endif; ?>
     </div>
+</div>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
@@ -52,12 +53,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <?php endif; ?>
                             </div>
                             
-                            <div class="d-flex gap-2 mt-3">
-                                <a href="<?= base_url('facilities/edit/' . $facility['id']) ?>" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </a>
-                                <a href="<?= base_url('bookings?facility_id=' . $facility['id']) ?>" class="btn btn-sm btn-outline-info">
-                                    <i class="bi bi-calendar"></i> View Bookings
+                            <div class="btn-group btn-group-sm mt-3">
+                                <?php if (has_permission('bookings', 'read')): ?>
+                                    <a href="<?= base_url('facilities/view/' . $facility['id']) ?>" class="btn btn-primary" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if (has_permission('bookings', 'update')): ?>
+                                    <a href="<?= base_url('facilities/edit/' . $facility['id']) ?>" class="btn btn-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if (has_permission('bookings', 'delete')): ?>
+                                    <a href="<?= base_url('facilities/delete/' . $facility['id']) ?>" class="btn btn-danger" 
+                                       title="Delete" onclick="return confirm('Are you sure you want to delete this facility?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <a href="<?= base_url('bookings?facility_id=' . $facility['id']) ?>" class="btn btn-outline-info" title="View Bookings">
+                                    <i class="bi bi-calendar"></i>
                                 </a>
                             </div>
                         </div>

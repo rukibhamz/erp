@@ -51,6 +51,49 @@ class Products extends Base_Controller {
         $this->loadView('products/index', $data);
     }
 
+    public function view($id) {
+        $this->requirePermission('products', 'read');
+
+        try {
+            $product = $this->productModel->getById($id);
+            if (!$product) {
+                $this->setFlashMessage('danger', 'Product not found.');
+                redirect('products');
+            }
+
+            // Get related tax and account info if available
+            if (!empty($product['tax_id'])) {
+                try {
+                    $tax = $this->taxModel->getById($product['tax_id']);
+                    $product['tax'] = $tax;
+                } catch (Exception $e) {
+                    $product['tax'] = null;
+                }
+            }
+
+            if (!empty($product['account_id'])) {
+                try {
+                    $account = $this->accountModel->getById($product['account_id']);
+                    $product['account'] = $account;
+                } catch (Exception $e) {
+                    $product['account'] = null;
+                }
+            }
+        } catch (Exception $e) {
+            error_log('Product view error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading product.');
+            redirect('products');
+        }
+
+        $data = [
+            'page_title' => 'Product Details',
+            'product' => $product,
+            'flash' => $this->getFlashMessage()
+        ];
+
+        $this->loadView('products/view', $data);
+    }
+
     public function create() {
         $this->requirePermission('products', 'create');
 

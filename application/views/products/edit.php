@@ -2,13 +2,14 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Edit Product/Service</h1>
-        <a href="<?= base_url('products') ?>" class="btn btn-secondary">
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Edit Product/Service</h1>
+        <a href="<?= base_url('products') ?>" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
+</div>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
@@ -144,7 +145,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">
-                    <a href="<?= base_url('products') ?>" class="btn btn-secondary">Cancel</a>
+                    <a href="<?= base_url('products') ?>" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Update Product</button>
                 </div>
             </form>

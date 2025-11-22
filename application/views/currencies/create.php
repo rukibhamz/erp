@@ -2,13 +2,14 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Add Currency</h1>
-        <a href="<?= base_url('currencies') ?>" class="btn btn-secondary">
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Add Currency</h1>
+        <a href="<?= base_url('currencies') ?>" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
+</div>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
@@ -21,28 +22,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card-body">
             <form method="POST">
                 <?php echo csrf_field(); ?>
-                <div class="row">
+                <div class="row mb-3">
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Currency Code *</label>
-                            <input type="text" name="currency_code" class="form-control" maxlength="3" required 
-                                   placeholder="USD, EUR, GBP, etc." style="text-transform: uppercase;">
-                            <small class="text-muted">ISO 4217 code (3 letters)</small>
-                        </div>
+                        <label for="currency_code" class="form-label">
+                            Currency Code <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="currency_code" name="currency_code" class="form-control" maxlength="3" required 
+                               placeholder="USD, EUR, GBP, etc." style="text-transform: uppercase;">
+                        <small class="text-muted">ISO 4217 code (3 letters)</small>
                     </div>
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Currency Name *</label>
-                            <input type="text" name="currency_name" class="form-control" required 
-                                   placeholder="US Dollar, Euro, etc.">
-                        </div>
+                        <label for="currency_name" class="form-label">
+                            Currency Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="currency_name" name="currency_name" class="form-control" required 
+                               placeholder="US Dollar, Euro, etc.">
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row mb-3">
                     <div class="col-md-4">
-                        <div class="mb-3">
-                            <label class="form-label">Symbol *</label>
+                        <label for="symbol" class="form-label">
+                            Symbol <span class="text-danger">*</span>
+                        </label>
                             <input type="text" name="symbol" class="form-control" required 
                                    placeholder="$, €, £, etc.">
                         </div>

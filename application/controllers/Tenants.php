@@ -206,5 +206,36 @@ class Tenants extends Base_Controller {
         
         $this->loadView('tenants/edit', $data);
     }
+
+    public function delete($id) {
+        $this->requirePermission('locations', 'delete');
+
+        try {
+            $tenant = $this->tenantModel->getById($id);
+            if (!$tenant) {
+                $this->setFlashMessage('danger', 'Tenant not found.');
+                redirect('tenants');
+            }
+
+            // Check if tenant has active leases
+            $activeLeases = $this->leaseModel->getActiveByTenantId($id);
+            if (!empty($activeLeases)) {
+                $this->setFlashMessage('danger', 'Cannot delete tenant with active leases. Please end all leases first.');
+                redirect('tenants');
+            }
+
+            if ($this->tenantModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Tenants', 'Deleted tenant: ' . ($tenant['business_name'] ?: $tenant['contact_person']));
+                $this->setFlashMessage('success', 'Tenant deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete tenant.');
+            }
+        } catch (Exception $e) {
+            error_log('Tenant delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'An error occurred while deleting tenant.');
+        }
+
+        redirect('tenants');
+    }
 }
 

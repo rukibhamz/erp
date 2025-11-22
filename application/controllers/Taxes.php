@@ -30,10 +30,34 @@ class Taxes extends Base_Controller {
         $this->loadView('taxes/index', $data);
     }
 
+    public function view($id) {
+        $this->requirePermission('taxes', 'read');
+
+        try {
+            $tax = $this->taxModel->getById($id);
+            if (!$tax) {
+                $this->setFlashMessage('danger', 'Tax rate not found.');
+                redirect('taxes');
+            }
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading tax rate.');
+            redirect('taxes');
+        }
+
+        $data = [
+            'page_title' => 'Tax Rate Details',
+            'tax' => $tax,
+            'flash' => $this->getFlashMessage()
+        ];
+
+        $this->loadView('taxes/view', $data);
+    }
+
     public function create() {
         $this->requirePermission('taxes', 'create');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'tax_name' => sanitize_input($_POST['tax_name'] ?? ''),
                 'tax_code' => sanitize_input($_POST['tax_code'] ?? ''),
@@ -71,6 +95,7 @@ class Taxes extends Base_Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'tax_name' => sanitize_input($_POST['tax_name'] ?? ''),
                 'tax_code' => sanitize_input($_POST['tax_code'] ?? ''),

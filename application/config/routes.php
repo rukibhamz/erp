@@ -17,11 +17,15 @@ $route['dashboard'] = 'Dashboard/index';
 // Entities (formerly Companies)
 $route['entities'] = 'Entities/index';
 $route['entities/create'] = 'Entities/create';
+$route['entities/view/(:num)'] = 'Entities/view/$1';
 $route['entities/edit/(:num)'] = 'Entities/edit/$1';
+$route['entities/delete/(:num)'] = 'Entities/delete/$1';
 // Legacy routes for backward compatibility
 $route['companies'] = 'Entities/index';
 $route['companies/create'] = 'Entities/create';
+$route['companies/view/(:num)'] = 'Entities/view/$1';
 $route['companies/edit/(:num)'] = 'Entities/edit/$1';
+$route['companies/delete/(:num)'] = 'Entities/delete/$1';
 
 // Users
 $route['users'] = 'Users/index';
@@ -162,23 +166,15 @@ $route['payables/vendors/delete/(:num)'] = 'Payables/deleteVendor/$1';
 $route['payables/batch-payment'] = 'Payables/batchPayment';
 $route['payables/aging'] = 'Payables/aging';
 
-// General Ledger
+// General Ledger (consolidated - duplicates removed)
 $route['ledger'] = 'Ledger/index';
 $route['ledger/index'] = 'Ledger/index';
 $route['journal'] = 'Ledger/index';
 $route['journal/create'] = 'Ledger/create';
-$route['ledger/create'] = 'Ledger/create';
-$route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
-        $route['ledger/approve/(:num)'] = 'Ledger/approve/$1';
-        $route['ledger/post/(:num)'] = 'Ledger/post/$1';
+$route['ledger/approve/(:num)'] = 'Ledger/approve/$1';
+$route['ledger/post/(:num)'] = 'Ledger/post/$1';
 
-        // Financial Reports
-        $route['reports'] = 'Reports/index';
-        $route['reports/profit-loss'] = 'Reports/profitLoss';
-        $route['reports/balance-sheet'] = 'Reports/balanceSheet';
-        $route['reports/cash-flow'] = 'Reports/cashFlow';
-        $route['reports/trial-balance'] = 'Reports/trialBalance';
-        $route['reports/general-ledger'] = 'Reports/generalLedger';
+// Financial Reports (consolidated - duplicates removed)
 
         // Staff Management (Payroll and Employees moved here)
         $route['staff_management'] = 'Staff_management/index';
@@ -254,7 +250,9 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         // Booking System - Resources
         $route['facilities'] = 'Facilities/index';
         $route['facilities/create'] = 'Facilities/create';
+        $route['facilities/view/(:num)'] = 'Facilities/view/$1';
         $route['facilities/edit/(:num)'] = 'Facilities/edit/$1';
+        $route['facilities/delete/(:num)'] = 'Facilities/delete/$1';
         $route['resource-management/availability/(:num)'] = 'Resource_management/availability/$1';
         $route['resource-management/blockouts/(:num)'] = 'Resource_management/blockouts/$1';
         $route['resource-management/add-blockout'] = 'Resource_management/addBlockout';
@@ -301,6 +299,28 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['booking-reports/customer-history'] = 'Booking_reports/customerHistory';
         $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
         $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
+        
+        // Currencies
+        $route['currencies'] = 'Currencies/index';
+        $route['currencies/create'] = 'Currencies/create';
+        $route['currencies/view/(:num)'] = 'Currencies/view/$1';
+        $route['currencies/edit/(:num)'] = 'Currencies/edit/$1';
+        $route['currencies/delete/(:num)'] = 'Currencies/delete/$1';
+        $route['currencies/rates'] = 'Currencies/rates';
+        
+        // Tax Rates
+        $route['taxes'] = 'Taxes/index';
+        $route['taxes/create'] = 'Taxes/create';
+        $route['taxes/view/(:num)'] = 'Taxes/view/$1';
+        $route['taxes/edit/(:num)'] = 'Taxes/edit/$1';
+        $route['taxes/delete/(:num)'] = 'Taxes/delete/$1';
+        
+        // Products & Services
+        $route['products'] = 'Products/index';
+        $route['products/create'] = 'Products/create';
+        $route['products/view/(:num)'] = 'Products/view/$1';
+        $route['products/edit/(:num)'] = 'Products/edit/$1';
+        $route['products/delete/(:num)'] = 'Products/delete/$1';
         
         // Settings Routes
         $route['settings/modules'] = 'Settings/modules';
@@ -355,6 +375,7 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['tenants/create'] = 'Tenants/create';
         $route['tenants/view/(:num)'] = 'Tenants/view/$1';
         $route['tenants/edit/(:num)'] = 'Tenants/edit/$1';
+        $route['tenants/delete/(:num)'] = 'Tenants/delete/$1';
         $route['leases'] = 'Leases/index';
         $route['leases/create'] = 'Leases/create';
         $route['leases/view/(:num)'] = 'Leases/view/$1';
@@ -429,6 +450,8 @@ $route['ledger/edit/(:num)'] = 'Ledger/edit/$1';
         $route['inventory/suppliers'] = 'Suppliers/index';
         $route['inventory/suppliers/create'] = 'Suppliers/create';
         $route['inventory/suppliers/view/(:num)'] = 'Suppliers/view/$1';
+        $route['inventory/suppliers/edit/(:num)'] = 'Suppliers/edit/$1';
+        $route['inventory/suppliers/delete/(:num)'] = 'Suppliers/delete/$1';
         $route['inventory/goods-receipts'] = 'Goods_receipts/index';
         $route['inventory/goods-receipts/create'] = 'Goods_receipts/create';
         $route['inventory/goods-receipts/view/(:num)'] = 'Goods_receipts/view/$1';

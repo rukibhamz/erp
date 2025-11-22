@@ -2,13 +2,14 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Create Facility</h1>
-        <a href="<?= base_url('facilities') ?>" class="btn btn-secondary">
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Create Facility</h1>
+        <a href="<?= base_url('facilities') ?>" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
+</div>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
@@ -21,33 +22,34 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card-body">
             <form method="POST">
                 <?php echo csrf_field(); ?>
-                <div class="row mb-4">
+                <div class="row mb-3">
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Facility Code</label>
-                            <input type="text" name="facility_code" class="form-control" placeholder="Leave empty to auto-generate">
-                        </div>
+                        <label for="facility_code" class="form-label">Facility Code</label>
+                        <input type="text" id="facility_code" name="facility_code" class="form-control" placeholder="Leave empty to auto-generate">
                     </div>
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Status</label>
-                            <select name="status" class="form-select">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="maintenance">Maintenance</option>
-                            </select>
-                        </div>
+                        <label for="status" class="form-label">Status</label>
+                        <select id="status" name="status" class="form-select">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Facility Name *</label>
-                    <input type="text" name="facility_name" class="form-control" required>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="facility_name" class="form-label">
+                            Facility Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="facility_name" name="facility_name" class="form-control" required>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-control" rows="3"></textarea>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea id="description" name="description" class="form-control" rows="3"></textarea>
                 </div>
 
                 <div class="row mb-4">

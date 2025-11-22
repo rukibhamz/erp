@@ -121,12 +121,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <i class="bi bi-eye"></i> View Details
                             </a>
                             <div class="btn-group btn-group-sm" role="group">
-                                <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <a href="<?= base_url('leases/create?tenant_id=' . $tenant['id']) ?>" class="btn btn-primary" title="Create Lease">
+                                <?php if (has_permission('locations', 'update')): ?>
+                                    <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <a href="<?= base_url('leases/create?tenant_id=' . $tenant['id']) ?>" class="btn btn-outline-primary" title="Create Lease">
                                     <i class="bi bi-file-earmark-plus"></i>
                                 </a>
+                                <?php if (has_permission('locations', 'delete')): ?>
+                                    <a href="<?= base_url('tenants/delete/' . $tenant['id']) ?>" class="btn btn-danger" 
+                                       title="Delete" onclick="return confirm('Are you sure you want to delete this tenant?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

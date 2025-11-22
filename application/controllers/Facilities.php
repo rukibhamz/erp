@@ -66,10 +66,45 @@ class Facilities extends Base_Controller {
         $this->loadView('facilities/index', $data);
     }
 
+    public function view($id) {
+        $this->requirePermission('bookings', 'read');
+
+        try {
+            $facility = $this->facilityModel->getWithPhotos($id);
+            if (!$facility) {
+                $this->setFlashMessage('danger', 'Facility not found.');
+                redirect('facilities');
+            }
+
+            // Get related data
+            $availability = $this->availabilityModel->getByFacilityId($id);
+            $blockouts = $this->blockoutModel->getByFacilityId($id);
+            $pricing = $this->pricingModel->getByFacilityId($id);
+            $addons = $this->addonModel->getByFacilityId($id);
+        } catch (Exception $e) {
+            error_log('Facility view error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading facility.');
+            redirect('facilities');
+        }
+
+        $data = [
+            'page_title' => 'Facility Details',
+            'facility' => $facility,
+            'availability' => $availability ?? [],
+            'blockouts' => $blockouts ?? [],
+            'pricing' => $pricing ?? [],
+            'addons' => $addons ?? [],
+            'flash' => $this->getFlashMessage()
+        ];
+
+        $this->loadView('facilities/view', $data);
+    }
+
     public function create() {
         $this->requirePermission('bookings', 'create');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'facility_code' => sanitize_input($_POST['facility_code'] ?? ''),
                 'facility_name' => sanitize_input($_POST['facility_name'] ?? ''),
@@ -131,6 +166,7 @@ class Facilities extends Base_Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
             $data = [
                 'facility_name' => sanitize_input($_POST['facility_name'] ?? ''),
                 'description' => sanitize_input($_POST['description'] ?? ''),
@@ -170,6 +206,38 @@ class Facilities extends Base_Controller {
         ];
 
         $this->loadView('facilities/edit', $data);
+    }
+
+    public function delete($id) {
+        $this->requirePermission('bookings', 'delete');
+
+        try {
+            $facility = $this->facilityModel->getById($id);
+            if (!$facility) {
+                $this->setFlashMessage('danger', 'Facility not found.');
+                redirect('facilities');
+            }
+
+            // Check if facility has active bookings
+            // TODO: Add booking check if booking model exists
+            // $activeBookings = $this->bookingModel->getActiveByFacilityId($id);
+            // if (!empty($activeBookings)) {
+            //     $this->setFlashMessage('danger', 'Cannot delete facility with active bookings.');
+            //     redirect('facilities');
+            // }
+
+            if ($this->facilityModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Facilities', 'Deleted facility: ' . $facility['facility_name']);
+                $this->setFlashMessage('success', 'Facility deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete facility.');
+            }
+        } catch (Exception $e) {
+            error_log('Facility delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'An error occurred while deleting facility.');
+        }
+
+        redirect('facilities');
     }
 }
 

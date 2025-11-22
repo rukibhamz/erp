@@ -64,9 +64,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="<?= base_url('inventory/suppliers/view/' . $supplier['id']) ?>" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="<?= base_url('inventory/suppliers/view/' . $supplier['id']) ?>" 
+                                           class="btn btn-primary" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <?php if (has_permission('inventory', 'update')): ?>
+                                        <a href="<?= base_url('inventory/suppliers/edit/' . $supplier['id']) ?>" 
+                                           class="btn btn-outline-primary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <?php endif; ?>
+                                        <?php if (has_permission('inventory', 'delete')): ?>
+                                        <a href="<?= base_url('inventory/suppliers/delete/' . $supplier['id']) ?>" 
+                                           class="btn btn-outline-danger" title="Delete"
+                                           onclick="return confirm('Are you sure you want to delete this supplier?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

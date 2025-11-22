@@ -2,13 +2,14 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Create Product/Service</h1>
-        <a href="<?= base_url('products') ?>" class="btn btn-secondary">
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title mb-0">Create Product/Service</h1>
+        <a href="<?= base_url('products') ?>" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
+</div>
 
     <?php if ($flash): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
@@ -21,26 +22,27 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="card-body">
             <form method="POST">
                 <?php echo csrf_field(); ?>
-                <div class="row">
+                <div class="row mb-3">
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Product Code *</label>
-                            <input type="text" name="product_code" class="form-control" required>
-                            <small class="text-muted">Leave empty to auto-generate</small>
-                        </div>
+                        <label for="product_code" class="form-label">
+                            Product Code <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="product_code" name="product_code" class="form-control" required>
+                        <small class="text-muted">Leave empty to auto-generate</small>
                     </div>
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Product Name *</label>
-                            <input type="text" name="product_name" class="form-control" required>
-                        </div>
+                        <label for="product_name" class="form-label">
+                            Product Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="product_name" name="product_name" class="form-control" required>
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row mb-3">
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Type *</label>
+                        <label for="type" class="form-label">
+                            Type <span class="text-danger">*</span>
+                        </label>
                             <select name="type" class="form-select" required>
                                 <option value="product">Product</option>
                                 <option value="service">Service</option>
