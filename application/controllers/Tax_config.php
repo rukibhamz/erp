@@ -410,6 +410,28 @@ class Tax_config extends Base_Controller {
         $this->loadView('tax/config/create', $data);
     }
     
+    public function view($id) {
+        try {
+            $taxType = $this->taxTypeModel->getById($id);
+            if (!$taxType) {
+                $this->setFlashMessage('danger', 'Tax type not found.');
+                redirect('tax/config');
+            }
+        } catch (Exception $e) {
+            error_log('Tax_config view error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading tax type.');
+            redirect('tax/config');
+        }
+        
+        $data = [
+            'page_title' => 'Tax Type: ' . $taxType['name'],
+            'tax_type' => $taxType,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('tax/config/view', $data);
+    }
+    
     public function edit($id) {
         $this->requirePermission('tax', 'update');
         

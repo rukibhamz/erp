@@ -240,5 +240,32 @@ class Meters extends Base_Controller {
         
         $this->loadView('utilities/meters/edit', $data);
     }
+    
+    public function delete($id) {
+        $this->requirePermission('utilities', 'delete');
+        
+        try {
+            $meter = $this->meterModel->getById($id);
+            if (!$meter) {
+                $this->setFlashMessage('danger', 'Meter not found.');
+                redirect('utilities/meters');
+            }
+            
+            // Check if meter has readings or bills
+            // TODO: Add validation to prevent deletion if meter has readings or bills
+            
+            if ($this->meterModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Meters', 'Deleted meter: ' . $meter['meter_number']);
+                $this->setFlashMessage('success', 'Meter deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete meter.');
+            }
+        } catch (Exception $e) {
+            error_log('Meters delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting meter: ' . $e->getMessage());
+        }
+        
+        redirect('utilities/meters');
+    }
 }
 

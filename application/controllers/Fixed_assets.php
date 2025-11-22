@@ -200,5 +200,32 @@ class Fixed_assets extends Base_Controller {
         
         $this->loadView('inventory/assets/edit', $data);
     }
+    
+    public function delete($id) {
+        $this->requirePermission('inventory', 'delete');
+        
+        try {
+            $asset = $this->assetModel->getById($id);
+            if (!$asset) {
+                $this->setFlashMessage('danger', 'Asset not found.');
+                redirect('inventory/assets');
+            }
+            
+            // Check if asset has associated records (depreciation, maintenance, etc.)
+            // TODO: Add validation to prevent deletion if asset has associated records
+            
+            if ($this->assetModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Fixed Assets', 'Deleted asset: ' . $asset['asset_tag']);
+                $this->setFlashMessage('success', 'Asset deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete asset.');
+            }
+        } catch (Exception $e) {
+            error_log('Fixed_assets delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting asset: ' . $e->getMessage());
+        }
+        
+        redirect('inventory/assets');
+    }
 }
 

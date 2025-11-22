@@ -186,4 +186,38 @@ class Locations extends Base_Controller {
         
         $this->loadView('locations/edit', $data);
     }
+    
+    public function delete($id) {
+        $this->requirePermission('locations', 'delete');
+        
+        try {
+            $location = $this->locationModel->getById($id);
+            if (!$location) {
+                $this->setFlashMessage('danger', 'Location not found.');
+                redirect('locations');
+            }
+            
+            // Check if location has spaces
+            $spaces = $this->spaceModel->getByProperty($id);
+            if (!empty($spaces)) {
+                $this->setFlashMessage('danger', 'Cannot delete location with associated spaces. Please remove or reassign spaces first.');
+                redirect('locations/view/' . $id);
+            }
+            
+            // Check if location has active leases
+            // TODO: Add lease model check if needed
+            
+            if ($this->locationModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Locations', 'Deleted location: ' . ($location['property_name'] ?? $location['Location_name'] ?? ''));
+                $this->setFlashMessage('success', 'Location deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete location.');
+            }
+        } catch (Exception $e) {
+            error_log('Locations delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting location: ' . $e->getMessage());
+        }
+        
+        redirect('locations');
+    }
 }

@@ -270,5 +270,47 @@ class Leases extends Base_Controller {
             error_log('Leases postSecurityDeposit error: ' . $e->getMessage());
         }
     }
+    
+    public function delete($id) {
+        $this->requirePermission('locations', 'delete');
+        
+        try {
+            $lease = $this->leaseModel->getById($id);
+            if (!$lease) {
+                $this->setFlashMessage('danger', 'Lease not found.');
+                redirect('leases');
+            }
+            
+            // Check if lease has active rent invoices
+            $invoices = $this->rentInvoiceModel->getByLease($id);
+            $unpaidInvoices = array_filter($invoices, function($inv) {
+                return floatval($inv['paid_amount'] ?? 0) < floatval($inv['total_amount'] ?? 0);
+            });
+            
+            if (!empty($unpaidInvoices)) {
+                $this->setFlashMessage('danger', 'Cannot delete lease with unpaid invoices. Please settle all invoices first.');
+                redirect('leases/view/' . $id);
+            }
+            
+            // Check if lease is currently active
+            $today = date('Y-m-d');
+            if (($lease['start_date'] <= $today) && ($lease['end_date'] >= $today || empty($lease['end_date']))) {
+                $this->setFlashMessage('danger', 'Cannot delete active lease. Please terminate the lease first.');
+                redirect('leases/view/' . $id);
+            }
+            
+            if ($this->leaseModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Leases', 'Deleted lease: ' . $lease['lease_number']);
+                $this->setFlashMessage('success', 'Lease deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete lease.');
+            }
+        } catch (Exception $e) {
+            error_log('Leases delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting lease: ' . $e->getMessage());
+        }
+        
+        redirect('leases');
+    }
 }
 
