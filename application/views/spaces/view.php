@@ -10,7 +10,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <i class="bi bi-pencil"></i> Edit
             </a>
             <?php if ($space['is_bookable']): ?>
-                <a href="<?= base_url('spaces/syncToBooking/' . $space['id']) ?>" class="btn btn-primary">
+                <a href="<?= base_url('spaces/sync/' . $space['id']) ?>" class="btn btn-primary">
                     <i class="bi bi-arrow-repeat"></i> Sync to Booking
                 </a>
             <?php endif; ?>

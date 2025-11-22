@@ -18,49 +18,62 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <!-- Quick Stats -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Total Meters</h6>
-                <h2 class="mb-0"><?= format_large_number($stats['total_meters']) ?></h2>
-                <a href="<?= base_url('utilities/meters') ?>" class="btn btn-sm btn-primary mt-2">
-                    View All
-                </a>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon primary me-3">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_number($stats['total_meters'], 0) ?></div>
+                    <div class="stat-label">Total Meters</div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Total Bills</h6>
-                <h2 class="mb-0"><?= format_large_number($stats['total_bills']) ?></h2>
-                <a href="<?= base_url('utilities/bills') ?>" class="btn btn-sm btn-primary mt-2">
-                    View All
-                </a>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon info me-3">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_number($stats['total_bills'], 0) ?></div>
+                    <div class="stat-label">Total Bills</div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Overdue Bills</h6>
-                <h2 class="mb-0 text-danger"><?= format_large_number($stats['overdue_bills']) ?></h2>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon danger me-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_number($stats['overdue_bills'], 0) ?></div>
+                    <div class="stat-label">Overdue Bills</div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">This Month Consumption</h6>
-                <h2 class="mb-0"><?= number_format($stats['total_consumption'], 2) ?></h2>
-                <small class="text-muted">Units</small>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon success me-3">
+                    <i class="bi bi-graph-up"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_number($stats['total_consumption'], 1) ?></div>
+                    <div class="stat-label">This Month Consumption</div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Quick Actions -->
-<div class="card mb-4">
-    <div class="card-header">
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">Quick Actions</h5>
     </div>
     <div class="card-body">
@@ -79,8 +92,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <!-- Utility Types -->
-<div class="card">
-    <div class="card-header">
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
         <h5 class="card-title mb-0">Utility Types</h5>
     </div>
     <div class="card-body">

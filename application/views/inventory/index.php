@@ -18,34 +18,54 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <!-- KPI Cards -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Total Items</h6>
-                <h2 class="mb-0"><?= format_large_number($stats['total_items']) ?></h2>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon primary me-3">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_number($stats['total_items'], 0) ?></div>
+                    <div class="stat-label">Total Items</div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Total Inventory Value</h6>
-                <h2 class="mb-0"><?= format_currency($stats['total_value']) ?></h2>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon success me-3">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_currency($stats['total_value'], 'NGN', 1) ?></div>
+                    <div class="stat-label">Total Inventory Value</div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Low Stock Items</h6>
-                <h2 class="mb-0 text-warning"><?= $stats['low_stock_count'] ?></h2>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon warning me-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_number($stats['low_stock_count'], 0) ?></div>
+                    <div class="stat-label">Low Stock Items</div>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-muted mb-2">Out of Stock</h6>
-                <h2 class="mb-0 text-danger"><?= $stats['out_of_stock_count'] ?></h2>
+        <div class="stat-card">
+            <div class="d-flex align-items-center">
+                <div class="stat-icon danger me-3">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+                <div>
+                    <div class="stat-number"><?= format_large_number($stats['out_of_stock_count'], 0) ?></div>
+                    <div class="stat-label">Out of Stock</div>
+                </div>
             </div>
         </div>
     </div>
@@ -53,8 +73,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="row g-3">
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">Low Stock Items</h5>
             </div>
             <div class="card-body">
@@ -94,8 +114,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
     
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">Out of Stock Items</h5>
             </div>
             <div class="card-body">
@@ -135,8 +155,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="row g-3 mt-2">
     <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">Locations</h5>
             </div>
             <div class="card-body">

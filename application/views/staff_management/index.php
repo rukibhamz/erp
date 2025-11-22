@@ -79,14 +79,14 @@ include(BASEPATH . 'views/staff_management/_nav.php');
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="<?= base_url('staff_management/employees') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('staff_management/employees') ?>" class="btn btn-primary">
                         <i class="bi bi-people me-2"></i> Manage Employees
                     </a>
-                    <a href="<?= base_url('staff_management/payroll') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('staff_management/payroll') ?>" class="btn btn-primary">
                         <i class="bi bi-cash-stack me-2"></i> View Payroll
                     </a>
                     <?php if (hasPermission('staff_management', 'create')): ?>
-                        <a href="<?= base_url('staff_management/payroll/process') ?>" class="btn btn-outline-success">
+                        <a href="<?= base_url('staff_management/payroll/process') ?>" class="btn btn-success">
                             <i class="bi bi-plus-circle me-2"></i> Process Payroll
                         </a>
                     <?php endif; ?>

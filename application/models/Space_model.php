@@ -109,7 +109,8 @@ class Space_model extends Base_Model {
     public function syncToBookingModule($spaceId) {
         try {
             $space = $this->getWithProperty($spaceId);
-            if (!$space || !$space['is_bookable']) {
+            if (!$space || empty($space['is_bookable']) || $space['is_bookable'] == 0) {
+                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' is not bookable (is_bookable=' . ($space['is_bookable'] ?? 'null') . ')');
                 return false;
             }
             

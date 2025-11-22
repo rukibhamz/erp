@@ -8,7 +8,7 @@ include(BASEPATH . 'views/staff_management/_nav.php');
         <h1 class="page-title mb-0">Payroll</h1>
         <div class="d-flex gap-2">
             <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('payroll/process') ?>" class="btn btn-dark">
+                <a href="<?= base_url('staff_management/payroll/process') ?>" class="btn btn-success">
                     <i class="bi bi-plus-circle"></i> Process Payroll
                 </a>
             <?php endif; ?>
@@ -49,7 +49,7 @@ include(BASEPATH . 'views/staff_management/_nav.php');
             <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No payroll runs found for the selected period.</p>
             <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('payroll/process') ?>" class="btn btn-dark">
+                <a href="<?= base_url('staff_management/payroll/process') ?>" class="btn btn-success">
                     <i class="bi bi-plus-circle"></i> Process First Payroll
                 </a>
             <?php endif; ?>
