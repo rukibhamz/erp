@@ -377,10 +377,74 @@ class Router {
         }
         
         // CRITICAL FIX: Handle multi-segment module URLs (e.g., inventory/items/view/123)
+        // Special handling for locations routes (MUST be before module prefix handling)
+        // Locations is both a module prefix AND a controller name
+        if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'locations') {
+            $method = strtolower($urlParts[1]);
+            // Check if it's a Locations controller method (view, edit, create, delete)
+            if (in_array($method, ['view', 'edit', 'create', 'delete', 'index'])) {
+                $this->controller = 'Locations';
+                $this->method = $method;
+                if (count($urlParts) > 2) {
+                    $this->params = array_slice($urlParts, 2);
+                    $this->params = array_map(function($param) {
+                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                    }, $this->params);
+                }
+                error_log("Router: Locations route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                return;
+            }
+        }
+        
+        // Special handling for properties routes (legacy, maps to Locations)
+        if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'properties') {
+            $method = strtolower($urlParts[1]);
+            if (in_array($method, ['view', 'edit', 'create', 'delete', 'index'])) {
+                $this->controller = 'Locations';
+                $this->method = $method;
+                if (count($urlParts) > 2) {
+                    $this->params = array_slice($urlParts, 2);
+                    $this->params = array_map(function($param) {
+                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                    }, $this->params);
+                }
+                error_log("Router: Properties route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                return;
+            }
+        }
+        
+        // Special handling for space-bookings routes (hyphenated controller name)
+        if (count($urlParts) >= 1 && strtolower($urlParts[0]) === 'space-bookings') {
+            $this->controller = 'Space_bookings';
+            if (isset($urlParts[1]) && !empty($urlParts[1])) {
+                $method = strtolower($urlParts[1]);
+                // Map common methods
+                if (in_array($method, ['create', 'calendar', 'view', 'index', 'check-availability', 'confirm', 'cancel'])) {
+                    if ($method === 'check-availability') {
+                        $this->method = 'checkAvailability';
+                    } else {
+                        $this->method = $method;
+                    }
+                } else {
+                    $this->method = 'index';
+                }
+            } else {
+                $this->method = 'index';
+            }
+            if (count($urlParts) > 2) {
+                $this->params = array_slice($urlParts, 2);
+                $this->params = array_map(function($param) {
+                    return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                }, $this->params);
+            }
+            error_log("Router: Space_bookings route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            return;
+        }
+        
         // Check if this looks like a module/controller/method/param pattern
         if (count($urlParts) >= 3) {
-            // Common module prefixes that should be stripped
-            $modulePrefixes = ['inventory', 'utilities', 'accounting', 'tax', 'locations', 'bookings', 'cash'];
+            // Common module prefixes that should be stripped (removed 'locations' since it's handled above)
+            $modulePrefixes = ['inventory', 'utilities', 'accounting', 'tax', 'bookings', 'cash'];
             $firstPart = strtolower($urlParts[0]);
             
             // If first part is a known module prefix, treat second part as controller
