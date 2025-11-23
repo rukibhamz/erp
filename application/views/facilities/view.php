@@ -140,9 +140,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <i class="bi bi-pencil"></i> Edit Facility
                         </a>
                     <?php endif; ?>
+                    <?php if (!empty($facility['is_bookable']) && $facility['is_bookable'] == 1): ?>
+                        <a href="<?= base_url('bookings/create?facility_id=' . $facility['id']) ?>" class="btn btn-primary">
+                            <i class="bi bi-calendar-plus"></i> Book Facility
+                        </a>
+                        <a href="<?= base_url('bookings/calendar?facility_id=' . $facility['id']) ?>" class="btn btn-primary">
+                            <i class="bi bi-calendar-month"></i> View Calendar
+                        </a>
+                    <?php endif; ?>
                     <a href="<?= base_url('bookings?facility_id=' . $facility['id']) ?>" class="btn btn-outline-primary">
-                        <i class="bi bi-calendar"></i> View Bookings
+                        <i class="bi bi-list-ul"></i> View Bookings
                     </a>
+                    <?php if (has_permission('bookings', 'update')): ?>
+                        <a href="<?= base_url('resource-management/availability/' . $facility['id']) ?>" class="btn btn-outline-info">
+                            <i class="bi bi-clock-history"></i> Manage Availability
+                        </a>
+                    <?php endif; ?>
                     <?php if (has_permission('bookings', 'delete')): ?>
                         <a href="<?= base_url('facilities/delete/' . $facility['id']) ?>" class="btn btn-danger" 
                            onclick="return confirm('Are you sure you want to delete this facility?')">

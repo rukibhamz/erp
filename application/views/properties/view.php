@@ -56,52 +56,77 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-4">Property Code:</dt>
-                    <dd class="col-sm-8"><?= htmlspecialchars($property['property_code']) ?></dd>
+                    <dd class="col-sm-8"><?= htmlspecialchars($property['property_code'] ?? 'N/A') ?></dd>
                     
                     <dt class="col-sm-4">Property Type:</dt>
-                    <dd class="col-sm-8"><?= ucfirst(str_replace('_', ' ', $property['property_type'])) ?></dd>
+                    <dd class="col-sm-8"><?= ucfirst(str_replace('_', ' ', $property['property_type'] ?? 'N/A')) ?></dd>
                     
                     <dt class="col-sm-4">Status:</dt>
                     <dd class="col-sm-8">
-                        <span class="badge bg-<?= $property['status'] === 'operational' ? 'success' : ($property['status'] === 'under_construction' ? 'warning' : 'secondary') ?>">
-                            <?= ucfirst(str_replace('_', ' ', $property['status'])) ?>
+                        <span class="badge bg-<?= ($property['status'] ?? '') === 'operational' ? 'success' : (($property['status'] ?? '') === 'under_construction' ? 'warning' : 'secondary') ?>">
+                            <?= ucfirst(str_replace('_', ' ', $property['status'] ?? 'N/A')) ?>
                         </span>
                     </dd>
                     
                     <dt class="col-sm-4">Ownership:</dt>
-                    <dd class="col-sm-8"><?= ucfirst(str_replace('_', ' ', $property['ownership_status'])) ?></dd>
+                    <dd class="col-sm-8"><?= ucfirst(str_replace('_', ' ', $property['ownership_status'] ?? 'N/A')) ?></dd>
                     
-                    <?php if ($property['address']): ?>
+                    <?php if (!empty($property['address'])): ?>
                         <dt class="col-sm-4">Address:</dt>
                         <dd class="col-sm-8"><?= htmlspecialchars($property['address']) ?></dd>
                     <?php endif; ?>
                     
-                    <?php if ($property['city'] || $property['state']): ?>
+                    <?php if (!empty($property['city']) || !empty($property['state'])): ?>
                         <dt class="col-sm-4">Location:</dt>
                         <dd class="col-sm-8">
-                            <?= htmlspecialchars($property['city'] ?? '') ?><?= $property['city'] && $property['state'] ? ', ' : '' ?><?= htmlspecialchars($property['state'] ?? '') ?>
-                            <?= $property['country'] ? ', ' . htmlspecialchars($property['country']) : '' ?>
+                            <?= htmlspecialchars($property['city'] ?? '') ?><?= !empty($property['city']) && !empty($property['state']) ? ', ' : '' ?><?= htmlspecialchars($property['state'] ?? '') ?>
+                            <?= !empty($property['country']) ? ', ' . htmlspecialchars($property['country']) : '' ?>
                         </dd>
                     <?php endif; ?>
                     
-                    <?php if ($property['land_area']): ?>
+                    <?php if (!empty($property['postal_code'])): ?>
+                        <dt class="col-sm-4">Postal Code:</dt>
+                        <dd class="col-sm-8"><?= htmlspecialchars($property['postal_code']) ?></dd>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($property['gps_latitude']) && !empty($property['gps_longitude'])): ?>
+                        <dt class="col-sm-4">GPS Coordinates:</dt>
+                        <dd class="col-sm-8">
+                            <?= number_format($property['gps_latitude'], 6) ?>, <?= number_format($property['gps_longitude'], 6) ?>
+                            <a href="https://www.google.com/maps?q=<?= $property['gps_latitude'] ?>,<?= $property['gps_longitude'] ?>" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                                <i class="bi bi-geo-alt"></i> View on Map
+                            </a>
+                        </dd>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($property['land_area'])): ?>
                         <dt class="col-sm-4">Land Area:</dt>
                         <dd class="col-sm-8"><?= number_format($property['land_area'], 2) ?> sqm</dd>
                     <?php endif; ?>
                     
-                    <?php if ($property['built_area']): ?>
+                    <?php if (!empty($property['built_area'])): ?>
                         <dt class="col-sm-4">Built Area:</dt>
                         <dd class="col-sm-8"><?= number_format($property['built_area'], 2) ?> sqm</dd>
                     <?php endif; ?>
                     
-                    <?php if ($property['year_built']): ?>
+                    <?php if (!empty($property['year_built'])): ?>
                         <dt class="col-sm-4">Year Built:</dt>
                         <dd class="col-sm-8"><?= $property['year_built'] ?></dd>
                     <?php endif; ?>
                     
-                    <?php if ($property['property_value']): ?>
+                    <?php if (!empty($property['year_acquired'])): ?>
+                        <dt class="col-sm-4">Year Acquired:</dt>
+                        <dd class="col-sm-8"><?= $property['year_acquired'] ?></dd>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($property['property_value'])): ?>
                         <dt class="col-sm-4">Property Value:</dt>
                         <dd class="col-sm-8"><?= format_currency($property['property_value']) ?></dd>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($manager)): ?>
+                        <dt class="col-sm-4">Manager:</dt>
+                        <dd class="col-sm-8"><?= htmlspecialchars(trim(($manager['first_name'] ?? '') . ' ' . ($manager['last_name'] ?? '')) ?: $manager['username']) ?></dd>
                     <?php endif; ?>
                 </dl>
             </div>

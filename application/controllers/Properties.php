@@ -105,9 +105,21 @@ class Properties extends Base_Controller {
             redirect('properties');
         }
         
+        // Load manager information if manager_id exists
+        $manager = null;
+        if (!empty($property['manager_id'])) {
+            try {
+                $userModel = $this->loadModel('User_model');
+                $manager = $userModel->getById($property['manager_id']);
+            } catch (Exception $e) {
+                // Ignore errors
+            }
+        }
+        
         $data = [
             'page_title' => 'Property: ' . $property['property_name'],
             'property' => $property,
+            'manager' => $manager,
             'flash' => $this->getFlashMessage()
         ];
         
