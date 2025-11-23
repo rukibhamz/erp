@@ -175,6 +175,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php
                     $pricingRules = $space['bookable_config'] ? json_decode($space['bookable_config']['pricing_rules'] ?? '{}', true) : [];
                     $bookingTypes = $space['bookable_config'] ? json_decode($space['bookable_config']['booking_types'] ?? '[]', true) : [];
+                    $availabilityRules = $space['bookable_config'] ? json_decode($space['bookable_config']['availability_rules'] ?? '{}', true) : [];
+                    $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '22:00'];
+                    $daysAvailable = $availabilityRules['days_available'] ?? [0,1,2,3,4,5,6];
                     ?>
                     
                     <div class="row g-3">
@@ -229,6 +232,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                         
                         <div class="col-md-6">
+                            <label for="operating_start" class="form-label">Operating Hours Start</label>
+                            <input type="time" class="form-control" id="operating_start" name="operating_start" value="<?= $operatingHours['start'] ?? '08:00' ?>">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="operating_end" class="form-label">Operating Hours End</label>
+                            <input type="time" class="form-control" id="operating_end" name="operating_end" value="<?= $operatingHours['end'] ?? '22:00' ?>">
+                        </div>
+                        
+                        <div class="col-md-6">
                             <label class="form-label">Booking Types</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="bt_hourly" name="booking_types[]" value="hourly" <?= in_array('hourly', $bookingTypes) ? 'checked' : '' ?>>
@@ -245,6 +258,38 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="bt_multi_day" name="booking_types[]" value="multi_day" <?= in_array('multi_day', $bookingTypes) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="bt_multi_day">Multi-Day</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Days Available</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_0" name="days_available[]" value="0" <?= in_array(0, $daysAvailable) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="day_0">Sunday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_1" name="days_available[]" value="1" <?= in_array(1, $daysAvailable) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="day_1">Monday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_2" name="days_available[]" value="2" <?= in_array(2, $daysAvailable) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="day_2">Tuesday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_3" name="days_available[]" value="3" <?= in_array(3, $daysAvailable) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="day_3">Wednesday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_4" name="days_available[]" value="4" <?= in_array(4, $daysAvailable) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="day_4">Thursday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_5" name="days_available[]" value="5" <?= in_array(5, $daysAvailable) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="day_5">Friday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_6" name="days_available[]" value="6" <?= in_array(6, $daysAvailable) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="day_6">Saturday</label>
                             </div>
                         </div>
                     </div>

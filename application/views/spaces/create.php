@@ -225,6 +225,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                         
                         <div class="col-md-6">
+                            <label for="operating_start" class="form-label">Operating Hours Start</label>
+                            <input type="time" class="form-control" id="operating_start" name="operating_start" value="08:00">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="operating_end" class="form-label">Operating Hours End</label>
+                            <input type="time" class="form-control" id="operating_end" name="operating_end" value="22:00">
+                        </div>
+                        
+                        <div class="col-md-6">
                             <label class="form-label">Booking Types</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="bt_hourly" name="booking_types[]" value="hourly" checked>
@@ -241,6 +251,38 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="bt_multi_day" name="booking_types[]" value="multi_day">
                                 <label class="form-check-label" for="bt_multi_day">Multi-Day</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Days Available</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_0" name="days_available[]" value="0" checked>
+                                <label class="form-check-label" for="day_0">Sunday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_1" name="days_available[]" value="1" checked>
+                                <label class="form-check-label" for="day_1">Monday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_2" name="days_available[]" value="2" checked>
+                                <label class="form-check-label" for="day_2">Tuesday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_3" name="days_available[]" value="3" checked>
+                                <label class="form-check-label" for="day_3">Wednesday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_4" name="days_available[]" value="4" checked>
+                                <label class="form-check-label" for="day_4">Thursday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_5" name="days_available[]" value="5" checked>
+                                <label class="form-check-label" for="day_5">Friday</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="day_6" name="days_available[]" value="6" checked>
+                                <label class="form-check-label" for="day_6">Saturday</label>
                             </div>
                         </div>
                     </div>

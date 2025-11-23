@@ -205,9 +205,43 @@ class Space_model extends Base_Model {
                 [$spaceId]
             );
             
+            // Sync availability rules to Resource_availability table
+            $this->syncAvailabilityRules($facilityId, $config);
+            
             return $facilityId;
         } catch (Exception $e) {
             error_log('Space_model syncToBookingModule error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Sync availability rules from bookable_config to Resource_availability table
+     */
+    private function syncAvailabilityRules($facilityId, $config) {
+        try {
+            require_once BASEPATH . 'models/Resource_availability_model.php';
+            $availabilityModel = new Resource_availability_model($this->db);
+            
+            $availabilityRules = json_decode($config['availability_rules'] ?? '{}', true) ?: [];
+            $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '22:00'];
+            $daysAvailable = $availabilityRules['days_available'] ?? [0,1,2,3,4,5,6];
+            
+            // Sync availability for each day of the week (0 = Sunday, 6 = Saturday)
+            for ($day = 0; $day <= 6; $day++) {
+                $isAvailable = in_array($day, $daysAvailable);
+                $availabilityModel->setDayAvailability(
+                    $facilityId,
+                    $day,
+                    $isAvailable,
+                    $isAvailable ? $operatingHours['start'] : null,
+                    $isAvailable ? $operatingHours['end'] : null
+                );
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log('Space_model syncAvailabilityRules error: ' . $e->getMessage());
             return false;
         }
     }

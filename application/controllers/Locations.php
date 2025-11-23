@@ -109,9 +109,21 @@ class Locations extends Base_Controller {
         // Ensure fields are mapped for view
         $location = $this->locationModel->mapFieldsForView($location);
         
+        // Load manager information if manager_id exists
+        $manager = null;
+        if (!empty($location['manager_id'])) {
+            try {
+                $userModel = $this->loadModel('User_model');
+                $manager = $userModel->getById($location['manager_id']);
+            } catch (Exception $e) {
+                // Ignore errors
+            }
+        }
+        
         $data = [
             'page_title' => 'Location: ' . ($location['Location_name'] ?? $location['property_name'] ?? ''),
             'Location' => $location, // Use Location for consistency with view
+            'manager' => $manager,
             'flash' => $this->getFlashMessage()
         ];
         
