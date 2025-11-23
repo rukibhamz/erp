@@ -308,14 +308,19 @@ function loadSpaceDetails() {
         'multi_day': 'Multi-Day'
     };
     
-    currentSpaceData.booking_types.forEach(type => {
-        const option = document.createElement('option');
-        option.value = type;
-        option.textContent = typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
-        bookingTypeSelect.appendChild(option);
-    });
-    
-    bookingTypeSelect.disabled = false;
+    if (currentSpaceData.booking_types && currentSpaceData.booking_types.length > 0) {
+        currentSpaceData.booking_types.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+            bookingTypeSelect.appendChild(option);
+        });
+        bookingTypeSelect.disabled = false;
+    } else {
+        // If no booking types, enable with default options
+        bookingTypeSelect.innerHTML = '<option value="hourly">Hourly</option><option value="daily">Daily</option>';
+        bookingTypeSelect.disabled = false;
+    }
     
     // Calculate price if date/time are already set
     calculatePrice();

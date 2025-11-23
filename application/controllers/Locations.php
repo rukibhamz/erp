@@ -5,6 +5,9 @@ class Locations extends Base_Controller {
     private $locationModel;
     private $spaceModel;
     private $activityModel;
+    private $bookingModel;
+    private $facilityModel;
+    private $spaceBookingModel;
     
     public function __construct() {
         parent::__construct();
@@ -12,6 +15,9 @@ class Locations extends Base_Controller {
         $this->locationModel = $this->loadModel('Location_model');
         $this->spaceModel = $this->loadModel('Space_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->bookingModel = $this->loadModel('Booking_model');
+        $this->facilityModel = $this->loadModel('Facility_model');
+        $this->spaceBookingModel = $this->loadModel('Space_booking_model');
     }
     
     public function index() {
@@ -231,5 +237,328 @@ class Locations extends Base_Controller {
         }
         
         redirect('locations');
+    }
+    
+    /**
+     * Bookings - Consolidated into Locations module
+     */
+    public function bookings($locationId = null) {
+        $this->requirePermission('locations', 'read');
+        
+        $status = $_GET['status'] ?? 'all';
+        $date = $_GET['date'] ?? date('Y-m-d');
+        $selectedLocationId = $locationId ?: (isset($_GET['location_id']) ? intval($_GET['location_id']) : null);
+        
+        try {
+            if ($selectedLocationId) {
+                // Get bookings for specific location's spaces
+                $spaces = $this->spaceModel->getByProperty($selectedLocationId);
+                $spaceIds = array_column($spaces, 'id');
+                $bookings = [];
+                if (!empty($spaceIds)) {
+                    $bookings = $this->spaceBookingModel->getBySpaces($spaceIds);
+                }
+            } else {
+                // Get all bookings
+                $bookings = $this->spaceBookingModel->getAllWithDetails();
+            }
+            
+            // Filter by status if needed
+            if ($status !== 'all') {
+                $bookings = array_filter($bookings, function($b) use ($status) {
+                    return ($b['status'] ?? 'pending') === $status;
+                });
+            }
+        } catch (Exception $e) {
+            $bookings = [];
+        }
+        
+        $locations = $this->locationModel->getAll();
+        
+        $data = [
+            'page_title' => 'Bookings',
+            'bookings' => $bookings,
+            'locations' => $locations,
+            'selected_location_id' => $selectedLocationId,
+            'selected_status' => $status,
+            'selected_date' => $date,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('locations/bookings/index', $data);
+    }
+    
+    public function createBooking($locationId = null, $spaceId = null) {
+        $this->requirePermission('locations', 'create');
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            
+            $spaceId = intval($_POST['space_id'] ?? 0);
+            $bookingDate = sanitize_input($_POST['booking_date'] ?? '');
+            $startTime = sanitize_input($_POST['start_time'] ?? '');
+            $endTime = sanitize_input($_POST['end_time'] ?? '');
+            $bookingType = sanitize_input($_POST['booking_type'] ?? 'hourly');
+            $numberOfGuests = intval($_POST['number_of_guests'] ?? 0);
+            $customerName = sanitize_input($_POST['customer_name'] ?? '');
+            $customerEmail = sanitize_input($_POST['customer_email'] ?? '');
+            $customerPhone = sanitize_input($_POST['customer_phone'] ?? '');
+            $bookingNotes = sanitize_input($_POST['booking_notes'] ?? '');
+            $specialRequests = sanitize_input($_POST['special_requests'] ?? '');
+            
+            if (!$spaceId || !$bookingDate || !$startTime || !$endTime || !$customerName || !$customerPhone) {
+                $this->setFlashMessage('danger', 'Please fill in all required fields.');
+                redirect('locations/create-booking' . ($locationId ? '/' . $locationId : '') . ($spaceId ? '/' . $spaceId : ''));
+            }
+            
+            // Get space
+            $space = $this->spaceModel->getWithProperty($spaceId);
+            if (!$space || !$space['is_bookable']) {
+                $this->setFlashMessage('danger', 'Selected space is not available for booking.');
+                redirect('locations/create-booking' . ($locationId ? '/' . $locationId : ''));
+            }
+            
+            // Check availability
+            if (!$this->spaceBookingModel->checkAvailability($spaceId, $bookingDate, $startTime, $endTime)) {
+                $this->setFlashMessage('danger', 'The selected time slot is not available. Please choose another time.');
+                redirect('locations/create-booking/' . ($space['property_id'] ?? '') . '/' . $spaceId);
+            }
+            
+            // Calculate duration and price
+            $start = new DateTime($bookingDate . ' ' . $startTime);
+            $end = new DateTime($bookingDate . ' ' . $endTime);
+            $duration = $end->diff($start);
+            $durationHours = $duration->h + ($duration->i / 60);
+            
+            // Get pricing from config
+            $config = $this->spaceModel->getBookableConfig($spaceId);
+            $pricingRules = [];
+            if ($config && !empty($config['pricing_rules'])) {
+                $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+            }
+            
+            $hourlyRate = floatval($pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 5000);
+            $baseAmount = $hourlyRate * $durationHours;
+            
+            $data = [
+                'booking_number' => $this->spaceBookingModel->getNextBookingNumber(),
+                'space_id' => $spaceId,
+                'tenant_id' => null, // Can be linked to tenant later if needed
+                'booking_date' => $bookingDate,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'duration_hours' => $durationHours,
+                'number_of_guests' => $numberOfGuests,
+                'booking_type' => $bookingType,
+                'base_amount' => $baseAmount,
+                'total_amount' => $baseAmount,
+                'status' => 'pending',
+                'payment_status' => 'unpaid',
+                'customer_name' => $customerName,
+                'customer_email' => $customerEmail,
+                'customer_phone' => $customerPhone,
+                'booking_notes' => $bookingNotes,
+                'special_requests' => $specialRequests,
+                'created_by' => $this->session['user_id'],
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            if ($this->spaceBookingModel->create($data)) {
+                $this->activityModel->log($this->session['user_id'], 'create', 'Bookings', 'Created booking: ' . $data['booking_number']);
+                $this->setFlashMessage('success', 'Booking created successfully.');
+                redirect('locations/bookings');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to create booking.');
+            }
+        }
+        
+        try {
+            $locations = $this->locationModel->getAll();
+            $selectedLocation = $locationId ? $this->locationModel->getById($locationId) : null;
+            $spaces = [];
+            
+            if ($locationId) {
+                $spaces = $this->spaceModel->getBookableSpaces($locationId);
+            }
+            
+            $selectedSpace = $spaceId ? $this->spaceModel->getById($spaceId) : null;
+        } catch (Exception $e) {
+            $locations = [];
+            $selectedLocation = null;
+            $spaces = [];
+            $selectedSpace = null;
+        }
+        
+        $data = [
+            'page_title' => 'Create Booking',
+            'locations' => $locations,
+            'selected_location' => $selectedLocation,
+            'spaces' => $spaces,
+            'selected_space' => $selectedSpace,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('locations/bookings/create', $data);
+    }
+    
+    public function viewBooking($id) {
+        $this->requirePermission('locations', 'read');
+        
+        try {
+            $booking = $this->spaceBookingModel->getById($id);
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('locations/bookings');
+            }
+            
+            $space = $this->spaceModel->getWithProperty($booking['space_id']);
+            $location = $space ? $this->locationModel->getById($space['property_id']) : null;
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading booking.');
+            redirect('locations/bookings');
+        }
+        
+        $data = [
+            'page_title' => 'Booking: ' . $booking['booking_number'],
+            'booking' => $booking,
+            'space' => $space,
+            'location' => $location,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('locations/bookings/view', $data);
+    }
+    
+    public function bookingCalendar($locationId = null, $spaceId = null) {
+        $this->requirePermission('locations', 'read');
+        
+        try {
+            $locations = $this->locationModel->getAll();
+            $selectedLocation = $locationId ? $this->locationModel->getById($locationId) : null;
+            $spaces = [];
+            $selectedSpace = null;
+            $bookings = [];
+            
+            if ($locationId) {
+                $spaces = $this->spaceModel->getBookableSpaces($locationId);
+            }
+            
+            if ($spaceId) {
+                $selectedSpace = $this->spaceModel->getById($spaceId);
+                if ($selectedSpace) {
+                    $startDate = date('Y-m-d');
+                    $endDate = date('Y-m-d', strtotime('+30 days'));
+                    $bookingsData = $this->spaceBookingModel->getAvailabilityCalendar($spaceId, $startDate, $endDate);
+                    
+                    foreach ($bookingsData as $booking) {
+                        $bookings[] = [
+                            'booking_date' => $booking['booking_date'],
+                            'start_time' => $booking['start_time'],
+                            'end_time' => $booking['end_time'],
+                            'status' => $booking['status'],
+                            'customer_name' => $booking['customer_name'] ?? 'N/A'
+                        ];
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            $locations = [];
+            $selectedLocation = null;
+            $spaces = [];
+            $selectedSpace = null;
+            $bookings = [];
+        }
+        
+        $data = [
+            'page_title' => 'Booking Calendar',
+            'locations' => $locations,
+            'selected_location' => $selectedLocation,
+            'spaces' => $spaces,
+            'selected_space' => $selectedSpace,
+            'bookings' => $bookings,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('locations/bookings/calendar', $data);
+    }
+    
+    public function getSpacesForBooking() {
+        $this->requirePermission('locations', 'read');
+        
+        header('Content-Type: application/json');
+        
+        $locationId = intval($_GET['location_id'] ?? 0);
+        if (!$locationId) {
+            echo json_encode(['success' => false, 'error' => 'Location ID required']);
+            exit;
+        }
+        
+        try {
+            $spaces = $this->spaceModel->getBookableSpaces($locationId);
+            $spacesData = [];
+            
+            foreach ($spaces as $space) {
+                $config = $this->spaceModel->getBookableConfig($space['id']);
+                $bookingTypes = ['hourly', 'daily'];
+                
+                if ($config && !empty($config['booking_types'])) {
+                    $bookingTypes = json_decode($config['booking_types'], true) ?: $bookingTypes;
+                }
+                
+                $pricingRules = [];
+                if ($config && !empty($config['pricing_rules'])) {
+                    $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+                }
+                
+                $spacesData[] = [
+                    'id' => $space['id'],
+                    'space_name' => $space['space_name'],
+                    'space_number' => $space['space_number'] ?? '',
+                    'capacity' => $space['capacity'] ?? 0,
+                    'facility_id' => $space['facility_id'] ?? '',
+                    'booking_types' => $bookingTypes,
+                    'hourly_rate' => floatval($pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0),
+                    'daily_rate' => floatval($pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0),
+                    'half_day_rate' => floatval($pricingRules['half_day'] ?? 0),
+                    'weekly_rate' => floatval($pricingRules['weekly'] ?? 0),
+                    'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
+                    'minimum_duration' => intval($config['minimum_duration'] ?? 1),
+                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null
+                ];
+            }
+            
+            echo json_encode(['success' => true, 'spaces' => $spacesData]);
+        } catch (Exception $e) {
+            error_log('getSpacesForBooking error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+    
+    public function checkBookingAvailability() {
+        $this->requirePermission('locations', 'read');
+        
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['available' => false, 'error' => 'Method not allowed']);
+            return;
+        }
+        
+        $spaceId = intval($_POST['space_id'] ?? 0);
+        $bookingDate = sanitize_input($_POST['booking_date'] ?? '');
+        $startTime = sanitize_input($_POST['start_time'] ?? '');
+        $endTime = sanitize_input($_POST['end_time'] ?? '');
+        $excludeBookingId = !empty($_POST['exclude_booking_id']) ? intval($_POST['exclude_booking_id']) : null;
+        
+        if (!$spaceId || !$bookingDate || !$startTime || !$endTime) {
+            echo json_encode(['available' => false, 'error' => 'Missing required parameters']);
+            return;
+        }
+        
+        $available = $this->spaceBookingModel->checkAvailability($spaceId, $bookingDate, $startTime, $endTime, $excludeBookingId);
+        
+        echo json_encode(['available' => $available]);
     }
 }

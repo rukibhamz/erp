@@ -186,10 +186,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <a href="<?= base_url('spaces/sync/' . $space['id']) ?>" class="btn btn-info w-100 mb-2" title="Sync space with booking module">
                         <i class="bi bi-arrow-repeat"></i> Sync to Booking
                     </a>
-                    <a href="<?= base_url('space-bookings/create/' . $space['id']) ?>" class="btn btn-primary w-100 mb-2">
+                    <a href="<?= base_url('locations/create-booking/' . $space['property_id'] . '/' . $space['id']) ?>" class="btn btn-primary w-100 mb-2">
                         <i class="bi bi-calendar-plus"></i> Book Space
                     </a>
-                    <a href="<?= base_url('space-bookings/calendar/' . $space['id']) ?>" class="btn btn-primary w-100 mb-2">
+                    <a href="<?= base_url('locations/booking-calendar/' . $space['property_id'] . '/' . $space['id']) ?>" class="btn btn-primary w-100 mb-2">
                         <i class="bi bi-calendar-month"></i> View Calendar
                     </a>
                 <?php else: ?>

@@ -213,6 +213,23 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
             </div>
         </div>
+        
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="<?= base_url('locations/create-booking/' . $Location['id']) ?>" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-calendar-plus"></i> Create Booking
+                </a>
+                <a href="<?= base_url('locations/bookings?location_id=' . $Location['id']) ?>" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-calendar-check"></i> View Bookings
+                </a>
+                <a href="<?= base_url('locations/booking-calendar/' . $Location['id']) ?>" class="btn btn-primary w-100 mb-2">
+                    <i class="bi bi-calendar-month"></i> View Calendar
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 

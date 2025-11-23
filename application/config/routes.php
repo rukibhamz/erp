@@ -264,12 +264,26 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['resource-management/addons'] = 'Resource_management/addons';
         $route['resource-management/addons/(:num)'] = 'Resource_management/addons/$1';
         
-        // Booking System - Bookings
-        $route['bookings'] = 'Bookings/index';
-        $route['bookings/create'] = 'Bookings/create';
-        $route['bookings/getSpacesForLocation'] = 'Bookings/getSpacesForLocation';
-        $route['bookings/calendar'] = 'Bookings/calendar';
-        $route['bookings/view/(:num)'] = 'Bookings/view/$1';
+        // Booking System - Consolidated into Locations module
+        $route['locations/bookings'] = 'Locations/bookings';
+        $route['locations/bookings/(:num)'] = 'Locations/bookings/$1';
+        $route['locations/create-booking'] = 'Locations/createBooking';
+        $route['locations/create-booking/(:num)'] = 'Locations/createBooking/$1';
+        $route['locations/create-booking/(:num)/(:num)'] = 'Locations/createBooking/$1/$2';
+        $route['locations/view-booking/(:num)'] = 'Locations/viewBooking/$1';
+        $route['locations/booking-calendar'] = 'Locations/bookingCalendar';
+        $route['locations/booking-calendar/(:num)'] = 'Locations/bookingCalendar/$1';
+        $route['locations/booking-calendar/(:num)/(:num)'] = 'Locations/bookingCalendar/$1/$2';
+        $route['locations/get-spaces-for-booking'] = 'Locations/getSpacesForBooking';
+        $route['locations/check-booking-availability'] = 'Locations/checkBookingAvailability';
+        
+        // Legacy booking routes - redirect to locations module
+        $route['bookings'] = 'Locations/bookings';
+        $route['bookings/create'] = 'Locations/createBooking';
+        $route['bookings/getSpacesForLocation'] = 'Locations/getSpacesForBooking';
+        $route['bookings/calendar'] = 'Locations/bookingCalendar';
+        $route['bookings/view/(:num)'] = 'Locations/viewBooking/$1';
+        // Keep advanced booking features in original controller for now
         $route['bookings/payment'] = 'Bookings/recordPayment';
         $route['bookings/status/(:num)'] = 'Bookings/updateStatus/$1';
         $route['bookings/reschedule/(:num)'] = 'Bookings/reschedule/$1';
@@ -374,6 +388,7 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['spaces/view/(:num)'] = 'Spaces/view/$1';
         $route['spaces/edit/(:num)'] = 'Spaces/edit/$1';
         $route['spaces/sync/(:num)'] = 'Spaces/syncToBooking/$1';
+        $route['spaces/syncToBooking/(:num)'] = 'Spaces/syncToBooking/$1';
         $route['tenants'] = 'Tenants/index';
         $route['tenants/create'] = 'Tenants/create';
         $route['tenants/view/(:num)'] = 'Tenants/view/$1';

@@ -135,15 +135,50 @@ class Space_booking_model extends Base_Model {
         try {
             return $this->db->fetchAll(
                 "SELECT sb.*, 
-                        t.tenant_code, t.business_name as tenant_name, t.contact_person, t.email,
-                        s.space_name, s.space_number
+                        COALESCE(t.business_name, t.contact_person, sb.customer_name) as tenant_name,
+                        COALESCE(t.email, sb.customer_email) as email,
+                        COALESCE(t.phone, sb.customer_phone) as phone,
+                        s.space_name, s.space_number,
+                        p.property_name as location_name
                  FROM `" . $this->db->getPrefix() . $this->table . "` sb
-                 JOIN `" . $this->db->getPrefix() . "tenants` t ON sb.tenant_id = t.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "tenants` t ON sb.tenant_id = t.id
                  JOIN `" . $this->db->getPrefix() . "spaces` s ON sb.space_id = s.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                  ORDER BY sb.booking_date DESC, sb.start_time DESC"
             );
         } catch (Exception $e) {
             error_log('Space_booking_model getAllWithDetails error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get bookings for multiple spaces
+     */
+    public function getBySpaces($spaceIds) {
+        if (empty($spaceIds)) {
+            return [];
+        }
+        
+        try {
+            $placeholders = implode(',', array_fill(0, count($spaceIds), '?'));
+            return $this->db->fetchAll(
+                "SELECT sb.*, 
+                        COALESCE(t.business_name, t.contact_person, sb.customer_name) as tenant_name,
+                        COALESCE(t.email, sb.customer_email) as email,
+                        COALESCE(t.phone, sb.customer_phone) as phone,
+                        s.space_name, s.space_number,
+                        p.property_name as location_name
+                 FROM `" . $this->db->getPrefix() . $this->table . "` sb
+                 LEFT JOIN `" . $this->db->getPrefix() . "tenants` t ON sb.tenant_id = t.id
+                 JOIN `" . $this->db->getPrefix() . "spaces` s ON sb.space_id = s.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                 WHERE sb.space_id IN ($placeholders)
+                 ORDER BY sb.booking_date DESC, sb.start_time DESC",
+                $spaceIds
+            );
+        } catch (Exception $e) {
+            error_log('Space_booking_model getBySpaces error: ' . $e->getMessage());
             return [];
         }
     }
