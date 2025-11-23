@@ -432,18 +432,34 @@ class Locations extends Base_Controller {
     public function bookingCalendar($locationId = null, $spaceId = null) {
         $this->requirePermission('locations', 'read');
         
+        // Get location_id and space_id from query string if not in URL
+        if (!$locationId && !empty($_GET['location_id'])) {
+            $locationId = intval($_GET['location_id']);
+        }
+        if (!$spaceId && !empty($_GET['space_id'])) {
+            $spaceId = intval($_GET['space_id']);
+        }
+        
+        // Convert empty string to null
+        if ($locationId === '' || $locationId === '0') {
+            $locationId = null;
+        }
+        if ($spaceId === '' || $spaceId === '0') {
+            $spaceId = null;
+        }
+        
         try {
             $locations = $this->locationModel->getAll();
-            $selectedLocation = $locationId ? $this->locationModel->getById($locationId) : null;
+            $selectedLocation = ($locationId && $locationId > 0) ? $this->locationModel->getById($locationId) : null;
             $spaces = [];
             $selectedSpace = null;
             $bookings = [];
             
-            if ($locationId) {
+            if ($locationId && $locationId > 0) {
                 $spaces = $this->spaceModel->getBookableSpaces($locationId);
             }
             
-            if ($spaceId) {
+            if ($spaceId && $spaceId > 0) {
                 $selectedSpace = $this->spaceModel->getById($spaceId);
                 if ($selectedSpace) {
                     $startDate = date('Y-m-d');
@@ -456,12 +472,14 @@ class Locations extends Base_Controller {
                             'start_time' => $booking['start_time'],
                             'end_time' => $booking['end_time'],
                             'status' => $booking['status'],
-                            'customer_name' => $booking['customer_name'] ?? 'N/A'
+                            'customer_name' => $booking['customer_name'] ?? ($booking['business_name'] ?? $booking['contact_person'] ?? 'N/A'),
+                            'id' => $booking['id'] ?? null
                         ];
                     }
                 }
             }
         } catch (Exception $e) {
+            error_log('Locations bookingCalendar error: ' . $e->getMessage());
             $locations = [];
             $selectedLocation = null;
             $spaces = [];

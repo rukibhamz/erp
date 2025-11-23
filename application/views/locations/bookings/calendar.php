@@ -69,7 +69,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="col-md-4">
                 <?php if ($selected_space): ?>
-                    <a href="<?= base_url('locations/create-booking/' . ($selected_location ? $selected_location['id'] : '') . '/' . $selected_space['id']) ?>" class="btn btn-primary w-100">
+                    <a href="<?= base_url('locations/create-booking' . ($selected_location ? '/' . $selected_location['id'] : '') . '/' . $selected_space['id']) ?>" class="btn btn-primary w-100">
                         <i class="bi bi-plus-circle"></i> Book This Space
                     </a>
                 <?php endif; ?>
@@ -116,9 +116,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </span>
                                         </td>
                                         <td>
-                                            <a href="<?= base_url('locations/view-booking/' . $booking['id']) ?>" class="btn btn-sm btn-primary">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
+                                            <?php if (!empty($booking['id'])): ?>
+                                                <a href="<?= base_url('locations/view-booking/' . $booking['id']) ?>" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -70,7 +70,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Space <span class="text-danger">*</span></label>
-                                <select name="space_id" id="space_id" class="form-select" required onchange="loadSpaceDetails(); loadCalendar()" disabled>
+                                <select name="space_id" id="space_id" class="form-select" required onchange="loadSpaceDetails()" disabled>
                                     <option value="">Select Location First</option>
                                     <?php if ($selected_location && !empty($spaces)): ?>
                                         <?php foreach ($spaces as $space): ?>
@@ -110,7 +110,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Booking Date <span class="text-danger">*</span></label>
-                                <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots()">
+                                <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots(); loadCalendar()">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -360,17 +360,21 @@ function loadSpaceDetails() {
 function loadCalendar() {
     const spaceId = document.getElementById('space_id').value;
     const bookingDate = document.getElementById('booking_date').value;
+    const locationId = document.getElementById('location_id').value;
     
     if (!spaceId || !bookingDate) {
-        document.getElementById('calendarContainer').innerHTML = '<p class="text-muted text-center">Select a space and date to view availability</p>';
+        document.getElementById('calendarContainer').innerHTML = '<p class="text-muted text-center"><small>Select a space and date to view availability</small></p>';
         return;
     }
     
-    selectedDate = bookingDate;
-    document.getElementById('calendarContainer').innerHTML = '<p class="text-muted text-center">Loading calendar...</p>';
-    
-    // Load calendar for the selected space and date
-    window.location.href = BASE_URL + 'locations/booking-calendar/' + (document.getElementById('location_id').value || '') + '/' + spaceId + '?date=' + bookingDate;
+    // Show link to full calendar view
+    const calendarUrl = BASE_URL + 'locations/booking-calendar' + (locationId ? '/' + locationId : '') + '/' + spaceId;
+    document.getElementById('calendarContainer').innerHTML = 
+        '<div class="text-center">' +
+        '<p class="text-muted mb-2"><small>Selected: ' + bookingDate + '</small></p>' +
+        '<a href="' + calendarUrl + '" class="btn btn-sm btn-outline-primary" target="_blank">' +
+        '<i class="bi bi-calendar-month"></i> View Full Calendar</a>' +
+        '</div>';
 }
 
 function checkCapacity() {

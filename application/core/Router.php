@@ -203,8 +203,9 @@ class Router {
             // Unescape the regex groups we added (they need to remain as groups)
             $regexPattern = str_replace('\\(\[0-9\]\+\)', '([0-9]+)', $regexPattern);
             $regexPattern = str_replace('\\(\.\+\)', '(.+)', $regexPattern);
-            // Unescape forward slashes (they're safe in our context)
+            // Unescape forward slashes and hyphens (they're safe in our context)
             $regexPattern = str_replace('\\/', '/', $regexPattern);
+            $regexPattern = str_replace('\\-', '-', $regexPattern);
             $regex = '#^' . $regexPattern . '$#i'; // Added 'i' flag for case-insensitive matching
             
             // Match against lowercase path (already normalized)
@@ -381,6 +382,51 @@ class Router {
         // Locations is both a module prefix AND a controller name
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'locations') {
             $method = strtolower($urlParts[1]);
+            
+            // Handle booking routes with hyphens
+            if ($method === 'create-booking' || $method === 'booking-calendar' || $method === 'view-booking' || 
+                $method === 'get-spaces-for-booking' || $method === 'check-booking-availability') {
+                // Map hyphenated methods to camelCase
+                $methodMap = [
+                    'create-booking' => 'createBooking',
+                    'booking-calendar' => 'bookingCalendar',
+                    'view-booking' => 'viewBooking',
+                    'get-spaces-for-booking' => 'getSpacesForBooking',
+                    'check-booking-availability' => 'checkBookingAvailability'
+                ];
+                
+                $this->controller = 'Locations';
+                $this->method = $methodMap[$method] ?? $method;
+                
+                // Handle parameters
+                if (count($urlParts) > 2) {
+                    $this->params = array_slice($urlParts, 2);
+                    $this->params = array_map(function($param) {
+                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                    }, $this->params);
+                }
+                
+                error_log("Router: Locations booking route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                return;
+            }
+            
+            // Handle bookings route
+            if ($method === 'bookings') {
+                $this->controller = 'Locations';
+                $this->method = 'bookings';
+                if (count($urlParts) > 2) {
+                    $this->params = array_slice($urlParts, 2);
+                    $this->params = array_map(function($param) {
+                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                    }, $this->params);
+                } else if (count($urlParts) === 2 && !empty($urlParts[1]) && is_numeric($urlParts[1])) {
+                    // Handle locations/bookings/123 format
+                    $this->params = [intval($urlParts[1])];
+                }
+                error_log("Router: Locations bookings route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                return;
+            }
+            
             // Check if it's a Locations controller method (view, edit, create, delete)
             if (in_array($method, ['view', 'edit', 'create', 'delete', 'index'])) {
                 $this->controller = 'Locations';
