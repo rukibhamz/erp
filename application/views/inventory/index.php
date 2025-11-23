@@ -168,10 +168,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="col-md-3">
                                 <div class="card bg-light">
                                     <div class="card-body p-3">
-                                        <h6 class="mb-1"><?= htmlspecialchars($location['location_name']) ?></h6>
-                                        <small class="text-muted"><?= htmlspecialchars($location['location_code']) ?></small>
+                                        <h6 class="mb-1"><?= htmlspecialchars($location['Location_name'] ?? $location['property_name'] ?? $location['location_name'] ?? 'N/A') ?></h6>
+                                        <small class="text-muted"><?= htmlspecialchars($location['Location_code'] ?? $location['property_code'] ?? $location['location_code'] ?? 'N/A') ?></small>
                                         <br>
-                                        <small class="text-muted"><?= ucfirst(str_replace('_', ' ', $location['location_type'])) ?></small>
+                                        <small class="text-muted"><?= ucfirst(str_replace('_', ' ', $location['Location_type'] ?? $location['property_type'] ?? $location['location_type'] ?? 'N/A')) ?></small>
                                     </div>
                                 </div>
                             </div>

@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <!-- Filters -->
 <div class="card shadow-sm mb-4">
     <div class="card-body">
-        <form method="GET" action="<?= base_url('payables/bills') ?>" class="row g-3">
+        <form method="GET" action="<?= base_url('payables/bills') ?>" class="row g-3 align-items-end">
             <div class="col-md-4">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
@@ -48,12 +48,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
                 </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-outline-secondary w-100">
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
                     <i class="bi bi-search"></i> Filter
                 </button>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
+            <div class="col-md-2">
                 <a href="<?= base_url('payables/bills') ?>" class="btn btn-outline-secondary w-100">
                     <i class="bi bi-arrow-clockwise"></i> Reset
                 </a>
@@ -141,8 +141,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="empty-state">
                                     <i class="bi bi-receipt"></i>
                                     <p class="mb-0">No bills found.</p>
-                                    <a href="<?= base_url('payables/bills/create') ?>" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle"></i> Create First Bill
+                                    <a href="<?= base_url('payables/bills/create') ?>" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create Bill
                                     </a>
                                 </div>
                             </td>

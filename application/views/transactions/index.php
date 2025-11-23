@@ -139,8 +139,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="empty-state">
                                     <i class="bi bi-arrow-left-right"></i>
                                     <p class="mb-0">No transactions found.</p>
-                                    <a href="<?= base_url('transactions/create') ?>" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle"></i> Create First Transaction
+                                    <a href="<?= base_url('transactions/create') ?>" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create Transaction
                                     </a>
                                 </div>
                             </td>

@@ -90,15 +90,19 @@ class Location_model extends Base_Model {
     public function mapFieldsForView($location) {
         if (isset($location['property_code'])) {
             $location['Location_code'] = $location['property_code'];
+            $location['location_code'] = $location['property_code']; // Lowercase for consistency
         }
         if (isset($location['property_name'])) {
             $location['Location_name'] = $location['property_name'];
+            $location['location_name'] = $location['property_name']; // Lowercase for consistency
         }
         if (isset($location['property_type'])) {
             $location['Location_type'] = $location['property_type'];
+            $location['location_type'] = $location['property_type']; // Lowercase for consistency
         }
         if (isset($location['property_value'])) {
             $location['Location_value'] = $location['property_value'];
+            $location['location_value'] = $location['property_value']; // Lowercase for consistency
         }
         return $location;
     }

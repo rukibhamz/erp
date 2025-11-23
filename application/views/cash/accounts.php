@@ -5,11 +5,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Cash Accounts</h1>
-        <a href="<?= base_url('cash/accounts/create') ?>" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Create Account
-        </a>
+        <div class="d-flex gap-2">
+            <a href="<?= base_url('cash') ?>" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            <a href="<?= base_url('cash/accounts/create') ?>" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Account
+            </a>
+        </div>
     </div>
 </div>
+
+<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
 <?php if (isset($flash) && $flash): ?>
     <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
@@ -91,8 +98,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="empty-state">
                                     <i class="bi bi-wallet2"></i>
                                     <p class="mb-0">No cash accounts found.</p>
-                                    <a href="<?= base_url('cash/accounts/create') ?>" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle"></i> Create First Account
+                                    <a href="<?= base_url('cash/accounts/create') ?>" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create Account
                                     </a>
                                 </div>
                             </td>

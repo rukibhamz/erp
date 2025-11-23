@@ -115,8 +115,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="empty-state">
                                     <i class="bi bi-journal-text"></i>
                                     <p class="mb-0">No journal entries found.</p>
-                                    <a href="<?= base_url('ledger/create') ?>" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle"></i> Create First Entry
+                                    <a href="<?= base_url('ledger/create') ?>" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-plus-circle"></i> Create Entry
                                     </a>
                                 </div>
                             </td>
