@@ -376,17 +376,33 @@ class Locations extends Base_Controller {
             $locations = $this->locationModel->getAll();
             $selectedLocation = $locationId ? $this->locationModel->getById($locationId) : null;
             $spaces = [];
+            $selectedSpace = null;
+            $spaceConfig = null;
             
             if ($locationId) {
                 $spaces = $this->spaceModel->getBookableSpaces($locationId);
             }
             
-            $selectedSpace = $spaceId ? $this->spaceModel->getById($spaceId) : null;
+            if ($spaceId) {
+                $selectedSpace = $this->spaceModel->getById($spaceId);
+                if ($selectedSpace) {
+                    $spaceConfig = $this->spaceModel->getBookableConfig($spaceId);
+                }
+            }
+            
+            // Check if coming from spaces module (via referrer or query param)
+            $fromSpacesModule = !empty($_GET['from']) && $_GET['from'] === 'spaces';
+            if (!$fromSpacesModule && !empty($_SERVER['HTTP_REFERER'])) {
+                $referer = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_PATH);
+                $fromSpacesModule = strpos($referer, '/spaces/') !== false;
+            }
         } catch (Exception $e) {
             $locations = [];
             $selectedLocation = null;
             $spaces = [];
             $selectedSpace = null;
+            $spaceConfig = null;
+            $fromSpacesModule = false;
         }
         
         $data = [
@@ -395,6 +411,8 @@ class Locations extends Base_Controller {
             'selected_location' => $selectedLocation,
             'spaces' => $spaces,
             'selected_space' => $selectedSpace,
+            'space_config' => $spaceConfig,
+            'from_spaces_module' => $fromSpacesModule ?? false,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -528,6 +546,14 @@ class Locations extends Base_Controller {
                     $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
                 }
                 
+                $availabilityRules = [];
+                if ($config && !empty($config['availability_rules'])) {
+                    $availabilityRules = json_decode($config['availability_rules'], true) ?: [];
+                }
+                
+                $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '22:00'];
+                $daysAvailable = $availabilityRules['days_available'] ?? [0,1,2,3,4,5,6];
+                
                 $spacesData[] = [
                     'id' => $space['id'],
                     'space_name' => $space['space_name'],
@@ -541,7 +567,9 @@ class Locations extends Base_Controller {
                     'weekly_rate' => floatval($pricingRules['weekly'] ?? 0),
                     'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
                     'minimum_duration' => intval($config['minimum_duration'] ?? 1),
-                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null
+                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null,
+                    'operating_hours' => $operatingHours,
+                    'days_available' => $daysAvailable
                 ];
             }
             

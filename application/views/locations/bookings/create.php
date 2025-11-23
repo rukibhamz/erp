@@ -110,7 +110,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Booking Date <span class="text-danger">*</span></label>
-                                <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots(); loadCalendar()">
+                                <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots(); loadCalendar(); if (currentSpaceData && currentSpaceData.operating_hours) { generateTimeSlots(this.value); }">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -127,13 +127,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                                <input type="time" name="start_time" id="start_time" class="form-control" required onchange="calculatePrice(); checkAvailability()" step="900">
+                                <?php if ($from_spaces_module && $selected_space && $space_config): ?>
+                                    <select name="start_time" id="start_time" class="form-select" required onchange="updateEndTimeOptions(); calculatePrice(); checkAvailability()">
+                                        <option value="">Select Start Time</option>
+                                    </select>
+                                <?php else: ?>
+                                    <input type="time" name="start_time" id="start_time" class="form-control" required onchange="calculatePrice(); checkAvailability()" step="900">
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">End Time <span class="text-danger">*</span></label>
-                                <input type="time" name="end_time" id="end_time" class="form-control" required onchange="calculatePrice(); checkAvailability()" step="900">
+                                <?php if ($from_spaces_module && $selected_space && $space_config): ?>
+                                    <select name="end_time" id="end_time" class="form-select" required onchange="calculatePrice(); checkAvailability()">
+                                        <option value="">Select End Time</option>
+                                    </select>
+                                <?php else: ?>
+                                    <input type="time" name="end_time" id="end_time" class="form-control" required onchange="calculatePrice(); checkAvailability()" step="900">
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -294,10 +306,21 @@ function populateSpaces(spaces) {
         option.dataset.capacity = space.capacity || 0;
         option.dataset.minimumDuration = space.minimum_duration || 1;
         option.dataset.maximumDuration = space.maximum_duration || '';
+        option.dataset.operatingHours = JSON.stringify(space.operating_hours || {start: '08:00', end: '22:00'});
+        option.dataset.daysAvailable = JSON.stringify(space.days_available || [0,1,2,3,4,5,6]);
         spaceSelect.appendChild(option);
     });
     
     spaceSelect.disabled = false;
+    
+    // If space is pre-selected, load its details
+    <?php if ($selected_space): ?>
+    const preSelectedSpaceId = '<?= $selected_space['id'] ?>';
+    if (preSelectedSpaceId) {
+        spaceSelect.value = preSelectedSpaceId;
+        loadSpaceDetails();
+    }
+    <?php endif; ?>
 }
 
 function loadSpaceDetails() {
@@ -309,6 +332,15 @@ function loadSpaceDetails() {
         document.getElementById('booking_type').innerHTML = '<option value="">Select Space First</option>';
         document.getElementById('booking_type').disabled = true;
         currentSpaceData = null;
+        // Clear time slots if using dropdowns
+        const startTimeSelect = document.getElementById('start_time');
+        const endTimeSelect = document.getElementById('end_time');
+        if (startTimeSelect && startTimeSelect.tagName === 'SELECT') {
+            startTimeSelect.innerHTML = '<option value="">Select Start Time</option>';
+        }
+        if (endTimeSelect && endTimeSelect.tagName === 'SELECT') {
+            endTimeSelect.innerHTML = '<option value="">Select End Time</option>';
+        }
         return;
     }
     
@@ -323,7 +355,9 @@ function loadSpaceDetails() {
         security_deposit: parseFloat(selectedOption.dataset.securityDeposit || 0),
         capacity: parseInt(selectedOption.dataset.capacity || 0),
         minimum_duration: parseInt(selectedOption.dataset.minimumDuration || 1),
-        maximum_duration: selectedOption.dataset.maximumDuration ? parseInt(selectedOption.dataset.maximumDuration) : null
+        maximum_duration: selectedOption.dataset.maximumDuration ? parseInt(selectedOption.dataset.maximumDuration) : null,
+        operating_hours: JSON.parse(selectedOption.dataset.operatingHours || '{"start":"08:00","end":"22:00"}'),
+        days_available: JSON.parse(selectedOption.dataset.daysAvailable || '[0,1,2,3,4,5,6]')
     };
     
     document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
@@ -352,6 +386,13 @@ function loadSpaceDetails() {
     } else {
         bookingTypeSelect.innerHTML = '<option value="hourly">Hourly</option><option value="daily">Daily</option>';
         bookingTypeSelect.disabled = false;
+    }
+    
+    // Generate time slots if using dropdowns and date is selected
+    const startTimeSelect = document.getElementById('start_time');
+    const bookingDate = document.getElementById('booking_date').value;
+    if (startTimeSelect && startTimeSelect.tagName === 'SELECT' && bookingDate) {
+        generateTimeSlots(bookingDate);
     }
     
     calculatePrice();
@@ -541,21 +582,183 @@ function loadTimeSlots() {
         });
 }
 
-// Initialize if space is pre-selected
-<?php if ($selected_space): ?>
+// Generate time slots based on operating hours
+function generateTimeSlots(bookingDate) {
+    if (!currentSpaceData || !currentSpaceData.operating_hours) {
+        return;
+    }
+    
+    const startTimeSelect = document.getElementById('start_time');
+    const endTimeSelect = document.getElementById('end_time');
+    
+    if (!startTimeSelect || startTimeSelect.tagName !== 'SELECT' || !endTimeSelect || endTimeSelect.tagName !== 'SELECT') {
+        return; // Not using dropdowns
+    }
+    
+    // Check if date is in days_available
+    const date = new Date(bookingDate);
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    if (!currentSpaceData.days_available.includes(dayOfWeek)) {
+        startTimeSelect.innerHTML = '<option value="">Not available on this day</option>';
+        endTimeSelect.innerHTML = '<option value="">Not available on this day</option>';
+        startTimeSelect.disabled = true;
+        endTimeSelect.disabled = true;
+        return;
+    }
+    
+    startTimeSelect.disabled = false;
+    endTimeSelect.disabled = false;
+    
+    const operatingStart = currentSpaceData.operating_hours.start || '08:00';
+    const operatingEnd = currentSpaceData.operating_hours.end || '22:00';
+    
+    // Parse operating hours
+    const [startHour, startMin] = operatingStart.split(':').map(Number);
+    const [endHour, endMin] = operatingEnd.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    // Generate time slots: primarily on the hour, with special cases for 30 and 45 minutes
+    const timeSlots = [];
+    for (let minutes = startMinutes; minutes < endMinutes; minutes += 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+        timeSlots.push(timeStr);
+    }
+    
+    // Add special 30 and 45 minute slots if they fall within operating hours
+    // Add 30-minute slot after first hour if it's not already on the hour
+    if (startMin !== 0 && startMin !== 30 && startMin !== 45) {
+        const first30Min = startMinutes + (60 - startMin) + 30;
+        if (first30Min < endMinutes) {
+            const hours = Math.floor(first30Min / 60);
+            const mins = first30Min % 60;
+            const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+            if (!timeSlots.includes(timeStr)) {
+                timeSlots.push(timeStr);
+            }
+        }
+    }
+    
+    // Add 45-minute slot after first hour if it's not already on the hour or 30
+    if (startMin !== 0 && startMin !== 30 && startMin !== 45) {
+        const first45Min = startMinutes + (60 - startMin) + 45;
+        if (first45Min < endMinutes) {
+            const hours = Math.floor(first45Min / 60);
+            const mins = first45Min % 60;
+            const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+            if (!timeSlots.includes(timeStr)) {
+                timeSlots.push(timeStr);
+            }
+        }
+    }
+    
+    // Sort time slots
+    timeSlots.sort();
+    
+    // Populate start time dropdown
+    startTimeSelect.innerHTML = '<option value="">Select Start Time</option>';
+    timeSlots.forEach(time => {
+        const option = document.createElement('option');
+        option.value = time;
+        option.textContent = time;
+        startTimeSelect.appendChild(option);
+    });
+    
+    // Initially populate end time with same slots
+    updateEndTimeOptions();
+}
+
+function updateEndTimeOptions() {
+    const startTimeSelect = document.getElementById('start_time');
+    const endTimeSelect = document.getElementById('end_time');
+    const selectedStartTime = startTimeSelect.value;
+    
+    if (!selectedStartTime || !currentSpaceData || !currentSpaceData.operating_hours) {
+        endTimeSelect.innerHTML = '<option value="">Select Start Time First</option>';
+        return;
+    }
+    
+    const operatingEnd = currentSpaceData.operating_hours.end || '22:00';
+    const [endHour, endMin] = operatingEnd.split(':').map(Number);
+    const endMinutes = endHour * 60 + endMin;
+    
+    // Parse selected start time
+    const [startHour, startMin] = selectedStartTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    
+    // Generate end time options (must be after start time)
+    const endTimeSlots = [];
+    for (let minutes = startMinutes + 60; minutes <= endMinutes; minutes += 60) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+        endTimeSlots.push(timeStr);
+    }
+    
+    // Add 30 and 45 minute options if they make sense
+    const first30Min = startMinutes + 90; // 1 hour 30 minutes
+    if (first30Min <= endMinutes) {
+        const hours = Math.floor(first30Min / 60);
+        const mins = first30Min % 60;
+        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+        if (!endTimeSlots.includes(timeStr)) {
+            endTimeSlots.push(timeStr);
+        }
+    }
+    
+    const first45Min = startMinutes + 105; // 1 hour 45 minutes
+    if (first45Min <= endMinutes) {
+        const hours = Math.floor(first45Min / 60);
+        const mins = first45Min % 60;
+        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+        if (!endTimeSlots.includes(timeStr)) {
+            endTimeSlots.push(timeStr);
+        }
+    }
+    
+    // Sort end time slots
+    endTimeSlots.sort();
+    
+    // Populate end time dropdown
+    endTimeSelect.innerHTML = '<option value="">Select End Time</option>';
+    endTimeSlots.forEach(time => {
+        const option = document.createElement('option');
+        option.value = time;
+        option.textContent = time;
+        endTimeSelect.appendChild(option);
+    });
+}
+
+// Initialize if location or space is pre-selected
 document.addEventListener('DOMContentLoaded', function() {
     <?php if ($selected_location): ?>
+    // Load spaces for pre-selected location
     loadSpaces();
     <?php endif; ?>
+    
+    <?php if ($selected_space): ?>
+    // Wait for spaces to load, then select the space
     setTimeout(function() {
-        document.getElementById('space_id').value = '<?= $selected_space['id'] ?>';
-        loadSpaceDetails();
-        <?php if (!empty($_GET['date'])): ?>
-        document.getElementById('booking_date').value = '<?= $_GET['date'] ?>';
-        loadTimeSlots();
-        <?php endif; ?>
-    }, 500);
+        const spaceSelect = document.getElementById('space_id');
+        if (spaceSelect) {
+            spaceSelect.value = '<?= $selected_space['id'] ?>';
+            loadSpaceDetails();
+            
+            <?php if (!empty($_GET['date'])): ?>
+            document.getElementById('booking_date').value = '<?= $_GET['date'] ?>';
+            const bookingDate = '<?= $_GET['date'] ?>';
+            if (currentSpaceData && currentSpaceData.operating_hours) {
+                generateTimeSlots(bookingDate);
+            }
+            loadTimeSlots();
+            <?php endif; ?>
+        }
+    }, <?php echo $selected_location ? '300' : '100'; ?>);
+    <?php endif; ?>
 });
-<?php endif; ?>
 </script>
 
