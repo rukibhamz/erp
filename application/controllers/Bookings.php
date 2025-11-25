@@ -260,8 +260,8 @@ class Bookings extends Base_Controller {
         }
 
         try {
-            // Load locations (properties) with bookable spaces
-            $locations = $this->locationModel->getActive();
+            // Load locations (properties) with bookable spaces or marked as bookable
+            $locations = $this->locationModel->getBookable();
             
             // Get all bookable spaces grouped by location
             $spacesByLocation = [];

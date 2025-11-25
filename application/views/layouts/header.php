@@ -83,7 +83,7 @@
                     $moduleRoutes = [
                         'accounting' => ['accounting', 'accounts', 'transactions', 'cash', 'receivables', 'payables', 'ledger', 'reports'],
                         'staff_management' => ['staff_management', 'payroll', 'employees'],
-                        'bookings' => ['bookings', 'facilities'],
+                        'bookings' => ['bookings'],
                         'locations' => ['locations', 'properties', 'spaces', 'leases', 'rent-invoices'], // Locations (formerly Properties)
                         'properties' => ['locations', 'properties', 'spaces', 'leases', 'rent-invoices'], // Legacy compatibility
                         'utilities' => ['utilities'],

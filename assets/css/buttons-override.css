@@ -64,22 +64,30 @@ a.btn-dark:hover:not(:disabled) {
     color: #ffffff !important;
 }
 
-/* Secondary buttons - Black background with white text */
+/* Secondary buttons - use dark text for visibility */
 .btn-secondary,
-button.btn-secondary,
-a.btn-secondary {
-    background-color: #000000 !important;
-    border-color: #000000 !important;
+a.btn-secondary,
+input[type="button"].btn-secondary,
+input[type="submit"].btn-secondary,
+input[type="reset"].btn-secondary {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
     color: #ffffff !important;
 }
 
-.btn-secondary:hover:not(:disabled),
-.btn-secondary:focus:not(:disabled),
-.btn-secondary:active:not(:disabled),
-button.btn-secondary:hover:not(:disabled),
-a.btn-secondary:hover:not(:disabled) {
-    background-color: #333333 !important;
-    border-color: #333333 !important;
+.btn-secondary:hover,
+a.btn-secondary:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+    color: #ffffff !important;
+}
+
+.btn-secondary:focus,
+.btn-secondary:active,
+a.btn-secondary:focus,
+a.btn-secondary:active {
+    background-color: #545b62 !important;
+    border-color: #4e555b !important;
     color: #ffffff !important;
 }
 
@@ -272,6 +280,87 @@ a.btn-outline-secondary {
     color: #ffffff !important;
 }
 
+/* Table/* Outline buttons - ensure proper text colors */
+.btn-outline-primary {
+    color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+
+.btn-outline-primary:hover {
+    color: #ffffff !important;
+    background-color: #0d6efd !important;
+}
+
+.btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+.btn-outline-secondary:hover {
+    color: #ffffff !important;
+    background-color: #6c757d !important;
+}
+
+.btn-outline-success {
+    color: #198754 !important;
+    border-color: #198754 !important;
+}
+
+.btn-outline-success:hover {
+    color: #ffffff !important;
+    background-color: #198754 !important;
+}
+
+.btn-outline-danger {
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.btn-outline-danger:hover {
+    color: #ffffff !important;
+    background-color: #dc3545 !important;
+}
+
+.btn-outline-warning {
+    color: #ffc107 !important;
+    border-color: #ffc107 !important;
+}
+
+.btn-outline-warning:hover {
+    color: #000000 !important;
+    background-color: #ffc107 !important;
+}
+
+.btn-outline-info {
+    color: #0dcaf0 !important;
+    border-color: #0dcaf0 !important;
+}
+
+.btn-outline-info:hover {
+    color: #000000 !important;
+    background-color: #0dcaf0 !important;
+}
+
+.btn-outline-light {
+    color: #f8f9fa !important;
+    border-color: #f8f9fa !important;
+}
+
+.btn-outline-light:hover {
+    color: #000000 !important;
+    background-color: #f8f9fa !important;
+}
+
+.btn-outline-dark {
+    color: #212529 !important;
+    border-color: #212529 !important;
+}
+
+.btn-outline-dark:hover {
+    color: #ffffff !important;
+    background-color: #212529 !important;
+}
+
 /* Override any text color utilities on buttons */
 .btn.text-white,
 .btn.text-light {
@@ -321,3 +410,27 @@ form input[type="submit"] {
     color: #ffffff !important;
 }
 
+/* Resize icons in buttons */
+.btn i {
+    font-size: 0.9em !important;
+    vertical-align: middle;
+    margin-right: 4px;
+    line-height: 1;
+    display: inline-block;
+}
+
+.btn-sm i {
+    font-size: 0.85em !important;
+    margin-right: 3px;
+}
+
+.btn-lg i {
+    font-size: 1em !important;
+    margin-right: 5px;
+}
+
+/* Ensure icons don't break button layout */
+.btn i.bi {
+    width: auto;
+    height: auto;
+}

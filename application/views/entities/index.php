@@ -5,7 +5,9 @@ $page_title = $page_title ?? 'Entities';
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Entities</h1>
-        <a href="<?= base_url('entities/create') ?>" class="btn btn-primary">Create Entity</a>
+        <?php if (has_permission('entities', 'create')): ?>
+            <a href="<?= base_url('entities/create') ?>" class="btn btn-primary">Create Entity</a>
+        <?php endif; ?>
     </div>
 </div>
 

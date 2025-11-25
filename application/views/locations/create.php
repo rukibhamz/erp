@@ -113,6 +113,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
                 
                 <div class="col-md-6">
+                    <label class="form-label d-block">Booking Options</label>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" id="is_bookable" name="is_bookable" value="1">
+                        <label class="form-check-label" for="is_bookable">Make this location bookable</label>
+                    </div>
+                    <small class="text-muted">Enable to allow bookings for this location directly</small>
+                </div>
+                
+                <div class="col-md-6">
                     <label for="manager_id" class="form-label">Location Manager</label>
                     <select class="form-select" id="manager_id" name="manager_id">
                         <option value="">Select Manager</option>

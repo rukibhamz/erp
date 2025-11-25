@@ -52,31 +52,24 @@ class Reports extends Base_Controller {
         $startDate = $_GET['start_date'] ?? date('Y-m-01');
         $endDate = $_GET['end_date'] ?? date('Y-m-t');
         
-        if (!$accountId) {
-            $this->setFlashMessage('danger', 'Please select an account.');
-            redirect('reports');
-            return;
-        }
-        
-        try {
-            $account = $this->accountModel->getById($accountId);
-            if (!$account) {
-                $this->setFlashMessage('danger', 'Account not found.');
-                redirect('reports');
-                return;
-            }
-            
-            $ledger = $this->transactionModel->getLedger($accountId, $startDate, $endDate);
-        } catch (Exception $e) {
-            error_log('Reports generalLedger error: ' . $e->getMessage());
-            $ledger = [];
-            $account = null;
-        }
-        
         try {
             $accounts = $this->accountModel->getAll();
         } catch (Exception $e) {
             $accounts = [];
+        }
+        
+        $account = null;
+        $ledger = [];
+        
+        if ($accountId) {
+            try {
+                $account = $this->accountModel->getById($accountId);
+                if ($account) {
+                    $ledger = $this->transactionModel->getLedger($accountId, $startDate, $endDate);
+                }
+            } catch (Exception $e) {
+                error_log('Reports generalLedger error: ' . $e->getMessage());
+            }
         }
         
         $data = [

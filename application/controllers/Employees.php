@@ -8,7 +8,7 @@ class Employees extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('payroll', 'read'); // Use payroll permissions since employees are part of payroll
+        $this->requirePermission('employees', 'read'); // Changed from payroll to employees
         $this->employeeModel = $this->loadModel('Employee_model');
         $this->payrollModel = $this->loadModel('Payroll_model');
         $this->activityModel = $this->loadModel('Activity_model');
@@ -32,7 +32,7 @@ class Employees extends Base_Controller {
     }
     
     public function create() {
-        $this->requirePermission('payroll', 'create');
+        $this->requirePermission('employees', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [

@@ -57,7 +57,7 @@ class Inventory extends Base_Controller {
      * Handles requests to inventory/items
      */
     public function items() {
-        redirect('inventory/items');
+        redirect('items');
     }
 }
 

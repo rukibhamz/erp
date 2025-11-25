@@ -1,96 +1,60 @@
-# Security Headers
-<IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
-    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    # Content Security Policy (temporarily disabled - uncomment after testing)
-    # Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; font-src 'self' fonts.gstatic.com cdn.jsdelivr.net data:; img-src 'self' data: https: ui-avatars.com; connect-src 'self'; frame-ancestors 'self';"
-</IfModule>
-
-# Prevent access to sensitive files
-<FilesMatch "^(\.htaccess|\.env|composer\.json|composer\.lock|package\.json|\.git|\.gitignore|README\.md|LICENSE|\.md)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# Protect config files
-<FilesMatch "^(config\.php|database\.php)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# PHP Security Settings
-<IfModule mod_php.c>
-    php_flag display_errors Off
-    php_flag log_errors On
-    php_value max_execution_time 300
-    php_value max_input_time 300
-    php_value memory_limit 256M
-    php_value post_max_size 50M
-    php_value upload_max_filesize 50M
-</IfModule>
-
-# Gzip Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
-</IfModule>
-
-# Browser Caching
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/svg+xml "access plus 1 year"
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType application/pdf "access plus 1 month"
-</IfModule>
-
-# URL Rewriting
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    
-    # Prevent direct access to application and system directories
-    RewriteCond %{THE_REQUEST} \s/+(.*/)?(application|system)/ [NC]
-    RewriteRule ^ - [F,L]
-    
-    # Skip rewriting for existing files (images, CSS, JS, PDF, etc.)
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
-    
-    # Skip rewriting for existing directories
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
-    
-    # Allow direct access to public directories (assets, uploads, install, backups)
-    RewriteCond %{REQUEST_URI} ^/(assets|uploads|install|backups)/ [NC]
-    RewriteRule ^ - [L]
-    
-    # For XAMPP subdirectory (/erp/): Extract path after /erp/
-    # REQUEST_URI will be /erp/... for requests to the subdirectory
-    RewriteCond %{REQUEST_URI} ^/erp/(.*)$ [NC]
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ index.php?url=%1 [L,QSA]
-    
-    # Handle root request for /erp/ subdirectory (just /erp/ or /erp)
-    RewriteCond %{REQUEST_URI} ^/erp/?$ [NC]
-    RewriteRule ^$ index.php?url= [L,QSA]
-    
-    # For root installation or other paths: use REQUEST_URI as-is
-    RewriteCond %{REQUEST_URI} !^/erp [NC]
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
-</IfModule>
+# Enable Rewrite Engine
+RewriteEngine On
 
 # Prevent directory listing
 Options -Indexes
 
-# Custom error pages
-# Use relative path since we're already in /erp/ directory
-ErrorDocument 404 index.php?url=error
-ErrorDocument 403 index.php?url=error
+# Protect config files
+<FilesMatch "\.(php|ini|conf)$">
+    <Files "config.php">
+        Require all denied
+    </Files>
+    <Files "config.installed.php">
+        Require all denied
+    </Files>
+</FilesMatch>
+
+# Block access to install directory after installation
+# Uncomment the following lines AFTER installation is complete and verified
+# RewriteCond %{REQUEST_URI} ^/install
+# RewriteRule . - [F,L]
+
+# Route all requests to index.php (allow assets and install to pass through)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/install
+RewriteCond %{REQUEST_URI} !^/assets
+RewriteCond %{REQUEST_URI} !^/uploads
+RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
+
+# Set default charset
+AddDefaultCharset UTF-8
+
+# Prevent access to .htaccess
+<Files .htaccess>
+    Require all denied
+</Files>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Enable compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Browser caching
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule>

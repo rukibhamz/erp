@@ -7,7 +7,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Employees</h1>
         <div class="d-flex gap-2">
-            <?php if (hasPermission('payroll', 'create')): ?>
+            <?php if (hasPermission('employees', 'create')): ?>
                 <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Add Employee
                 </a>
@@ -28,7 +28,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
         <div class="card-body text-center py-5">
             <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No employees found.</p>
-            <?php if (hasPermission('payroll', 'create')): ?>
+            <?php if (hasPermission('employees', 'create')): ?>
                 <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Add First Employee
                 </a>
@@ -73,7 +73,7 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                         <a href="<?= base_url('employees/view/' . $employee['id']) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <?php if (hasPermission('payroll', 'update')): ?>
+                                        <?php if (hasPermission('employees', 'update')): ?>
                                             <a href="<?= base_url('employees/edit/' . $employee['id']) ?>" class="btn btn-primary" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
