@@ -19,41 +19,6 @@ class Reports extends Base_Controller {
     public function index() {
         $data = [
             'page_title' => 'Financial Reports',
-            'flash' => $this->getFlashMessage()
-        ];
-        
-        $this->loadView('reports/index', $data);
-    }
-    
-    public function trialBalance() {
-        $startDate = $_GET['start_date'] ?? date('Y-m-01');
-        $endDate = $_GET['end_date'] ?? date('Y-m-t');
-        
-        try {
-            $trialBalance = $this->transactionModel->getTrialBalance($startDate, $endDate);
-        } catch (Exception $e) {
-            error_log('Reports trialBalance error: ' . $e->getMessage());
-            $trialBalance = [];
-        }
-        
-        $data = [
-            'page_title' => 'Trial Balance',
-            'trial_balance' => $trialBalance,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'flash' => $this->getFlashMessage()
-        ];
-        
-        $this->loadView('reports/trial_balance', $data);
-    }
-    
-    public function generalLedger() {
-        $accountId = !empty($_GET['account_id']) ? intval($_GET['account_id']) : null;
-        $startDate = $_GET['start_date'] ?? date('Y-m-01');
-        $endDate = $_GET['end_date'] ?? date('Y-m-t');
-        
-        try {
-            $accounts = $this->accountModel->getAll();
         } catch (Exception $e) {
             $accounts = [];
         }

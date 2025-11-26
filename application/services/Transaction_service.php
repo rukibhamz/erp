@@ -11,11 +11,16 @@ class Transaction_service {
     private $journalModel;
     private $accountModel;
     private $db;
+    private $balanceCalculator;
     
     public function __construct() {
         $this->db = Database::getInstance();
         $this->journalModel = $this->loadModel('Journal_entry_model');
         $this->accountModel = $this->loadModel('Account_model');
+        
+        // Load Balance Calculator
+        require_once BASEPATH . 'services/Balance_calculator.php';
+        $this->balanceCalculator = new Balance_calculator();
     }
     
     /**
@@ -110,6 +115,11 @@ class Transaction_service {
             if ($data['auto_post'] ?? false) {
                 $this->journalModel->approve($entryId, $data['created_by']);
                 $this->journalModel->post($entryId, $data['created_by']);
+                
+                // Invalidate balance cache for all affected accounts
+                foreach ($data['entries'] as $entry) {
+                    $this->balanceCalculator->invalidateCache($entry['account_id']);
+                }
             }
             
             $this->db->commit();

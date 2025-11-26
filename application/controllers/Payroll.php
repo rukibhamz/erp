@@ -367,6 +367,86 @@ class Payroll extends Base_Controller {
             if (!$cashAccount) {
                 throw new Exception('Cash account not found');
             }
+            
+            // Get payslips to calculate total deductions
+            $payslips = $this->payrollModel->getPayslips($payrollRunId);
+            $totalPAYE = 0;
+            $totalPension = 0;
+            $totalNHF = 0;
+            $totalGrossPay = 0;
+            
+            foreach ($payslips as $payslip) {
+                $deductions = json_decode($payslip['deductions_json'] ?? '[]', true);
+                $totalGrossPay += floatval($payslip['gross_pay']);
+                
+                foreach ($deductions as $deduction) {
+                    $type = strtolower($deduction['type'] ?? $deduction['name'] ?? '');
+                    $amount = floatval($deduction['amount'] ?? 0);
+                    
+                    if (strpos($type, 'paye') !== false || strpos($type, 'tax') !== false) {
+                        $totalPAYE += $amount;
+                    } elseif (strpos($type, 'pension') !== false) {
+                        $totalPension += $amount;
+                    } elseif (strpos($type, 'nhf') !== false) {
+                        $totalNHF += $amount;
+                    }
+                }
+            }
+            
+            // Get liability accounts (create if they don't exist)
+            $payeAccount = $this->accountModel->getByCode('2210'); // PAYE Payable
+            $pensionAccount = $this->accountModel->getByCode('2220'); // Pension Payable
+            $nhfAccount = $this->accountModel->getByCode('2230'); // NHF Payable
+            
+            // Build journal entry lines
+            $journalEntries = [
+                // Debit: Payroll Expense (gross pay)
+                [
+                    'account_id' => $expenseAccount['id'],
+                    'debit' => $totalGrossPay,
+                    'credit' => 0.00,
+                    'description' => 'Payroll Expense - Gross Pay'
+                ]
+            ];
+            
+            // Credit: PAYE Liability
+            if ($totalPAYE > 0 && $payeAccount) {
+                $journalEntries[] = [
+                    'account_id' => $payeAccount['id'],
+                    'debit' => 0.00,
+                    'credit' => $totalPAYE,
+                    'description' => 'PAYE Withholding Tax'
+                ];
+            }
+            
+            // Credit: Pension Liability
+            if ($totalPension > 0 && $pensionAccount) {
+                $journalEntries[] = [
+                    'account_id' => $pensionAccount['id'],
+                    'debit' => 0.00,
+                    'credit' => $totalPension,
+                    'description' => 'Pension Contribution (8%)'
+                ];
+            }
+            
+            // Credit: NHF Liability
+            if ($totalNHF > 0 && $nhfAccount) {
+                $journalEntries[] = [
+                    'account_id' => $nhfAccount['id'],
+                    'debit' => 0.00,
+                    'credit' => $totalNHF,
+                    'description' => 'NHF Contribution (2.5%)'
+                ];
+            }
+            
+            // Credit: Cash (net pay)
+            $netPay = floatval($payrollRun['total_amount']);
+            $journalEntries[] = [
+                'account_id' => $cashAccount['account_id'],
+                'debit' => 0.00,
+                'credit' => $netPay,
+                'description' => 'Net Payroll Payment'
+            ];
 
             // Use Transaction Service to post journal entry
             $journalData = [
@@ -375,20 +455,7 @@ class Payroll extends Base_Controller {
                 'reference_id' => $payrollRunId,
                 'description' => 'Payroll for ' . $payrollRun['period'],
                 'journal_type' => 'payroll',
-                'entries' => [
-                    [
-                        'account_id' => $expenseAccount['id'],
-                        'debit' => floatval($payrollRun['total_amount']),
-                        'credit' => 0.00,
-                        'description' => 'Payroll Expense'
-                    ],
-                    [
-                        'account_id' => $cashAccount['account_id'],
-                        'debit' => 0.00,
-                        'credit' => floatval($payrollRun['total_amount']),
-                        'description' => 'Payroll Payment'
-                    ]
-                ],
+                'entries' => $journalEntries,
                 'created_by' => $this->session['user_id'],
                 'auto_post' => true // Auto-approve and post
             ];

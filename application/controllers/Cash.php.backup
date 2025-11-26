@@ -1,31 +1,3 @@
-<?php
-defined('BASEPATH') OR exit('No direct script access allowed');
-
-class Cash extends Base_Controller {
-    private $cashAccountModel;
-    private $accountModel;
-    private $transactionModel;
-    private $paymentModel;
-    private $activityModel;
-    private $transactionService;
-
-    public function __construct() {
-        parent::__construct();
-        $this->requirePermission('cash', 'read');
-        $this->cashAccountModel = $this->loadModel('Cash_account_model');
-        $this->accountModel = $this->loadModel('Account_model');
-        $this->transactionModel = $this->loadModel('Transaction_model');
-        $this->paymentModel = $this->loadModel('Payment_model');
-        $this->activityModel = $this->loadModel('Activity_model');
-        
-        // Load Transaction Service
-        require_once BASEPATH . 'services/Transaction_service.php';
-        $this->transactionService = new Transaction_service();
-    }
-    
-    public function index() {
-        try {
-            $cashAccounts = $this->cashAccountModel->getActive();
         } catch (Exception $e) {
             $cashAccounts = [];
         }

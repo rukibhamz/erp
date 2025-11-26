@@ -11,19 +11,27 @@ class Receivables extends Base_Controller {
     private $cashAccountModel;
     private $activityModel;
     private $entityModel;
+    private $productModel;
+    private $companyModel;
+    private $transactionService;
     
     public function __construct() {
         parent::__construct();
         $this->requirePermission('receivables', 'read');
-        $this->customerModel = $this->loadModel('Customer_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
-        $this->paymentModel = $this->loadModel('Payment_model');
-        $this->paymentAllocationModel = $this->loadModel('Payment_allocation_model');
+        $this->customerModel = $this->loadModel('Customer_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
+        $this->paymentModel = $this->loadModel('Payment_model');
         $this->activityModel = $this->loadModel('Activity_model');
         $this->entityModel = $this->loadModel('Entity_model');
+        $this->productModel = $this->loadModel('Product_model');
+        $this->companyModel = $this->loadModel('Company_model');
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
     }
     
     // Customers Management
@@ -362,14 +370,49 @@ class Receivables extends Base_Controller {
                     $this->invoiceModel->addItem($invoiceId, $itemData);
                 }
                 
-                // If status is 'sent', create transaction
-                if ($invoiceData['status'] === 'sent') {
-                    $customer = $this->customerModel->getById($customerId);
-                    if ($customer && $customer['account_id']) {
-                        $this->createInvoiceTransaction($invoiceId, $customer['account_id'], $totalAmount);
+                // If status is 'sent', create journal entry
+            if ($invoiceData['status'] === 'sent') {
+                try {
+                    // Get Accounts Receivable account (1200)
+                    $arAccount = $this->accountModel->getByCode('1200');
+                    // Get Sales Revenue account (4000) - or use first revenue account
+                    $revenueAccount = $this->accountModel->getByCode('4000');
+                    if (!$revenueAccount) {
+                        $revenueAccounts = $this->accountModel->getByType('Revenue');
+                        $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
                     }
+                    
+                    if ($arAccount && $revenueAccount) {
+                        $journalData = [
+                            'date' => $invoiceDate,
+                            'reference_type' => 'invoice',
+                            'reference_id' => $invoiceId,
+                            'description' => 'Invoice ' . $invoiceData['invoice_number'],
+                            'journal_type' => 'sales',
+                            'entries' => [
+                                [
+                                    'account_id' => $arAccount['id'],
+                                    'debit' => $totalAmount,
+                                    'credit' => 0.00,
+                                    'description' => 'Accounts Receivable'
+                                ],
+                                [
+                                    'account_id' => $revenueAccount['id'],
+                                    'debit' => 0.00,
+                                    'credit' => $totalAmount,
+                                    'description' => 'Sales Revenue'
+                                ]
+                            ],
+                            'created_by' => $this->session['user_id'],
+                            'auto_post' => true
+                        ];
+                        
+                        $this->transactionService->postJournalEntry($journalData);
+                    }
+                } catch (Exception $e) {
+                    error_log('Receivables createInvoice journal entry error: ' . $e->getMessage());
                 }
-                
+            }          
                 $this->activityModel->log($this->session['user_id'], 'create', 'Receivables', 'Created invoice: ' . $invoiceData['invoice_number']);
                 $this->setFlashMessage('success', 'Invoice created successfully.');
                 redirect('receivables/invoices/edit/' . $invoiceId);
@@ -987,43 +1030,47 @@ class Receivables extends Base_Controller {
                 $this->invoiceModel->addPayment($invoiceId, $amount);
                 $this->invoiceModel->updateStatus($invoiceId);
                 
-                // Create transactions
-                // Credit customer account (Accounts Receivable)
-                if ($customer && $customer['account_id']) {
-                    $this->transactionModel->create([
-                        'transaction_number' => $paymentData['payment_number'] . '-AR',
-                        'transaction_date' => $paymentDate,
-                        'transaction_type' => 'receipt',
+                // Create journal entry using Transaction Service
+            try {
+                // Get Accounts Receivable account (1200)
+                $arAccount = $this->accountModel->getByCode('1200');
+                
+                if ($arAccount) {
+                    $journalData = [
+                        'date' => $paymentDate,
+                        'reference_type' => 'invoice_payment',
                         'reference_id' => $paymentId,
-                        'reference_type' => 'payment',
-                        'account_id' => $customer['account_id'],
-                        'description' => 'Payment for invoice ' . $invoice['invoice_number'],
-                        'debit' => 0,
-                        'credit' => $amount,
-                        'status' => 'posted',
-                        'created_by' => $this->session['user_id']
-                    ]);
+                        'description' => 'Payment for Invoice ' . $invoice['invoice_number'],
+                        'journal_type' => 'receipt',
+                        'entries' => [
+                            [
+                                'account_id' => $cashAccount['account_id'],
+                                'debit' => $amount,
+                                'credit' => 0.00,
+                                'description' => 'Cash Receipt'
+                            ],
+                            [
+                                'account_id' => $arAccount['id'],
+                                'debit' => 0.00,
+                                'credit' => $amount,
+                                'description' => 'Accounts Receivable'
+                            ]
+                        ],
+                        'created_by' => $this->session['user_id'],
+                        'auto_post' => true
+                    ];
                     
-                    $this->accountModel->updateBalance($customer['account_id'], $amount, 'credit');
+                    $this->transactionService->postJournalEntry($journalData);
+                    
+                    // Update cash account balance
+                    $this->cashAccountModel->updateBalance($cashAccountId, $amount, 'deposit');
+                } else {
+                    error_log('Receivables recordPayment: Accounts Receivable account (1200) not found');
                 }
-                
-                // Debit cash account
-                $this->transactionModel->create([
-                    'transaction_number' => $paymentData['payment_number'] . '-CASH',
-                    'transaction_date' => $paymentDate,
-                    'transaction_type' => 'receipt',
-                    'reference_id' => $paymentId,
-                    'reference_type' => 'payment',
-                    'account_id' => $cashAccount['account_id'],
-                    'description' => 'Payment received for invoice ' . $invoice['invoice_number'],
-                    'debit' => $amount,
-                    'credit' => 0,
-                    'status' => 'posted',
-                    'created_by' => $this->session['user_id']
-                ]);
-                
-                $this->accountModel->updateBalance($cashAccount['account_id'], $amount, 'debit');
-                $this->cashAccountModel->updateBalance($cashAccountId, $amount, 'deposit');
+            } catch (Exception $e) {
+                error_log('Receivables recordPayment journal entry error: ' . $e->getMessage());
+                $this->setFlashMessage('warning', 'Payment recorded but journal entry failed. Please check logs.');
+            }
                 
                 $this->activityModel->log($this->session['user_id'], 'create', 'Receivables', 'Recorded payment for invoice: ' . $invoice['invoice_number']);
                 $this->setFlashMessage('success', 'Payment recorded successfully.');
