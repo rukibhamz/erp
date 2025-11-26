@@ -1,26 +1,3 @@
-<?php
-defined('BASEPATH') OR exit('No direct script access allowed');
-
-class Cash extends Base_Controller {
-    private $cashAccountModel;
-    private $accountModel;
-    private $paymentModel;
-    private $transactionModel;
-    private $activityModel;
-    
-    public function __construct() {
-        parent::__construct();
-        $this->requirePermission('cash', 'read');
-        $this->cashAccountModel = $this->loadModel('Cash_account_model');
-        $this->accountModel = $this->loadModel('Account_model');
-        $this->paymentModel = $this->loadModel('Payment_model');
-        $this->transactionModel = $this->loadModel('Transaction_model');
-        $this->activityModel = $this->loadModel('Activity_model');
-    }
-    
-    public function index() {
-        try {
-            $cashAccounts = $this->cashAccountModel->getActive();
         } catch (Exception $e) {
             $cashAccounts = [];
         }
@@ -74,7 +51,26 @@ class Cash extends Base_Controller {
                 $accountData['account_code'] = $this->accountModel->getNextAccountCode('Assets');
             }
             
-            $accountId = $this->accountModel->create($accountData);
+            try {
+                $accountId = $this->accountModel->create($accountData);
+            } catch (Exception $e) {
+                // If duplicate account code, try generating a new one
+                if (stripos($e->getMessage(), 'Duplicate entry') !== false && stripos($e->getMessage(), 'account_code') !== false) {
+                    // Generate a unique code by appending timestamp
+                    $accountData['account_code'] = $this->accountModel->getNextAccountCode('Assets') . '-' . time();
+                    try {
+                        $accountId = $this->accountModel->create($accountData);
+                    } catch (Exception $e2) {
+                        $this->setFlashMessage('danger', 'Failed to create account: ' . $e2->getMessage());
+                        redirect('cash/accounts/create');
+                        return;
+                    }
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to create account: ' . $e->getMessage());
+                    redirect('cash/accounts/create');
+                    return;
+                }
+            }
             
             if ($accountId) {
                 // Validate account_number (10 digits, numbers only)
@@ -132,13 +128,16 @@ class Cash extends Base_Controller {
         
         try {
             $cashAccounts = $this->cashAccountModel->getActive();
+            $incomeAccounts = $this->accountModel->getByType('Revenue');
         } catch (Exception $e) {
             $cashAccounts = [];
+            $incomeAccounts = [];
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // CSRF Protection
             $cashAccountId = intval($_POST['cash_account_id'] ?? 0);
+            $incomeAccountId = intval($_POST['income_account_id'] ?? 0);
             $amount = floatval($_POST['amount'] ?? 0);
             $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
             $description = sanitize_input($_POST['description'] ?? '');
@@ -150,54 +149,84 @@ class Cash extends Base_Controller {
                 redirect('cash/receipts');
             }
             
-            // Create payment record
-            $paymentData = [
-                'payment_number' => $this->paymentModel->getNextPaymentNumber('receipt'),
-                'payment_date' => $paymentDate,
-                'payment_type' => 'receipt',
-                'account_id' => $cashAccount['account_id'],
-                'amount' => $amount,
-                'payment_method' => $paymentMethod,
-                'notes' => $description,
-                'status' => 'posted',
-                'created_by' => $this->session['user_id']
-            ];
+            // Get income account (default to first revenue account if not specified)
+            if (!$incomeAccountId && !empty($incomeAccounts)) {
+                $incomeAccountId = $incomeAccounts[0]['id'];
+            }
             
-            $paymentId = $this->paymentModel->create($paymentData);
+            if (!$incomeAccountId) {
+                $this->setFlashMessage('danger', 'Income account not found.');
+                redirect('cash/receipts');
+            }
             
-            if ($paymentId) {
-                // Update cash account balance
-                $this->cashAccountModel->updateBalance($cashAccountId, $amount, 'deposit');
-                
-                // Create transaction
-                $this->transactionModel->create([
-                    'transaction_number' => $paymentData['payment_number'] . '-TXN',
-                    'transaction_date' => $paymentDate,
-                    'transaction_type' => 'receipt',
-                    'reference_id' => $paymentId,
-                    'reference_type' => 'payment',
+            try {
+                // Create payment record
+                $paymentData = [
+                    'payment_number' => $this->paymentModel->getNextPaymentNumber('receipt'),
+                    'payment_date' => $paymentDate,
+                    'payment_type' => 'receipt',
                     'account_id' => $cashAccount['account_id'],
-                    'description' => $description ?: 'Cash Receipt',
-                    'debit' => $amount,
-                    'credit' => 0,
+                    'amount' => $amount,
+                    'payment_method' => $paymentMethod,
+                    'notes' => $description,
                     'status' => 'posted',
                     'created_by' => $this->session['user_id']
-                ]);
+                ];
                 
-                // Update account balance
-                $this->accountModel->updateBalance($cashAccount['account_id'], $amount, 'debit');
+                $paymentId = $this->paymentModel->create($paymentData);
+                
+                if (!$paymentId) {
+                    throw new Exception('Failed to create payment record');
+                }
+                
+                // Use Transaction Service to post journal entry
+                $journalData = [
+                    'date' => $paymentDate,
+                    'reference_type' => 'cash_receipt',
+                    'reference_id' => $paymentId,
+                    'description' => 'Cash receipt - ' . ($description ?: 'Payment received'),
+                    'journal_type' => 'cash_receipt',
+                    'entries' => [
+                        [
+                            'account_id' => $cashAccount['account_id'],
+                            'debit' => $amount,
+                            'credit' => 0.00,
+                            'description' => 'Cash received'
+                        ],
+                        [
+                            'account_id' => $incomeAccountId,
+                            'debit' => 0.00,
+                            'credit' => $amount,
+                            'description' => 'Income received'
+                        ]
+                    ],
+                    'created_by' => $this->session['user_id'],
+                    'auto_post' => true
+                ];
+                
+                $journalId = $this->transactionService->postJournalEntry($journalData);
+                
+                if (!$journalId) {
+                    throw new Exception('Failed to create journal entry');
+                }
+                
+                // Update cash account balance
+                $this->cashAccountModel->updateBalance($cashAccountId, $amount, 'deposit');
                 
                 $this->activityModel->log($this->session['user_id'], 'create', 'Cash', 'Recorded cash receipt: ' . format_currency($amount));
                 $this->setFlashMessage('success', 'Cash receipt recorded successfully.');
                 redirect('cash/receipts');
-            } else {
-                $this->setFlashMessage('danger', 'Failed to record cash receipt.');
+            } catch (Exception $e) {
+                error_log('Cash receipts error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to record cash receipt: ' . $e->getMessage());
+                redirect('cash/receipts');
             }
         }
         
         $data = [
             'page_title' => 'Cash Receipts',
             'cash_accounts' => $cashAccounts,
+            'income_accounts' => $incomeAccounts,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -222,7 +251,7 @@ class Cash extends Base_Controller {
             $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
             $description = sanitize_input($_POST['description'] ?? '');
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'cash');
-            $accountId = intval($_POST['account_id'] ?? 0);
+            $expenseAccountId = intval($_POST['expense_account_id'] ?? 0);
             
             $cashAccount = $this->cashAccountModel->getById($cashAccountId);
             if (!$cashAccount) {
@@ -235,67 +264,77 @@ class Cash extends Base_Controller {
                 redirect('cash/payments');
             }
             
-            // Create payment record
-            $paymentData = [
-                'payment_number' => $this->paymentModel->getNextPaymentNumber('payment'),
-                'payment_date' => $paymentDate,
-                'payment_type' => 'payment',
-                'account_id' => $cashAccount['account_id'],
-                'amount' => $amount,
-                'payment_method' => $paymentMethod,
-                'notes' => $description,
-                'status' => 'posted',
-                'created_by' => $this->session['user_id']
-            ];
+            // Get expense account (default to first expense account if not specified)
+            if (!$expenseAccountId && !empty($expenseAccounts)) {
+                $expenseAccountId = $expenseAccounts[0]['id'];
+            }
             
-            $paymentId = $this->paymentModel->create($paymentData);
+            if (!$expenseAccountId) {
+                $this->setFlashMessage('danger', 'Expense account not found.');
+                redirect('cash/payments');
+            }
             
-            if ($paymentId) {
-                // Update cash account balance
-                $this->cashAccountModel->updateBalance($cashAccountId, $amount, 'withdrawal');
-                
-                // Create transactions
-                // Debit the expense/payable account
-                if ($accountId) {
-                    $this->transactionModel->create([
-                        'transaction_number' => $paymentData['payment_number'] . '-DEBIT',
-                        'transaction_date' => $paymentDate,
-                        'transaction_type' => 'payment',
-                        'reference_id' => $paymentId,
-                        'reference_type' => 'payment',
-                        'account_id' => $accountId,
-                        'description' => $description ?: 'Cash Payment',
-                        'debit' => $amount,
-                        'credit' => 0,
-                        'status' => 'posted',
-                        'created_by' => $this->session['user_id']
-                    ]);
-                    
-                    $this->accountModel->updateBalance($accountId, $amount, 'debit');
-                }
-                
-                // Credit the cash account
-                $this->transactionModel->create([
-                    'transaction_number' => $paymentData['payment_number'] . '-CREDIT',
-                    'transaction_date' => $paymentDate,
-                    'transaction_type' => 'payment',
-                    'reference_id' => $paymentId,
-                    'reference_type' => 'payment',
+            try {
+                // Create payment record
+                $paymentData = [
+                    'payment_number' => $this->paymentModel->getNextPaymentNumber('payment'),
+                    'payment_date' => $paymentDate,
+                    'payment_type' => 'payment',
                     'account_id' => $cashAccount['account_id'],
-                    'description' => $description ?: 'Cash Payment',
-                    'debit' => 0,
-                    'credit' => $amount,
+                    'amount' => $amount,
+                    'payment_method' => $paymentMethod,
+                    'notes' => $description,
                     'status' => 'posted',
                     'created_by' => $this->session['user_id']
-                ]);
+                ];
                 
-                $this->accountModel->updateBalance($cashAccount['account_id'], $amount, 'credit');
+                $paymentId = $this->paymentModel->create($paymentData);
+                
+                if (!$paymentId) {
+                    throw new Exception('Failed to create payment record');
+                }
+                
+                // Use Transaction Service to post journal entry
+                $journalData = [
+                    'date' => $paymentDate,
+                    'reference_type' => 'cash_payment',
+                    'reference_id' => $paymentId,
+                    'description' => 'Cash payment - ' . ($description ?: 'Expense payment'),
+                    'journal_type' => 'cash_payment',
+                    'entries' => [
+                        [
+                            'account_id' => $expenseAccountId,
+                            'debit' => $amount,
+                            'credit' => 0.00,
+                            'description' => 'Expense payment'
+                        ],
+                        [
+                            'account_id' => $cashAccount['account_id'],
+                            'debit' => 0.00,
+                            'credit' => $amount,
+                            'description' => 'Cash paid'
+                        ]
+                    ],
+                    'created_by' => $this->session['user_id'],
+                    'auto_post' => true
+                ];
+                
+                $journalId = $this->transactionService->postJournalEntry($journalData);
+                
+                if (!$journalId) {
+                    throw new Exception('Failed to create journal entry');
+                }
+                
+                // Update cash account balance
+                $this->cashAccountModel->updateBalance($cashAccountId, $amount, 'withdrawal');
                 
                 $this->activityModel->log($this->session['user_id'], 'create', 'Cash', 'Recorded cash payment: ' . format_currency($amount));
                 $this->setFlashMessage('success', 'Cash payment recorded successfully.');
                 redirect('cash/payments');
-            } else {
-                $this->setFlashMessage('danger', 'Failed to record cash payment.');
+            } catch (Exception $e) {
+                error_log('Cash payments error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to record cash payment: ' . $e->getMessage());
+                redirect('cash/payments');
             }
         }
         

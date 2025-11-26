@@ -112,5 +112,17 @@ class Payroll_model extends Base_Model {
             return [];
         }
     }
+    
+    public function getPayslipById($payslipId) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . "payslips` WHERE id = ?",
+                [$payslipId]
+            );
+        } catch (Exception $e) {
+            error_log('Payroll_model getPayslipById error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
 

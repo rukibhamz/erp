@@ -323,6 +323,48 @@ class Router {
             return;
         }
         
+        if ($firstPart === 'cash') {
+            // Cash module - map directly to Cash controller
+            $this->controller = 'Cash';
+            
+            if (count($urlParts) >= 3) {
+                // Handle method names like "editAccount", "createAccount", "deleteAccount"
+                $methodPart = $urlParts[1] ?? '';
+                $actionPart = $urlParts[2] ?? '';
+                
+                // Map common patterns: accounts/edit -> editAccount, accounts/create -> createAccount
+                if ($methodPart === 'accounts' && $actionPart === 'edit') {
+                    $this->method = 'editAccount';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'accounts' && $actionPart === 'create') {
+                    $this->method = 'createAccount';
+                    $this->params = [];
+                } elseif ($methodPart === 'accounts' && $actionPart === 'delete') {
+                    $this->method = 'deleteAccount';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } else {
+                    // Generic mapping: cash/method/param
+                    $this->method = $actionPart ?: ($methodPart ?: 'index');
+                    $this->params = count($urlParts) > 3 ? array_slice($urlParts, 3) : [];
+                }
+            } elseif (count($urlParts) === 2) {
+                // cash/accounts or cash/receipts or cash/payments
+                $this->method = $urlParts[1] ?? 'index';
+                $this->params = [];
+            } else {
+                // cash only
+                $this->method = 'index';
+                $this->params = [];
+            }
+            
+            // Convert numeric parameters to integers
+            $this->params = array_map(function($param) {
+                return is_string($param) && preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+            }, $this->params);
+            error_log("Router: Cash URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            return;
+        }
+        
         if ($firstPart === 'payables') {
             // Payables module - map directly to Payables controller
             $this->controller = 'Payables';

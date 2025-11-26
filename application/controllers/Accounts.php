@@ -21,12 +21,10 @@ class Accounts extends Base_Controller {
         $search = $_GET['search'] ?? '';
         
         try {
-            if ($type) {
-                $accounts = $this->accountModel->getByType($type);
-            } elseif ($search) {
-                $accounts = $this->accountModel->search($search);
+            if (empty($search)) {
+                $accounts = $this->accountModel->getTreeWithDepth($type);
             } else {
-                $accounts = $this->accountModel->getAll();
+                $accounts = $this->accountModel->getFiltered($type, $search);
             }
         } catch (Exception $e) {
             error_log('Accounts index error: ' . $e->getMessage());
@@ -56,7 +54,7 @@ class Accounts extends Base_Controller {
                 'account_code' => sanitize_input($_POST['account_code'] ?? ''),
                 'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                 'account_type' => sanitize_input($_POST['account_type'] ?? 'Assets'),
-                'parent_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
+                'parent_account_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'opening_balance' => floatval($_POST['opening_balance'] ?? 0),
                 'balance' => floatval($_POST['opening_balance'] ?? 0),
@@ -75,12 +73,16 @@ class Accounts extends Base_Controller {
                 $data['account_code'] = $this->accountModel->getNextAccountCode($data['account_type'], $data['parent_id']);
             }
             
-            if ($this->accountModel->create($data)) {
-                $this->activityModel->log($this->session['user_id'], 'create', 'Accounts', 'Created account: ' . $data['account_name']);
-                $this->setFlashMessage('success', 'Account created successfully.');
-                redirect('accounts');
-            } else {
-                $this->setFlashMessage('danger', 'Failed to create account.');
+            try {
+                if ($this->accountModel->create($data)) {
+                    $this->activityModel->log($this->session['user_id'], 'create', 'Accounts', 'Created account: ' . $data['account_name']);
+                    $this->setFlashMessage('success', 'Account created successfully.');
+                    redirect('accounts');
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to create account.');
+                }
+            } catch (Exception $e) {
+                $this->setFlashMessage('danger', $e->getMessage());
             }
         }
         
@@ -123,7 +125,7 @@ class Accounts extends Base_Controller {
             $account['account_code'] = $account['account_code'] ?? '';
             $account['account_name'] = $account['account_name'] ?? '';
             $account['account_type'] = $account['account_type'] ?? 'Assets';
-            $account['parent_id'] = $account['parent_id'] ?? null;
+            $account['parent_id'] = $account['parent_account_id'] ?? null;
             $account['opening_balance'] = $account['opening_balance'] ?? 0;
             $account['balance'] = $account['balance'] ?? 0;
             $account['currency'] = $account['currency'] ?? 'USD';
@@ -148,7 +150,7 @@ class Accounts extends Base_Controller {
                 'account_code' => sanitize_input($_POST['account_code'] ?? ''),
                 'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                 'account_type' => sanitize_input($_POST['account_type'] ?? 'Assets'),
-                'parent_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
+                'parent_account_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'status' => sanitize_input($_POST['status'] ?? 'active'),
@@ -160,12 +162,16 @@ class Accounts extends Base_Controller {
                 $data['account_number'] = $accountNumber !== '' ? $accountNumber : null;
             }
             
-            if ($this->accountModel->update($id, $data)) {
-                $this->activityModel->log($this->session['user_id'], 'update', 'Accounts', 'Updated account: ' . $data['account_name']);
-                $this->setFlashMessage('success', 'Account updated successfully.');
-                redirect('accounts');
-            } else {
-                $this->setFlashMessage('danger', 'Failed to update account.');
+            try {
+                if ($this->accountModel->update($id, $data)) {
+                    $this->activityModel->log($this->session['user_id'], 'update', 'Accounts', 'Updated account: ' . $data['account_name']);
+                    $this->setFlashMessage('success', 'Account updated successfully.');
+                    redirect('accounts');
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to update account.');
+                }
+            } catch (Exception $e) {
+                $this->setFlashMessage('danger', $e->getMessage());
             }
         }
         

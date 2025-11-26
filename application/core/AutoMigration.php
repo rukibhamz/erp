@@ -81,240 +81,151 @@ class AutoMigration {
         $migrationFile = __DIR__ . '/../../database/migrations/000_complete_system_migration.sql';
         
         // Check if main migration needs to run
-        // Also check if critical tables exist (for cases where migration was run before table was added)
         $needsMigration = !in_array('000_complete_system_migration.sql', $executed);
         
         // Check if critical tables and data exist (for cases where migration was run before updates were added)
         if (!$needsMigration) {
             try {
-                // Check for tax_types table (added in previous update)
+                // Check for tax_types table
                 $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}tax_types'");
                 $taxTypesExists = $stmt->rowCount() > 0;
                 
-                // Check for entities and locations module labels (added in this update)
+                // Check for module labels
                 $entitiesLabelExists = false;
                 $locationsLabelExists = false;
                 $staffManagementLabelExists = false;
-                $staffManagementModuleExists = false;
-                $entitiesPermsExist = false;
-                $locationsPermsExist = false;
                 
                 try {
                     $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'entities'");
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     $entitiesLabelExists = ($result['cnt'] ?? 0) > 0;
-                } catch (Exception $e) {
-                    // Table might not exist yet
-                }
+                } catch (Exception $e) {}
                 
                 try {
                     $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'locations'");
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     $locationsLabelExists = ($result['cnt'] ?? 0) > 0;
-                } catch (Exception $e) {
-                    // Table might not exist yet
-                }
+                } catch (Exception $e) {}
                 
                 try {
                     $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'staff_management'");
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     $staffManagementLabelExists = ($result['cnt'] ?? 0) > 0;
-                } catch (Exception $e) {
-                    // Table might not exist yet
-                }
-                
-                try {
-                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}modules` WHERE module_key = 'staff_management'");
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $staffManagementModuleExists = ($result['cnt'] ?? 0) > 0;
-                } catch (Exception $e) {
-                    // Table might not exist yet
-                }
-                
-                try {
-                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}permissions` WHERE module = 'entities'");
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $entitiesPermsExist = ($result['cnt'] ?? 0) > 0;
-                } catch (Exception $e) {
-                    // Table might not exist yet
-                }
-                
-                try {
-                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}permissions` WHERE module = 'locations'");
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $locationsPermsExist = ($result['cnt'] ?? 0) > 0;
-                } catch (Exception $e) {
-                    // Table might not exist yet
-                }
-                
-                // Check if admin has locations permissions
-                $adminHasLocationsPerms = false;
-                try {
-                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt 
-                        FROM `{$this->prefix}role_permissions` rp
-                        JOIN `{$this->prefix}roles` r ON rp.role_id = r.id
-                        JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
-                        WHERE r.role_code = 'admin' AND p.module = 'locations'");
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $adminHasLocationsPerms = ($result['cnt'] ?? 0) > 0;
-                } catch (Exception $e) {
-                    // Table might not exist yet
-                }
+                } catch (Exception $e) {}
                 
                 // Re-run migration if any critical updates are missing
-                if (!$taxTypesExists || !$entitiesLabelExists || !$locationsLabelExists || !$staffManagementLabelExists || !$staffManagementModuleExists || !$entitiesPermsExist || !$locationsPermsExist || !$adminHasLocationsPerms) {
-                    $missing = [];
-                    if (!$taxTypesExists) $missing[] = 'tax_types table';
-                    if (!$entitiesLabelExists) $missing[] = 'entities module label';
-                    if (!$locationsLabelExists) $missing[] = 'locations module label';
-                    if (!$staffManagementLabelExists) $missing[] = 'staff_management module label';
-                    if (!$staffManagementModuleExists) $missing[] = 'staff_management module';
-                    if (!$entitiesPermsExist) $missing[] = 'entities permissions';
-                    if (!$locationsPermsExist) $missing[] = 'locations permissions';
-                    if (!$adminHasLocationsPerms) $missing[] = 'admin locations permissions';
-                    
-                    error_log("AutoMigration: Missing updates detected (" . implode(', ', $missing) . "), re-running migration to apply them");
+                if (!$taxTypesExists || !$entitiesLabelExists || !$locationsLabelExists || !$staffManagementLabelExists) {
+                    error_log("AutoMigration: Missing updates detected, re-running migration to apply them");
                     $needsMigration = true;
                 }
             } catch (Exception $e) {
-                // If check fails, assume migration needed
                 error_log("AutoMigration: Error checking for updates: " . $e->getMessage());
             }
         }
         
-        // ALWAYS check and create properties table if missing (needed for Locations controller)
-        // This must run regardless of migration status to ensure table exists
-        try {
-            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
-            $propertiesExists = $stmt->rowCount() > 0;
-            
-            if (!$propertiesExists) {
-                error_log("AutoMigration: Properties table missing, creating it immediately...");
-                $this->createPropertiesTable();
-                // Verify it was created
-                $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
-                if ($stmt->rowCount() > 0) {
-                    error_log("AutoMigration: Properties table created successfully");
-                } else {
-                    error_log("AutoMigration: WARNING - Properties table creation may have failed");
-                }
-            }
-        } catch (Exception $e) {
-            error_log("AutoMigration: CRITICAL ERROR checking/creating properties table: " . $e->getMessage());
-            error_log("AutoMigration: Attempting to create properties table despite error...");
-            // Try to create anyway, even if check failed
-            try {
-                $this->createPropertiesTable();
-            } catch (Exception $e2) {
-                error_log("AutoMigration: Failed to create properties table: " . $e2->getMessage());
-            }
+        // Run main migration if needed
+        if ($needsMigration && file_exists($migrationFile)) {
+            $this->executeMigration($migrationFile, '000_complete_system_migration.sql');
         }
         
-        // ALWAYS check and create space_bookings table if missing (needed for Space bookings)
+        // ALWAYS check and create properties table if missing
         try {
-            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
-            $bookingsExists = $stmt->rowCount() > 0;
-            
-            if (!$bookingsExists) {
-                error_log("AutoMigration: Space_bookings table missing, creating it immediately...");
-                $this->createSpaceBookingsTable();
-                // Verify it was created
-                $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
-                if ($stmt->rowCount() > 0) {
-                    error_log("AutoMigration: Space_bookings table created successfully");
-                } else {
-                    error_log("AutoMigration: WARNING - Space_bookings table creation may have failed");
-                }
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
+            if ($stmt->rowCount() == 0) {
+                $this->createPropertiesTable();
             }
         } catch (Exception $e) {
-            error_log("AutoMigration: CRITICAL ERROR checking/creating space_bookings table: " . $e->getMessage());
-            // Try to create anyway
-            try {
+            error_log("AutoMigration: Error checking properties table: " . $e->getMessage());
+        }
+        
+        // ALWAYS check and create space_bookings table if missing
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
+            if ($stmt->rowCount() == 0) {
                 $this->createSpaceBookingsTable();
-            } catch (Exception $e2) {
-                error_log("AutoMigration: Failed to create space_bookings table: " . $e2->getMessage());
             }
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error checking space_bookings table: " . $e->getMessage());
         }
 
         // ALWAYS check and create utilities tables if missing
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}meters'");
             if ($stmt->rowCount() == 0) {
-                error_log("AutoMigration: Utilities tables missing, creating them...");
                 $this->createUtilitiesTables();
             }
         } catch (Exception $e) {
-            error_log("AutoMigration: CRITICAL ERROR checking/creating utilities tables: " . $e->getMessage());
-            try {
-                $this->createUtilitiesTables();
-            } catch (Exception $e2) {
-                error_log("AutoMigration: Failed to create utilities tables: " . $e2->getMessage());
-            }
+            error_log("AutoMigration: Error checking utilities tables: " . $e->getMessage());
         }
 
         // ALWAYS check and create tax tables if missing
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}vat_returns'");
             if ($stmt->rowCount() == 0) {
-                error_log("AutoMigration: Tax tables missing, creating them...");
                 $this->createTaxTables();
             }
         } catch (Exception $e) {
-            error_log("AutoMigration: CRITICAL ERROR checking/creating tax tables: " . $e->getMessage());
-            try {
-                $this->createTaxTables();
-            } catch (Exception $e2) {
-                error_log("AutoMigration: Failed to create tax tables: " . $e2->getMessage());
-            }
+            error_log("AutoMigration: Error checking tax tables: " . $e->getMessage());
         }
 
-        // ALWAYS check and ensure modules table and staff_management module exist
+        // ALWAYS ensure modules table
         try {
             $this->ensureModulesTable();
         } catch (Exception $e) {
-            error_log("AutoMigration: CRITICAL ERROR ensuring modules table: " . $e->getMessage());
-            try {
-                $this->ensureModulesTable();
-            } catch (Exception $e2) {
-                error_log("AutoMigration: Failed to ensure modules table: " . $e2->getMessage());
-            }
+            error_log("AutoMigration: Error ensuring modules table: " . $e->getMessage());
         }
         
-        if ($needsMigration) {
-            if (file_exists($migrationFile)) {
-                $this->executeMigration($migrationFile, '000_complete_system_migration.sql');
-            }
+        // ALWAYS fix employees table
+        try {
+            $this->fixEmployeesTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error fixing employees table: " . $e->getMessage());
+        }
+        
+        // ALWAYS ensure default cash account
+        try {
+            $this->ensureDefaultCashAccount();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring default cash account: " . $e->getMessage());
+        }
+        
+        // ALWAYS standardize accounts table
+        try {
+            $this->standardizeAccountsTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error standardizing accounts table: " . $e->getMessage());
+        }
+        
+        // ALWAYS install default COA
+        try {
+            $this->installDefaultCOA();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error installing default COA: " . $e->getMessage());
+        }
             
-            // Also run the admin locations permissions fix if it exists and hasn't been executed
-            $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
-            if (file_exists($adminLocationsFix) && !in_array('002_ensure_admin_locations_permissions.sql', $executed)) {
-                $this->executeMigration($adminLocationsFix, '002_ensure_admin_locations_permissions.sql');
-            }
-        } else {
-            
-            // Even if main migration ran, check if admin locations fix is needed
-            $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
-            if (file_exists($adminLocationsFix) && !in_array('002_ensure_admin_locations_permissions.sql', $executed)) {
-                // Check if admin has locations permissions
-                try {
-                    $stmt = $this->pdo->query("SELECT COUNT(*) as cnt 
-                        FROM `{$this->prefix}role_permissions` rp
-                        JOIN `{$this->prefix}roles` r ON rp.role_id = r.id
-                        JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
-                        WHERE r.role_code = 'admin' AND p.module = 'locations'");
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $adminHasLocationsPerms = ($result['cnt'] ?? 0) > 0;
-                    
-                    if (!$adminHasLocationsPerms) {
-                        error_log("AutoMigration: Admin missing locations permissions, running fix migration");
-                        $this->executeMigration($adminLocationsFix, '002_ensure_admin_locations_permissions.sql');
-                    }
-                } catch (Exception $e) {
-                    error_log("AutoMigration: Error checking admin locations permissions: " . $e->getMessage());
+        // Check if admin locations fix is needed
+        $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
+        if (file_exists($adminLocationsFix) && !in_array('002_ensure_admin_locations_permissions.sql', $executed)) {
+            // Check if admin has locations permissions
+            try {
+                $stmt = $this->pdo->query("SELECT COUNT(*) as cnt 
+                    FROM `{$this->prefix}role_permissions` rp
+                    JOIN `{$this->prefix}roles` r ON rp.role_id = r.id
+                    JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                    WHERE r.role_code = 'admin' AND p.module = 'locations'");
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $adminHasLocationsPerms = ($result['cnt'] ?? 0) > 0;
+                
+                if (!$adminHasLocationsPerms) {
+                    $this->executeMigration($adminLocationsFix, '002_ensure_admin_locations_permissions.sql');
                 }
+            } catch (Exception $e) {
+                error_log("AutoMigration: Error checking admin locations permissions: " . $e->getMessage());
             }
         }
     }
+    
+
     
     /**
      * Ensure migrations tracking table exists
@@ -744,6 +655,378 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: CRITICAL ERROR ensuring modules table: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Fix employees table by adding missing columns
+     * Works for both new and existing installations
+     */
+    private function fixEmployeesTable() {
+        try {
+            // Check if employees table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}employees'");
+            if ($stmt->rowCount() == 0) {
+                // Table doesn't exist yet, skip
+                return true;
+            }
+            
+            // Check and add hire_date column
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}employees` LIKE 'hire_date'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}employees` 
+                    ADD COLUMN `hire_date` DATE NULL AFTER `employment_type`");
+                error_log("AutoMigration: Added hire_date column to employees table");
+            }
+            
+            // Check and add salary_structure column
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}employees` LIKE 'salary_structure'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}employees` 
+                    ADD COLUMN `salary_structure` TEXT NULL AFTER `status`");
+                error_log("AutoMigration: Added salary_structure column to employees table");
+            }
+            
+            // Check and add address column
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}employees` LIKE 'address'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}employees` 
+                    ADD COLUMN `address` TEXT NULL AFTER `phone`");
+                error_log("AutoMigration: Added address column to employees table");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR fixing employees table: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure at least one default cash account exists
+     * Needed for Payroll and other modules
+     */
+    private function ensureDefaultCashAccount() {
+        try {
+            // Check if cash_accounts table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}cash_accounts'");
+            if ($stmt->rowCount() == 0) {
+                // Table doesn't exist yet, skip
+                return true;
+            }
+            
+            // Check if any cash accounts exist
+            $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}cash_accounts`");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $count = $result['cnt'] ?? 0;
+            
+            if ($count == 0) {
+                // No cash accounts exist, create a default one
+                // First, get or create a default Cash account in chart of accounts
+                $stmt = $this->pdo->query("SELECT id FROM `{$this->prefix}accounts` 
+                    WHERE account_type = 'Assets' AND (account_name LIKE '%Cash%' OR account_code = '1001') 
+                    LIMIT 1");
+                $cashAccount = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$cashAccount) {
+                    // Create default cash account in chart of accounts
+                    // Use INSERT IGNORE to avoid duplicate key errors
+                    $this->pdo->exec("INSERT IGNORE INTO `{$this->prefix}accounts` 
+                        (account_code, account_name, account_type, currency, status, created_at)
+                        VALUES ('1001', 'Cash on Hand', 'Assets', 'NGN', 'active', NOW())");
+                    
+                    // Get the ID (either newly created or existing)
+                    $stmt = $this->pdo->query("SELECT id FROM `{$this->prefix}accounts` 
+                        WHERE account_code = '1001' LIMIT 1");
+                    $cashAccount = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$cashAccount) {
+                        error_log("AutoMigration: Could not create or find cash account");
+                        return false;
+                    }
+                }
+                
+                $accountId = $cashAccount['id'];
+                
+                // Create cash account (use INSERT IGNORE to avoid duplicates)
+                $this->pdo->exec("INSERT IGNORE INTO `{$this->prefix}cash_accounts` 
+                    (account_id, account_name, account_type, currency, balance, status, created_at)
+                    VALUES ({$accountId}, 'Main Cash Account', 'cash', 'NGN', 0.00, 'active', NOW())");
+                
+                error_log("AutoMigration: Created default cash account");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring default cash account: " . $e->getMessage());
+            // Don't fail - just log the error
+            return true;
+        }
+    }
+    
+    /**
+     * Standardize accounts table for proper accounting module
+     * Adds hierarchy, categories, and other standardization fields
+     */
+    private function standardizeAccountsTable() {
+        try {
+            // Check if accounts table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
+            if ($stmt->rowCount() == 0) {
+                // Table doesn't exist yet, skip
+                return true;
+            }
+            
+            $columnsAdded = false;
+            
+            // Add parent_account_id for hierarchy
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}accounts` LIKE 'parent_account_id'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts` 
+                    ADD COLUMN `parent_account_id` INT NULL AFTER `id`");
+                error_log("AutoMigration: Added parent_account_id column to accounts table");
+                $columnsAdded = true;
+            }
+            
+            // Add account_category
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}accounts` LIKE 'account_category'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts` 
+                    ADD COLUMN `account_category` VARCHAR(50) NULL AFTER `account_type`");
+                error_log("AutoMigration: Added account_category column to accounts table");
+                $columnsAdded = true;
+            }
+            
+            // Add is_system_account
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}accounts` LIKE 'is_system_account'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts` 
+                    ADD COLUMN `is_system_account` TINYINT(1) DEFAULT 0 AFTER `account_category`");
+                error_log("AutoMigration: Added is_system_account column to accounts table");
+                $columnsAdded = true;
+            }
+            
+            // Add opening_balance
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}accounts` LIKE 'opening_balance'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts` 
+                    ADD COLUMN `opening_balance` DECIMAL(15,2) DEFAULT 0.00 AFTER `balance`");
+                error_log("AutoMigration: Added opening_balance column to accounts table");
+                $columnsAdded = true;
+            }
+            
+            // Add opening_balance_date
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}accounts` LIKE 'opening_balance_date'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts` 
+                    ADD COLUMN `opening_balance_date` DATE NULL AFTER `opening_balance`");
+                error_log("AutoMigration: Added opening_balance_date column to accounts table");
+                $columnsAdded = true;
+            }
+            
+            // Add description
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}accounts` LIKE 'description'");
+            if ($stmt->rowCount() == 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts` 
+                    ADD COLUMN `description` TEXT NULL AFTER `account_name`");
+                error_log("AutoMigration: Added description column to accounts table");
+                $columnsAdded = true;
+            }
+            
+            if ($columnsAdded) {
+                error_log("AutoMigration: Standardized accounts table for accounting module");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR standardizing accounts table: " . $e->getMessage());
+            // Don't fail - just log the error
+            return true;
+        }
+    }
+
+    private function installDefaultCOA() {
+        try {
+            // Define default accounts (same as in 006_install_default_coa.php)
+            $accounts = [
+                // ASSETS (1000-1999)
+                [
+                    'account_code' => '1000',
+                    'account_name' => 'Cash on Hand',
+                    'account_type' => 'Assets',
+                    'account_category' => 'Cash & Bank',
+                    'description' => 'Petty cash and physical currency',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '1010',
+                    'account_name' => 'Bank Account - Main',
+                    'account_type' => 'Assets',
+                    'account_category' => 'Cash & Bank',
+                    'description' => 'Primary business bank account',
+                    'is_system_account' => 0
+                ],
+                [
+                    'account_code' => '1100',
+                    'account_name' => 'Accounts Receivable',
+                    'account_type' => 'Assets',
+                    'account_category' => 'Accounts Receivable',
+                    'description' => 'Unpaid customer invoices',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '1200',
+                    'account_name' => 'Inventory Asset',
+                    'account_type' => 'Assets',
+                    'account_category' => 'Inventory',
+                    'description' => 'Value of goods held for sale',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '1500',
+                    'account_name' => 'Furniture & Equipment',
+                    'account_type' => 'Assets',
+                    'account_category' => 'Fixed Assets',
+                    'description' => 'Office furniture and equipment',
+                    'is_system_account' => 0
+                ],
+                
+                // LIABILITIES (2000-2999)
+                [
+                    'account_code' => '2000',
+                    'account_name' => 'Accounts Payable',
+                    'account_type' => 'Liabilities',
+                    'account_category' => 'Accounts Payable',
+                    'description' => 'Unpaid vendor bills',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '2100',
+                    'account_name' => 'Sales Tax Payable',
+                    'account_type' => 'Liabilities',
+                    'account_category' => 'Current Liabilities',
+                    'description' => 'Sales tax collected but not yet paid',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '2200',
+                    'account_name' => 'Payroll Liabilities',
+                    'account_type' => 'Liabilities',
+                    'account_category' => 'Current Liabilities',
+                    'description' => 'Wages and taxes withheld',
+                    'is_system_account' => 1
+                ],
+                
+                // EQUITY (3000-3999)
+                [
+                    'account_code' => '3000',
+                    'account_name' => 'Owner\'s Equity',
+                    'account_type' => 'Equity',
+                    'account_category' => 'Equity',
+                    'description' => 'Owner\'s investment in the business',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '3900',
+                    'account_name' => 'Retained Earnings',
+                    'account_type' => 'Equity',
+                    'account_category' => 'Equity',
+                    'description' => 'Cumulative net income retained',
+                    'is_system_account' => 1
+                ],
+                
+                // REVENUE (4000-4999)
+                [
+                    'account_code' => '4000',
+                    'account_name' => 'Sales Revenue',
+                    'account_type' => 'Revenue',
+                    'account_category' => 'Income',
+                    'description' => 'Income from sales of goods/services',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '4100',
+                    'account_name' => 'Service Income',
+                    'account_type' => 'Revenue',
+                    'account_category' => 'Income',
+                    'description' => 'Income from services rendered',
+                    'is_system_account' => 0
+                ],
+                [
+                    'account_code' => '4900',
+                    'account_name' => 'Other Income',
+                    'account_type' => 'Revenue',
+                    'account_category' => 'Other Income',
+                    'description' => 'Interest, refunds, etc.',
+                    'is_system_account' => 0
+                ],
+                
+                // EXPENSES (5000-9999)
+                [
+                    'account_code' => '5000',
+                    'account_name' => 'Cost of Goods Sold',
+                    'account_type' => 'Expenses',
+                    'account_category' => 'Cost of Goods Sold',
+                    'description' => 'Direct costs of goods sold',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '6000',
+                    'account_name' => 'Rent Expense',
+                    'account_type' => 'Expenses',
+                    'account_category' => 'Expense',
+                    'description' => 'Office or building rent',
+                    'is_system_account' => 0
+                ],
+                [
+                    'account_code' => '6100',
+                    'account_name' => 'Utilities Expense',
+                    'account_type' => 'Expenses',
+                    'account_category' => 'Expense',
+                    'description' => 'Electricity, water, internet',
+                    'is_system_account' => 0
+                ],
+                [
+                    'account_code' => '7000',
+                    'account_name' => 'Payroll Expense',
+                    'account_type' => 'Expenses',
+                    'account_category' => 'Expense',
+                    'description' => 'Employee salaries and wages',
+                    'is_system_account' => 1
+                ]
+            ];
+
+            $insertedCount = 0;
+            foreach ($accounts as $account) {
+                // Check if account code already exists
+                $stmt = $this->pdo->prepare("SELECT COUNT(*) as cnt FROM `{$this->prefix}accounts` WHERE account_code = ?");
+                $stmt->execute([$account['account_code']]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                $exists = ($result['cnt'] ?? 0) > 0;
+                
+                if (!$exists) {
+                    $sql = "INSERT INTO `{$this->prefix}accounts` 
+                            (account_code, account_name, account_type, account_category, description, is_system_account, status, created_at) 
+                            VALUES (?, ?, ?, ?, ?, ?, 'active', NOW())";
+                    $stmt = $this->pdo->prepare($sql);
+                    $stmt->execute([
+                        $account['account_code'],
+                        $account['account_name'],
+                        $account['account_type'],
+                        $account['account_category'],
+                        $account['description'],
+                        $account['is_system_account']
+                    ]);
+                    $insertedCount++;
+                }
+            }
+            
+            if ($insertedCount > 0) {
+                error_log("AutoMigration: Installed {$insertedCount} default accounts");
+            }
+            
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR installing default COA: " . $e->getMessage());
         }
     }
 }

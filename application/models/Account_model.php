@@ -5,6 +5,14 @@ class Account_model extends Base_Model {
     protected $table = 'accounts';
     private static $accountNumberColumnExists = null;
     
+    const ACCOUNT_RANGES = [
+        'Assets' => ['start' => 1000, 'end' => 1999],
+        'Liabilities' => ['start' => 2000, 'end' => 2999],
+        'Equity' => ['start' => 3000, 'end' => 3999],
+        'Revenue' => ['start' => 4000, 'end' => 4999],
+        'Expenses' => ['start' => 5000, 'end' => 9999]
+    ];
+    
     /**
      * Check if account_number column exists (cached per request)
      */
@@ -24,6 +32,31 @@ class Account_model extends Base_Model {
         }
         
         return self::$accountNumberColumnExists;
+    }
+    
+    public function getFiltered($type = null, $search = null) {
+        try {
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE status = 'active'";
+            $params = [];
+            
+            if (!empty($type)) {
+                $sql .= " AND account_type = ?";
+                $params[] = $type;
+            }
+            
+            if (!empty($search)) {
+                $sql .= " AND (account_name LIKE ? OR account_code LIKE ?)";
+                $params[] = "%$search%";
+                $params[] = "%$search%";
+            }
+            
+            $sql .= " ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code";
+            
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Account_model getFiltered error: ' . $e->getMessage());
+            return [];
+        }
     }
     
     public function getByType($type) {
@@ -46,9 +79,9 @@ class Account_model extends Base_Model {
         $params = [];
         
         if ($parentId === null) {
-            $sql .= "parent_id IS NULL";
+            $sql .= "parent_account_id IS NULL";
         } else {
-            $sql .= "parent_id = ?";
+            $sql .= "parent_account_id = ?";
             $params[] = $parentId;
         }
         
@@ -61,7 +94,7 @@ class Account_model extends Base_Model {
         try {
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE parent_id = ? AND status = 'active' 
+                 WHERE parent_account_id = ? AND status = 'active' 
                  ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code",
                 [$parentId]
             );
@@ -130,7 +163,7 @@ class Account_model extends Base_Model {
             $sql = "SELECT MAX(CAST(account_number AS UNSIGNED)) as max_code
                     FROM `" . $this->db->getPrefix() . $this->table . "`
                     WHERE account_type = ? AND account_number >= ? AND account_number < ?
-                    AND (parent_id IS NULL OR parent_id = 0)";
+                    AND (parent_account_id IS NULL OR parent_account_id = 0)";
             $params = [$type, $startNum, $range['end']];
             
             $result = $this->db->fetchOne($sql, $params);
@@ -241,6 +274,116 @@ class Account_model extends Base_Model {
             error_log('Account_model search error: ' . $e->getMessage());
             return [];
         }
+    }
+
+    public function validateAccountCode($code, $type) {
+        // If code is empty, it's valid (will be auto-generated)
+        if (empty($code)) {
+            return true;
+        }
+        
+        // Check if code is numeric
+        if (!is_numeric($code)) {
+            // Allow non-numeric codes for legacy support, but warn?
+            // For now, strict numeric validation for standard codes
+            // return false; 
+        }
+        
+        $codeNum = intval($code);
+        $range = self::ACCOUNT_RANGES[$type] ?? null;
+        
+        if ($range) {
+            if ($codeNum < $range['start'] || $codeNum > $range['end']) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    public function getParent($accountId) {
+        try {
+            $account = $this->getById($accountId);
+            if (!$account || empty($account['parent_account_id'])) {
+                return false;
+            }
+            return $this->getById($account['parent_account_id']);
+        } catch (Exception $e) {
+            error_log('Account_model getParent error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getTreeWithDepth($type = null) {
+        $accounts = $this->getFiltered($type);
+        return $this->flattenTree($this->buildTree($accounts));
+    }
+
+    private function buildTree(array $elements, $parentId = null) {
+        $branch = array();
+        foreach ($elements as $element) {
+            $elementParentId = $element['parent_account_id'] ?? null;
+            // Handle 0 as null for parent_id
+            if ($elementParentId == 0) $elementParentId = null;
+            
+            if ($elementParentId == $parentId) {
+                $children = $this->buildTree($elements, $element['id']);
+                if ($children) {
+                    $element['children'] = $children;
+                }
+                $branch[] = $element;
+            }
+        }
+        return $branch;
+    }
+
+    private function flattenTree($tree, $depth = 0) {
+        $flat = [];
+        foreach ($tree as $node) {
+            $node['depth'] = $depth;
+            $children = $node['children'] ?? [];
+            unset($node['children']); // Remove children from the flat node
+            $flat[] = $node;
+            if (!empty($children)) {
+                $flat = array_merge($flat, $this->flattenTree($children, $depth + 1));
+            }
+        }
+        return $flat;
+    }
+
+    public function create($data) {
+        // Validate account code if provided
+        if (!empty($data['account_code']) && !empty($data['account_type'])) {
+            if (!$this->validateAccountCode($data['account_code'], $data['account_type'])) {
+                $range = self::ACCOUNT_RANGES[$data['account_type']];
+                throw new Exception("Account code {$data['account_code']} is invalid for type {$data['account_type']}. Valid range: {$range['start']}-{$range['end']}");
+            }
+            
+            // Check for duplicate code
+            if ($this->getByCode($data['account_code'])) {
+                throw new Exception("Account code {$data['account_code']} already exists.");
+            }
+        }
+        
+        return parent::create($data);
+    }
+
+    public function update($id, $data, $where = null, $params = []) {
+        // Validate account code if changing
+        if (!empty($data['account_code']) && !empty($data['account_type'])) {
+            if (!$this->validateAccountCode($data['account_code'], $data['account_type'])) {
+                $range = self::ACCOUNT_RANGES[$data['account_type']];
+                throw new Exception("Account code {$data['account_code']} is invalid for type {$data['account_type']}. Valid range: {$range['start']}-{$range['end']}");
+            }
+            
+            // Check for duplicate code (exclude current account)
+            $existing = $this->getByCode($data['account_code']);
+            if ($existing && $existing['id'] != $id) {
+                throw new Exception("Account code {$data['account_code']} already exists.");
+            }
+        }
+        
+        return parent::update($id, $data, $where, $params);
     }
 }
 

@@ -28,7 +28,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <form method="GET" action="<?= base_url('accounts') ?>" class="row g-3">
             <div class="col-md-4">
                 <label for="type" class="form-label">Account Type</label>
-                <select class="form-select" id="type" name="type">
+                <select class="form-select" id="type" name="type" onchange="this.form.submit()">
                     <option value="">All Types</option>
                     <option value="Assets" <?= ($selected_type ?? '') === 'Assets' ? 'selected' : '' ?>>Assets</option>
                     <option value="Liabilities" <?= ($selected_type ?? '') === 'Liabilities' ? 'selected' : '' ?>>Liabilities</option>
@@ -77,7 +77,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php foreach ($accounts as $account): ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($account['account_code'] ?? '') ?></strong></td>
-                                <td><?= htmlspecialchars($account['account_name'] ?? '') ?></td>
+                                <td style="padding-left: <?= (($account['depth'] ?? 0) * 30) + 12 ?>px">
+                                    <?php if (($account['depth'] ?? 0) > 0): ?>
+                                        <span class="text-muted me-1">└─</span>
+                                    <?php endif; ?>
+                                    <?= htmlspecialchars($account['account_name'] ?? '') ?>
+                                </td>
                                 <?php if ($account_number_enabled ?? false): ?>
                                 <td><?= htmlspecialchars($account['account_number'] ?? '-') ?></td>
                                 <?php endif; ?>
