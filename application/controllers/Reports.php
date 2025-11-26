@@ -6,6 +6,7 @@ class Reports extends Base_Controller {
     private $accountModel;
     private $invoiceModel;
     private $billModel;
+    private $balanceCalculator;
     
     public function __construct() {
         parent::__construct();
@@ -14,241 +15,610 @@ class Reports extends Base_Controller {
         $this->accountModel = $this->loadModel('Account_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->billModel = $this->loadModel('Bill_model');
+        
+        // Load Balance Calculator
+        require_once BASEPATH . 'services/Balance_calculator.php';
+        $this->balanceCalculator = new Balance_calculator();
+        
+        // Load export helper
+        $this->load->helper('export');
     }
     
     public function index() {
         $data = [
             'page_title' => 'Financial Reports',
-        } catch (Exception $e) {
-            $accounts = [];
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('reports/index', $data);
+    }
+    
+    /**
+     * Profit & Loss Statement
+     */
+    public function profitLoss() {
+        $startDate = $_GET['start_date'] ?? date('Y-m-01');
+        $endDate = $_GET['end_date'] ?? date('Y-m-t');
+        $format = $_GET['format'] ?? 'html';
+        
+        // Get revenue accounts (4000-4999)
+        $revenueAccounts = $this->accountModel->getByType('Revenue');
+        $revenue = [];
+        $totalRevenue = 0;
+        
+        foreach ($revenueAccounts as $account) {
+            $balance = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(credit - debit), 0) as balance
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? 
+                 AND je.entry_date BETWEEN ? AND ?
+                 AND je.status = 'posted'",
+                [$account['id'], $startDate, $endDate]
+            );
+            
+            if ($balance['balance'] > 0) {
+                $revenue[] = [
+                    'account' => $account['account_name'],
+                    'amount' => $balance['balance']
+                ];
+                $totalRevenue += $balance['balance'];
+            }
         }
         
-        $account = null;
-        $ledger = [];
+        // Get COGS accounts (5000-5999)
+        $cogsAccounts = $this->accountModel->getByCode('5%');
+        $cogs = [];
+        $totalCOGS = 0;
         
-        if ($accountId) {
-            try {
-                $account = $this->accountModel->getById($accountId);
-                if ($account) {
-                    $ledger = $this->transactionModel->getLedger($accountId, $startDate, $endDate);
+        foreach ($cogsAccounts as $account) {
+            $balance = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(debit - credit), 0) as balance
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? 
+                 AND je.entry_date BETWEEN ? AND ?
+                 AND je.status = 'posted'",
+                [$account['id'], $startDate, $endDate]
+            );
+            
+            if ($balance['balance'] > 0) {
+                $cogs[] = [
+                    'account' => $account['account_name'],
+                    'amount' => $balance['balance']
+                ];
+                $totalCOGS += $balance['balance'];
+            }
+        }
+        
+        $grossProfit = $totalRevenue - $totalCOGS;
+        
+        // Get expense accounts (6000-9999)
+        $expenseAccounts = $this->accountModel->getByType('Expenses');
+        $expenses = [];
+        $totalExpenses = 0;
+        
+        foreach ($expenseAccounts as $account) {
+            // Skip COGS accounts
+            if (substr($account['account_code'], 0, 1) == '5') continue;
+            
+            $balance = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(debit - credit), 0) as balance
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? 
+                 AND je.entry_date BETWEEN ? AND ?
+                 AND je.status = 'posted'",
+                [$account['id'], $startDate, $endDate]
+            );
+            
+            if ($balance['balance'] > 0) {
+                $expenses[] = [
+                    'account' => $account['account_name'],
+                    'amount' => $balance['balance']
+                ];
+                $totalExpenses += $balance['balance'];
+            }
+        }
+        
+        $netIncome = $grossProfit - $totalExpenses;
+        
+        $data = [
+            'page_title' => 'Profit & Loss Statement',
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'revenue' => $revenue,
+            'total_revenue' => $totalRevenue,
+            'cogs' => $cogs,
+            'total_cogs' => $totalCOGS,
+            'gross_profit' => $grossProfit,
+            'expenses' => $expenses,
+            'total_expenses' => $totalExpenses,
+            'net_income' => $netIncome,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        // Handle export formats
+        if ($format == 'pdf') {
+            $this->exportProfitLossPDF($data);
+        } elseif ($format == 'excel') {
+            $this->exportProfitLossExcel($data);
+        } else {
+            $this->loadView('reports/profit_loss', $data);
+        }
+    }
+    
+    /**
+     * Balance Sheet
+     */
+    public function balanceSheet() {
+        $asOfDate = $_GET['as_of_date'] ?? date('Y-m-d');
+        $format = $_GET['format'] ?? 'html';
+        
+        // Assets
+        $assetAccounts = $this->accountModel->getByType('Assets');
+        $assets = [];
+        $totalAssets = 0;
+        
+        foreach ($assetAccounts as $account) {
+            $balance = $this->balanceCalculator->calculateBalance($account['id'], $asOfDate);
+            if ($balance != 0) {
+                $assets[] = [
+                    'account' => $account['account_name'],
+                    'amount' => $balance
+                ];
+                $totalAssets += $balance;
+            }
+        }
+        
+        // Liabilities
+        $liabilityAccounts = $this->accountModel->getByType('Liabilities');
+        $liabilities = [];
+        $totalLiabilities = 0;
+        
+        foreach ($liabilityAccounts as $account) {
+            $balance = $this->balanceCalculator->calculateBalance($account['id'], $asOfDate);
+            if ($balance != 0) {
+                $liabilities[] = [
+                    'account' => $account['account_name'],
+                    'amount' => $balance
+                ];
+                $totalLiabilities += $balance;
+            }
+        }
+        
+        // Equity
+        $equityAccounts = $this->accountModel->getByType('Equity');
+        $equity = [];
+        $totalEquity = 0;
+        
+        foreach ($equityAccounts as $account) {
+            $balance = $this->balanceCalculator->calculateBalance($account['id'], $asOfDate);
+            if ($balance != 0) {
+                $equity[] = [
+                    'account' => $account['account_name'],
+                    'amount' => $balance
+                ];
+                $totalEquity += $balance;
+            }
+        }
+        
+        // Calculate retained earnings (Net Income)
+        $retainedEarnings = $totalAssets - $totalLiabilities - $totalEquity;
+        $equity[] = [
+            'account' => 'Retained Earnings',
+            'amount' => $retainedEarnings
+        ];
+        $totalEquity += $retainedEarnings;
+        
+        $data = [
+            'page_title' => 'Balance Sheet',
+            'as_of_date' => $asOfDate,
+            'assets' => $assets,
+            'total_assets' => $totalAssets,
+            'liabilities' => $liabilities,
+            'total_liabilities' => $totalLiabilities,
+            'equity' => $equity,
+            'total_equity' => $totalEquity,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        // Handle export formats
+        if ($format == 'pdf') {
+            $this->exportBalanceSheetPDF($data);
+        } elseif ($format == 'excel') {
+            $this->exportBalanceSheetExcel($data);
+        } else {
+            $this->loadView('reports/balance_sheet', $data);
+        }
+    }
+    
+    /**
+     * Trial Balance
+     */
+    public function trialBalance() {
+        $asOfDate = $_GET['as_of_date'] ?? date('Y-m-d');
+        $format = $_GET['format'] ?? 'html';
+        
+        $accounts = $this->accountModel->getAll();
+        $balances = [];
+        $totalDebits = 0;
+        $totalCredits = 0;
+        
+        foreach ($accounts as $account) {
+            $balance = $this->balanceCalculator->calculateBalance($account['id'], $asOfDate);
+            
+            if ($balance != 0) {
+                $debit = 0;
+                $credit = 0;
+                
+                // Determine if debit or credit based on account type
+                $accountType = $account['account_type'];
+                if (in_array($accountType, ['Assets', 'Expenses'])) {
+                    $debit = abs($balance);
+                } else {
+                    $credit = abs($balance);
                 }
-            } catch (Exception $e) {
-                error_log('Reports generalLedger error: ' . $e->getMessage());
+                
+                $balances[] = [
+                    'code' => $account['account_code'],
+                    'account' => $account['account_name'],
+                    'debit' => $debit,
+                    'credit' => $credit
+                ];
+                
+                $totalDebits += $debit;
+                $totalCredits += $credit;
             }
         }
         
         $data = [
-            'page_title' => 'General Ledger',
-            'account' => $account,
-            'ledger' => $ledger,
-            'accounts' => $accounts,
-            'selected_account_id' => $accountId,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'flash' => $this->getFlashMessage()
-        ];
-        
-        $this->loadView('reports/general_ledger', $data);
-    }
-    
-    public function profitLoss() {
-        $startDate = $_GET['start_date'] ?? date('Y-01-01');
-        $endDate = $_GET['end_date'] ?? date('Y-12-31');
-        
-        try {
-            // Get revenue
-            $revenue = $this->db->fetchAll(
-                "SELECT a.id, a.account_code, a.account_name, 
-                        COALESCE(SUM(t.credit - t.debit), 0) as total
-                 FROM `" . $this->db->getPrefix() . "accounts` a
-                 LEFT JOIN `" . $this->db->getPrefix() . "transactions` t ON a.id = t.account_id 
-                     AND t.status = 'posted' AND t.transaction_date >= ? AND t.transaction_date <= ?
-                 WHERE a.account_type = 'Revenue' AND a.status = 'active'
-                 GROUP BY a.id, a.account_code, a.account_name
-                 HAVING total > 0
-                 ORDER BY a.account_code",
-                [$startDate, $endDate]
-            );
-            
-            // Get expenses
-            $expenses = $this->db->fetchAll(
-                "SELECT a.id, a.account_code, a.account_name, 
-                        COALESCE(SUM(t.debit - t.credit), 0) as total
-                 FROM `" . $this->db->getPrefix() . "accounts` a
-                 LEFT JOIN `" . $this->db->getPrefix() . "transactions` t ON a.id = t.account_id 
-                     AND t.status = 'posted' AND t.transaction_date >= ? AND t.transaction_date <= ?
-                 WHERE a.account_type = 'Expenses' AND a.status = 'active'
-                 GROUP BY a.id, a.account_code, a.account_name
-                 HAVING total > 0
-                 ORDER BY a.account_code",
-                [$startDate, $endDate]
-            );
-            
-            $totalRevenue = array_sum(array_column($revenue, 'total'));
-            $totalExpenses = array_sum(array_column($expenses, 'total'));
-            $netIncome = $totalRevenue - $totalExpenses;
-        } catch (Exception $e) {
-            error_log('Reports profitLoss error: ' . $e->getMessage());
-            $revenue = [];
-            $expenses = [];
-            $totalRevenue = 0;
-            $totalExpenses = 0;
-            $netIncome = 0;
-        }
-        
-        $data = [
-            'page_title' => 'Profit & Loss Statement',
-            'revenue' => $revenue,
-            'expenses' => $expenses,
-            'total_revenue' => $totalRevenue,
-            'total_expenses' => $totalExpenses,
-            'net_income' => $netIncome,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'flash' => $this->getFlashMessage()
-        ];
-        
-        $this->loadView('reports/profit_loss', $data);
-    }
-    
-    public function balanceSheet() {
-        $asOfDate = $_GET['as_of_date'] ?? date('Y-m-t');
-        
-        try {
-            // Get assets
-            $assets = $this->db->fetchAll(
-                "SELECT a.id, a.account_code, a.account_name, 
-                        COALESCE(a.opening_balance, 0) + COALESCE(SUM(CASE 
-                            WHEN a.account_type = 'Assets' THEN t.debit - t.credit
-                            ELSE 0
-                        END), 0) as balance
-                 FROM `" . $this->db->getPrefix() . "accounts` a
-                 LEFT JOIN `" . $this->db->getPrefix() . "transactions` t ON a.id = t.account_id 
-                     AND t.status = 'posted' AND t.transaction_date <= ?
-                 WHERE a.account_type = 'Assets' AND a.status = 'active'
-                 GROUP BY a.id, a.account_code, a.account_name, a.opening_balance
-                 HAVING balance != 0
-                 ORDER BY a.account_code",
-                [$asOfDate]
-            );
-            
-            // Get liabilities
-            $liabilities = $this->db->fetchAll(
-                "SELECT a.id, a.account_code, a.account_name, 
-                        COALESCE(a.opening_balance, 0) + COALESCE(SUM(CASE 
-                            WHEN a.account_type = 'Liabilities' THEN t.credit - t.debit
-                            ELSE 0
-                        END), 0) as balance
-                 FROM `" . $this->db->getPrefix() . "accounts` a
-                 LEFT JOIN `" . $this->db->getPrefix() . "transactions` t ON a.id = t.account_id 
-                     AND t.status = 'posted' AND t.transaction_date <= ?
-                 WHERE a.account_type = 'Liabilities' AND a.status = 'active'
-                 GROUP BY a.id, a.account_code, a.account_name, a.opening_balance
-                 HAVING balance != 0
-                 ORDER BY a.account_code",
-                [$asOfDate]
-            );
-            
-            // Get equity
-            $equity = $this->db->fetchAll(
-                "SELECT a.id, a.account_code, a.account_name, 
-                        COALESCE(a.opening_balance, 0) + COALESCE(SUM(CASE 
-                            WHEN a.account_type = 'Equity' THEN t.credit - t.debit
-                            ELSE 0
-                        END), 0) as balance
-                 FROM `" . $this->db->getPrefix() . "accounts` a
-                 LEFT JOIN `" . $this->db->getPrefix() . "transactions` t ON a.id = t.account_id 
-                     AND t.status = 'posted' AND t.transaction_date <= ?
-                 WHERE a.account_type = 'Equity' AND a.status = 'active'
-                 GROUP BY a.id, a.account_code, a.account_name, a.opening_balance
-                 HAVING balance != 0
-                 ORDER BY a.account_code",
-                [$asOfDate]
-            );
-            
-            $totalAssets = array_sum(array_column($assets, 'balance'));
-            $totalLiabilities = array_sum(array_column($liabilities, 'balance'));
-            $totalEquity = array_sum(array_column($equity, 'balance'));
-        } catch (Exception $e) {
-            error_log('Reports balanceSheet error: ' . $e->getMessage());
-            $assets = [];
-            $liabilities = [];
-            $equity = [];
-            $totalAssets = 0;
-            $totalLiabilities = 0;
-            $totalEquity = 0;
-        }
-        
-        $data = [
-            'page_title' => 'Balance Sheet',
-            'assets' => $assets,
-            'liabilities' => $liabilities,
-            'equity' => $equity,
-            'total_assets' => $totalAssets,
-            'total_liabilities' => $totalLiabilities,
-            'total_equity' => $totalEquity,
+            'page_title' => 'Trial Balance',
             'as_of_date' => $asOfDate,
+            'balances' => $balances,
+            'total_debits' => $totalDebits,
+            'total_credits' => $totalCredits,
+            'in_balance' => abs($totalDebits - $totalCredits) < 0.01,
             'flash' => $this->getFlashMessage()
         ];
         
-        $this->loadView('reports/balance_sheet', $data);
+        // Handle export formats
+        if ($format == 'pdf') {
+            $this->exportTrialBalancePDF($data);
+        } elseif ($format == 'excel') {
+            $this->exportTrialBalanceExcel($data);
+        } else {
+            $this->loadView('reports/trial_balance', $data);
+        }
     }
     
+    /**
+     * Cash Flow Statement
+     */
     public function cashFlow() {
-        $startDate = $_GET['start_date'] ?? date('Y-01-01');
-        $endDate = $_GET['end_date'] ?? date('Y-12-31');
+        $startDate = $_GET['start_date'] ?? date('Y-m-01');
+        $endDate = $_GET['end_date'] ?? date('Y-m-t');
+        $format = $_GET['format'] ?? 'html';
         
-        try {
-            // Operating activities (cash accounts transactions)
-            $operating = $this->db->fetchAll(
-                "SELECT t.*, a.account_name
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 JOIN `" . $this->db->getPrefix() . "cash_accounts` ca ON ca.account_id = a.id
-                 WHERE t.status = 'posted' AND t.transaction_date >= ? AND t.transaction_date <= ?
-                 ORDER BY t.transaction_date",
-                [$startDate, $endDate]
+        // Get net income from P&L
+        $revenueAccounts = $this->accountModel->getByType('Revenue');
+        $totalRevenue = 0;
+        foreach ($revenueAccounts as $account) {
+            $balance = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(credit - debit), 0) as balance
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? 
+                 AND je.entry_date BETWEEN ? AND ?
+                 AND je.status = 'posted'",
+                [$account['id'], $startDate, $endDate]
             );
-            
-            // Investing activities
-            $investing = $this->db->fetchAll(
-                "SELECT t.*, a.account_name
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE a.account_type = 'Assets' AND t.reference_type = 'asset'
-                 AND t.status = 'posted' AND t.transaction_date >= ? AND t.transaction_date <= ?
-                 ORDER BY t.transaction_date",
-                [$startDate, $endDate]
-            );
-            
-            // Financing activities
-            $financing = $this->db->fetchAll(
-                "SELECT t.*, a.account_name
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE a.account_type IN ('Liabilities', 'Equity')
-                 AND t.status = 'posted' AND t.transaction_date >= ? AND t.transaction_date <= ?
-                 ORDER BY t.transaction_date",
-                [$startDate, $endDate]
-            );
-        } catch (Exception $e) {
-            error_log('Reports cashFlow error: ' . $e->getMessage());
-            $operating = [];
-            $investing = [];
-            $financing = [];
+            $totalRevenue += $balance['balance'];
         }
+        
+        $expenseAccounts = $this->accountModel->getByType('Expenses');
+        $totalExpenses = 0;
+        foreach ($expenseAccounts as $account) {
+            $balance = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(debit - credit), 0) as balance
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? 
+                 AND je.entry_date BETWEEN ? AND ?
+                 AND je.status = 'posted'",
+                [$account['id'], $startDate, $endDate]
+            );
+            $totalExpenses += $balance['balance'];
+        }
+        
+        $netIncome = $totalRevenue - $totalExpenses;
+        
+        // Get cash accounts
+        $cashAccounts = $this->accountModel->getByCode('1000');
+        $cashAccount = !empty($cashAccounts) ? $cashAccounts[0] : null;
+        
+        $beginningCash = 0;
+        $endingCash = 0;
+        $operatingActivities = [];
+        
+        if ($cashAccount) {
+            // Calculate beginning balance (before start date)
+            $beginningCash = $this->balanceCalculator->calculateBalance(
+                $cashAccount['id'], 
+                date('Y-m-d', strtotime($startDate . ' -1 day'))
+            );
+            
+            // Calculate ending balance
+            $endingCash = $this->balanceCalculator->calculateBalance($cashAccount['id'], $endDate);
+            
+            // Get cash transactions for operating activities
+            $transactions = $this->db->fetchAll(
+                "SELECT je.entry_date, je.description, jel.debit, jel.credit
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? 
+                 AND je.entry_date BETWEEN ? AND ?
+                 AND je.status = 'posted'
+                 ORDER BY je.entry_date",
+                [$cashAccount['id'], $startDate, $endDate]
+            );
+            
+            foreach ($transactions as $txn) {
+                $operatingActivities[] = [
+                    'date' => $txn['entry_date'],
+                    'description' => $txn['description'],
+                    'amount' => $txn['debit'] - $txn['credit']
+                ];
+            }
+        }
+        
+        $netCashFlow = $endingCash - $beginningCash;
         
         $data = [
             'page_title' => 'Cash Flow Statement',
-            'operating' => $operating,
-            'investing' => $investing,
-            'financing' => $financing,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'net_income' => $netIncome,
+            'beginning_cash' => $beginningCash,
+            'ending_cash' => $endingCash,
+            'net_cash_flow' => $netCashFlow,
+            'operating_activities' => $operatingActivities,
+            'investing' => [],
+            'financing' => [],
             'flash' => $this->getFlashMessage()
         ];
         
-        $this->loadView('reports/cash_flow', $data);
+        // Handle export formats
+        if ($format == 'pdf') {
+            $this->exportCashFlowPDF($data);
+        } elseif ($format == 'excel') {
+            $this->exportCashFlowExcel($data);
+        } else {
+            $this->loadView('reports/cash_flow', $data);
+        }
+    }
+    
+    // ==================== PDF Export Methods ====================
+    
+    private function exportProfitLossPDF($data) {
+        $html = '<h1>Profit & Loss Statement</h1>';
+        $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
+        
+        $html .= '<h2>Revenue</h2><table>';
+        foreach ($data['revenue'] as $item) {
+            $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+        }
+        $html .= '<tr class="total-row"><td>Total Revenue</td><td class="text-right">₦' . number_format($data['total_revenue'], 2) . '</td></tr>';
+        $html .= '</table>';
+        
+        if (!empty($data['cogs'])) {
+            $html .= '<h2>Cost of Goods Sold</h2><table>';
+            foreach ($data['cogs'] as $item) {
+                $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+            }
+            $html .= '<tr class="total-row"><td>Total COGS</td><td class="text-right">₦' . number_format($data['total_cogs'], 2) . '</td></tr>';
+            $html .= '</table>';
+            
+            $html .= '<table><tr class="total-row"><td><strong>Gross Profit</strong></td><td class="text-right"><strong>₦' . number_format($data['gross_profit'], 2) . '</strong></td></tr></table>';
+        }
+        
+        $html .= '<h2>Expenses</h2><table>';
+        foreach ($data['expenses'] as $item) {
+            $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+        }
+        $html .= '<tr class="total-row"><td>Total Expenses</td><td class="text-right">₦' . number_format($data['total_expenses'], 2) . '</td></tr>';
+        $html .= '</table>';
+        
+        $html .= '<table><tr class="total-row"><td><strong>Net Income</strong></td><td class="text-right"><strong>₦' . number_format($data['net_income'], 2) . '</strong></td></tr></table>';
+        
+        exportToPDF(wrapPdfHtml('Profit & Loss Statement', $html), 'profit_loss_' . date('Y-m-d') . '.pdf');
+    }
+    
+    private function exportBalanceSheetPDF($data) {
+        $html = '<h1>Balance Sheet</h1>';
+        $html .= '<p class="subtitle">As of: ' . $data['as_of_date'] . '</p>';
+        
+        $html .= '<h2>Assets</h2><table>';
+        foreach ($data['assets'] as $item) {
+            $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+        }
+        $html .= '<tr class="total-row"><td>Total Assets</td><td class="text-right">₦' . number_format($data['total_assets'], 2) . '</td></tr>';
+        $html .= '</table>';
+        
+        $html .= '<h2>Liabilities</h2><table>';
+        foreach ($data['liabilities'] as $item) {
+            $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+        }
+        $html .= '<tr class="total-row"><td>Total Liabilities</td><td class="text-right">₦' . number_format($data['total_liabilities'], 2) . '</td></tr>';
+        $html .= '</table>';
+        
+        $html .= '<h2>Equity</h2><table>';
+        foreach ($data['equity'] as $item) {
+            $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+        }
+        $html .= '<tr class="total-row"><td>Total Equity</td><td class="text-right">₦' . number_format($data['total_equity'], 2) . '</td></tr>';
+        $html .= '</table>';
+        
+        exportToPDF(wrapPdfHtml('Balance Sheet', $html), 'balance_sheet_' . date('Y-m-d') . '.pdf');
+    }
+    
+    private function exportTrialBalancePDF($data) {
+        $html = '<h1>Trial Balance</h1>';
+        $html .= '<p class="subtitle">As of: ' . $data['as_of_date'] . '</p>';
+        
+        $html .= '<table>';
+        $html .= '<tr><th>Account Code</th><th>Account Name</th><th class="text-right">Debit</th><th class="text-right">Credit</th></tr>';
+        
+        foreach ($data['balances'] as $item) {
+            $html .= '<tr>';
+            $html .= '<td>' . htmlspecialchars($item['code']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($item['account']) . '</td>';
+            $html .= '<td class="text-right">' . ($item['debit'] > 0 ? '₦' . number_format($item['debit'], 2) : '-') . '</td>';
+            $html .= '<td class="text-right">' . ($item['credit'] > 0 ? '₦' . number_format($item['credit'], 2) : '-') . '</td>';
+            $html .= '</tr>';
+        }
+        
+        $html .= '<tr class="total-row">';
+        $html .= '<td colspan="2"><strong>Total</strong></td>';
+        $html .= '<td class="text-right"><strong>₦' . number_format($data['total_debits'], 2) . '</strong></td>';
+        $html .= '<td class="text-right"><strong>₦' . number_format($data['total_credits'], 2) . '</strong></td>';
+        $html .= '</tr>';
+        $html .= '</table>';
+        
+        if ($data['in_balance']) {
+            $html .= '<p style="color: green; font-weight: bold; margin-top: 20px;">✓ Trial Balance is in balance</p>';
+        } else {
+            $html .= '<p style="color: red; font-weight: bold; margin-top: 20px;">✗ Trial Balance is OUT of balance</p>';
+        }
+        
+        exportToPDF(wrapPdfHtml('Trial Balance', $html), 'trial_balance_' . date('Y-m-d') . '.pdf');
+    }
+    
+    private function exportCashFlowPDF($data) {
+        $html = '<h1>Cash Flow Statement</h1>';
+        $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
+        
+        $html .= '<table>';
+        $html .= '<tr><td>Net Income</td><td class="text-right">₦' . number_format($data['net_income'], 2) . '</td></tr>';
+        $html .= '</table>';
+        
+        $html .= '<h2>Operating Activities</h2><table>';
+        foreach ($data['operating_activities'] as $item) {
+            $html .= '<tr><td>' . htmlspecialchars($item['description']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+        }
+        $html .= '</table>';
+        
+        $html .= '<h2>Cash Summary</h2><table>';
+        $html .= '<tr><td>Beginning Cash</td><td class="text-right">₦' . number_format($data['beginning_cash'], 2) . '</td></tr>';
+        $html .= '<tr><td>Net Cash Flow</td><td class="text-right">₦' . number_format($data['net_cash_flow'], 2) . '</td></tr>';
+        $html .= '<tr class="total-row"><td><strong>Ending Cash</strong></td><td class="text-right"><strong>₦' . number_format($data['ending_cash'], 2) . '</strong></td></tr>';
+        $html .= '</table>';
+        
+        exportToPDF(wrapPdfHtml('Cash Flow Statement', $html), 'cash_flow_' . date('Y-m-d') . '.pdf');
+    }
+    
+    // ==================== Excel Export Methods ====================
+    
+    private function exportProfitLossExcel($data) {
+        $csvData = [];
+        $csvData[] = ['Profit & Loss Statement'];
+        $csvData[] = ['Period:', $data['start_date'] . ' to ' . $data['end_date']];
+        $csvData[] = [];
+        
+        $csvData[] = ['Revenue'];
+        foreach ($data['revenue'] as $item) {
+            $csvData[] = [$item['account'], $item['amount']];
+        }
+        $csvData[] = ['Total Revenue', $data['total_revenue']];
+        $csvData[] = [];
+        
+        if (!empty($data['cogs'])) {
+            $csvData[] = ['Cost of Goods Sold'];
+            foreach ($data['cogs'] as $item) {
+                $csvData[] = [$item['account'], $item['amount']];
+            }
+            $csvData[] = ['Total COGS', $data['total_cogs']];
+            $csvData[] = ['Gross Profit', $data['gross_profit']];
+            $csvData[] = [];
+        }
+        
+        $csvData[] = ['Expenses'];
+        foreach ($data['expenses'] as $item) {
+            $csvData[] = [$item['account'], $item['amount']];
+        }
+        $csvData[] = ['Total Expenses', $data['total_expenses']];
+        $csvData[] = [];
+        $csvData[] = ['Net Income', $data['net_income']];
+        
+        exportToExcel($csvData, 'profit_loss_' . date('Y-m-d') . '.csv');
+    }
+    
+    private function exportBalanceSheetExcel($data) {
+        $csvData = [];
+        $csvData[] = ['Balance Sheet'];
+        $csvData[] = ['As of:', $data['as_of_date']];
+        $csvData[] = [];
+        
+        $csvData[] = ['Assets'];
+        foreach ($data['assets'] as $item) {
+            $csvData[] = [$item['account'], $item['amount']];
+        }
+        $csvData[] = ['Total Assets', $data['total_assets']];
+        $csvData[] = [];
+        
+        $csvData[] = ['Liabilities'];
+        foreach ($data['liabilities'] as $item) {
+            $csvData[] = [$item['account'], $item['amount']];
+        }
+        $csvData[] = ['Total Liabilities', $data['total_liabilities']];
+        $csvData[] = [];
+        
+        $csvData[] = ['Equity'];
+        foreach ($data['equity'] as $item) {
+            $csvData[] = [$item['account'], $item['amount']];
+        }
+        $csvData[] = ['Total Equity', $data['total_equity']];
+        
+        exportToExcel($csvData, 'balance_sheet_' . date('Y-m-d') . '.csv');
+    }
+    
+    private function exportTrialBalanceExcel($data) {
+        $csvData = [];
+        $csvData[] = ['Trial Balance'];
+        $csvData[] = ['As of:', $data['as_of_date']];
+        $csvData[] = [];
+        
+        $csvData[] = ['Account Code', 'Account Name', 'Debit', 'Credit'];
+        foreach ($data['balances'] as $item) {
+            $csvData[] = [$item['code'], $item['account'], $item['debit'], $item['credit']];
+        }
+        $csvData[] = ['', 'Total', $data['total_debits'], $data['total_credits']];
+        $csvData[] = [];
+        $csvData[] = ['In Balance:', $data['in_balance'] ? 'Yes' : 'No'];
+        
+        exportToExcel($csvData, 'trial_balance_' . date('Y-m-d') . '.csv');
+    }
+    
+    private function exportCashFlowExcel($data) {
+        $csvData = [];
+        $csvData[] = ['Cash Flow Statement'];
+        $csvData[] = ['Period:', $data['start_date'] . ' to ' . $data['end_date']];
+        $csvData[] = [];
+        
+        $csvData[] = ['Net Income', $data['net_income']];
+        $csvData[] = [];
+        
+        $csvData[] = ['Operating Activities'];
+        foreach ($data['operating_activities'] as $item) {
+            $csvData[] = [$item['description'], $item['amount']];
+        }
+        $csvData[] = [];
+        
+        $csvData[] = ['Cash Summary'];
+        $csvData[] = ['Beginning Cash', $data['beginning_cash']];
+        $csvData[] = ['Net Cash Flow', $data['net_cash_flow']];
+        $csvData[] = ['Ending Cash', $data['ending_cash']];
+        
+        exportToExcel($csvData, 'cash_flow_' . date('Y-m-d') . '.csv');
     }
 }
-
