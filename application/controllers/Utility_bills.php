@@ -14,21 +14,6 @@ class Utility_bills extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
-        $this->requirePermission('utilities', 'read');
-        $this->billModel = $this->loadModel('Utility_bill_model');
-        $this->meterModel = $this->loadModel('Meter_model');
-        $this->readingModel = $this->loadModel('Meter_reading_model');
-        $this->tariffModel = $this->loadModel('Tariff_model');
-        $this->providerModel = $this->loadModel('Utility_provider_model');
-        $this->paymentModel = $this->loadModel('Utility_payment_model');
-        $this->transactionModel = $this->loadModel('Transaction_model');
-        $this->accountModel = $this->loadModel('Account_model');
-        $this->activityModel = $this->loadModel('Activity_model');
-    }
-    
-    public function index() {
-        $status = $_GET['status'] ?? 'all';
-        
         try {
             $allBills = $this->billModel->getAll();
             if ($status !== 'all') {
@@ -225,31 +210,37 @@ class Utility_bills extends Base_Controller {
     
     private function postBillToAccounting($billId, $billData, $meter) {
         try {
-            // Find Utility Expense account
-            $expenseAccounts = $this->accountModel->getByType('Expenses');
-            $utilityExpenseAccount = null;
-            foreach ($expenseAccounts as $acc) {
-                if (stripos($acc['account_name'], 'utility') !== false) {
-                    $utilityExpenseAccount = $acc;
-                    break;
+            // Find Utility Expense account (6100)
+            $utilityExpenseAccount = $this->accountModel->getByCode('6100');
+            if (!$utilityExpenseAccount) {
+                // Fallback search
+                $expenseAccounts = $this->accountModel->getByType('Expenses');
+                foreach ($expenseAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'utility') !== false) {
+                        $utilityExpenseAccount = $acc;
+                        break;
+                    }
                 }
-            }
-            if (!$utilityExpenseAccount && !empty($expenseAccounts)) {
-                $utilityExpenseAccount = $expenseAccounts[0]; // Fallback
+                if (!$utilityExpenseAccount && !empty($expenseAccounts)) {
+                    $utilityExpenseAccount = $expenseAccounts[0];
+                }
             }
             
-            // Find Accounts Payable account
-            $liabilityAccounts = $this->accountModel->getByType('Liabilities');
-            $apAccount = null;
-            foreach ($liabilityAccounts as $acc) {
-                if (stripos($acc['account_name'], 'payable') !== false || 
-                    stripos($acc['account_name'], 'ap') !== false) {
-                    $apAccount = $acc;
-                    break;
+            // Find Accounts Payable account (2000)
+            $apAccount = $this->accountModel->getByCode('2000');
+            if (!$apAccount) {
+                // Fallback search
+                $liabilityAccounts = $this->accountModel->getByType('Liabilities');
+                foreach ($liabilityAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'payable') !== false || 
+                        stripos($acc['account_name'], 'ap') !== false) {
+                        $apAccount = $acc;
+                        break;
+                    }
                 }
-            }
-            if (!$apAccount && !empty($liabilityAccounts)) {
-                $apAccount = $liabilityAccounts[0]; // Fallback
+                if (!$apAccount && !empty($liabilityAccounts)) {
+                    $apAccount = $liabilityAccounts[0];
+                }
             }
             
             if (!$utilityExpenseAccount || !$apAccount) {
@@ -257,37 +248,35 @@ class Utility_bills extends Base_Controller {
                 return;
             }
             
-            // Entry 1: Debit Utility Expense
-            $this->transactionModel->create([
-                'transaction_number' => $billData['bill_number'] . '-EXP',
-                'transaction_date' => $billData['billing_date'],
-                'transaction_type' => 'expense',
-                'reference_id' => $billId,
+            // Create Journal Entry
+            $journalData = [
+                'date' => $billData['billing_date'],
                 'reference_type' => 'utility_bill',
-                'account_id' => $utilityExpenseAccount['id'],
-                'description' => 'Utility bill - ' . $billData['bill_number'],
-                'debit' => $billData['total_amount'],
-                'credit' => 0,
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($utilityExpenseAccount['id'], $billData['total_amount'], 'debit');
+                'reference_id' => $billId,
+                'description' => 'Utility Bill #' . $billData['bill_number'],
+                'journal_type' => 'purchase',
+                'entries' => [
+                    // Debit Utility Expense
+                    [
+                        'account_id' => $utilityExpenseAccount['id'],
+                        'debit' => $billData['total_amount'],
+                        'credit' => 0,
+                        'description' => 'Utility Expense - ' . $meter['meter_number']
+                    ],
+                    // Credit Accounts Payable
+                    [
+                        'account_id' => $apAccount['id'],
+                        'debit' => 0,
+                        'credit' => $billData['total_amount'],
+                        'description' => 'Utility Bill Payable'
+                    ]
+                ],
+                'created_by' => $this->session['user_id'] ?? null,
+                'auto_post' => true
+            ];
             
-            // Entry 2: Credit Accounts Payable
-            $this->transactionModel->create([
-                'transaction_number' => $billData['bill_number'] . '-AP',
-                'transaction_date' => $billData['billing_date'],
-                'transaction_type' => 'bill',
-                'reference_id' => $billId,
-                'reference_type' => 'utility_bill',
-                'account_id' => $apAccount['id'],
-                'description' => 'Utility bill payable - ' . $billData['bill_number'],
-                'debit' => 0,
-                'credit' => $billData['total_amount'],
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($apAccount['id'], $billData['total_amount'], 'credit');
+            $this->transactionService->postJournalEntry($journalData);
+            
         } catch (Exception $e) {
             error_log('Utility_bills postBillToAccounting error: ' . $e->getMessage());
         }

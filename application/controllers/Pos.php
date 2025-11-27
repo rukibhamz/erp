@@ -28,6 +28,10 @@ class Pos extends Base_Controller {
         $this->stockModel = $this->loadModel('Stock_level_model');
         $this->activityModel = $this->loadModel('Activity_model');
         $this->taxTypeModel = $this->loadModel('Tax_type_model'); // Use Tax_type_model for erp_tax_types table
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
     }
     
     public function index() {
@@ -286,51 +290,48 @@ class Pos extends Base_Controller {
             $taxAccountId = $taxAccount[0]['id'] ?? null;
             
             if ($cashAccountId && $salesAccountId) {
-                // Debit Cash, Credit Sales Revenue
-                $this->transactionModel->create([
-                    'transaction_number' => 'POS-' . $saleId . '-CASH',
-                    'transaction_date' => date('Y-m-d'),
-                    'transaction_type' => 'pos_sale',
-                    'reference_id' => $saleId,
+                // Prepare journal entry data
+                $journalData = [
+                    'date' => date('Y-m-d'),
                     'reference_type' => 'pos_sale',
-                    'account_id' => $cashAccountId,
-                    'description' => 'POS Sale #' . $saleId,
-                    'debit' => $totalAmount,
-                    'credit' => 0,
-                    'status' => 'posted',
-                    'created_by' => $this->session['user_id']
-                ]);
-                
-                $this->transactionModel->create([
-                    'transaction_number' => 'POS-' . $saleId . '-REV',
-                    'transaction_date' => date('Y-m-d'),
-                    'transaction_type' => 'pos_sale',
                     'reference_id' => $saleId,
-                    'reference_type' => 'pos_sale',
-                    'account_id' => $salesAccountId,
                     'description' => 'POS Sale #' . $saleId,
-                    'debit' => 0,
-                    'credit' => $totalAmount - $taxAmount,
-                    'status' => 'posted',
-                    'created_by' => $this->session['user_id']
-                ]);
+                    'journal_type' => 'sales',
+                    'entries' => [
+                        // Debit Cash
+                        [
+                            'account_id' => $cashAccountId,
+                            'debit' => $totalAmount,
+                            'credit' => 0,
+                            'description' => 'POS Sale Collection'
+                        ],
+                        // Credit Sales Revenue
+                        [
+                            'account_id' => $salesAccountId,
+                            'debit' => 0,
+                            'credit' => $totalAmount - $taxAmount,
+                            'description' => 'Sales Revenue'
+                        ]
+                    ],
+                    'created_by' => $this->session['user_id'],
+                    'auto_post' => true
+                ];
                 
-                // If tax, create tax liability entry
+                // Add tax entry if applicable
                 if ($taxAmount > 0 && $taxAccountId) {
-                    $this->transactionModel->create([
-                        'transaction_number' => 'POS-' . $saleId . '-TAX',
-                        'transaction_date' => date('Y-m-d'),
-                        'transaction_type' => 'pos_sale',
-                        'reference_id' => $saleId,
-                        'reference_type' => 'pos_sale',
+                    $journalData['entries'][] = [
                         'account_id' => $taxAccountId,
-                        'description' => 'VAT on POS Sale #' . $saleId,
                         'debit' => 0,
                         'credit' => $taxAmount,
-                        'status' => 'posted',
-                        'created_by' => $this->session['user_id']
-                    ]);
+                        'description' => 'VAT Liability'
+                    ];
                 }
+                
+                // Post journal entry using Transaction Service
+                $this->transactionService->postJournalEntry($journalData);
+                
+                // Update cash account balance
+                $this->loadModel('Cash_account_model')->updateBalance($cashAccountId, $totalAmount, 'deposit');
             }
             
             // Get walk-in customer if needed

@@ -116,9 +116,17 @@ class Transaction_service {
                 $this->journalModel->approve($entryId, $data['created_by']);
                 $this->journalModel->post($entryId, $data['created_by']);
                 
-                // Invalidate balance cache for all affected accounts
+                // Update balances and invalidate cache for all affected accounts
                 foreach ($data['entries'] as $entry) {
                     $this->balanceCalculator->invalidateCache($entry['account_id']);
+                    
+                    // Update account table balance (denormalization)
+                    if (!empty($entry['debit']) && $entry['debit'] > 0) {
+                        $this->accountModel->updateBalance($entry['account_id'], $entry['debit'], 'debit');
+                    }
+                    if (!empty($entry['credit']) && $entry['credit'] > 0) {
+                        $this->accountModel->updateBalance($entry['account_id'], $entry['credit'], 'credit');
+                    }
                 }
             }
             
@@ -177,6 +185,20 @@ class Transaction_service {
                 // Auto-approve and post the reversal
                 $this->journalModel->approve($reversedId, $userId);
                 $this->journalModel->post($reversedId, $userId);
+                
+                // Update balances and invalidate cache for all affected accounts
+                $lines = $this->journalModel->getLines($reversedId);
+                foreach ($lines as $line) {
+                    $this->balanceCalculator->invalidateCache($line['account_id']);
+                    
+                    // Update account table balance (denormalization)
+                    if (!empty($line['debit']) && $line['debit'] > 0) {
+                        $this->accountModel->updateBalance($line['account_id'], $line['debit'], 'debit');
+                    }
+                    if (!empty($line['credit']) && $line['credit'] > 0) {
+                        $this->accountModel->updateBalance($line['account_id'], $line['credit'], 'credit');
+                    }
+                }
                 
                 $this->logActivity(
                     $userId,

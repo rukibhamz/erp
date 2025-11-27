@@ -5,6 +5,8 @@ class Tax_payments extends Base_Controller {
     private $taxPaymentModel;
     private $taxTypeModel;
     private $activityModel;
+    private $accountModel;
+    private $transactionService;
     
     public function __construct() {
         parent::__construct();
@@ -12,6 +14,11 @@ class Tax_payments extends Base_Controller {
         $this->taxPaymentModel = $this->loadModel('Tax_payment_model');
         $this->taxTypeModel = $this->loadModel('Tax_type_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->accountModel = $this->loadModel('Account_model');
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
     }
     
     public function index() {
@@ -69,7 +76,12 @@ class Tax_payments extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            if ($this->taxPaymentModel->create($data)) {
+            $paymentId = $this->taxPaymentModel->create($data);
+            
+            if ($paymentId) {
+                // Post to accounting
+                $this->postTaxPaymentToAccounting($paymentId, $data);
+                
                 $this->activityModel->log($this->session['user_id'], 'create', 'Tax', 'Recorded tax payment: ' . $data['tax_type'] . ' - ' . format_currency($data['amount']));
                 $this->setFlashMessage('success', 'Tax payment recorded successfully.');
                 redirect('tax/payments');
@@ -92,5 +104,88 @@ class Tax_payments extends Base_Controller {
         
         $this->loadView('tax/payments/create', $data);
     }
+    
+    private function postTaxPaymentToAccounting($paymentId, $paymentData) {
+        try {
+            // Determine Liability Account based on tax_type
+            $liabilityAccountCode = null;
+            switch (strtolower($paymentData['tax_type'])) {
+                case 'vat':
+                    $liabilityAccountCode = '2300'; // VAT Payable
+                    break;
+                case 'paye':
+                    $liabilityAccountCode = '2310'; // PAYE Payable
+                    break;
+                case 'wht':
+                    $liabilityAccountCode = '2320'; // WHT Payable
+                    break;
+                case 'cit':
+                case 'company_income_tax':
+                    $liabilityAccountCode = '2330'; // CIT Payable
+                    break;
+                case 'education_tax':
+                    $liabilityAccountCode = '2340'; // Education Tax Payable
+                    break;
+                default:
+                    // Generic Tax Payable or try to find by name
+                    $liabilityAccountCode = '2300'; 
+            }
+            
+            $liabilityAccount = $this->accountModel->getByCode($liabilityAccountCode);
+            if (!$liabilityAccount) {
+                // Fallback: search by name
+                $liabilityAccounts = $this->accountModel->getByType('Liabilities');
+                foreach ($liabilityAccounts as $acc) {
+                    if (stripos($acc['account_name'], $paymentData['tax_type']) !== false) {
+                        $liabilityAccount = $acc;
+                        break;
+                    }
+                }
+                // Ultimate fallback
+                if (!$liabilityAccount && !empty($liabilityAccounts)) {
+                    $liabilityAccount = $liabilityAccounts[0];
+                }
+            }
+            
+            // Find Cash Account (1000)
+            $cashAccount = $this->accountModel->getByCode('1000');
+            if (!$cashAccount) {
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                $cashAccount = !empty($assetAccounts) ? $assetAccounts[0] : null;
+            }
+            
+            if ($liabilityAccount && $cashAccount) {
+                $journalData = [
+                    'date' => $paymentData['payment_date'],
+                    'reference_type' => 'tax_payment',
+                    'reference_id' => $paymentId,
+                    'description' => 'Tax Payment - ' . $paymentData['tax_type'],
+                    'journal_type' => 'payment',
+                    'entries' => [
+                        // Debit Liability
+                        [
+                            'account_id' => $liabilityAccount['id'],
+                            'debit' => $paymentData['amount'],
+                            'credit' => 0,
+                            'description' => 'Tax Payment: ' . $paymentData['tax_type']
+                        ],
+                        // Credit Cash
+                        [
+                            'account_id' => $cashAccount['id'],
+                            'debit' => 0,
+                            'credit' => $paymentData['amount'],
+                            'description' => 'Paid via ' . $paymentData['payment_method']
+                        ]
+                    ],
+                    'created_by' => $this->session['user_id'],
+                    'auto_post' => true
+                ];
+                
+                $this->transactionService->postJournalEntry($journalData);
+            }
+            
+        } catch (Exception $e) {
+            error_log('Tax_payments postTaxPaymentToAccounting error: ' . $e->getMessage());
+        }
+    }
 }
-

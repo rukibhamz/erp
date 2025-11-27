@@ -313,46 +313,6 @@ class Payables extends Base_Controller {
                         'line_total' => $lineTotal,
                         'account_id' => !empty($item['account_id']) ? intval($item['account_id']) : null
                     ];
-                    
-                    $this->billModel->addItem($billId, $itemData);
-                }
-                
-                // If status is 'approved', create journal entry
-                if ($billData['status'] === 'approved') {
-                    try {
-                        // Get Accounts Payable account (2100)
-                        $apAccount = $this->accountModel->getByCode('2100');
-                        
-                        // Get expense account from first item or use default
-                        $expenseAccount = null;
-                        if (!empty($items) && !empty($items[0]['account_id'])) {
-                            $expenseAccount = $this->accountModel->getById($items[0]['account_id']);
-                        }
-                        if (!$expenseAccount) {
-                            $expenseAccounts = $this->accountModel->getByType('Expenses');
-                            $expenseAccount = !empty($expenseAccounts) ? $expenseAccounts[0] : null;
-                        }
-                        
-                        if ($apAccount && $expenseAccount) {
-                            $journalData = [
-                                'date' => $billDate,
-                                'reference_type' => 'bill',
-                                'reference_id' => $billId,
-                                'description' => 'Bill ' . $billData['bill_number'],
-                                'journal_type' => 'purchase',
-                                'entries' => [
-                                    [
-                                        'account_id' => $expenseAccount['id'],
-                                        'debit' => $totalAmount,
-                                        'credit' => 0.00,
-                                        'description' => 'Expense'
-                                    ],
-                                    [
-                                        'account_id' => $apAccount['id'],
-                                        'debit' => 0.00,
-                                        'credit' => $totalAmount,
-                                        'description' => 'Accounts Payable'
-                                    ]
                                 ],
                                 'created_by' => $this->session['user_id'],
                                 'auto_post' => true

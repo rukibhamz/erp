@@ -20,6 +20,10 @@ class Rent_invoices extends Base_Controller {
         $this->accountModel = $this->loadModel('Account_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
     }
     
     public function index() {
@@ -283,34 +287,38 @@ class Rent_invoices extends Base_Controller {
     /**
      * Post rent invoice to accounting (AR entry)
      */
+    /**
+     * Post rent invoice to accounting (AR entry)
+     */
     private function postRentInvoiceToAccounting($invoiceId, $invoiceData, $lease) {
         try {
-            // Try to find AR account by searching account name
-            $arAccounts = $this->accountModel->getByType('Assets');
-            $arAccount = null;
-            foreach ($arAccounts as $acc) {
-                if (stripos($acc['account_name'], 'receivable') !== false || 
-                    stripos($acc['account_name'], 'ar') !== false) {
-                    $arAccount = $acc;
-                    break;
+            // Find AR account (1200)
+            $arAccount = $this->accountModel->getByCode('1200');
+            if (!$arAccount) {
+                // Fallback
+                $arAccounts = $this->accountModel->getByType('Assets');
+                foreach ($arAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'receivable') !== false) {
+                        $arAccount = $acc;
+                        break;
+                    }
                 }
-            }
-            if (!$arAccount && !empty($arAccounts)) {
-                $arAccount = $arAccounts[0]; // Fallback to first asset account
             }
             
-            // Try to find Rent Revenue account
-            $revenueAccounts = $this->accountModel->getByType('Revenue');
-            $rentRevenueAccount = null;
-            foreach ($revenueAccounts as $acc) {
-                if (stripos($acc['account_name'], 'rent') !== false || 
-                    stripos($acc['account_name'], 'rental') !== false) {
-                    $rentRevenueAccount = $acc;
-                    break;
+            // Find Rent Revenue account (4005)
+            $rentRevenueAccount = $this->accountModel->getByCode('4005'); // Rental Income
+            if (!$rentRevenueAccount) {
+                // Fallback
+                $revenueAccounts = $this->accountModel->getByType('Revenue');
+                foreach ($revenueAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'rent') !== false) {
+                        $rentRevenueAccount = $acc;
+                        break;
+                    }
                 }
-            }
-            if (!$rentRevenueAccount && !empty($revenueAccounts)) {
-                $rentRevenueAccount = $revenueAccounts[0]; // Fallback to first revenue account
+                if (!$rentRevenueAccount && !empty($revenueAccounts)) {
+                    $rentRevenueAccount = $revenueAccounts[0];
+                }
             }
             
             if (!$arAccount || !$rentRevenueAccount) {
@@ -318,37 +326,35 @@ class Rent_invoices extends Base_Controller {
                 return;
             }
             
-            // Entry 1: Debit Accounts Receivable
-            $this->transactionModel->create([
-                'transaction_number' => $invoiceData['invoice_number'] . '-AR',
-                'transaction_date' => $invoiceData['invoice_date'],
-                'transaction_type' => 'invoice',
-                'reference_id' => $invoiceId,
+            // Prepare journal entry data
+            $journalData = [
+                'date' => $invoiceData['invoice_date'],
                 'reference_type' => 'rent_invoice',
-                'account_id' => $arAccount['id'],
-                'description' => 'Rent receivable - ' . $invoiceData['invoice_number'],
-                'debit' => $invoiceData['total_amount'],
-                'credit' => 0,
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($arAccount['id'], $invoiceData['total_amount'], 'debit');
+                'reference_id' => $invoiceId,
+                'description' => 'Rent Invoice #' . $invoiceData['invoice_number'],
+                'journal_type' => 'sales',
+                'entries' => [
+                    // Debit Accounts Receivable
+                    [
+                        'account_id' => $arAccount['id'],
+                        'debit' => $invoiceData['total_amount'],
+                        'credit' => 0,
+                        'description' => 'Rent Receivable'
+                    ],
+                    // Credit Rent Revenue
+                    [
+                        'account_id' => $rentRevenueAccount['id'],
+                        'debit' => 0,
+                        'credit' => $invoiceData['total_amount'],
+                        'description' => 'Rental Income'
+                    ]
+                ],
+                'created_by' => $this->session['user_id'] ?? null,
+                'auto_post' => true
+            ];
             
-            // Entry 2: Credit Rent Revenue
-            $this->transactionModel->create([
-                'transaction_number' => $invoiceData['invoice_number'] . '-REV',
-                'transaction_date' => $invoiceData['invoice_date'],
-                'transaction_type' => 'revenue',
-                'reference_id' => $invoiceId,
-                'reference_type' => 'rent_invoice',
-                'account_id' => $rentRevenueAccount['id'],
-                'description' => 'Rent revenue - ' . $invoiceData['invoice_number'],
-                'debit' => 0,
-                'credit' => $invoiceData['total_amount'],
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($rentRevenueAccount['id'], $invoiceData['total_amount'], 'credit');
+            // Post journal entry using Transaction Service
+            $this->transactionService->postJournalEntry($journalData);
             
         } catch (Exception $e) {
             error_log('Rent_invoices postRentInvoiceToAccounting error: ' . $e->getMessage());
@@ -360,31 +366,30 @@ class Rent_invoices extends Base_Controller {
      */
     private function postRentPaymentToAccounting($paymentId, $paymentData, $invoice, $lease) {
         try {
-            // Find Cash account
-            $assetAccounts = $this->accountModel->getByType('Assets');
-            $cashAccount = null;
-            foreach ($assetAccounts as $acc) {
-                if (stripos($acc['account_name'], 'cash') !== false || 
-                    stripos($acc['account_name'], 'bank') !== false) {
-                    $cashAccount = $acc;
-                    break;
+            // Find Cash account (1000)
+            $cashAccount = $this->accountModel->getByCode('1000'); // Cash on Hand
+            if (!$cashAccount) {
+                // Fallback
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                foreach ($assetAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'cash') !== false) {
+                        $cashAccount = $acc;
+                        break;
+                    }
                 }
-            }
-            if (!$cashAccount && !empty($assetAccounts)) {
-                $cashAccount = $assetAccounts[0]; // Fallback
             }
             
-            // Find AR account
-            $arAccount = null;
-            foreach ($assetAccounts as $acc) {
-                if (stripos($acc['account_name'], 'receivable') !== false || 
-                    stripos($acc['account_name'], 'ar') !== false) {
-                    $arAccount = $acc;
-                    break;
+            // Find AR account (1200)
+            $arAccount = $this->accountModel->getByCode('1200');
+            if (!$arAccount) {
+                // Fallback
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                foreach ($assetAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'receivable') !== false) {
+                        $arAccount = $acc;
+                        break;
+                    }
                 }
-            }
-            if (!$arAccount && !empty($assetAccounts)) {
-                $arAccount = $assetAccounts[0]; // Fallback
             }
             
             if (!$cashAccount || !$arAccount) {
@@ -392,37 +397,38 @@ class Rent_invoices extends Base_Controller {
                 return;
             }
             
-            // Entry 1: Debit Cash
-            $this->transactionModel->create([
-                'transaction_number' => $paymentData['payment_number'] . '-CASH',
-                'transaction_date' => $paymentData['payment_date'],
-                'transaction_type' => 'receipt',
-                'reference_id' => $paymentId,
+            // Prepare journal entry data
+            $journalData = [
+                'date' => $paymentData['payment_date'],
                 'reference_type' => 'rent_payment',
-                'account_id' => $cashAccount['id'],
-                'description' => 'Rent payment received - ' . $paymentData['payment_number'],
-                'debit' => $paymentData['amount'],
-                'credit' => 0,
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($cashAccount['id'], $paymentData['amount'], 'debit');
+                'reference_id' => $paymentId,
+                'description' => 'Rent Payment #' . $paymentData['payment_number'],
+                'journal_type' => 'receipt',
+                'entries' => [
+                    // Debit Cash
+                    [
+                        'account_id' => $cashAccount['id'],
+                        'debit' => $paymentData['amount'],
+                        'credit' => 0,
+                        'description' => 'Rent Payment Received'
+                    ],
+                    // Credit Accounts Receivable
+                    [
+                        'account_id' => $arAccount['id'],
+                        'debit' => 0,
+                        'credit' => $paymentData['amount'],
+                        'description' => 'Rent Receivable Payment'
+                    ]
+                ],
+                'created_by' => $this->session['user_id'] ?? null,
+                'auto_post' => true
+            ];
             
-            // Entry 2: Credit Accounts Receivable
-            $this->transactionModel->create([
-                'transaction_number' => $paymentData['payment_number'] . '-AR',
-                'transaction_date' => $paymentData['payment_date'],
-                'transaction_type' => 'receipt',
-                'reference_id' => $paymentId,
-                'reference_type' => 'rent_payment',
-                'account_id' => $arAccount['id'],
-                'description' => 'Rent payment - ' . $paymentData['payment_number'],
-                'debit' => 0,
-                'credit' => $paymentData['amount'],
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($arAccount['id'], $paymentData['amount'], 'credit');
+            // Post journal entry using Transaction Service
+            $this->transactionService->postJournalEntry($journalData);
+            
+            // Update cash account balance
+            $this->loadModel('Cash_account_model')->updateBalance($cashAccount['id'], $paymentData['amount'], 'deposit');
             
         } catch (Exception $e) {
             error_log('Rent_invoices postRentPaymentToAccounting error: ' . $e->getMessage());

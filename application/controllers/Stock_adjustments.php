@@ -22,6 +22,10 @@ class Stock_adjustments extends Base_Controller {
         $this->transactionModelAccounting = $this->loadModel('Transaction_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
     }
     
     public function index() {
@@ -197,9 +201,9 @@ class Stock_adjustments extends Base_Controller {
             
             $this->transactionModel->create($transactionData);
             
-            // Post to accounting if adjustment increases stock
-            if ($adjustment['adjustment_qty'] > 0) {
-                $this->postAdjustmentToAccounting($id, $transactionData, $item);
+            // Post to accounting for all adjustments (gains and losses)
+            if ($transactionData['total_cost'] > 0) {
+                $this->postAdjustmentToAccounting($id, $transactionData, $item, $adjustment['adjustment_qty']);
             }
             
             $this->activityModel->log($this->session['user_id'], 'update', 'Stock Adjustments', 'Approved adjustment: ' . $adjustment['adjustment_number']);
@@ -235,68 +239,90 @@ class Stock_adjustments extends Base_Controller {
         exit;
     }
     
-    private function postAdjustmentToAccounting($adjustmentId, $transactionData, $item) {
+    private function postAdjustmentToAccounting($adjustmentId, $transactionData, $item, $adjustmentQty) {
         try {
-            // Find Inventory Asset account
-            $assetAccounts = $this->accountModel->getByType('Assets');
-            $inventoryAccount = null;
-            foreach ($assetAccounts as $acc) {
-                if (stripos($acc['account_name'], 'inventory') !== false) {
-                    $inventoryAccount = $acc;
-                    break;
+            // Find Inventory Asset account (Asset)
+            $inventoryAccount = $this->accountModel->getByCode('1205'); // Inventory Asset
+            if (!$inventoryAccount) {
+                // Fallback to finding by type
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                foreach ($assetAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'inventory') !== false) {
+                        $inventoryAccount = $acc;
+                        break;
+                    }
                 }
             }
             
-            // Find Inventory Adjustment Expense account
-            $expenseAccounts = $this->accountModel->getByType('Expenses');
-            $adjustmentExpenseAccount = null;
-            foreach ($expenseAccounts as $acc) {
-                if (stripos($acc['account_name'], 'adjustment') !== false || 
-                    stripos($acc['account_name'], 'inventory') !== false) {
-                    $adjustmentExpenseAccount = $acc;
-                    break;
+            // Find Inventory Adjustment Account (Expense/Income)
+            $adjustmentAccount = $this->accountModel->getByCode('5005'); // Inventory Shrinkage/Adjustment
+            if (!$adjustmentAccount) {
+                $expenseAccounts = $this->accountModel->getByType('Expenses');
+                foreach ($expenseAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'adjustment') !== false || 
+                        stripos($acc['account_name'], 'shrinkage') !== false) {
+                        $adjustmentAccount = $acc;
+                        break;
+                    }
+                }
+                if (!$adjustmentAccount && !empty($expenseAccounts)) {
+                    $adjustmentAccount = $expenseAccounts[0];
                 }
             }
-            if (!$adjustmentExpenseAccount && !empty($expenseAccounts)) {
-                $adjustmentExpenseAccount = $expenseAccounts[0];
-            }
             
-            if (!$inventoryAccount || !$adjustmentExpenseAccount) {
+            if (!$inventoryAccount || !$adjustmentAccount) {
                 error_log('Accounts not found for adjustment accounting entry.');
                 return;
             }
             
-            // Debit Inventory
-            $this->transactionModelAccounting->create([
-                'transaction_number' => $transactionData['reference_number'] . '-INV',
-                'transaction_date' => $transactionData['transaction_date'],
-                'transaction_type' => 'stock_adjustment',
-                'reference_id' => $adjustmentId,
-                'reference_type' => 'stock_adjustment',
-                'account_id' => $inventoryAccount['id'],
-                'description' => 'Stock adjustment - ' . $item['item_name'],
-                'debit' => $transactionData['total_cost'],
-                'credit' => 0,
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($inventoryAccount['id'], $transactionData['total_cost'], 'debit');
+            $totalCost = floatval($transactionData['total_cost']);
+            $entries = [];
             
-            // Credit Adjustment Expense
-            $this->transactionModelAccounting->create([
-                'transaction_number' => $transactionData['reference_number'] . '-EXP',
-                'transaction_date' => $transactionData['transaction_date'],
-                'transaction_type' => 'stock_adjustment',
-                'reference_id' => $adjustmentId,
+            if ($adjustmentQty > 0) {
+                // Stock Gain: Debit Inventory, Credit Adjustment (Income/Contra-Expense)
+                $entries[] = [
+                    'account_id' => $inventoryAccount['id'],
+                    'debit' => $totalCost,
+                    'credit' => 0,
+                    'description' => 'Stock Gain - ' . $item['item_name']
+                ];
+                $entries[] = [
+                    'account_id' => $adjustmentAccount['id'],
+                    'debit' => 0,
+                    'credit' => $totalCost,
+                    'description' => 'Inventory Adjustment Gain'
+                ];
+            } else {
+                // Stock Loss: Debit Adjustment (Expense), Credit Inventory
+                $entries[] = [
+                    'account_id' => $adjustmentAccount['id'],
+                    'debit' => $totalCost,
+                    'credit' => 0,
+                    'description' => 'Stock Loss/Shrinkage - ' . $item['item_name']
+                ];
+                $entries[] = [
+                    'account_id' => $inventoryAccount['id'],
+                    'debit' => 0,
+                    'credit' => $totalCost,
+                    'description' => 'Inventory Asset Reduction'
+                ];
+            }
+            
+            // Prepare journal entry data
+            $journalData = [
+                'date' => $transactionData['transaction_date'],
                 'reference_type' => 'stock_adjustment',
-                'account_id' => $adjustmentExpenseAccount['id'],
-                'description' => 'Stock adjustment expense - ' . $item['item_name'],
-                'debit' => 0,
-                'credit' => $transactionData['total_cost'],
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($adjustmentExpenseAccount['id'], $transactionData['total_cost'], 'credit');
+                'reference_id' => $adjustmentId,
+                'description' => 'Stock Adjustment #' . $transactionData['reference_number'] . ' (' . ($adjustmentQty > 0 ? 'Gain' : 'Loss') . ')',
+                'journal_type' => 'inventory',
+                'entries' => $entries,
+                'created_by' => $this->session['user_id'] ?? null,
+                'auto_post' => true
+            ];
+            
+            // Post journal entry using Transaction Service
+            $this->transactionService->postJournalEntry($journalData);
+            
         } catch (Exception $e) {
             error_log('Stock_adjustments postAdjustmentToAccounting error: ' . $e->getMessage());
         }

@@ -375,34 +375,55 @@ class Receivables extends Base_Controller {
                 try {
                     // Get Accounts Receivable account (1200)
                     $arAccount = $this->accountModel->getByCode('1200');
-                    // Get Sales Revenue account (4000) - or use first revenue account
+                    
+                    // Get Sales Revenue account (4000)
                     $revenueAccount = $this->accountModel->getByCode('4000');
                     if (!$revenueAccount) {
                         $revenueAccounts = $this->accountModel->getByType('Revenue');
                         $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
                     }
                     
+                    // Get VAT Payable account (2300)
+                    $vatAccount = $this->accountModel->getByCode('2300');
+                    
                     if ($arAccount && $revenueAccount) {
+                        $entries = [
+                            // Debit AR (Total Amount)
+                            [
+                                'account_id' => $arAccount['id'],
+                                'debit' => $totalAmount,
+                                'credit' => 0.00,
+                                'description' => 'Accounts Receivable - ' . $invoiceData['invoice_number']
+                            ],
+                            // Credit Revenue (Subtotal)
+                            [
+                                'account_id' => $revenueAccount['id'],
+                                'debit' => 0.00,
+                                'credit' => $subtotal - $discountAmount, // Net Revenue
+                                'description' => 'Sales Revenue - ' . $invoiceData['invoice_number']
+                            ]
+                        ];
+                        
+                        // Credit VAT Payable (Tax Amount)
+                        if ($taxAmount > 0 && $vatAccount) {
+                            $entries[] = [
+                                'account_id' => $vatAccount['id'],
+                                'debit' => 0.00,
+                                'credit' => $taxAmount,
+                                'description' => 'VAT Payable - ' . $invoiceData['invoice_number']
+                            ];
+                        } elseif ($taxAmount > 0) {
+                            // If no VAT account, add to revenue (fallback)
+                            $entries[1]['credit'] += $taxAmount;
+                        }
+                        
                         $journalData = [
                             'date' => $invoiceDate,
                             'reference_type' => 'invoice',
                             'reference_id' => $invoiceId,
                             'description' => 'Invoice ' . $invoiceData['invoice_number'],
                             'journal_type' => 'sales',
-                            'entries' => [
-                                [
-                                    'account_id' => $arAccount['id'],
-                                    'debit' => $totalAmount,
-                                    'credit' => 0.00,
-                                    'description' => 'Accounts Receivable'
-                                ],
-                                [
-                                    'account_id' => $revenueAccount['id'],
-                                    'debit' => 0.00,
-                                    'credit' => $totalAmount,
-                                    'description' => 'Sales Revenue'
-                                ]
-                            ],
+                            'entries' => $entries,
                             'created_by' => $this->session['user_id'],
                             'auto_post' => true
                         ];
