@@ -202,6 +202,20 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error installing default COA: " . $e->getMessage());
         }
+        
+        // ALWAYS install Phase 12 accounts
+        try {
+            $this->installPhase12Accounts();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error installing Phase 12 accounts: " . $e->getMessage());
+        }
+        
+        // ALWAYS add performance indexes
+        try {
+            $this->addPerformanceIndexes();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error adding performance indexes: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -687,6 +701,12 @@ class AutoMigration {
                 error_log("AutoMigration: Added salary_structure column to employees table");
             }
             
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error fixing employees table: " . $e->getMessage());
+        }
+    }
+    
+    /**
      * Ensure at least one default cash account exists
      * Needed for Payroll and other modules
      */
@@ -886,18 +906,34 @@ class AutoMigration {
                 ],
                 [
                     'account_code' => '2100',
-                    'account_name' => 'Sales Tax Payable',
+                    'account_name' => 'VAT Payable',
                     'account_type' => 'Liabilities',
-                    'account_category' => 'Current Liabilities',
-                    'description' => 'Sales tax collected but not yet paid',
+                    'account_category' => 'Tax Payable',
+                    'description' => 'VAT collected on sales',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '2110',
+                    'account_name' => 'PAYE Payable',
+                    'account_type' => 'Liabilities',
+                    'account_category' => 'Tax Payable',
+                    'description' => 'Employee income tax withheld',
+                    'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '2120',
+                    'account_name' => 'WHT Payable',
+                    'account_type' => 'Liabilities',
+                    'account_category' => 'Tax Payable',
+                    'description' => 'Withholding tax deducted',
                     'is_system_account' => 1
                 ],
                 [
                     'account_code' => '2200',
                     'account_name' => 'Payroll Liabilities',
                     'account_type' => 'Liabilities',
-                    'account_category' => 'Current Liabilities',
-                    'description' => 'Wages and taxes withheld',
+                    'account_category' => 'Payroll Liabilities',
+                    'description' => 'Salaries and wages payable',
                     'is_system_account' => 1
                 ],
                 
@@ -907,15 +943,15 @@ class AutoMigration {
                     'account_name' => 'Owner\'s Equity',
                     'account_type' => 'Equity',
                     'account_category' => 'Equity',
-                    'description' => 'Owner\'s investment in the business',
+                    'description' => 'Owner\'s investment',
                     'is_system_account' => 1
                 ],
                 [
-                    'account_code' => '3900',
+                    'account_code' => '3100',
                     'account_name' => 'Retained Earnings',
                     'account_type' => 'Equity',
-                    'account_category' => 'Equity',
-                    'description' => 'Cumulative net income retained',
+                    'account_category' => 'Retained Earnings',
+                    'description' => 'Accumulated profits',
                     'is_system_account' => 1
                 ],
                 
@@ -924,24 +960,24 @@ class AutoMigration {
                     'account_code' => '4000',
                     'account_name' => 'Sales Revenue',
                     'account_type' => 'Revenue',
-                    'account_category' => 'Income',
-                    'description' => 'Income from sales of goods/services',
+                    'account_category' => 'Sales',
+                    'description' => 'Income from sales',
                     'is_system_account' => 1
                 ],
                 [
                     'account_code' => '4100',
-                    'account_name' => 'Service Income',
+                    'account_name' => 'Service Revenue',
                     'account_type' => 'Revenue',
-                    'account_category' => 'Income',
-                    'description' => 'Income from services rendered',
+                    'account_category' => 'Services',
+                    'description' => 'Income from services',
                     'is_system_account' => 0
                 ],
                 [
-                    'account_code' => '4900',
+                    'account_code' => '4200',
                     'account_name' => 'Other Income',
                     'account_type' => 'Revenue',
                     'account_category' => 'Other Income',
-                    'description' => 'Interest, refunds, etc.',
+                    'description' => 'Miscellaneous income',
                     'is_system_account' => 0
                 ],
                 
@@ -958,41 +994,66 @@ class AutoMigration {
                     'account_code' => '6000',
                     'account_name' => 'Rent Expense',
                     'account_type' => 'Expenses',
-                    'account_category' => 'Expense',
-                    'description' => 'Office or building rent',
+                    'account_category' => 'Operating Expenses',
+                    'description' => 'Office or facility rent',
                     'is_system_account' => 0
                 ],
                 [
-                    'account_code' => '6100',
+                    'account_code' => '6010',
                     'account_name' => 'Utilities Expense',
                     'account_type' => 'Expenses',
-                    'account_category' => 'Expense',
-                    'description' => 'Electricity, water, internet',
+                    'account_category' => 'Operating Expenses',
+                    'description' => 'Electricity, water, etc.',
                     'is_system_account' => 0
                 ],
                 [
-                    'account_code' => '7000',
-                    'account_name' => 'Payroll Expense',
+                    'account_code' => '6020',
+                    'account_name' => 'Salaries Expense',
                     'account_type' => 'Expenses',
-                    'account_category' => 'Expense',
+                    'account_category' => 'Payroll Expenses',
                     'description' => 'Employee salaries and wages',
                     'is_system_account' => 1
+                ],
+                [
+                    'account_code' => '6030',
+                    'account_name' => 'Office Supplies',
+                    'account_type' => 'Expenses',
+                    'account_category' => 'Operating Expenses',
+                    'description' => 'Stationery and supplies',
+                    'is_system_account' => 0
+                ],
+                [
+                    'account_code' => '6040',
+                    'account_name' => 'Travel Expense',
+                    'account_type' => 'Expenses',
+                    'account_category' => 'Operating Expenses',
+                    'description' => 'Business travel costs',
+                    'is_system_account' => 0
+                ],
+                [
+                    'account_code' => '6050',
+                    'account_name' => 'Advertising Expense',
+                    'account_type' => 'Expenses',
+                    'account_category' => 'Marketing',
+                    'description' => 'Marketing and advertising',
+                    'is_system_account' => 0
                 ]
             ];
-
+            
             $insertedCount = 0;
+            
             foreach ($accounts as $account) {
-                // Check if account code already exists
-                $stmt = $this->pdo->prepare("SELECT COUNT(*) as cnt FROM `{$this->prefix}accounts` WHERE account_code = ?");
+                // Check if account exists
+                $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = ?");
                 $stmt->execute([$account['account_code']]);
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                $exists = ($result['cnt'] ?? 0) > 0;
                 
-                if (!$exists) {
-                    $sql = "INSERT INTO `{$this->prefix}accounts` 
-                            (account_code, account_name, account_type, account_category, description, is_system_account, status, created_at) 
-                            VALUES (?, ?, ?, ?, ?, ?, 'active', NOW())";
-                    $stmt = $this->pdo->prepare($sql);
+                if ($stmt->rowCount() == 0) {
+                    // Insert account
+                    $stmt = $this->pdo->prepare("
+                        INSERT INTO `{$this->prefix}accounts` 
+                        (account_code, account_name, account_type, account_category, description, is_system_account, created_at, status)
+                        VALUES (?, ?, ?, ?, ?, ?, NOW(), 'active')
+                    ");
                     $stmt->execute([
                         $account['account_code'],
                         $account['account_name'],
