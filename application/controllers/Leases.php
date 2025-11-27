@@ -20,6 +20,10 @@ class Leases extends Base_Controller {
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
     }
     
     public function index() {
@@ -196,75 +200,71 @@ class Leases extends Base_Controller {
                 return;
             }
             
-            // Find Security Deposit account (liability)
-            $liabilityAccounts = $this->accountModel->getByType('Liabilities');
-            $depositAccount = null;
-            foreach ($liabilityAccounts as $acc) {
-                if (stripos($acc['account_name'], 'deposit') !== false || 
-                    stripos($acc['account_name'], 'security') !== false) {
-                    $depositAccount = $acc;
-                    break;
-                }
-            }
-            if (!$depositAccount && !empty($liabilityAccounts)) {
-                $depositAccount = $liabilityAccounts[0]; // Fallback to first liability
-            }
-            
-            if (!$depositAccount) {
-                error_log('No security deposit account found for lease accounting entry.');
-                return;
-            }
-            
-            // Find Cash account
-            $assetAccounts = $this->accountModel->getByType('Assets');
-            $cashAccount = null;
-            foreach ($assetAccounts as $acc) {
-                if (stripos($acc['account_name'], 'cash') !== false || 
-                    stripos($acc['account_name'], 'bank') !== false) {
-                    $cashAccount = $acc;
-                    break;
-                }
-            }
-            if (!$cashAccount && !empty($assetAccounts)) {
-                $cashAccount = $assetAccounts[0]; // Fallback
-            }
-            
+            // Get Cash Account (1000)
+            $cashAccount = $this->accountModel->getByCode('1000');
             if (!$cashAccount) {
-                error_log('No cash account found for lease accounting entry.');
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                foreach ($assetAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'cash') !== false || 
+                        stripos($acc['account_name'], 'bank') !== false) {
+                        $cashAccount = $acc;
+                        break;
+                    }
+                }
+            }
+            
+            // Get Security Deposits Liability Account (2210)
+            $depositAccount = $this->accountModel->getByCode('2210');
+            if (!$depositAccount) {
+                // Fallback: search by name
+                $liabilityAccounts = $this->accountModel->getByType('Liabilities');
+                foreach ($liabilityAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'deposit') !== false || 
+                        stripos($acc['account_name'], 'security') !== false) {
+                        $depositAccount = $acc;
+                        break;
+                    }
+                }
+                // Ultimate fallback
+                if (!$depositAccount && !empty($liabilityAccounts)) {
+                    $depositAccount = $liabilityAccounts[0];
+                }
+            }
+            
+            if (!$cashAccount || !$depositAccount) {
+                error_log('Leases: Cash or Security Deposit account not found for accounting entry.');
                 return;
             }
             
-            // Entry 1: Debit Cash
-            $this->transactionModel->create([
-                'transaction_number' => $leaseData['lease_number'] . '-DEP-CASH',
-                'transaction_date' => $leaseData['start_date'],
-                'transaction_type' => 'deposit',
-                'reference_id' => $leaseId,
+            // Prepare journal entry data
+            $journalData = [
+                'date' => $leaseData['start_date'],
                 'reference_type' => 'lease_deposit',
-                'account_id' => $cashAccount['id'],
-                'description' => 'Security deposit received - ' . $leaseData['lease_number'],
-                'debit' => $leaseData['security_deposit'],
-                'credit' => 0,
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($cashAccount['id'], $leaseData['security_deposit'], 'debit');
+                'reference_id' => $leaseId,
+                'description' => 'Security Deposit - ' . $leaseData['lease_number'],
+                'journal_type' => 'receipt',
+                'entries' => [
+                    // Debit Cash
+                    [
+                        'account_id' => $cashAccount['id'],
+                        'debit' => $leaseData['security_deposit'],
+                        'credit' => 0.00,
+                        'description' => 'Security Deposit Received'
+                    ],
+                    // Credit Security Deposits Liability
+                    [
+                        'account_id' => $depositAccount['id'],
+                        'debit' => 0.00,
+                        'credit' => $leaseData['security_deposit'],
+                        'description' => 'Security Deposit Liability'
+                    ]
+                ],
+                'created_by' => $this->session['user_id'] ?? null,
+                'auto_post' => true
+            ];
             
-            // Entry 2: Credit Security Deposits (Liability)
-            $this->transactionModel->create([
-                'transaction_number' => $leaseData['lease_number'] . '-DEP-LIAB',
-                'transaction_date' => $leaseData['start_date'],
-                'transaction_type' => 'deposit',
-                'reference_id' => $leaseId,
-                'reference_type' => 'lease_deposit',
-                'account_id' => $depositAccount['id'],
-                'description' => 'Security deposit liability - ' . $leaseData['lease_number'],
-                'debit' => 0,
-                'credit' => $leaseData['security_deposit'],
-                'status' => 'posted',
-                'created_by' => $this->session['user_id'] ?? null
-            ]);
-            $this->accountModel->updateBalance($depositAccount['id'], $leaseData['security_deposit'], 'credit');
+            // Post journal entry using Transaction Service
+            $this->transactionService->postJournalEntry($journalData);
             
         } catch (Exception $e) {
             error_log('Leases postSecurityDeposit error: ' . $e->getMessage());

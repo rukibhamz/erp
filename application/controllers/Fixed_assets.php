@@ -16,6 +16,11 @@ class Fixed_assets extends Base_Controller {
         $this->locationModel = $this->loadModel('Location_model');
         $this->supplierModel = $this->loadModel('Supplier_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->accountModel = $this->loadModel('Account_model');
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
     }
     
     public function index() {
@@ -83,6 +88,11 @@ class Fixed_assets extends Base_Controller {
                     $assetId = $this->assetModel->create($assetData);
                     
                     if ($assetId) {
+                        // Post asset acquisition to accounting
+                        $paymentStatus = sanitize_input($_POST['payment_status'] ?? 'paid');
+                        $assetData['payment_status'] = $paymentStatus;
+                        $this->postAssetAcquisition($assetId, $assetData);
+                        
                         $this->activityModel->log($this->session['user_id'], 'create', 'Fixed Assets', 'Created asset: ' . $assetData['asset_tag']);
                         $this->setFlashMessage('success', 'Fixed asset created successfully.');
                         redirect('inventory/assets/view/' . $assetId);
@@ -226,6 +236,111 @@ class Fixed_assets extends Base_Controller {
         }
         
         redirect('inventory/assets');
+    }
+    
+    /**
+     * Post asset acquisition to accounting
+     */
+    private function postAssetAcquisition($assetId, $assetData) {
+        try {
+            // Determine asset account based on category
+            $assetAccountCode = $this->getAssetAccountCode($assetData['asset_category']);
+            $assetAccount = $this->accountModel->getByCode($assetAccountCode);
+            
+            if (!$assetAccount) {
+                // Fallback to generic Fixed Assets (1500)
+                $assetAccount = $this->accountModel->getByCode('1500');
+            }
+            
+            if (!$assetAccount) {
+                // Ultimate fallback - search by type
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                foreach ($assetAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'fixed') !== false || 
+                        stripos($acc['account_name'], 'asset') !== false) {
+                        $assetAccount = $acc;
+                        break;
+                    }
+                }
+            }
+            
+            // Determine payment account (Cash or AP)
+            $paymentAccount = null;
+            if ($assetData['payment_status'] === 'paid') {
+                // Cash payment
+                $paymentAccount = $this->accountModel->getByCode('1000');
+                if (!$paymentAccount) {
+                    $assetAccounts = $this->accountModel->getByType('Assets');
+                    foreach ($assetAccounts as $acc) {
+                        if (stripos($acc['account_name'], 'cash') !== false) {
+                            $paymentAccount = $acc;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // On credit - Accounts Payable
+                $paymentAccount = $this->accountModel->getByCode('2100');
+                if (!$paymentAccount) {
+                    $liabilityAccounts = $this->accountModel->getByType('Liabilities');
+                    foreach ($liabilityAccounts as $acc) {
+                        if (stripos($acc['account_name'], 'payable') !== false) {
+                            $paymentAccount = $acc;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if ($assetAccount && $paymentAccount) {
+                $journalData = [
+                    'date' => $assetData['purchase_date'],
+                    'reference_type' => 'fixed_asset_acquisition',
+                    'reference_id' => $assetId,
+                    'description' => 'Asset Acquisition - ' . $assetData['asset_tag'],
+                    'journal_type' => 'general',
+                    'entries' => [
+                        // Debit Fixed Asset
+                        [
+                            'account_id' => $assetAccount['id'],
+                            'debit' => $assetData['purchase_cost'],
+                            'credit' => 0.00,
+                            'description' => 'Fixed Asset - ' . $assetData['asset_name']
+                        ],
+                        // Credit Cash or AP
+                        [
+                            'account_id' => $paymentAccount['id'],
+                            'debit' => 0.00,
+                            'credit' => $assetData['purchase_cost'],
+                            'description' => $assetData['payment_status'] === 'paid' ? 'Cash Payment' : 'Accounts Payable'
+                        ]
+                    ],
+                    'created_by' => $this->session['user_id'],
+                    'auto_post' => true
+                ];
+                
+                $this->transactionService->postJournalEntry($journalData);
+            }
+            
+        } catch (Exception $e) {
+            error_log('Fixed_assets postAssetAcquisition error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Get asset account code based on category
+     */
+    private function getAssetAccountCode($category) {
+        $mapping = [
+            'building' => '1500',
+            'furniture' => '1510',
+            'equipment' => '1520',
+            'vehicle' => '1530',
+            'computer' => '1540',
+            'leasehold' => '1550'
+        ];
+        
+        return $mapping[$category] ?? '1500';
     }
 }
 
