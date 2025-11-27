@@ -342,5 +342,338 @@ class Fixed_assets extends Base_Controller {
         
         return $mapping[$category] ?? '1500';
     }
+    
+    /**
+     * Calculate and post monthly depreciation for all active assets
+     */
+    public function calculateDepreciation() {
+        $this->requirePermission('inventory', 'update');
+        
+        try {
+            // Get all active assets
+            $assets = $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . "fixed_assets` 
+                 WHERE asset_status = 'active' 
+                 AND depreciation_method != 'none'"
+            );
+            
+            $totalDepreciation = 0;
+            $assetsDepreciated = 0;
+            
+            foreach ($assets as $asset) {
+                $monthlyDepreciation = $this->calculateMonthlyDepreciation($asset);
+                
+                if ($monthlyDepreciation > 0) {
+                    // Update asset current value
+                    $newValue = max(
+                        $asset['current_value'] - $monthlyDepreciation,
+                        $asset['salvage_value']
+                    );
+                    
+                    $this->assetModel->update($asset['id'], [
+                        'current_value' => $newValue,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                    
+                    $totalDepreciation += $monthlyDepreciation;
+                    $assetsDepreciated++;
+                }
+            }
+            
+            // Post consolidated depreciation entry
+            if ($totalDepreciation > 0) {
+                $this->postDepreciationEntry($totalDepreciation);
+            }
+            
+            $this->activityModel->log(
+                $this->session['user_id'], 
+                'update', 
+                'Fixed Assets', 
+                'Calculated depreciation for ' . $assetsDepreciated . ' assets: ' . format_currency($totalDepreciation)
+            );
+            
+            $this->setFlashMessage('success', 
+                'Depreciation calculated and posted: ' . format_currency($totalDepreciation) . 
+                ' for ' . $assetsDepreciated . ' assets.'
+            );
+            
+        } catch (Exception $e) {
+            error_log('Fixed_assets calculateDepreciation error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error calculating depreciation: ' . $e->getMessage());
+        }
+        
+        redirect('inventory/assets');
+    }
+    
+    /**
+     * Calculate monthly depreciation for a single asset
+     */
+    private function calculateMonthlyDepreciation($asset) {
+        // Check if asset has reached salvage value
+        if ($asset['current_value'] <= $asset['salvage_value']) {
+            return 0;
+        }
+        
+        if ($asset['depreciation_method'] === 'straight_line') {
+            $depreciableAmount = $asset['purchase_cost'] - $asset['salvage_value'];
+            $totalMonths = $asset['useful_life_years'] * 12;
+            $monthlyDepreciation = $depreciableAmount / $totalMonths;
+            
+            // Don't depreciate below salvage value
+            $maxDepreciation = $asset['current_value'] - $asset['salvage_value'];
+            return min($monthlyDepreciation, $maxDepreciation);
+        }
+        
+        // Add other depreciation methods here (declining balance, etc.)
+        return 0;
+    }
+    
+    /**
+     * Post depreciation entry to accounting
+     */
+    private function postDepreciationEntry($amount) {
+        try {
+            // Get Depreciation Expense account (6200)
+            $expenseAccount = $this->accountModel->getByCode('6200');
+            if (!$expenseAccount) {
+                $expenseAccounts = $this->accountModel->getByType('Expenses');
+                foreach ($expenseAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'depreciation') !== false) {
+                        $expenseAccount = $acc;
+                        break;
+                    }
+                }
+            }
+            
+            // Get Accumulated Depreciation account (1590)
+            $accumulatedDepAccount = $this->accountModel->getByCode('1590');
+            if (!$accumulatedDepAccount) {
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                foreach ($assetAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'accumulated') !== false ||
+                        stripos($acc['account_name'], 'depreciation') !== false) {
+                        $accumulatedDepAccount = $acc;
+                        break;
+                    }
+                }
+            }
+            
+            if ($expenseAccount && $accumulatedDepAccount) {
+                $journalData = [
+                    'date' => date('Y-m-d'),
+                    'reference_type' => 'depreciation',
+                    'reference_id' => 0,
+                    'description' => 'Monthly Depreciation - ' . date('F Y'),
+                    'journal_type' => 'general',
+                    'entries' => [
+                        // Debit Depreciation Expense
+                        [
+                            'account_id' => $expenseAccount['id'],
+                            'debit' => $amount,
+                            'credit' => 0.00,
+                            'description' => 'Depreciation Expense'
+                        ],
+                        // Credit Accumulated Depreciation
+                        [
+                            'account_id' => $accumulatedDepAccount['id'],
+                            'debit' => 0.00,
+                            'credit' => $amount,
+                            'description' => 'Accumulated Depreciation'
+                        ]
+                    ],
+                    'created_by' => $this->session['user_id'],
+                    'auto_post' => true
+                ];
+                
+                $this->transactionService->postJournalEntry($journalData);
+            }
+            
+        } catch (Exception $e) {
+            error_log('Fixed_assets postDepreciationEntry error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Dispose of an asset (sale, scrap, retirement)
+     */
+    public function dispose($id) {
+        $this->requirePermission('inventory', 'delete');
+        
+        try {
+            $asset = $this->assetModel->getById($id);
+            if (!$asset) {
+                $this->setFlashMessage('danger', 'Asset not found.');
+                redirect('inventory/assets');
+                return;
+            }
+            
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                check_csrf();
+                
+                $disposalDate = sanitize_input($_POST['disposal_date'] ?? date('Y-m-d'));
+                $disposalMethod = sanitize_input($_POST['disposal_method'] ?? 'sold');
+                $saleProceeds = floatval($_POST['sale_proceeds'] ?? 0);
+                $notes = sanitize_input($_POST['notes'] ?? '');
+                
+                // Calculate accumulated depreciation
+                $accumulatedDep = $asset['purchase_cost'] - $asset['current_value'];
+                
+                // Calculate gain/loss
+                $bookValue = $asset['current_value'];
+                $gainLoss = $saleProceeds - $bookValue;
+                
+                // Post disposal entry
+                $this->postAssetDisposal($asset, $disposalDate, $saleProceeds, $accumulatedDep, $gainLoss);
+                
+                // Update asset status
+                $this->assetModel->update($id, [
+                    'asset_status' => 'disposed',
+                    'disposal_date' => $disposalDate,
+                    'disposal_method' => $disposalMethod,
+                    'sale_proceeds' => $saleProceeds,
+                    'disposal_notes' => $notes,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+                
+                $this->activityModel->log(
+                    $this->session['user_id'], 
+                    'delete', 
+                    'Fixed Assets', 
+                    'Disposed asset: ' . $asset['asset_tag'] . ' - ' . $disposalMethod
+                );
+                
+                $this->setFlashMessage('success', 'Asset disposed successfully.');
+                redirect('inventory/assets');
+            }
+            
+        } catch (Exception $e) {
+            error_log('Fixed_assets dispose error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error disposing asset: ' . $e->getMessage());
+            redirect('inventory/assets');
+        }
+        
+        $data = [
+            'page_title' => 'Dispose Asset',
+            'asset' => $asset,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('inventory/assets/dispose', $data);
+    }
+    
+    /**
+     * Post asset disposal to accounting
+     */
+    private function postAssetDisposal($asset, $disposalDate, $saleProceeds, $accumulatedDep, $gainLoss) {
+        try {
+            // Get asset account
+            $assetAccountCode = $this->getAssetAccountCode($asset['asset_category']);
+            $assetAccount = $this->accountModel->getByCode($assetAccountCode);
+            if (!$assetAccount) {
+                $assetAccount = $this->accountModel->getByCode('1500');
+            }
+            
+            // Get cash account
+            $cashAccount = $this->accountModel->getByCode('1000');
+            
+            // Get accumulated depreciation account
+            $accDepAccount = $this->accountModel->getByCode('1590');
+            
+            // Get gain/loss account
+            $gainLossAccount = null;
+            if ($gainLoss >= 0) {
+                $gainLossAccount = $this->accountModel->getByCode('4900'); // Gain on Asset Disposal
+                if (!$gainLossAccount) {
+                    $revenueAccounts = $this->accountModel->getByType('Revenue');
+                    foreach ($revenueAccounts as $acc) {
+                        if (stripos($acc['account_name'], 'gain') !== false) {
+                            $gainLossAccount = $acc;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                $gainLossAccount = $this->accountModel->getByCode('7000'); // Loss on Asset Disposal
+                if (!$gainLossAccount) {
+                    $expenseAccounts = $this->accountModel->getByType('Expenses');
+                    foreach ($expenseAccounts as $acc) {
+                        if (stripos($acc['account_name'], 'loss') !== false) {
+                            $gainLossAccount = $acc;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if ($assetAccount && $cashAccount && $accDepAccount) {
+                $entries = [];
+                
+                // DR: Cash (proceeds)
+                if ($saleProceeds > 0) {
+                    $entries[] = [
+                        'account_id' => $cashAccount['id'],
+                        'debit' => $saleProceeds,
+                        'credit' => 0.00,
+                        'description' => 'Sale Proceeds'
+                    ];
+                }
+                
+                // DR: Accumulated Depreciation
+                if ($accumulatedDep > 0) {
+                    $entries[] = [
+                        'account_id' => $accDepAccount['id'],
+                        'debit' => $accumulatedDep,
+                        'credit' => 0.00,
+                        'description' => 'Accumulated Depreciation Removal'
+                    ];
+                }
+                
+                // CR: Fixed Asset (original cost)
+                $entries[] = [
+                    'account_id' => $assetAccount['id'],
+                    'debit' => 0.00,
+                    'credit' => $asset['purchase_cost'],
+                    'description' => 'Asset Disposal - ' . $asset['asset_tag']
+                ];
+                
+                // Add gain/loss entry
+                if ($gainLossAccount && abs($gainLoss) > 0.01) {
+                    if ($gainLoss > 0) {
+                        // Gain - Credit
+                        $entries[] = [
+                            'account_id' => $gainLossAccount['id'],
+                            'debit' => 0.00,
+                            'credit' => abs($gainLoss),
+                            'description' => 'Gain on Asset Disposal'
+                        ];
+                    } else {
+                        // Loss - Debit
+                        $entries[] = [
+                            'account_id' => $gainLossAccount['id'],
+                            'debit' => abs($gainLoss),
+                            'credit' => 0.00,
+                            'description' => 'Loss on Asset Disposal'
+                        ];
+                    }
+                }
+                
+                $journalData = [
+                    'date' => $disposalDate,
+                    'reference_type' => 'asset_disposal',
+                    'reference_id' => $asset['id'],
+                    'description' => 'Asset Disposal - ' . $asset['asset_tag'],
+                    'journal_type' => 'general',
+                    'entries' => $entries,
+                    'created_by' => $this->session['user_id'],
+                    'auto_post' => true
+                ];
+                
+                $this->transactionService->postJournalEntry($journalData);
+            }
+            
+        } catch (Exception $e) {
+            error_log('Fixed_assets postAssetDisposal error: ' . $e->getMessage());
+        }
+    }
 }
 
