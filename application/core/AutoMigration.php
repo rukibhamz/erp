@@ -687,22 +687,6 @@ class AutoMigration {
                 error_log("AutoMigration: Added salary_structure column to employees table");
             }
             
-            // Check and add address column
-            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}employees` LIKE 'address'");
-            if ($stmt->rowCount() == 0) {
-                $this->pdo->exec("ALTER TABLE `{$this->prefix}employees` 
-                    ADD COLUMN `address` TEXT NULL AFTER `phone`");
-                error_log("AutoMigration: Added address column to employees table");
-            }
-            
-            return true;
-        } catch (Exception $e) {
-            error_log("AutoMigration: ERROR fixing employees table: " . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
      * Ensure at least one default cash account exists
      * Needed for Payroll and other modules
      */
@@ -1027,6 +1011,121 @@ class AutoMigration {
             
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR installing default COA: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Install Phase 12 accounts (Fixed Assets, Security Deposits, Gain/Loss)
+     */
+    private function installPhase12Accounts() {
+        try {
+            // Check if accounts table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
+            if ($stmt->rowCount() == 0) {
+                return true; // Table doesn't exist yet
+            }
+            
+            $phase12Accounts = [
+                ['1500', 'Buildings', 'Assets', 'Fixed Assets', 'Building and property assets', 1],
+                ['1510', 'Furniture & Fixtures', 'Assets', 'Fixed Assets', 'Office furniture and fixtures', 1],
+                ['1520', 'Equipment', 'Assets', 'Fixed Assets', 'Machinery and equipment', 1],
+                ['1530', 'Vehicles', 'Assets', 'Fixed Assets', 'Company vehicles', 1],
+                ['1540', 'Computer Equipment', 'Assets', 'Fixed Assets', 'Computers and IT equipment', 1],
+                ['1550', 'Leasehold Improvements', 'Assets', 'Fixed Assets', 'Improvements to leased property', 1],
+                ['1590', 'Accumulated Depreciation', 'Assets', 'Contra-Asset', 'Accumulated depreciation on fixed assets', 1],
+                ['2210', 'Security Deposits Payable', 'Liabilities', 'Current Liabilities', 'Security deposits received from tenants', 1],
+                ['4900', 'Gain on Asset Disposal', 'Revenue', 'Other Income', 'Gains from sale of fixed assets', 1],
+                ['6200', 'Depreciation Expense', 'Expenses', 'Operating Expenses', 'Depreciation on fixed assets', 1],
+                ['7000', 'Loss on Asset Disposal', 'Expenses', 'Other Expenses', 'Losses from sale of fixed assets', 1]
+            ];
+            
+            $insertedCount = 0;
+            foreach ($phase12Accounts as $account) {
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO `{$this->prefix}accounts` 
+                    (account_code, account_name, account_type, account_category, description, is_system_account, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, NOW())
+                    ON DUPLICATE KEY UPDATE account_name = account_name
+                ");
+                
+                $result = $stmt->execute($account);
+                if ($result && $stmt->rowCount() > 0) {
+                    $insertedCount++;
+                }
+            }
+            
+            if ($insertedCount > 0) {
+                error_log("AutoMigration: Installed {$insertedCount} Phase 12 accounts");
+            }
+            
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR installing Phase 12 accounts: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Add performance indexes to frequently queried tables
+     */
+    private function addPerformanceIndexes() {
+        try {
+            $indexes = [
+                // Journal Entries
+                "ALTER TABLE `{$this->prefix}journal_entries` ADD INDEX IF NOT EXISTS idx_reference (reference_type, reference_id)",
+                "ALTER TABLE `{$this->prefix}journal_entries` ADD INDEX IF NOT EXISTS idx_date (entry_date)",
+                "ALTER TABLE `{$this->prefix}journal_entries` ADD INDEX IF NOT EXISTS idx_status (status)",
+                
+                // Journal Entry Lines
+                "ALTER TABLE `{$this->prefix}journal_entry_lines` ADD INDEX IF NOT EXISTS idx_entry_id (entry_id)",
+                "ALTER TABLE `{$this->prefix}journal_entry_lines` ADD INDEX IF NOT EXISTS idx_account_id (account_id)",
+                
+                // Accounts
+                "ALTER TABLE `{$this->prefix}accounts` ADD INDEX IF NOT EXISTS idx_account_code (account_code)",
+                "ALTER TABLE `{$this->prefix}accounts` ADD INDEX IF NOT EXISTS idx_account_type (account_type)",
+                "ALTER TABLE `{$this->prefix}accounts` ADD INDEX IF NOT EXISTS idx_parent (parent_account_id)",
+                
+                // Invoices
+                "ALTER TABLE `{$this->prefix}invoices` ADD INDEX IF NOT EXISTS idx_customer (customer_id)",
+                "ALTER TABLE `{$this->prefix}invoices` ADD INDEX IF NOT EXISTS idx_status (status)",
+                "ALTER TABLE `{$this->prefix}invoices` ADD INDEX IF NOT EXISTS idx_date (invoice_date)",
+                
+                // Bills
+                "ALTER TABLE `{$this->prefix}bills` ADD INDEX IF NOT EXISTS idx_supplier (supplier_id)",
+                "ALTER TABLE `{$this->prefix}bills` ADD INDEX IF NOT EXISTS idx_status (status)",
+                "ALTER TABLE `{$this->prefix}bills` ADD INDEX IF NOT EXISTS idx_date (bill_date)",
+                
+                // Fixed Assets
+                "ALTER TABLE `{$this->prefix}fixed_assets` ADD INDEX IF NOT EXISTS idx_status (asset_status)",
+                "ALTER TABLE `{$this->prefix}fixed_assets` ADD INDEX IF NOT EXISTS idx_category (asset_category)",
+                
+                // Bookings
+                "ALTER TABLE `{$this->prefix}bookings` ADD INDEX IF NOT EXISTS idx_customer (customer_id)",
+                "ALTER TABLE `{$this->prefix}bookings` ADD INDEX IF NOT EXISTS idx_status (status)",
+                
+                // Users
+                "ALTER TABLE `{$this->prefix}users` ADD INDEX IF NOT EXISTS idx_email (email)",
+                "ALTER TABLE `{$this->prefix}users` ADD INDEX IF NOT EXISTS idx_role (role)"
+            ];
+            
+            $addedCount = 0;
+            foreach ($indexes as $indexSql) {
+                try {
+                    $this->pdo->exec($indexSql);
+                    $addedCount++;
+                } catch (Exception $e) {
+                    // Ignore errors for tables that don't exist or indexes that already exist
+                    if (stripos($e->getMessage(), "doesn't exist") === false && 
+                        stripos($e->getMessage(), "Duplicate key") === false) {
+                        error_log("AutoMigration: Index warning: " . $e->getMessage());
+                    }
+                }
+            }
+            
+            if ($addedCount > 0) {
+                error_log("AutoMigration: Added {$addedCount} performance indexes");
+            }
+            
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR adding performance indexes: " . $e->getMessage());
         }
     }
 }
