@@ -11,6 +11,7 @@ class Customer_portal extends Base_Controller {
         $this->customerPortalUserModel = $this->loadModel('Customer_portal_user_model');
         $this->bookingModel = $this->loadModel('Booking_model');
         $this->bookingPaymentModel = $this->loadModel('Booking_payment_model');
+        $this->loadLibrary('Email_sender');
     }
     
     protected function checkAuth() {
@@ -104,11 +105,33 @@ class Customer_portal extends Base_Controller {
             $result = $this->customerPortalUserModel->register($data);
             
             if ($result['success']) {
-                // TODO: Send verification email
-                // For now, auto-verify
-                $this->customerPortalUserModel->verifyEmail($result['verification_token']);
+                // Send verification email
+                $verificationLink = site_url('customer-portal/verify/' . $result['verification_token']);
                 
-                $this->setFlashMessage('success', 'Registration successful! Please login.');
+                // Load email template
+                $emailData = [
+                    'name' => $data['first_name'],
+                    'verification_link' => $verificationLink,
+                    'company_name' => $this->config['company_name'] ?? 'ERP System'
+                ];
+                
+                // Get email content
+                // Note: Since we can't easily capture view output to string in this framework without a helper,
+                // we'll use a simple approach or assume a helper exists. 
+                // For now, let's use output buffering to capture the view.
+                ob_start();
+                $this->loader->view('emails/user_registration', $emailData);
+                $emailBody = ob_get_clean();
+                
+                // Send email
+                $emailSender = new Email_sender();
+                $emailSender->sendEmail(
+                    $data['email'],
+                    'Verify Your Account',
+                    $emailBody
+                );
+                
+                $this->setFlashMessage('success', 'Registration successful! Please check your email to verify your account.');
                 redirect('customer-portal/login');
             } else {
                 $this->setFlashMessage('danger', $result['message']);
@@ -122,6 +145,24 @@ class Customer_portal extends Base_Controller {
         ];
         
         $this->loadView('customer_portal/register', $data);
+    }
+    
+    /**
+     * Verify email address
+     */
+    public function verify($token) {
+        if (empty($token)) {
+            $this->setFlashMessage('danger', 'Invalid verification token.');
+            redirect('customer-portal/login');
+        }
+        
+        if ($this->customerPortalUserModel->verifyEmail($token)) {
+            $this->setFlashMessage('success', 'Email verified successfully! You can now login.');
+        } else {
+            $this->setFlashMessage('danger', 'Invalid or expired verification token.');
+        }
+        
+        redirect('customer-portal/login');
     }
     
     /**

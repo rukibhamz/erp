@@ -159,6 +159,92 @@ class Email_sender {
     }
     
     /**
+     * Send generic email
+     * 
+     * @param string $to Recipient email
+     * @param string $subject Email subject
+     * @param string $body HTML email body
+     * @param array $attachments Array of ['path' => '/path/to/file', 'name' => 'filename.ext']
+     * @return array ['success' => bool, 'error' => string]
+     */
+    public function sendEmail($to, $subject, $body, $attachments = []) {
+        if (empty($to) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return ['success' => false, 'error' => 'Invalid email address'];
+        }
+        
+        if (empty($this->config['smtp_user'])) {
+            return ['success' => false, 'error' => 'Email not configured. Please configure SMTP settings in System Settings > Email Configuration'];
+        }
+        
+        // Use PHP mail fallback if configured or PHPMailer not available
+        if (!$this->usePhpMailer) {
+            // Convert single attachment format from sendInvoice if needed
+            $pdfPath = null;
+            $pdfName = null;
+            if (!empty($attachments) && isset($attachments[0]['path'])) {
+                $pdfPath = $attachments[0]['path'];
+                $pdfName = $attachments[0]['name'] ?? basename($pdfPath);
+            }
+            return $this->sendWithPhpMail($to, $subject, $body, $pdfPath, $pdfName);
+        }
+        
+        try {
+            // Reconfigure for each email to ensure fresh state
+            $this->configure();
+            
+            // Reset for new email
+            $this->mail->clearAddresses();
+            $this->mail->clearAttachments();
+            $this->mail->clearReplyTos();
+            $this->mail->clearCustomHeaders();
+            $this->mail->clearAllRecipients();
+            
+            // Add recipient
+            $this->mail->addAddress($to);
+            
+            // Set content
+            $this->mail->isHTML(true);
+            $this->mail->Subject = $subject;
+            $this->mail->Body = $body;
+            $this->mail->AltBody = strip_tags($body);
+            
+            // Add attachments
+            foreach ($attachments as $attachment) {
+                if (isset($attachment['path']) && file_exists($attachment['path'])) {
+                    $this->mail->addAttachment($attachment['path'], $attachment['name'] ?? basename($attachment['path']));
+                }
+            }
+            
+            // Enable verbose error reporting if debug mode
+            $this->mail->SMTPDebug = $this->debugMode ? 2 : 0;
+            
+            // Attempt to send
+            $sent = $this->mail->send();
+            
+            // Check for errors even if send() returned true
+            if (!$sent || !empty($this->mail->ErrorInfo)) {
+                $errorMsg = $this->mail->ErrorInfo ?? 'Email send failed but no error message provided';
+                error_log('PHPMailer send failed: ' . $errorMsg);
+                return ['success' => false, 'error' => $errorMsg];
+            }
+            
+            // Log successful send
+            error_log('Email sent successfully to: ' . $to . ' via ' . $this->config['smtp_host']);
+            
+            return ['success' => true, 'error' => null];
+            
+        } catch (\PHPMailer\PHPMailer\Exception $e) {
+            $errorMsg = $this->mail->ErrorInfo ?? $e->getMessage();
+            error_log('PHPMailer exception: ' . $errorMsg);
+            return ['success' => false, 'error' => $errorMsg];
+        } catch (Exception $e) {
+            $errorMsg = $e->getMessage();
+            error_log('Email send exception: ' . $errorMsg);
+            return ['success' => false, 'error' => $errorMsg];
+        }
+    }
+
+    /**
      * Send invoice email with PDF attachment
      * 
      * @param string $to Recipient email
