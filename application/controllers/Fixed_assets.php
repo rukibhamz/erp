@@ -222,7 +222,23 @@ class Fixed_assets extends Base_Controller {
             }
             
             // Check if asset has associated records (depreciation, maintenance, etc.)
-            // TODO: Add validation to prevent deletion if asset has associated records
+            $financialRecords = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "journal_entries` 
+                 WHERE (reference_type = 'fixed_asset_acquisition' OR reference_type = 'asset_disposal' OR reference_type = 'depreciation')
+                 AND reference_id = ?",
+                [$id]
+            );
+
+            if ($financialRecords && $financialRecords['count'] > 0) {
+                $this->setFlashMessage('danger', 'Cannot delete asset with associated financial records. Please dispose of the asset instead.');
+                redirect('inventory/assets/view/' . $id);
+            }
+
+            // Check if asset is disposed (preserve history)
+            if ($asset['asset_status'] === 'disposed') {
+                $this->setFlashMessage('danger', 'Cannot delete disposed asset. History must be preserved.');
+                redirect('inventory/assets/view/' . $id);
+            }
             
             if ($this->assetModel->delete($id)) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Fixed Assets', 'Deleted asset: ' . $asset['asset_tag']);

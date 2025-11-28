@@ -10,6 +10,7 @@ class Suppliers extends Base_Controller {
         $this->requirePermission('inventory', 'read');
         $this->supplierModel = $this->loadModel('Supplier_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->billModel = $this->loadModel('Bill_model');
     }
     
     public function index() {
@@ -229,9 +230,16 @@ class Suppliers extends Base_Controller {
                 redirect('inventory/suppliers');
             }
             
+            // Check if supplier has associated bills
+            $bills = $this->billModel->getBySupplier($id);
+            if (!empty($bills)) {
+                $this->setFlashMessage('danger', 'Cannot delete supplier with associated bills.');
+                redirect('inventory/suppliers/view/' . $id);
+            }
+            
             // Check if supplier has associated purchase orders or goods receipts
             // This would require checking related models - placeholder for now
-            // TODO: Add validation to prevent deletion if supplier has active orders
+            // TODO: Add validation for purchase orders when Purchase_order_model is available
             
             if ($this->supplierModel->delete($id)) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Suppliers', 'Deleted supplier: ' . $supplier['supplier_name']);

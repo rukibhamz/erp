@@ -18,6 +18,8 @@ class Meters extends Base_Controller {
         $this->spaceModel = $this->loadModel('Space_model');
         $this->tenantModel = $this->loadModel('Tenant_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->billModel = $this->loadModel('Bill_model');
+        $this->readingModel = $this->loadModel('Reading_model');
     }
     
     public function index() {
@@ -251,8 +253,19 @@ class Meters extends Base_Controller {
                 redirect('utilities/meters');
             }
             
-            // Check if meter has readings or bills
-            // TODO: Add validation to prevent deletion if meter has readings or bills
+            // Check if meter has readings
+            $readings = $this->readingModel->getByMeter($id);
+            if (!empty($readings)) {
+                $this->setFlashMessage('danger', 'Cannot delete meter with associated readings.');
+                redirect('utilities/meters/view/' . $id);
+            }
+
+            // Check if meter has bills
+            $bills = $this->billModel->getByMeter($id);
+            if (!empty($bills)) {
+                $this->setFlashMessage('danger', 'Cannot delete meter with associated bills.');
+                redirect('utilities/meters/view/' . $id);
+            }
             
             if ($this->meterModel->delete($id)) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Meters', 'Deleted meter: ' . $meter['meter_number']);

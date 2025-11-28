@@ -18,6 +18,7 @@ class Locations extends Base_Controller {
         $this->bookingModel = $this->loadModel('Booking_model');
         $this->facilityModel = $this->loadModel('Facility_model');
         $this->spaceBookingModel = $this->loadModel('Space_booking_model');
+        $this->meterModel = $this->loadModel('Meter_model');
     }
     
     public function index() {
@@ -224,8 +225,15 @@ class Locations extends Base_Controller {
                 redirect('locations/view/' . $id);
             }
             
-            // Check if location has active leases
-            // TODO: Add lease model check if needed
+            // Check if location has active leases (via spaces)
+            // Note: Since we block deletion if spaces exist, this is implicitly covered.
+            
+            // Check if location has meters
+            $meters = $this->meterModel->getByProperty($id);
+            if (!empty($meters)) {
+                $this->setFlashMessage('danger', 'Cannot delete location with associated meters. Please remove or reassign meters first.');
+                redirect('locations/view/' . $id);
+            }
             
             if ($this->locationModel->delete($id)) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Locations', 'Deleted location: ' . ($location['property_name'] ?? $location['Location_name'] ?? ''));
