@@ -28,6 +28,24 @@ class Rate_limiter {
             $this->config = $security_config['rate_limiting'] ?? [];
             $this->enabled = $this->config['enabled'] ?? true;
         }
+        
+        // Check if rate_limits table exists
+        if ($this->enabled && $this->CI->db) {
+            try {
+                $prefix = $this->CI->db->getPrefix();
+                $tableExists = $this->CI->db->fetchOne(
+                    "SHOW TABLES LIKE ?",
+                    [$prefix . 'rate_limits']
+                );
+                if (!$tableExists) {
+                    error_log('Rate limiter disabled: rate_limits table does not exist');
+                    $this->enabled = false;
+                }
+            } catch (Exception $e) {
+                error_log('Rate limiter table check failed: ' . $e->getMessage());
+                $this->enabled = false;
+            }
+        }
     }
     
     /**

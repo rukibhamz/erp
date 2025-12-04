@@ -5,6 +5,34 @@ class Utility_payments extends Base_Controller {
     private $paymentModel;
     private $billModel;
     private $transactionModel;
+    private $accountModel;
+    private $activityModel;
+    private $transactionService;
+    
+    public function __construct() {
+        parent::__construct();
+        $this->requirePermission('utilities', 'read');
+        $this->paymentModel = $this->loadModel('Utility_payment_model');
+        $this->billModel = $this->loadModel('Utility_bill_model');
+        $this->transactionModel = $this->loadModel('Transaction_model');
+        $this->accountModel = $this->loadModel('Account_model');
+        $this->activityModel = $this->loadModel('Activity_model');
+        
+        // Load Transaction Service with path validation
+        $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
+        if (file_exists($transactionServicePath)) {
+            require_once $transactionServicePath;
+            $this->transactionService = new Transaction_service();
+        } else {
+            error_log('Transaction_service.php not found at: ' . $transactionServicePath);
+            $this->transactionService = null;
+        }
+    }
+    
+    public function index() {
+        try {
+            $allPayments = $this->paymentModel->getAll();
+            
             // Enhance payments with bill details
             foreach ($allPayments as &$payment) {
                 if (!empty($payment['bill_id'])) {

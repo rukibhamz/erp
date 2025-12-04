@@ -136,7 +136,6 @@ class Base_Controller {
             'Vendor_utility_bills' => 'utilities',
             'Inventory' => 'inventory',
             'Items' => 'inventory',
-            'Locations' => 'inventory',
             'Stock_movements' => 'inventory',
             'Suppliers' => 'inventory',
             'Purchase_orders' => 'inventory',

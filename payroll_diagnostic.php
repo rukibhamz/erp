@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  */
 
 // Include the application bootstrap
-require_once __DIR__ . '/../index.php';
+require_once __DIR__ . '/index.php';
 
 echo "<h1>Payroll Module Diagnostic</h1>";
 echo "<style>body{font-family:Arial;padding:20px;} .success{color:green;} .error{color:red;} .warning{color:orange;} table{border-collapse:collapse;width:100%;margin:20px 0;} th,td{border:1px solid #ddd;padding:8px;text-align:left;} th{background:#f2f2f2;}</style>";

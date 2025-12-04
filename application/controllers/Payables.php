@@ -23,9 +23,15 @@ class Payables extends Base_Controller {
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
         $this->activityModel = $this->loadModel('Activity_model');
         
-        // Load Transaction Service
-        require_once BASEPATH . 'services/Transaction_service.php';
-        $this->transactionService = new Transaction_service();
+        // Load Transaction Service with path validation
+        $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
+        if (file_exists($transactionServicePath)) {
+            require_once $transactionServicePath;
+            $this->transactionService = new Transaction_service();
+        } else {
+            error_log('Transaction_service.php not found at: ' . $transactionServicePath);
+            $this->transactionService = null;
+        }
     }
     
     public function vendors() {
@@ -313,6 +319,39 @@ class Payables extends Base_Controller {
                         'line_total' => $lineTotal,
                         'account_id' => !empty($item['account_id']) ? intval($item['account_id']) : null
                     ];
+                    
+                    // Add item to bill
+                    $this->billModel->addItem($billId, $itemData);
+                }
+                
+                // Post to accounting if status is not draft
+                if ($billData['status'] !== 'draft') {
+                    try {
+                        // Get Accounts Payable account (2100)
+                        $apAccount = $this->accountModel->getByCode('2100');
+                        
+                        if ($apAccount) {
+                            $journalData = [
+                                'date' => $billDate,
+                                'reference_type' => 'bill',
+                                'reference_id' => $billId,
+                                'description' => 'Bill ' . $billData['bill_number'],
+                                'journal_type' => 'purchase',
+                                'entries' => [
+                                    // Debit Expense Account
+                                    [
+                                        'account_id' => $items[0]['account_id'] ?? null,
+                                        'debit' => $totalAmount,
+                                        'credit' => 0.00,
+                                        'description' => 'Expense'
+                                    ],
+                                    // Credit Accounts Payable
+                                    [
+                                        'account_id' => $apAccount['id'],
+                                        'debit' => 0.00,
+                                        'credit' => $totalAmount,
+                                        'description' => 'Accounts Payable'
+                                    ]
                                 ],
                                 'created_by' => $this->session['user_id'],
                                 'auto_post' => true
@@ -802,6 +841,9 @@ class Payables extends Base_Controller {
         
         // Get unpaid bills
         try {
+            // SECURITY WARNING: ORDER BY is currently hardcoded (safe).
+            // If ORDER BY ever becomes dynamic, MUST use whitelist validation
+            // to prevent SQL injection. See Base_Model::validateOrderBy() for example.
             $bills = $this->db->fetchAll(
                 "SELECT b.*, v.company_name 
                  FROM `" . $this->db->getPrefix() . "bills` b

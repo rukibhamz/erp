@@ -21,9 +21,15 @@ class Rent_invoices extends Base_Controller {
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->activityModel = $this->loadModel('Activity_model');
         
-        // Load Transaction Service
-        require_once BASEPATH . 'services/Transaction_service.php';
-        $this->transactionService = new Transaction_service();
+        // Load Transaction Service with path validation
+        $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
+        if (file_exists($transactionServicePath)) {
+            require_once $transactionServicePath;
+            $this->transactionService = new Transaction_service();
+        } else {
+            error_log('Transaction_service.php not found at: ' . $transactionServicePath);
+            $this->transactionService = null;
+        }
     }
     
     public function index() {
