@@ -52,30 +52,164 @@ class Bookings extends Base_Controller {
     }
 
     public function calendar() {
+        $viewType = $_GET['view'] ?? 'month';
         $facilityId = $_GET['facility_id'] ?? null;
+        $date = $_GET['date'] ?? date('Y-m-d');
         $month = $_GET['month'] ?? date('Y-m');
         
         try {
-            $startDate = date('Y-m-01', strtotime($month));
-            $endDate = date('Y-m-t', strtotime($month));
-            
-            $bookings = $this->bookingModel->getByDateRange($startDate, $endDate, $facilityId);
             $facilities = $this->facilityModel->getActive();
+            
+            if ($viewType === 'day') {
+                // Day view with time slots
+                $timeSlots = $this->generateTimeSlots('08:00', '22:00', 60); // 1-hour intervals
+                $bookings = $this->bookingModel->getByDate($date, $facilityId);
+                
+                // Check availability for each slot and find bookings
+                $slotsWithAvailability = [];
+                foreach ($timeSlots as $slot) {
+                    $available = true;
+                    $booking = null;
+                    
+                    if ($facilityId) {
+                        $available = $this->facilityModel->checkAvailability(
+                            $facilityId,
+                            $date,
+                            $slot['start'],
+                            $slot['end']
+                        );
+                        
+                        // Find booking for this slot
+                        $booking = $this->getBookingForSlot($bookings, $slot);
+                    }
+                    
+                    $slotsWithAvailability[] = [
+                        'start_time' => $slot['start'],
+                        'end_time' => $slot['end'],
+                        'label' => $slot['label'],
+                        'available' => $available,
+                        'booking' => $booking
+                    ];
+                }
+                
+                $data = [
+                    'page_title' => 'Booking Calendar - Day View',
+                    'view_type' => 'day',
+                    'time_slots' => $slotsWithAvailability,
+                    'facilities' => $facilities,
+                    'selected_facility_id' => $facilityId,
+                    'selected_date' => $date,
+                    'flash' => $this->getFlashMessage()
+                ];
+                
+                $this->loadView('bookings/calendar_timeslots', $data);
+            } else {
+                // Month view (existing functionality)
+                $startDate = date('Y-m-01', strtotime($month));
+                $endDate = date('Y-m-t', strtotime($month));
+                
+                $bookings = $this->bookingModel->getByDateRange($startDate, $endDate, $facilityId);
+                
+                $data = [
+                    'page_title' => 'Booking Calendar',
+                    'view_type' => 'month',
+                    'bookings' => $bookings,
+                    'facilities' => $facilities,
+                    'selected_facility_id' => $facilityId,
+                    'selected_month' => $month,
+                    'selected_date' => $date,
+                    'flash' => $this->getFlashMessage()
+                ];
+                
+                $this->loadView('bookings/calendar', $data);
+            }
         } catch (Exception $e) {
-            $bookings = [];
-            $facilities = [];
+            error_log('Bookings calendar error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading calendar.');
+            redirect('bookings');
         }
-
-        $data = [
-            'page_title' => 'Booking Calendar',
-            'bookings' => $bookings,
-            'facilities' => $facilities,
-            'selected_facility_id' => $facilityId,
-            'selected_month' => $month,
-            'flash' => $this->getFlashMessage()
-        ];
-
-        $this->loadView('bookings/calendar', $data);
+    }
+    
+    /**
+     * Generate time slots for a given time range
+     */
+    private function generateTimeSlots($startTime, $endTime, $intervalMinutes) {
+        $slots = [];
+        $current = new DateTime($startTime);
+        $end = new DateTime($endTime);
+        
+        while ($current < $end) {
+            $slotStart = clone $current;
+            $current->modify("+{$intervalMinutes} minutes");
+            
+            $slots[] = [
+                'start' => $slotStart->format('H:i'),
+                'end' => $current->format('H:i'),
+                'label' => $slotStart->format('g:i A') . ' - ' . $current->format('g:i A')
+            ];
+        }
+        
+        return $slots;
+    }
+    
+    /**
+     * Find booking that overlaps with a time slot
+     */
+    private function getBookingForSlot($bookings, $slot) {
+        foreach ($bookings as $booking) {
+            if ($booking['start_time'] <= $slot['start'] && $booking['end_time'] >= $slot['end']) {
+                return $booking;
+            }
+            // Partial overlap
+            if ($booking['start_time'] < $slot['end'] && $booking['end_time'] > $slot['start']) {
+                return $booking;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * AJAX endpoint to get availability for a specific date
+     */
+    public function getAvailabilityForDate() {
+        $this->requirePermission('bookings', 'read');
+        
+        header('Content-Type: application/json');
+        
+        $facilityId = intval($_GET['facility_id'] ?? 0);
+        $date = sanitize_input($_GET['date'] ?? date('Y-m-d'));
+        
+        if (!$facilityId) {
+            echo json_encode(['success' => false, 'error' => 'Facility ID required']);
+            exit;
+        }
+        
+        try {
+            $timeSlots = $this->generateTimeSlots('08:00', '22:00', 60);
+            $availability = [];
+            
+            foreach ($timeSlots as $slot) {
+                $available = $this->facilityModel->checkAvailability(
+                    $facilityId,
+                    $date,
+                    $slot['start'],
+                    $slot['end']
+                );
+                
+                $availability[] = [
+                    'start_time' => $slot['start'],
+                    'end_time' => $slot['end'],
+                    'label' => $slot['label'],
+                    'available' => $available
+                ];
+            }
+            
+            echo json_encode(['success' => true, 'slots' => $availability]);
+        } catch (Exception $e) {
+            error_log('getAvailabilityForDate error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
     }
 
     public function create() {
