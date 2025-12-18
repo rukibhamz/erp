@@ -165,6 +165,12 @@ class Pos extends Base_Controller {
                 
                 $quantity = floatval($itemData['quantity'] ?? 1);
                 $unitPrice = floatval($itemData['price'] ?? $item['selling_price'] ?? 0);
+                
+                // Wholesale Logic
+                if (($item['is_wholesale_enabled'] ?? 0) == 1 && $quantity >= ($item['wholesale_moq'] ?? 0)) {
+                    $unitPrice = floatval($item['wholesale_price'] ?? $unitPrice);
+                }
+                
                 $itemDiscount = floatval($itemData['discount'] ?? 0);
                 
                 // Use tax_rate from item data, or default VAT rate, or 0

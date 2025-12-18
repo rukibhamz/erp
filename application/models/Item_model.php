@@ -345,6 +345,24 @@ class Item_model extends Base_Model {
             // Always set updated_at
             $data['updated_at'] = date('Y-m-d H:i:s');
             
+            // Log price change if retail_price or wholesale_price changed
+            $currentItem = $this->getById($id);
+            if ($currentItem && (
+                ($data['retail_price'] ?? $currentItem['retail_price']) != $currentItem['retail_price'] || 
+                ($data['wholesale_price'] ?? $currentItem['wholesale_price']) != $currentItem['wholesale_price']
+            )) {
+                $pricingModel = $this->loadModel('Wholesale_pricing_model');
+                $pricingModel->logPriceChange(
+                    $id, 
+                    $currentItem['retail_price'], 
+                    $data['retail_price'] ?? $currentItem['retail_price'],
+                    $currentItem['wholesale_price'],
+                    $data['wholesale_price'] ?? $currentItem['wholesale_price'],
+                    $this->session['user_id'] ?? 1,
+                    $data['price_change_reason'] ?? 'Manual update'
+                );
+            }
+            
             // Use parent update method
             $result = parent::update($id, $data);
             

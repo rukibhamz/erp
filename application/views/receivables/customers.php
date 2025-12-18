@@ -5,9 +5,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Customers</h1>
-        <a href="<?= base_url('receivables/customers/create') ?>" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Create Customer
-        </a>
+        <div class="btn-group">
+            <a href="<?= base_url('customer_types') ?>" class="btn btn-outline-primary">
+                <i class="bi bi-people"></i> Customer Types
+            </a>
+            <a href="<?= base_url('receivables/customers/create') ?>" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Customer
+            </a>
+        </div>
     </div>
 </div>
 

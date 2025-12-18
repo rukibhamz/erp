@@ -35,6 +35,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                     <option value="vat" <?= $report_type === 'vat' ? 'selected' : '' ?>>VAT Report</option>
                     <option value="wht" <?= $report_type === 'wht' ? 'selected' : '' ?>>WHT Report</option>
                     <option value="cit" <?= $report_type === 'cit' ? 'selected' : '' ?>>CIT Report</option>
+                    <option value="education_tax" <?= $report_type === 'education_tax' ? 'selected' : '' ?>>Education Tax Report</option>
                     <option value="payments" <?= $report_type === 'payments' ? 'selected' : '' ?>>Payments Report</option>
                 </select>
             </div>
@@ -57,37 +58,46 @@ include(BASEPATH . 'views/tax/_nav.php');
 <?php if ($report_type === 'summary'): ?>
     <!-- Summary Report -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card">
+        <div class="col-md-2">
+            <div class="card h-100">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2">VAT Payable</h6>
-                    <h4 class="mb-0"><?= format_currency($total_vat_payable ?? 0) ?></h4>
-                    <small class="text-muted">Paid: <?= format_currency($total_vat_paid ?? 0) ?></small>
+                    <h6 class="text-muted mb-2 small">VAT Payable</h6>
+                    <h5 class="mb-0"><?= format_currency($total_vat_payable ?? 0) ?></h5>
+                    <small class="text-muted small">Paid: <?= format_currency($total_vat_paid ?? 0) ?></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2 small">WHT Payable</h6>
+                    <h5 class="mb-0"><?= format_currency($total_wht_payable ?? 0) ?></h5>
+                    <small class="text-muted small">Paid: <?= format_currency($total_wht_paid ?? 0) ?></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2 small">CIT Liability</h6>
+                    <h5 class="mb-0"><?= format_currency($total_cit_payable ?? 0) ?></h5>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2">WHT Payable</h6>
-                    <h4 class="mb-0"><?= format_currency($total_wht_payable ?? 0) ?></h4>
-                    <small class="text-muted">Paid: <?= format_currency($total_wht_paid ?? 0) ?></small>
+                    <h6 class="text-muted mb-2 small">Education Tax</h6>
+                    <h5 class="mb-0"><?= format_currency($total_ed_tax_payable ?? 0) ?></h5>
+                    <small class="text-muted small">Paid: <?= format_currency($total_ed_tax_paid ?? 0) ?></small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2">CIT Payable</h6>
-                    <h4 class="mb-0"><?= format_currency($total_cit_payable ?? 0) ?></h4>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Total Payments</h6>
-                    <h4 class="mb-0"><?= format_currency($total_payments ?? 0) ?></h4>
+                    <h6 class="text-muted mb-2 small">Total Payments</h6>
+                    <h5 class="mb-0 text-primary"><?= format_currency($total_payments ?? 0) ?></h5>
                 </div>
             </div>
         </div>
@@ -500,6 +510,62 @@ include(BASEPATH . 'views/tax/_nav.php');
         </div>
     </div>
 
+<?php elseif ($report_type === 'education_tax'): ?>
+    <!-- Education Tax Report -->
+    <div class="card">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Education Tax Report</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2">Total Payable</h6>
+                            <h4 class="mb-0 text-danger"><?= format_currency($total_payable ?? 0) ?></h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2">Returns Filed</h6>
+                            <h4 class="mb-0"><?= count($ed_tax_returns ?? []) ?></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <?php if (empty($ed_tax_returns)): ?>
+                <p class="text-muted">No Education Tax returns found.</p>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Year</th>
+                                <th>Assessable Profit</th>
+                                <th>Tax Amount</th>
+                                <th>Paid Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($ed_tax_returns as $return): ?>
+                                <tr>
+                                    <td><strong><?= $return['tax_year'] ?></strong></td>
+                                    <td><?= format_currency($return['assessable_profit'] ?? 0) ?></td>
+                                    <td><strong><?= format_currency($return['tax_amount'] ?? 0) ?></strong></td>
+                                    <td><?= format_currency($return['paid_amount'] ?? 0) ?></td>
+                                    <td><span class="badge bg-<?= $return['status'] === 'paid' ? 'success' : 'secondary' ?>"><?= ucfirst($return['status']) ?></span></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 <?php endif; ?>
 
 <style>

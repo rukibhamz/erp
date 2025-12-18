@@ -32,6 +32,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <?php endif; ?>
 
     <div class="row g-3">
+        <script>
+            // Store items globally for JS access
+            const itemsList = <?= json_encode($items) ?>;
+        </script>
         <!-- Left Panel - Items & Cart -->
         <div class="col-md-8">
             <!-- Quick Item Search -->
@@ -53,9 +57,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="col-md-3 col-sm-4 col-6">
                                 <div class="card item-card" onclick="addToCart(<?= $item['id'] ?>, '<?= htmlspecialchars(addslashes($item['name'])) ?>', <?= $item['selling_price'] ?? 0 ?>)">
                                     <div class="card-body text-center p-2">
-                                        <div class="fw-bold small"><?= htmlspecialchars(substr($item['name'] ?? '', 0, 20)) ?></div>
-                                        <div class="text-muted small"><?= htmlspecialchars($item['item_code'] ?? '') ?></div>
+                                        <div class="fw-bold small"><?= htmlspecialchars(substr($item['item_name'] ?? $item['name'] ?? '', 0, 20)) ?></div>
+                                        <div class="text-muted small"><?= htmlspecialchars($item['sku'] ?? $item['item_code'] ?? '') ?></div>
                                         <div class="text-primary fw-bold mt-1"><?= format_currency($item['selling_price'] ?? 0) ?></div>
+                                        <?php if (($item['is_wholesale_enabled'] ?? 0) == 1): ?>
+                                            <div class="badge bg-info p-1 mt-1" style="font-size: 0.65rem;">
+                                                WS: <?= format_currency($item['wholesale_price']) ?> (min <?= $item['wholesale_moq'] ?>)
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -162,12 +171,20 @@ function addToCart(itemId, itemName, price) {
     if (existing) {
         existing.quantity += 1;
     } else {
+        // Find item details to check wholesale
+        const item = itemsList.find(i => i.id === itemId);
+        let currentPrice = price;
+        
         cart.push({
             item_id: itemId,
             item_name: itemName,
             quantity: 1,
-            price: price,
-            tax_rate: <?= $default_vat_rate ?? 7.5 ?> // Auto VAT rate
+            price: currentPrice,
+            retail_price: price,
+            wholesale_price: item ? item.wholesale_price : price,
+            wholesale_moq: item ? item.wholesale_moq : 0,
+            is_wholesale_enabled: item ? item.is_wholesale_enabled : 0,
+            tax_rate: <?= $default_vat_rate ?? 7.5 ?>
         });
     }
     updateCart();
@@ -204,6 +221,13 @@ function updateCart() {
         let subtotal = 0;
         
         cart.forEach((item, index) => {
+            // Apply wholesale price in client side if MOQ met
+            if (item.is_wholesale_enabled == 1 && item.quantity >= item.wholesale_moq) {
+                item.price = item.wholesale_price;
+            } else {
+                item.price = item.retail_price;
+            }
+            
             const lineTotal = item.price * item.quantity;
             subtotal += lineTotal;
             html += `

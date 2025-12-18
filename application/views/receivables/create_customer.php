@@ -113,6 +113,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     
                     <div class="row mb-3">
                         <div class="col-md-6">
+                            <label for="customer_type_id" class="form-label">Customer Type</label>
+                            <select class="form-select" id="customer_type_id" name="customer_type_id">
+                                <option value="">Standard / Retail</option>
+                                <?php foreach ($types as $type): ?>
+                                    <option value="<?= $type['id'] ?>"><?= esc($type['name']) ?> (<?= $type['discount_percentage'] ?>%)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="active" selected>Active</option>

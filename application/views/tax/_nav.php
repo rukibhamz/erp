@@ -12,6 +12,7 @@ $is_paye = isset($uri_segments[1]) && $uri_segments[1] === 'paye';
 $is_payments = isset($uri_segments[1]) && $uri_segments[1] === 'payments';
 $is_reports = isset($uri_segments[1]) && $uri_segments[1] === 'reports';
 $is_config = isset($uri_segments[1]) && $uri_segments[1] === 'config';
+$is_education_tax = isset($uri_segments[0]) && $uri_segments[0] === 'education_tax';
 $is_settings = isset($uri_segments[1]) && $uri_segments[1] === 'settings';
 ?>
 
@@ -32,6 +33,9 @@ $is_settings = isset($uri_segments[1]) && $uri_segments[1] === 'settings';
         </a>
         <a class="nav-link <?= $is_paye ? 'active' : '' ?>" href="<?= base_url('tax/paye') ?>">
             <i class="bi bi-people"></i> PAYE
+        </a>
+        <a class="nav-link <?= $is_education_tax ? 'active' : '' ?>" href="<?= base_url('education_tax') ?>">
+            <i class="bi bi-mortarboard"></i> Education Tax
         </a>
         <a class="nav-link <?= $is_payments ? 'active' : '' ?>" href="<?= base_url('tax/payments') ?>">
             <i class="bi bi-cash-coin"></i> Payments

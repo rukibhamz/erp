@@ -24,5 +24,46 @@ class Inventory_reports extends Base_Controller {
         
         $this->loadView('inventory/reports/index', $data);
     }
+    
+    /**
+     * Stock Valuation Report
+     */
+    public function valuation() {
+        try {
+            $data = [
+                'page_title' => 'Inventory Valuation Report',
+                'valuation' => $this->db->fetchAll("SELECT * FROM `" . $this->db->getPrefix() . "vw_inventory_valuation` ORDER BY total_value DESC"),
+                'flash' => $this->getFlashMessage()
+            ];
+            
+            $this->loadView('inventory/reports/valuation', $data);
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading valuation report: ' . $e->getMessage());
+            redirect('inventory/reports');
+        }
+    }
+    
+    /**
+     * Stock on Hand Report
+     */
+    public function stock() {
+        try {
+            $sql = "SELECT i.*, 
+                    COALESCE((SELECT SUM(quantity) FROM `" . $this->db->getPrefix() . "stock_levels` WHERE item_id = i.id), 0) as total_stock
+                    FROM `" . $this->db->getPrefix() . "items` i 
+                    ORDER BY i.item_name ASC";
+            
+            $data = [
+                'page_title' => 'Stock on Hand Report',
+                'items' => $this->db->fetchAll($sql),
+                'flash' => $this->getFlashMessage()
+            ];
+            
+            $this->loadView('inventory/reports/stock', $data);
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading stock report: ' . $e->getMessage());
+            redirect('inventory/reports');
+        }
+    }
 }
 

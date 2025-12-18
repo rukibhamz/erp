@@ -111,14 +111,28 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 
                 <div class="row mb-3">
                     <div class="col-md-6">
+                        <strong>Customer Type:</strong><br>
+                        <span class="badge bg-info">
+                            <?php 
+                            if (!empty($customer['customer_type_name'])) {
+                                echo htmlspecialchars($customer['customer_type_name']) . ' (' . ($customer['discount_percentage'] ?? 0) . '%)';
+                            } else {
+                                echo 'Standard / Retail';
+                            }
+                            ?>
+                        </span>
+                    </div>
+                    <div class="col-md-6">
                         <strong>Credit Limit:</strong><br>
                         <?= format_currency($customer['credit_limit'] ?? 0, $customer['currency'] ?? 'NGN') ?>
                     </div>
+                </div>
+                
+                <div class="row mb-3">
                     <div class="col-md-6">
                         <strong>Payment Terms:</strong><br>
                         <?= htmlspecialchars($customer['payment_terms'] ?? '-') ?>
                     </div>
-                </div>
                 
                 <div class="row mb-3">
                     <div class="col-md-12">

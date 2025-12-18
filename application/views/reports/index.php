@@ -78,5 +78,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
         </div>
     </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-person-badge"></i> Statement of Changes in Equity
+                </h5>
+                <p class="card-text">View changes in company equity including net income and capital adjustments.</p>
+                <a href="<?= base_url('reports/equity-statement') ?>" class="btn btn-primary">
+                    View Report
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 

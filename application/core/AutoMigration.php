@@ -216,6 +216,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error adding performance indexes: " . $e->getMessage());
         }
+
+        // ALWAYS run new feature migrations (Wholesale Pricing & Education Tax)
+        try {
+            $this->applyNewFeatureMigrations();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error applying new feature migrations: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -573,6 +580,29 @@ class AutoMigration {
             return false;
         } catch (Exception $e) {
             error_log("AutoMigration: CRITICAL ERROR creating tax tables: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Apply new feature migrations (Wholesale Pricing, Education Tax, Report Views)
+     */
+    private function applyNewFeatureMigrations() {
+        try {
+            $migrationFile = __DIR__ . '/../../install/migrations_new_features.php';
+            if (file_exists($migrationFile)) {
+                require_once $migrationFile;
+                if (function_exists('runNewFeatureMigrations')) {
+                    runNewFeatureMigrations($this->pdo, $this->prefix);
+                }
+                if (function_exists('fixNewFeatureColumns')) {
+                    fixNewFeatureColumns($this->pdo, $this->prefix);
+                }
+                return true;
+            }
+            return false;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR applying new feature migrations: " . $e->getMessage());
             return false;
         }
     }

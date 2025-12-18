@@ -119,6 +119,8 @@ class Items extends Base_Controller {
                 'selling_price' => floatval($_POST['selling_price'] ?? 0),
                 'retail_price' => floatval($_POST['retail_price'] ?? 0),
                 'wholesale_price' => floatval($_POST['wholesale_price'] ?? 0),
+                'wholesale_moq' => floatval($_POST['wholesale_moq'] ?? 0),
+                'is_wholesale_enabled' => isset($_POST['is_wholesale_enabled']) ? 1 : 0,
                 'costing_method' => sanitize_input($_POST['costing_method'] ?? 'weighted_average'),
                 'track_serial' => !empty($_POST['track_serial']) ? 1 : 0,
                 'track_batch' => !empty($_POST['track_batch']) ? 1 : 0,

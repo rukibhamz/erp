@@ -170,6 +170,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     
                     <dt class="col-6">Wholesale Price:</dt>
                     <dd class="col-6"><?= format_currency($item['wholesale_price']) ?></dd>
+
+                    <dt class="col-6">Wholesale MOQ:</dt>
+                    <dd class="col-6"><?= number_format($item['wholesale_moq'] ?? 0, 2) ?></dd>
+
+                    <dt class="col-6">Wholesale Status:</dt>
+                    <dd class="col-6">
+                        <span class="badge bg-<?= !empty($item['is_wholesale_enabled']) ? 'success' : 'secondary' ?>">
+                            <?= !empty($item['is_wholesale_enabled']) ? 'Enabled' : 'Disabled' ?>
+                        </span>
+                    </dd>
                 </dl>
             </div>
         </div>
@@ -214,9 +224,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <a href="<?= base_url('inventory/transfer?item_id=' . $item['id']) ?>" class="btn btn-info w-100 mb-2">
                     <i class="bi bi-arrow-left-right"></i> Transfer Stock
                 </a>
+                <hr>
+                <a href="<?= base_url('wholesale_pricing/setup/' . $item['id']) ?>" class="btn btn-outline-primary w-100 mb-2">
+                    <i class="bi bi-tag"></i> Wholesale Rules
+                </a>
+                <a href="<?= base_url('discount_tiers/item/' . $item['id']) ?>" class="btn btn-outline-info w-100 mb-2">
+                    <i class="bi bi-layers"></i> Discount Tiers
+                </a>
+                <hr>
                 <a href="<?= base_url('inventory/purchase-orders/create?item_id=' . $item['id']) ?>" class="btn btn-primary w-100">
                     <i class="bi bi-cart-plus"></i> Create PO
                 </a>
+                
             </div>
         </div>
     </div>

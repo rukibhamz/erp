@@ -739,6 +739,16 @@ class Dashboard extends Base_Controller {
                 // Table might not exist
             }
             
+            try {
+                $edTaxResult = $this->db->fetchOne(
+                    "SELECT SUM(tax_amount - paid_amount) as total FROM `" . $this->db->getPrefix() . "education_tax_returns` 
+                     WHERE status != 'paid'"
+                );
+                $payeTotal += floatval($edTaxResult['total'] ?? 0);
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+            
             return $payeTotal + $vatTotal;
         } catch (Exception $e) {
             error_log('Dashboard getTaxLiability error: ' . $e->getMessage());
@@ -959,7 +969,37 @@ class Dashboard extends Base_Controller {
             error_log('Dashboard getSystemAlerts overdue invoices error: ' . $e->getMessage());
         }
         
-        // Tax compliance module removed - no alerts for deadlines
+        // Education Tax alerts
+        try {
+            $edTaxReturns = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "education_tax_returns` 
+                 WHERE status != 'paid' AND due_date < CURDATE()"
+            );
+            if (($edTaxReturns['count'] ?? 0) > 0) {
+                $alerts[] = [
+                    'type' => 'danger',
+                    'message' => $edTaxReturns['count'] . ' Education Tax returns are overdue',
+                    'link' => base_url('education_tax')
+                ];
+            }
+            
+            // Upcoming deadlines for Education Tax
+            $currentYear = date('Y');
+            $edTaxConfig = $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . "education_tax_config` 
+                 WHERE tax_year = ? AND deadline_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)",
+                [$currentYear]
+            );
+            if ($edTaxConfig) {
+                $alerts[] = [
+                    'type' => 'info',
+                    'message' => 'Education Tax deadline for ' . $currentYear . ' is approaching: ' . format_date($edTaxConfig['deadline_date']),
+                    'link' => base_url('education_tax/config')
+                ];
+            }
+        } catch (Exception $e) {
+            error_log('Dashboard getSystemAlerts education tax error: ' . $e->getMessage());
+        }
         
         return $alerts;
     }

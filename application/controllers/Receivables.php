@@ -76,6 +76,7 @@ class Receivables extends Base_Controller {
                 'credit_limit' => floatval($_POST['credit_limit'] ?? 0),
                 'payment_terms' => sanitize_input($_POST['payment_terms'] ?? ''),
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
+                'customer_type_id' => !empty($_POST['customer_type_id']) ? intval($_POST['customer_type_id']) : null,
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
             
@@ -110,8 +111,13 @@ class Receivables extends Base_Controller {
             }
         }
         
+        // Load customer types for the dropdown
+        $typeModel = $this->loadModel('Customer_type_model');
+        $types = $typeModel->getAllActive();
+        
         $data = [
             'page_title' => 'Create Customer',
+            'types' => $types,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -130,7 +136,9 @@ class Receivables extends Base_Controller {
         }
         
         try {
-            $customer = $this->customerModel->getById($id);
+            // Load detailed customer with type and discount
+            $customer = $this->customerModel->getCustomerDetailed($id);
+            
             if (!$customer) {
                 error_log("Receivables viewCustomer: Customer not found for ID: {$id}");
                 $this->setFlashMessage('danger', 'Customer not found.');
@@ -226,6 +234,7 @@ class Receivables extends Base_Controller {
                 'credit_limit' => floatval($_POST['credit_limit'] ?? 0),
                 'payment_terms' => sanitize_input($_POST['payment_terms'] ?? ''),
                 'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
+                'customer_type_id' => !empty($_POST['customer_type_id']) ? intval($_POST['customer_type_id']) : null,
                 'status' => sanitize_input($_POST['status'] ?? 'active')
             ];
             
@@ -238,9 +247,14 @@ class Receivables extends Base_Controller {
             }
         }
         
+        // Load customer types for the dropdown
+        $typeModel = $this->loadModel('Customer_type_model');
+        $types = $typeModel->getAllActive();
+        
         $data = [
             'page_title' => 'Edit Customer',
             'customer' => $customer,
+            'types' => $types,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -310,11 +324,30 @@ class Receivables extends Base_Controller {
             $dueDate = sanitize_input($_POST['due_date'] ?? date('Y-m-d', strtotime('+30 days')));
             $taxRate = floatval($_POST['tax_rate'] ?? 0);
             
+            // Load Pricing Model
+            $pricingModel = $this->loadModel('Wholesale_pricing_model');
+            
             // Calculate totals from items
             $items = $_POST['items'] ?? [];
             $subtotal = 0;
-            foreach ($items as $item) {
+            foreach ($items as &$item) {
+                $itemId = intval($item['product_id'] ?? 0);
                 $quantity = floatval($item['quantity'] ?? 0);
+                
+                // If it's a real product, calculate pricing
+                if ($itemId > 0) {
+                    $pricing = $pricingModel->calculatePricing($itemId, $customerId, $quantity);
+                    $item['unit_price'] = $pricing['final_price'];
+                    if (!$pricing['moq_valid']) {
+                        // We could throw an error or just warn. Requirement said MOQ is a business rule.
+                        // I'll add a warning but allow it for now, or I could block it.
+                        // Let's block it for now to enforce the rule.
+                        $this->setFlashMessage('danger', 'Error: Item ' . $itemId . ' requires a minimum quantity of ' . $pricing['moq_required'] . ' for wholesale pricing.');
+                        redirect('receivables/invoices/create');
+                        return;
+                    }
+                }
+                
                 $unitPrice = floatval($item['unit_price'] ?? 0);
                 $lineTotal = $quantity * $unitPrice;
                 $subtotal += $lineTotal;

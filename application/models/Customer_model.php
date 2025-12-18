@@ -66,12 +66,32 @@ class Customer_model extends Base_Model {
     public function getByCode($code) {
         try {
             return $this->db->fetchOne(
-                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE customer_code = ?",
+                "SELECT c.*, ct.name as customer_type_name, ct.discount_percentage 
+                 FROM `" . $this->db->getPrefix() . "customers` c
+                 LEFT JOIN `" . $this->db->getPrefix() . "customer_types` ct ON c.customer_type_id = ct.id
+                 WHERE c.customer_code = ?",
                 [$code]
             );
         } catch (Exception $e) {
             error_log('Customer_model getByCode error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get customer by ID with joined type data
+     */
+    public function getCustomerDetailed($id) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT c.*, ct.name as customer_type_name, ct.discount_percentage 
+                 FROM `" . $this->db->getPrefix() . "customers` c
+                 LEFT JOIN `" . $this->db->getPrefix() . "customer_types` ct ON c.customer_type_id = ct.id
+                 WHERE c.id = ?",
+                [$id]
+            );
+        } catch (Exception $e) {
+            error_log('Customer_model getCustomerDetailed error: ' . $e->getMessage());
             return false;
         }
     }

@@ -49,6 +49,9 @@ class Tax_reports extends Base_Controller {
                 case 'cit':
                     $data = array_merge($data, $this->getCITReport());
                     break;
+                case 'education_tax':
+                    $data = array_merge($data, $this->getEducationTaxReport($startDate, $endDate));
+                    break;
                 case 'payments':
                     $data = array_merge($data, $this->getPaymentsReport($startDate, $endDate));
                     break;
@@ -117,17 +120,32 @@ class Tax_reports extends Base_Controller {
             $upcomingDeadlines = [];
             $overdueDeadlines = [];
             
+            // Education Tax Summary
+            $this->loadModel('Education_tax_model');
+            $edTaxReturns = $this->loadModel('Education_tax_model')->getReturns();
+            $totalEdTaxPayable = 0;
+            $totalEdTaxPaid = 0;
+            foreach ($edTaxReturns as $return) {
+                if ($return['tax_year'] >= date('Y', strtotime($startDate)) && $return['tax_year'] <= date('Y', strtotime($endDate))) {
+                    $totalEdTaxPayable += floatval($return['tax_amount'] ?? 0);
+                    $totalEdTaxPaid += floatval($return['paid_amount'] ?? 0);
+                }
+            }
+            
             return [
                 'total_vat_payable' => $totalVATPayable,
                 'total_vat_paid' => $totalVATPaid,
                 'total_wht_payable' => $totalWHTPayable,
                 'total_wht_paid' => $totalWHTPaid,
                 'total_cit_payable' => $totalCITPayable,
+                'total_ed_tax_payable' => $totalEdTaxPayable,
+                'total_ed_tax_paid' => $totalEdTaxPaid,
                 'total_payments' => $totalPayments,
                 'upcoming_deadlines_count' => count($upcomingDeadlines),
                 'overdue_deadlines_count' => count($overdueDeadlines),
                 'vat_returns' => array_slice($vatReturns, 0, 10),
                 'wht_returns' => array_slice($whtReturns, 0, 10),
+                'ed_tax_returns' => array_slice($edTaxReturns, 0, 10),
                 'payments' => array_slice($payments, 0, 10)
             ];
         } catch (Exception $e) {
@@ -201,6 +219,28 @@ class Tax_reports extends Base_Controller {
         } catch (Exception $e) {
             error_log('Tax_reports getCITReport error: ' . $e->getMessage());
             return ['cit_calculations' => [], 'total_liability' => 0];
+        }
+    }
+    
+    private function getEducationTaxReport($startDate, $endDate) {
+        try {
+            $this->loadModel('Education_tax_model');
+            $returns = $this->loadModel('Education_tax_model')->getReturns();
+            $filtered = [];
+            $totalPayable = 0;
+            foreach ($returns as $return) {
+                if ($return['tax_year'] >= date('Y', strtotime($startDate)) && $return['tax_year'] <= date('Y', strtotime($endDate))) {
+                    $filtered[] = $return;
+                    $totalPayable += floatval($return['tax_amount'] ?? 0);
+                }
+            }
+            return [
+                'ed_tax_returns' => $filtered,
+                'total_payable' => $totalPayable
+            ];
+        } catch (Exception $e) {
+            error_log('Tax_reports getEducationTaxReport error: ' . $e->getMessage());
+            return ['ed_tax_returns' => [], 'total_payable' => 0];
         }
     }
     

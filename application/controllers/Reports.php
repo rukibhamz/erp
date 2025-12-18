@@ -398,6 +398,132 @@ class Reports extends Base_Controller {
         }
     }
     
+    /**
+     * Statement of Changes in Equity
+     */
+    public function equityStatement() {
+        $startDate = $_GET['start_date'] ?? date('Y-01-01');
+        $endDate = $_GET['end_date'] ?? date('Y-12-31');
+        $format = $_GET['format'] ?? 'html';
+        
+        // Opening Balances (Equity accounts before start date)
+        $equityAccounts = $this->accountModel->getByType('Equity');
+        $openingEquity = 0;
+        foreach ($equityAccounts as $account) {
+            $openingEquity += $this->balanceCalculator->calculateBalance(
+                $account['id'], 
+                date('Y-m-d', strtotime($startDate . ' -1 day'))
+            );
+        }
+        
+        // Net Income for the period
+        $netIncomeData = $this->calculateNetIncome($startDate, $endDate);
+        $periodNetIncome = $netIncomeData['net_income'];
+        
+        // Period Transactions (Excluding transfers between equity accounts)
+        $equityChanges = [];
+        $totalAdjustments = 0;
+        
+        foreach ($equityAccounts as $account) {
+            $txns = $this->db->fetchAll(
+                "SELECT je.entry_date, je.description, jel.debit, jel.credit
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? 
+                 AND je.entry_date BETWEEN ? AND ?
+                 AND je.status = 'posted'
+                 AND je.reference_type NOT IN ('net_income_close')", // Avoid closing entries if any
+                [$account['id'], $startDate, $endDate]
+            );
+            
+            foreach ($txns as $txn) {
+                $amount = $txn['credit'] - $txn['debit'];
+                if ($amount != 0) {
+                    $equityChanges[] = [
+                        'date' => $txn['entry_date'],
+                        'description' => $txn['description'],
+                        'amount' => $amount
+                    ];
+                    $totalAdjustments += $amount;
+                }
+            }
+        }
+        
+        $closingEquity = $openingEquity + $periodNetIncome + $totalAdjustments;
+        
+        $data = [
+            'page_title' => 'Statement of Changes in Equity',
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'opening_balance' => $openingEquity,
+            'net_income' => $periodNetIncome,
+            'adjustments' => $equityChanges,
+            'total_adjustments' => $totalAdjustments,
+            'closing_balance' => $closingEquity,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        if ($format == 'pdf') {
+            $this->exportEquityPDF($data);
+        } else {
+            $this->loadView('reports/equity_statement', $data);
+        }
+    }
+    
+    /**
+     * Helper to calculate net income for a period
+     */
+    private function calculateNetIncome($startDate, $endDate) {
+        $revenueTotal = $this->db->fetchOne(
+            "SELECT COALESCE(SUM(credit - debit), 0) as total
+             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+             JOIN `" . $this->db->getPrefix() . "accounts` a ON jel.account_id = a.id
+             WHERE a.account_type = 'Revenue' 
+             AND je.entry_date BETWEEN ? AND ?
+             AND je.status = 'posted'",
+            [$startDate, $endDate]
+        );
+        
+        $expenseTotal = $this->db->fetchOne(
+            "SELECT COALESCE(SUM(debit - credit), 0) as total
+             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+             JOIN `" . $this->db->getPrefix() . "accounts` a ON jel.account_id = a.id
+             WHERE a.account_type = 'Expenses' 
+             AND je.entry_date BETWEEN ? AND ?
+             AND je.status = 'posted'",
+            [$startDate, $endDate]
+        );
+        
+        return [
+            'revenue' => floatval($revenueTotal['total'] ?? 0),
+            'expenses' => floatval($expenseTotal['total'] ?? 0),
+            'net_income' => floatval($revenueTotal['total'] ?? 0) - floatval($expenseTotal['total'] ?? 0)
+        ];
+    }
+    
+    private function exportEquityPDF($data) {
+        $html = '<h1>Statement of Changes in Equity</h1>';
+        $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
+        
+        $html .= '<table>';
+        $html .= '<tr><td>Opening Balance</td><td class="text-right">₦' . number_format($data['opening_balance'], 2) . '</td></tr>';
+        $html .= '<tr><td>Net Income for the Period</td><td class="text-right">₦' . number_format($data['net_income'], 2) . '</td></tr>';
+        
+        if (!empty($data['adjustments'])) {
+            $html .= '<tr><td colspan="2"><strong>Other Adjustments</strong></td></tr>';
+            foreach ($data['adjustments'] as $adj) {
+                $html .= '<tr><td>' . htmlspecialchars($adj['description']) . '</td><td class="text-right">₦' . number_format($adj['amount'], 2) . '</td></tr>';
+            }
+        }
+        
+        $html .= '<tr class="total-row"><td><strong>Closing Balance</strong></td><td class="text-right"><strong>₦' . number_format($data['closing_balance'], 2) . '</strong></td></tr>';
+        $html .= '</table>';
+        
+        exportToPDF(wrapPdfHtml('Statement of Changes in Equity', $html), 'equity_statement_' . date('Y-m-d') . '.pdf');
+    }
+    
     // ==================== PDF Export Methods ====================
     
     private function exportProfitLossPDF($data) {

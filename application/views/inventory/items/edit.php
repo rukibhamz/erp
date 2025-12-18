@@ -149,6 +149,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <label for="wholesale_price" class="form-label">Wholesale Price</label>
                             <input type="number" step="0.01" class="form-control" id="wholesale_price" name="wholesale_price" value="<?= $item['wholesale_price'] ?>">
                         </div>
+
+                        <div class="col-md-6">
+                            <label for="wholesale_moq" class="form-label">Wholesale MOQ</label>
+                            <input type="number" step="0.01" class="form-control" id="wholesale_moq" name="wholesale_moq" value="<?= $item['wholesale_moq'] ?? 0 ?>">
+                        </div>
+
+                        <div class="col-md-6 pt-4">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="is_wholesale_enabled" id="isWholesale" <?= !empty($item['is_wholesale_enabled']) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="isWholesale">Enable Wholesale Pricing</label>
+                            </div>
+                        </div>
                         
                         <div class="col-md-6">
                             <label for="costing_method" class="form-label">Costing Method</label>

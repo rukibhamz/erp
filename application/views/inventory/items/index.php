@@ -110,6 +110,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <a href="<?= base_url('inventory/items/view/' . $item['id']) ?>">
                                         <?= htmlspecialchars($item['item_name']) ?>
                                     </a>
+                                    <?php if (($item['is_wholesale_enabled'] ?? 0) == 1): ?>
+                                        <span class="badge bg-info ms-1" title="Wholesale Enabled">WS</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary">
