@@ -373,9 +373,6 @@ class Items extends Base_Controller {
         $this->loadView('inventory/items/edit', $data);
     }
     
-    /**
-     * Sync reorder point across all stock levels for an item
-     */
     private function syncStockLevelsReorderPoint($itemId, $reorderPoint) {
         try {
             $stockLevels = $this->stockLevelModel->getByItem($itemId);
@@ -387,6 +384,100 @@ class Items extends Base_Controller {
         } catch (Exception $e) {
             error_log('Items syncStockLevelsReorderPoint error: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Delete an item
+     * Prevents deletion if item has stock or active transactions
+     */
+    public function delete($id) {
+        $this->requirePermission('inventory', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('items');
+        }
+        
+        check_csrf(); // CSRF Protection
+        
+        try {
+            $id = intval($id);
+            if (!$id) {
+                $this->setFlashMessage('danger', 'Invalid item ID.');
+                redirect('items');
+            }
+            
+            $item = $this->itemModel->getById($id);
+            if (!$item) {
+                $this->setFlashMessage('danger', 'Item not found.');
+                redirect('items');
+            }
+            
+            // Check if item has stock levels with quantity > 0
+            $stockLevels = $this->stockLevelModel->getByItem($id);
+            $totalStock = 0;
+            foreach ($stockLevels as $level) {
+                $totalStock += floatval($level['quantity'] ?? 0);
+            }
+            
+            if ($totalStock > 0) {
+                $this->setFlashMessage('danger', 'Cannot delete item with existing stock (' . number_format($totalStock, 2) . ' units). Please adjust stock to zero first.');
+                redirect('items/view/' . $id);
+            }
+            
+            // Check for recent transactions (within last 30 days)
+            try {
+                $recentTransactions = $this->transactionModel->getByItem($id, 1);
+                if (!empty($recentTransactions)) {
+                    // Soft delete instead - mark as discontinued
+                    $this->itemModel->update($id, [
+                        'item_status' => 'discontinued',
+                        'status' => 'inactive',
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                    
+                    $this->activityModel->log(
+                        $this->session['user_id'], 
+                        'update', 
+                        'Items', 
+                        'Discontinued item (has transaction history): ' . $item['item_name']
+                    );
+                    
+                    $this->setFlashMessage('warning', 'Item has transaction history and was marked as discontinued instead of deleted.');
+                    redirect('items');
+                }
+            } catch (Exception $e) {
+                // If transaction check fails, proceed with delete attempt
+                error_log('Items delete transaction check error: ' . $e->getMessage());
+            }
+            
+            // Delete stock level records first
+            foreach ($stockLevels as $level) {
+                $this->stockLevelModel->delete($level['id']);
+            }
+            
+            // Delete the item
+            $deleted = $this->itemModel->delete($id);
+            
+            if ($deleted) {
+                $this->activityModel->log(
+                    $this->session['user_id'], 
+                    'delete', 
+                    'Items', 
+                    'Deleted item: ' . $item['item_name'] . ' (SKU: ' . ($item['sku'] ?? 'N/A') . ')'
+                );
+                
+                $this->setFlashMessage('success', 'Item deleted successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete item.');
+            }
+            
+        } catch (Exception $e) {
+            error_log('Items delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting item: ' . $e->getMessage());
+        }
+        
+        redirect('items');
     }
 }
 

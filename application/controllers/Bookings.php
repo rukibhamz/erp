@@ -19,6 +19,20 @@ class Bookings extends Base_Controller {
     private $locationModel;
     private $spaceModel;
 
+    public function __construct() {
+        parent::__construct();
+        $this->requirePermission('bookings', 'read');
+        $this->bookingModel = $this->loadModel('Booking_model');
+        $this->facilityModel = $this->loadModel('Facility_model');
+        $this->paymentModel = $this->loadModel('Booking_payment_model');
+        $this->transactionModel = $this->loadModel('Transaction_model');
+        $this->cashAccountModel = $this->loadModel('Cash_account_model');
+        $this->accountModel = $this->loadModel('Account_model');
+        $this->activityModel = $this->loadModel('Activity_model');
+        $this->bookingResourceModel = $this->loadModel('Booking_resource_model');
+        $this->bookingAddonModel = $this->loadModel('Booking_addon_model');
+        $this->addonModel = $this->loadModel('Addon_model');
+        $this->promoCodeModel = $this->loadModel('Promo_code_model');
         $this->cancellationPolicyModel = $this->loadModel('Cancellation_policy_model');
         $this->paymentScheduleModel = $this->loadModel('Payment_schedule_model');
         $this->bookingModificationModel = $this->loadModel('Booking_modification_model');
@@ -531,6 +545,128 @@ class Bookings extends Base_Controller {
 
         $this->loadView('bookings/view', $data);
     }
+    
+    /**
+     * Edit booking details
+     */
+    public function edit($id) {
+        $this->requirePermission('bookings', 'update');
+        
+        try {
+            $booking = $this->bookingModel->getWithFacility($id);
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('bookings');
+            }
+            
+            // Cannot edit cancelled or completed bookings
+            if (in_array($booking['status'], ['cancelled', 'completed'])) {
+                $this->setFlashMessage('warning', 'Cannot edit a ' . $booking['status'] . ' booking.');
+                redirect('bookings/view/' . $id);
+            }
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading booking.');
+            redirect('bookings');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
+            
+            try {
+                $pdo = $this->db->getConnection();
+                $pdo->beginTransaction();
+                
+                // Store old values for logging
+                $oldValues = json_encode([
+                    'customer_name' => $booking['customer_name'],
+                    'customer_email' => $booking['customer_email'],
+                    'customer_phone' => $booking['customer_phone'],
+                    'booking_notes' => $booking['booking_notes']
+                ]);
+                
+                // Validate customer email if provided
+                if (!empty($_POST['customer_email']) && !validate_email($_POST['customer_email'])) {
+                    $this->setFlashMessage('danger', 'Invalid email address.');
+                    redirect('bookings/edit/' . $id);
+                }
+                
+                // Validate customer phone if provided
+                if (!empty($_POST['customer_phone']) && !validate_phone($_POST['customer_phone'])) {
+                    $this->setFlashMessage('danger', 'Invalid phone number.');
+                    redirect('bookings/edit/' . $id);
+                }
+                
+                $updateData = [
+                    'customer_name' => sanitize_input($_POST['customer_name'] ?? $booking['customer_name']),
+                    'customer_email' => sanitize_input($_POST['customer_email'] ?? $booking['customer_email']),
+                    'customer_phone' => !empty($_POST['customer_phone']) ? sanitize_phone($_POST['customer_phone']) : $booking['customer_phone'],
+                    'customer_address' => sanitize_input($_POST['customer_address'] ?? $booking['customer_address']),
+                    'number_of_guests' => intval($_POST['number_of_guests'] ?? $booking['number_of_guests']),
+                    'booking_notes' => sanitize_input($_POST['booking_notes'] ?? $booking['booking_notes']),
+                    'special_requests' => sanitize_input($_POST['special_requests'] ?? $booking['special_requests']),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+                
+                // Handle discount update if provided
+                if (isset($_POST['discount_amount'])) {
+                    $newDiscount = floatval($_POST['discount_amount']);
+                    if ($newDiscount != floatval($booking['discount_amount'])) {
+                        $updateData['discount_amount'] = $newDiscount;
+                        // Recalculate total
+                        $newTotal = floatval($booking['base_amount']) + floatval($booking['tax_amount']) - $newDiscount;
+                        $updateData['total_amount'] = $newTotal;
+                        $updateData['balance_amount'] = $newTotal - floatval($booking['paid_amount']);
+                    }
+                }
+                
+                $this->bookingModel->update($id, $updateData);
+                
+                // Log modification
+                $newValues = json_encode([
+                    'customer_name' => $updateData['customer_name'],
+                    'customer_email' => $updateData['customer_email'],
+                    'customer_phone' => $updateData['customer_phone'],
+                    'booking_notes' => $updateData['booking_notes']
+                ]);
+                
+                $this->bookingModificationModel->logModification(
+                    $id,
+                    'edit',
+                    $oldValues,
+                    $newValues,
+                    'Booking details updated',
+                    $this->session['user_id']
+                );
+                
+                $pdo->commit();
+                
+                $this->activityModel->log(
+                    $this->session['user_id'], 
+                    'update', 
+                    'Bookings', 
+                    'Updated booking details: ' . $booking['booking_number']
+                );
+                
+                $this->setFlashMessage('success', 'Booking updated successfully.');
+                redirect('bookings/view/' . $id);
+                
+            } catch (Exception $e) {
+                if (isset($pdo)) {
+                    $pdo->rollBack();
+                }
+                error_log('Bookings edit error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to update booking: ' . $e->getMessage());
+            }
+        }
+        
+        $data = [
+            'page_title' => 'Edit Booking: ' . $booking['booking_number'],
+            'booking' => $booking,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('bookings/edit', $data);
+    }
 
     public function recordPayment() {
         $this->requirePermission('bookings', 'update');
@@ -579,6 +715,70 @@ class Bookings extends Base_Controller {
                 'status' => 'completed',
                 'created_by' => $this->session['user_id']
             ];
+
+            $paymentId = $this->paymentModel->create($paymentData);
+            if (!$paymentId) {
+                throw new Exception('Failed to create payment record');
+            }
+
+            // Update booking paid amount and balance
+            $newPaidAmount = floatval($booking['paid_amount']) + $amount;
+            $newBalance = floatval($booking['total_amount']) - $newPaidAmount;
+            
+            $updateData = [
+                'paid_amount' => $newPaidAmount,
+                'balance_amount' => max(0, $newBalance)
+            ];
+            
+            // Update payment status based on balance
+            if ($newBalance <= 0) {
+                $updateData['payment_status'] = 'paid';
+            } elseif ($newPaidAmount > 0) {
+                $updateData['payment_status'] = 'partial';
+            }
+            
+            $this->bookingModel->update($bookingId, $updateData);
+
+            // Create cash account transaction if applicable
+            if ($paymentMethod === 'cash' && $this->cashAccountModel) {
+                try {
+                    $defaultCashAccount = $this->cashAccountModel->getDefault();
+                    if ($defaultCashAccount) {
+                        $this->transactionModel->create([
+                            'account_id' => $defaultCashAccount['id'],
+                            'transaction_type' => 'credit',
+                            'amount' => $amount,
+                            'description' => 'Booking payment: ' . ($booking['booking_number'] ?? $bookingId),
+                            'reference_type' => 'booking_payment',
+                            'reference_id' => $paymentId,
+                            'transaction_date' => date('Y-m-d'),
+                            'created_by' => $this->session['user_id']
+                        ]);
+                    }
+                } catch (Exception $e) {
+                    // Log but don't fail - cash transaction is secondary
+                    error_log('Booking payment cash transaction error: ' . $e->getMessage());
+                }
+            }
+
+            $pdo->commit();
+            
+            // Log activity
+            $this->activityModel->log(
+                $this->session['user_id'], 
+                'create', 
+                'Booking Payments', 
+                'Recorded payment of ' . number_format($amount, 2) . ' for booking: ' . ($booking['booking_number'] ?? $bookingId)
+            );
+            
+            return $paymentId;
+            
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function reschedule($id) {
         $this->requirePermission('bookings', 'update');
         

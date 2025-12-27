@@ -216,6 +216,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error adding performance indexes: " . $e->getMessage());
         }
+        
+        // ALWAYS ensure inventory valuation view
+        try {
+            $this->ensureInventoryValuationView();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring inventory valuation view: " . $e->getMessage());
+        }
 
         // ALWAYS run new feature migrations (Wholesale Pricing & Education Tax)
         try {
@@ -1219,5 +1226,55 @@ class AutoMigration {
             error_log("AutoMigration: ERROR adding performance indexes: " . $e->getMessage());
         }
     }
+    
+    /**
+     * Ensure inventory valuation view exists
+     * Used by Inventory_reports::valuation()
+     */
+    private function ensureInventoryValuationView() {
+        try {
+            // Check if items table exists first
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}items'");
+            if ($stmt->rowCount() == 0) {
+                // Items table doesn't exist yet, skip
+                return true;
+            }
+            
+            // Create or replace the view
+            $sql = "CREATE OR REPLACE VIEW `{$this->prefix}vw_inventory_valuation` AS
+                SELECT 
+                    i.id AS item_id,
+                    i.sku,
+                    i.item_name,
+                    i.item_type,
+                    i.category,
+                    i.unit_of_measure,
+                    i.cost_price,
+                    i.selling_price,
+                    i.costing_method,
+                    COALESCE(SUM(sl.quantity), 0) AS total_quantity,
+                    COALESCE(SUM(sl.quantity * COALESCE(sl.unit_cost, i.cost_price, 0)), 0) AS total_value,
+                    i.item_status,
+                    i.created_at,
+                    i.updated_at
+                FROM 
+                    `{$this->prefix}items` i
+                LEFT JOIN 
+                    `{$this->prefix}stock_levels` sl ON i.id = sl.item_id
+                WHERE 
+                    i.item_status = 'active' OR i.item_status IS NULL
+                GROUP BY 
+                    i.id, i.sku, i.item_name, i.item_type, i.category, 
+                    i.unit_of_measure, i.cost_price, i.selling_price, i.costing_method,
+                    i.item_status, i.created_at, i.updated_at";
+            
+            $this->pdo->exec($sql);
+            error_log("AutoMigration: Inventory valuation view created/updated successfully");
+            return true;
+            
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR creating inventory valuation view: " . $e->getMessage());
+            return false;
+        }
+    }
 }
-
