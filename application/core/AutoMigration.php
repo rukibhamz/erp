@@ -223,6 +223,20 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring inventory valuation view: " . $e->getMessage());
         }
+        
+        // ALWAYS ensure PAYE tax brackets
+        try {
+            $this->ensurePAYEBrackets();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring PAYE tax brackets: " . $e->getMessage());
+        }
+        
+        // ALWAYS ensure default POS terminal
+        try {
+            $this->ensureDefaultPOSTerminal();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring default POS terminal: " . $e->getMessage());
+        }
 
         // ALWAYS run new feature migrations (Wholesale Pricing & Education Tax)
         try {
@@ -1274,6 +1288,130 @@ class AutoMigration {
             
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR creating inventory valuation view: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure PAYE tax brackets exist
+     * Nigeria progressive tax brackets for payroll
+     */
+    private function ensurePAYEBrackets() {
+        try {
+            // Create tax_brackets table if not exists
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}tax_brackets` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `tax_type_code` VARCHAR(50) NOT NULL,
+                `bracket_name` VARCHAR(100) NOT NULL,
+                `min_amount` DECIMAL(15,2) NOT NULL DEFAULT 0,
+                `max_amount` DECIMAL(15,2) DEFAULT NULL,
+                `rate` DECIMAL(5,2) NOT NULL DEFAULT 0,
+                `cumulative_tax` DECIMAL(15,2) DEFAULT 0,
+                `sort_order` INT(11) DEFAULT 0,
+                `is_active` TINYINT(1) DEFAULT 1,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_tax_type` (`tax_type_code`),
+                KEY `idx_is_active` (`is_active`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            
+            // Check if PAYE brackets exist
+            $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}tax_brackets` WHERE tax_type_code = 'PAYE'");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (($result['cnt'] ?? 0) == 0) {
+                // Insert Nigeria PAYE brackets
+                $brackets = [
+                    ['PAYE', 'First ₦300,000', 0.00, 300000.00, 7.00, 0.00, 1],
+                    ['PAYE', 'Next ₦300,000', 300000.01, 600000.00, 11.00, 21000.00, 2],
+                    ['PAYE', 'Next ₦500,000', 600000.01, 1100000.00, 15.00, 54000.00, 3],
+                    ['PAYE', 'Next ₦500,000', 1100000.01, 1600000.00, 19.00, 129000.00, 4],
+                    ['PAYE', 'Next ₦1,600,000', 1600000.01, 3200000.00, 21.00, 224000.00, 5],
+                    ['PAYE', 'Above ₦3,200,000', 3200000.01, null, 24.00, 560000.00, 6]
+                ];
+                
+                $stmt = $this->pdo->prepare("INSERT INTO `{$this->prefix}tax_brackets` 
+                    (tax_type_code, bracket_name, min_amount, max_amount, rate, cumulative_tax, sort_order, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())");
+                
+                foreach ($brackets as $bracket) {
+                    $stmt->execute($bracket);
+                }
+                
+                error_log("AutoMigration: PAYE tax brackets created successfully");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring PAYE brackets: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure default POS terminal exists
+     */
+    private function ensureDefaultPOSTerminal() {
+        try {
+            // Create pos_terminals table if not exists
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}pos_terminals` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `terminal_code` VARCHAR(50) NOT NULL UNIQUE,
+                `terminal_name` VARCHAR(100) NOT NULL,
+                `location_id` INT(11) DEFAULT NULL,
+                `terminal_type` ENUM('physical','virtual','mobile') DEFAULT 'virtual',
+                `status` ENUM('active','inactive','maintenance') DEFAULT 'active',
+                `settings` JSON DEFAULT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `unique_terminal_code` (`terminal_code`),
+                KEY `idx_status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            
+            // Create pos_payment_methods table if not exists
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}pos_payment_methods` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `code` VARCHAR(50) NOT NULL UNIQUE,
+                `name` VARCHAR(100) NOT NULL,
+                `type` ENUM('cash','card','transfer','mobile','other') NOT NULL,
+                `is_active` TINYINT(1) DEFAULT 1,
+                `sort_order` INT(11) DEFAULT 0,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `unique_code` (`code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            
+            // Check if default terminal exists
+            $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}pos_terminals`");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (($result['cnt'] ?? 0) == 0) {
+                // Insert default terminal
+                $this->pdo->exec("INSERT INTO `{$this->prefix}pos_terminals` 
+                    (terminal_code, terminal_name, terminal_type, status, created_at)
+                    VALUES ('TERM-001', 'Main POS Terminal', 'virtual', 'active', NOW())");
+                error_log("AutoMigration: Default POS terminal created");
+            }
+            
+            // Check if payment methods exist
+            $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}pos_payment_methods`");
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (($result['cnt'] ?? 0) == 0) {
+                // Insert default payment methods
+                $this->pdo->exec("INSERT INTO `{$this->prefix}pos_payment_methods` 
+                    (code, name, type, is_active, sort_order, created_at) VALUES
+                    ('CASH', 'Cash', 'cash', 1, 1, NOW()),
+                    ('CARD', 'Card (POS)', 'card', 1, 2, NOW()),
+                    ('TRANSFER', 'Bank Transfer', 'transfer', 1, 3, NOW())");
+                error_log("AutoMigration: Default POS payment methods created");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring default POS terminal: " . $e->getMessage());
             return false;
         }
     }

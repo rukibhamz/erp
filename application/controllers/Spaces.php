@@ -411,5 +411,98 @@ class Spaces extends Base_Controller {
             error_log('Spaces deactivateInBookingModule error: ' . $e->getMessage());
         }
     }
+    
+    /**
+     * Delete a space
+     * Validates no active bookings or leases exist before deletion
+     */
+    public function delete($id) {
+        $this->requirePermission('locations', 'delete');
+        
+        try {
+            $space = $this->spaceModel->getById($id);
+            if (!$space) {
+                $this->setFlashMessage('danger', 'Space not found.');
+                redirect('spaces');
+            }
+            
+            $propertyId = $space['property_id'] ?? null;
+            
+            // Check for active bookings
+            try {
+                $bookingModel = $this->loadModel('Space_booking_model');
+                $activeBookings = $bookingModel->getBy([
+                    'space_id' => $id,
+                    'status' => ['pending', 'confirmed']
+                ]);
+                
+                if (!empty($activeBookings)) {
+                    $this->setFlashMessage('danger', 'Cannot delete space with active bookings. Please cancel or complete all bookings first.');
+                    redirect('spaces/view/' . $id);
+                }
+            } catch (Exception $e) {
+                // Model might not exist, continue
+            }
+            
+            // Check for active leases
+            try {
+                $leaseModel = $this->loadModel('Lease_model');
+                $activeLeases = $leaseModel->getBy([
+                    'space_id' => $id,
+                    'status' => 'active'
+                ]);
+                
+                if (!empty($activeLeases)) {
+                    $this->setFlashMessage('danger', 'Cannot delete space with active leases. Please terminate leases first.');
+                    redirect('spaces/view/' . $id);
+                }
+            } catch (Exception $e) {
+                // Model might not exist, continue
+            }
+            
+            // Deactivate in booking module first
+            if (!empty($space['facility_id'])) {
+                try {
+                    $this->facilityModel->update($space['facility_id'], [
+                        'status' => 'inactive',
+                        'is_bookable' => 0
+                    ]);
+                } catch (Exception $e) {
+                    error_log('Spaces delete deactivate facility error: ' . $e->getMessage());
+                }
+            }
+            
+            // Delete bookable config if exists
+            try {
+                $this->bookableConfigModel->deleteBy(['space_id' => $id]);
+            } catch (Exception $e) {
+                // Continue if fails
+            }
+            
+            // Delete the space
+            if ($this->spaceModel->delete($id)) {
+                $this->activityModel->log(
+                    $this->session['user_id'], 
+                    'delete', 
+                    'Spaces', 
+                    'Deleted space: ' . ($space['space_name'] ?? $space['space_number'] ?? '')
+                );
+                $this->setFlashMessage('success', 'Space deleted successfully.');
+                
+                // Redirect to property spaces if we have property ID
+                if ($propertyId) {
+                    redirect('spaces?property_id=' . $propertyId);
+                }
+            } else {
+                $this->setFlashMessage('danger', 'Failed to delete space.');
+                redirect('spaces/view/' . $id);
+            }
+            
+        } catch (Exception $e) {
+            error_log('Spaces delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting space: ' . $e->getMessage());
+        }
+        
+        redirect('spaces');
+    }
 }
-
