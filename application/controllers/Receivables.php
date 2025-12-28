@@ -489,6 +489,7 @@ class Receivables extends Base_Controller {
             'revenue_accounts' => $revenueAccounts,
             'currencies' => get_all_currencies(),
             'preselected_customer_id' => $preselectedCustomerId,
+            'tax_types' => $this->taxTypes,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -658,6 +659,7 @@ class Receivables extends Base_Controller {
             'customers' => $customers,
             'revenue_accounts' => $revenueAccounts,
             'currencies' => get_all_currencies(),
+            'tax_types' => $this->taxTypes,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -898,6 +900,20 @@ class Receivables extends Base_Controller {
         exit;
     }
     
+    private $taxTypes = [
+        'VAT' => 7.50,
+        'WHT_5' => 5.00,
+        'WHT_10' => 10.00,
+        'None' => 0.00
+    ];
+
+    /**
+     * Download PDF (Alias for compatibility)
+     */
+    public function download($id) {
+        $this->downloadInvoice($id);
+    }
+
     /**
      * Download PDF
      */

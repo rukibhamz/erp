@@ -71,8 +71,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <input type="text" class="form-control" id="reference" name="reference" placeholder="PO Number, etc.">
                         </div>
                         <div class="col-md-3">
-                            <label for="tax_rate" class="form-label">Tax Rate (%)</label>
-                            <input type="number" step="0.01" class="form-control" id="tax_rate" name="tax_rate" value="0.00" onchange="calculateTotals()">
+                            <label for="tax_rate" class="form-label">Avg Tax Rate (%)</label>
+                            <input type="number" step="0.01" class="form-control" id="tax_rate" name="tax_rate" value="0.00" readonly>
                         </div>
                         <div class="col-md-3">
                             <label for="discount_amount" class="form-label">Discount Amount</label>
@@ -106,7 +106,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[0][unit_price]" value="0.00" onchange="calculateLineTotal(0)" required>
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[0][tax_rate]" value="0.00" onchange="calculateLineTotal(0)">
+                                        <select class="form-select form-select-sm text-end tax-select" name="items[0][tax_rate]" onchange="calculateLineTotal(0)">
+                                            <option value="0.00">None (0%)</option>
+                                            <?php if (!empty($tax_types)): ?>
+                                                <?php foreach ($tax_types as $name => $rate): ?>
+                                                    <option value="<?= $rate ?>"><?= $name ?> (<?= $rate ?>%)</option>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </select>
                                     </td>
                                     <td class="text-end">
                                         <span class="line-total" data-index="0">0.00</span>
@@ -174,6 +181,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <script>
 let itemIndex = 1;
 
+// Define tax options from PHP
+const taxOptions = `
+    <option value="0.00">None (0%)</option>
+    <?php if (!empty($tax_types)): ?>
+        <?php foreach ($tax_types as $name => $rate): ?>
+            <option value="<?= $rate ?>"><?= $name ?> (<?= $rate ?>%)</option>
+        <?php endforeach; ?>
+    <?php endif; ?>
+`;
+
 function addItem() {
     const tbody = document.getElementById('invoiceItemsBody');
     const rowCount = tbody.rows.length + 1;
@@ -190,10 +207,14 @@ function addItem() {
             <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[${itemIndex}][unit_price]" value="0.00" onchange="calculateLineTotal(${itemIndex})" required>
         </td>
         <td>
-            <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[${itemIndex}][tax_rate]" value="0.00" onchange="calculateLineTotal(${itemIndex})">
+            <select class="form-select form-select-sm text-end tax-select" name="items[${itemIndex}][tax_rate]" onchange="calculateLineTotal(${itemIndex})">
+                ${taxOptions}
+            </select>
         </td>
         <td class="text-end">
             <span class="line-total" data-index="${itemIndex}">0.00</span>
+            <input type="hidden" class="line-subtotal" data-index="${itemIndex}" value="0.00">
+            <input type="hidden" class="line-tax" data-index="${itemIndex}" value="0.00">
         </td>
         <td>
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(this)">
@@ -225,36 +246,91 @@ function calculateLineTotal(index) {
     const row = document.querySelector(`[data-index="${index}"]`)?.closest('tr');
     if (!row) return;
     
-    const quantity = parseFloat(row.querySelector(`input[name="items[${index}][quantity]"]`).value) || 0;
-    const unitPrice = parseFloat(row.querySelector(`input[name="items[${index}][unit_price]"]`).value) || 0;
-    const lineTotal = quantity * unitPrice;
+    // Find inputs within the row specifically to avoid index collision issues
+    const qtyInput = row.querySelector(`input[name*="[quantity]"]`);
+    const priceInput = row.querySelector(`input[name*="[unit_price]"]`);
+    const taxSelect = row.querySelector(`select[name*="[tax_rate]"]`);
     
-    row.querySelector(`[data-index="${index}"]`).textContent = lineTotal.toFixed(2);
+    const quantity = parseFloat(qtyInput.value) || 0;
+    const unitPrice = parseFloat(priceInput.value) || 0;
+    const taxRate = parseFloat(taxSelect.value) || 0;
+    
+    const lineSubtotal = quantity * unitPrice;
+    const lineTax = lineSubtotal * (taxRate / 100);
+    const lineTotal = lineSubtotal + lineTax;
+    
+    // Update display and hidden values
+    row.querySelector(`.line-total`).textContent = lineTotal.toFixed(2);
+    
+    // Check if hidden inputs exist, if not create them (for backward compatibility if HTML isn't updated)
+    let subtotalHidden = row.querySelector(`.line-subtotal`);
+    let taxHidden = row.querySelector(`.line-tax`);
+    
+    if (!subtotalHidden) {
+        // Fallback or dynamic insertion if needed, but HTML structure should include them now
+        // For now, we rely on re-calculating in calculateTotals if hidden fields miss, 
+        // but let's assume they are there from addItem or initial load.
+    } else {
+        subtotalHidden.value = lineSubtotal.toFixed(2);
+        taxHidden.value = lineTax.toFixed(2);
+    }
+
     calculateTotals();
 }
 
 function calculateTotals() {
     let subtotal = 0;
+    let totalTax = 0;
     
-    document.querySelectorAll('.line-total').forEach(span => {
-        subtotal += parseFloat(span.textContent) || 0;
-    });
+    // Iterate rows to sum up precise values
+    const rows = document.getElementById('invoiceItemsBody').rows;
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const qtyInput = row.querySelector(`input[name*="[quantity]"]`);
+        const priceInput = row.querySelector(`input[name*="[unit_price]"]`);
+        const taxSelect = row.querySelector(`select[name*="[tax_rate]"]`);
+        
+        if (qtyInput && priceInput) { // Tax select might be optional/default 0
+            const quantity = parseFloat(qtyInput.value) || 0;
+            const unitPrice = parseFloat(priceInput.value) || 0;
+            const taxRate = parseFloat(taxSelect ? taxSelect.value : 0) || 0;
+            
+            const lineSubtotal = quantity * unitPrice;
+            const lineTax = lineSubtotal * (taxRate / 100);
+            
+            subtotal += lineSubtotal;
+            totalTax += lineTax;
+        }
+    }
     
-    const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
     const discountAmount = parseFloat(document.getElementById('discount_amount').value) || 0;
-    const taxAmount = subtotal * (taxRate / 100);
-    const totalAmount = subtotal + taxAmount - discountAmount;
+    const totalAmount = subtotal + totalTax - discountAmount;
     
     document.getElementById('subtotal').textContent = subtotal.toFixed(2);
-    document.getElementById('taxAmount').textContent = taxAmount.toFixed(2);
+    document.getElementById('taxAmount').textContent = totalTax.toFixed(2);
     document.getElementById('discountDisplay').textContent = discountAmount.toFixed(2);
     document.getElementById('totalAmount').textContent = totalAmount.toFixed(2);
 }
 
-document.getElementById('invoiceForm').addEventListener('input', function(e) {
-    if (e.target.classList.contains('line-input')) {
-        calculateTotals();
-    }
+// Initialize calculations on page load
+document.addEventListener('DOMContentLoaded', function() {
+    calculateTotals();
+    
+    // Recalculate when inputs change
+    document.getElementById('invoiceForm').addEventListener('input', function(e) {
+        if (e.target.classList.contains('form-control-sm') || e.target.classList.contains('form-select')) {
+            // Find the closest row to identify the index
+            const row = e.target.closest('tr');
+            if (row) {
+                // Try to find a data-index attribute in the row to pass to calculation
+                const indexSpan = row.querySelector('.line-total');
+                if (indexSpan) {
+                    const index = indexSpan.getAttribute('data-index');
+                    calculateLineTotal(index);
+                }
+            }
+        }
+    });
 });
 </script>
 

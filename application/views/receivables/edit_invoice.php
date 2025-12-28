@@ -116,7 +116,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[<?= $index ?>][unit_price]" value="<?= $item['unit_price'] ?>" onchange="calculateLineTotal(<?= $index ?>)" required>
                                             </td>
                                             <td>
-                                                <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[<?= $index ?>][tax_rate]" value="<?= $item['tax_rate'] ?? 0 ?>" onchange="calculateLineTotal(<?= $index ?>)">
+                                                <select class="form-select form-select-sm text-end tax-select" name="items[<?= $index ?>][tax_rate]" onchange="calculateLineTotal(<?= $index ?>)">
+                                                    <option value="0.00">None (0%)</option>
+                                                    <?php if (!empty($tax_types)): ?>
+                                                        <?php foreach ($tax_types as $name => $rate): ?>
+                                                            <?php 
+                                                                // Check if this rate matches the item's rate
+                                                                $isSelected = (abs(($item['tax_rate'] ?? 0) - $rate) < 0.01);
+                                                            ?>
+                                                            <option value="<?= $rate ?>" <?= $isSelected ? 'selected' : '' ?>>
+                                                                <?= $name ?> (<?= $rate ?>%)
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    <?php endif; ?>
+                                                </select>
                                             </td>
                                             <td class="text-end">
                                                 <span class="line-total" data-index="<?= $index ?>"><?= number_format($item['line_total'], 2) ?></span>
@@ -141,7 +154,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[0][unit_price]" value="0.00" onchange="calculateLineTotal(0)" required>
                                         </td>
                                         <td>
-                                            <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[0][tax_rate]" value="0.00" onchange="calculateLineTotal(0)">
+                                            <select class="form-select form-select-sm text-end tax-select" name="items[0][tax_rate]" onchange="calculateLineTotal(0)">
+                                                 <option value="0.00">None (0%)</option>
+                                                <?php if (!empty($tax_types)): ?>
+                                                    <?php foreach ($tax_types as $name => $rate): ?>
+                                                        <option value="<?= $rate ?>"><?= $name ?> (<?= $rate ?>%)</option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </select>
                                         </td>
                                         <td class="text-end">
                                             <span class="line-total" data-index="0">0.00</span>
@@ -213,6 +233,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <script>
 let itemIndex = <?= !empty($items) ? count($items) : 1 ?>;
 
+// Define tax options from PHP
+const taxOptions = `
+    <option value="0.00">None (0%)</option>
+    <?php if (!empty($tax_types)): ?>
+        <?php foreach ($tax_types as $name => $rate): ?>
+            <option value="<?= $rate ?>"><?= $name ?> (<?= $rate ?>%)</option>
+        <?php endforeach; ?>
+    <?php endif; ?>
+`;
+
 function addItem() {
     const tbody = document.getElementById('invoiceItemsBody');
     const rowCount = tbody.rows.length + 1;
@@ -229,7 +259,9 @@ function addItem() {
             <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[${itemIndex}][unit_price]" value="0.00" onchange="calculateLineTotal(${itemIndex})" required>
         </td>
         <td>
-            <input type="number" step="0.01" class="form-control form-control-sm text-end" name="items[${itemIndex}][tax_rate]" value="0.00" onchange="calculateLineTotal(${itemIndex})">
+            <select class="form-select form-select-sm text-end tax-select" name="items[${itemIndex}][tax_rate]" onchange="calculateLineTotal(${itemIndex})">
+                ${taxOptions}
+            </select>
         </td>
         <td class="text-end">
             <span class="line-total" data-index="${itemIndex}">0.00</span>
@@ -261,17 +293,25 @@ function updateRowNumbers() {
 }
 
 function calculateLineTotal(index) {
-    const row = document.querySelector(`input[name="items[${index}][quantity]"]`)?.closest('tr');
+    const row = document.querySelector(`[data-index="${index}"]`)?.closest('tr');
     if (!row) return;
     
-    const quantity = parseFloat(row.querySelector(`input[name="items[${index}][quantity]"]`).value) || 0;
-    const unitPrice = parseFloat(row.querySelector(`input[name="items[${index}][unit_price]"]`).value) || 0;
-    const taxRate = parseFloat(row.querySelector(`input[name="items[${index}][tax_rate]"]`).value) || 0;
+    // Find inputs within the row
+    const qtyInput = row.querySelector(`input[name*="[quantity]"]`);
+    const priceInput = row.querySelector(`input[name*="[unit_price]"]`);
+    const taxSelect = row.querySelector(`select[name*="[tax_rate]"]`);
+    
+    const quantity = parseFloat(qtyInput.value) || 0;
+    const unitPrice = parseFloat(priceInput.value) || 0;
+    const taxRate = parseFloat(taxSelect.value) || 0;
+    
     const lineSubtotal = quantity * unitPrice;
     const lineTax = lineSubtotal * (taxRate / 100);
     const lineTotal = lineSubtotal + lineTax;
     
-    row.querySelector(`[data-index="${index}"]`).textContent = lineTotal.toFixed(2);
+    // Update display
+    row.querySelector(`.line-total`).textContent = lineTotal.toFixed(2);
+    
     calculateTotals();
 }
 
@@ -279,16 +319,18 @@ function calculateTotals() {
     let subtotal = 0;
     let totalTax = 0;
     
-    // Calculate subtotal and tax from each item
-    document.querySelectorAll('#invoiceItemsBody tr').forEach(row => {
-        const quantityInput = row.querySelector('input[name*="[quantity]"]');
-        const unitPriceInput = row.querySelector('input[name*="[unit_price]"]');
-        const taxRateInput = row.querySelector('input[name*="[tax_rate]"]');
+    // Iterate rows to sum up precise values (calculate from inputs)
+    const rows = document.getElementById('invoiceItemsBody').rows;
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const qtyInput = row.querySelector(`input[name*="[quantity]"]`);
+        const priceInput = row.querySelector(`input[name*="[unit_price]"]`);
+        const taxSelect = row.querySelector(`select[name*="[tax_rate]"]`);
         
-        if (quantityInput && unitPriceInput && taxRateInput) {
-            const quantity = parseFloat(quantityInput.value) || 0;
-            const unitPrice = parseFloat(unitPriceInput.value) || 0;
-            const taxRate = parseFloat(taxRateInput.value) || 0;
+        if (qtyInput && priceInput && taxSelect) {
+            const quantity = parseFloat(qtyInput.value) || 0;
+            const unitPrice = parseFloat(priceInput.value) || 0;
+            const taxRate = parseFloat(taxSelect.value) || 0;
             
             const lineSubtotal = quantity * unitPrice;
             const lineTax = lineSubtotal * (taxRate / 100);
@@ -296,7 +338,7 @@ function calculateTotals() {
             subtotal += lineSubtotal;
             totalTax += lineTax;
         }
-    });
+    }
     
     const discountAmount = parseFloat(document.getElementById('discount_amount').value) || 0;
     const totalAmount = subtotal + totalTax - discountAmount;
@@ -313,10 +355,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Recalculate when inputs change
     document.getElementById('invoiceForm').addEventListener('input', function(e) {
-        if (e.target.classList.contains('form-control-sm')) {
-            const index = parseInt(e.target.name.match(/\[(\d+)\]/)?.[1]);
-            if (!isNaN(index)) {
-                calculateLineTotal(index);
+        if (e.target.classList.contains('form-control-sm') || e.target.classList.contains('form-select')) {
+             const row = e.target.closest('tr');
+            if (row) {
+                const indexSpan = row.querySelector('.line-total');
+                if (indexSpan) {
+                    const index = indexSpan.getAttribute('data-index');
+                    calculateLineTotal(index);
+                }
             }
         }
     });
