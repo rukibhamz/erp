@@ -54,6 +54,8 @@ class Settings extends Base_Controller {
         $this->requirePermission('settings', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            
             $data = [
                 'public_key' => sanitize_input($_POST['public_key'] ?? ''),
                 'private_key' => sanitize_input($_POST['private_key'] ?? ''),

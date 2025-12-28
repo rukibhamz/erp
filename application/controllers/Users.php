@@ -33,6 +33,8 @@ class Users extends Base_Controller {
         $this->requirePermission('users', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // Validate CSRF token
+            
             $data = [
                 'username' => sanitize_input($_POST['username'] ?? ''),
                 'email' => sanitize_input($_POST['email'] ?? ''),

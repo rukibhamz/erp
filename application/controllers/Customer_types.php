@@ -61,4 +61,35 @@ class Customer_types extends Base_Controller {
         }
         $this->loadView('customer_types/form', ['page_title' => 'Edit Customer Type', 'type' => $type]);
     }
+    
+    public function delete($id) {
+        $this->requirePermission('customer_types', 'delete');
+        
+        $type = $this->typeModel->getById($id);
+        if (!$type) {
+            $this->setFlashMessage('danger', 'Customer type not found.');
+            redirect('customer_types');
+        }
+        
+        // Check if type is in use by customers
+        try {
+            $customerModel = $this->loadModel('Customer_model');
+            $customers = $customerModel->getBy(['customer_type_id' => $id]);
+            if (!empty($customers)) {
+                $this->setFlashMessage('danger', 'Cannot delete customer type in use. Please reassign customers first.');
+                redirect('customer_types');
+            }
+        } catch (Exception $e) {
+            // Continue if model doesn't exist
+        }
+        
+        if ($this->typeModel->delete($id)) {
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Settings', 'Deleted customer type: ' . ($type['name'] ?? ''));
+            $this->setFlashMessage('success', 'Customer type deleted.');
+        } else {
+            $this->setFlashMessage('danger', 'Failed to delete customer type.');
+        }
+        
+        redirect('customer_types');
+    }
 }

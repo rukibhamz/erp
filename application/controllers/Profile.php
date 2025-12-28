@@ -19,6 +19,8 @@ class Profile extends Base_Controller {
         $sessions = $this->sessionModel->getUserSessions($userId);
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+            check_csrf(); // Validate CSRF token
+            
             switch ($_POST['action']) {
                 case 'update_profile':
                     $this->updateProfile($userId);
