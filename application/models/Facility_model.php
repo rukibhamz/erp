@@ -282,6 +282,188 @@ class Facility_model extends Base_Model {
         return null;
     }
     
+    public function getAvailableTimeSlots($facilityId, $date, $endDate = null) {
+        $checkEndDate = $endDate ?? $date;
+        
+        try {
+            $facility = $this->getById($facilityId);
+            if (!$facility) {
+                return ['success' => false, 'message' => 'Facility/Space not found'];
+            }
+            
+            // Default Operating Hours: 8am - 10pm (22:00)
+            $startHour = 8;
+            $endHour = 22;
+            
+            // Check for overrides in pricing/availability rules
+            // NOTE: 'pricing_rules' sometimes contains availability info in legacy data, 
+            // but we should primarily look at availability_rules if available (from config)
+            if (isset($facility['pricing_rules']) && is_string($facility['pricing_rules'])) {
+                 // Try to decode if string
+                 $rules = json_decode($facility['pricing_rules'], true) ?: [];
+                 // Some legacy data might have hours here
+            }
+
+            // Ideally, we get config directly if it's a space
+            $availabilityRules = [];
+            if (!empty($facility['space_id'])) {
+                 // It's a space, let's fetch its specific config to be sure
+                 $config = $this->db->fetchOne("SELECT availability_rules FROM `" . $this->db->getPrefix() . "bookable_config` WHERE space_id = ?", [$facility['space_id']]);
+                 if ($config && !empty($config['availability_rules'])) {
+                     $availabilityRules = json_decode($config['availability_rules'], true) ?: [];
+                 }
+            }
+            
+            if (!empty($availabilityRules['operating_hours'])) {
+                $startHour = intval(substr($availabilityRules['operating_hours']['start'], 0, 2));
+                $endHour = intval(substr($availabilityRules['operating_hours']['end'], 0, 2));
+            }
+
+            // Check Day-Specific Availability (Resource_availability)
+            $dayOfWeek = date('w', strtotime($date));
+            $dayAvailability = $this->loadModel('Resource_availability_model')->getByResource($facilityId);
+             
+            $isDayAvailable = true; // Default to available if no rules
+            if (!empty($dayAvailability)) {
+                $foundDayRule = false;
+                foreach ($dayAvailability as $avail) {
+                    if ($avail['day_of_week'] == $dayOfWeek) {
+                        $foundDayRule = true;
+                        if (!$avail['is_available']) {
+                            $isDayAvailable = false;
+                        } else {
+                            if ($avail['start_time']) $startHour = intval(substr($avail['start_time'], 0, 2));
+                            if ($avail['end_time']) $endHour = intval(substr($avail['end_time'], 0, 2));
+                        }
+                        break;
+                    }
+                }
+                // If we found rules for other days but not this one, what is the default?
+                // Usually implied available, but let's stick to true.
+            }
+
+            if (!$isDayAvailable) {
+                return ['success' => true, 'slots' => [], 'occupied' => [], 'message' => 'Not available on this day'];
+            }
+
+            // Get Bookings
+            $bookingModel = $this->loadModel('Booking_model');
+            $bookings = $bookingModel->getByDateRange($date, $checkEndDate, $facilityId);
+            $recurringBookings = $bookingModel->getRecurringBookingsForDate($facilityId, $date);
+            $bookings = array_merge($bookings, $recurringBookings);
+
+            // Build Occupied Slots (with 1 hour buffer)
+            $occupiedSlots = [];
+            $bufferMinutes = 60; 
+
+            foreach ($bookings as $booking) {
+                if (!in_array($booking['status'], ['cancelled', 'no_show', 'refunded'])) {
+                    $bookingStart = new DateTime($booking['booking_date'] . ' ' . $booking['start_time']);
+                    $bookingEnd = new DateTime($booking['booking_date'] . ' ' . $booking['end_time']);
+                    
+                    // Buffer
+                    $bufferedStart = clone $bookingStart;
+                    $bufferedStart->modify("-{$bufferMinutes} minutes");
+                    $bufferedEnd = clone $bookingEnd;
+                    $bufferedEnd->modify("+{$bufferMinutes} minutes");
+
+                    $current = clone $bufferedStart;
+                    // Handle multi-day spanning
+                    while ($current < $bufferedEnd) {
+                        $dayDate = $current->format('Y-m-d');
+                        if ($dayDate >= $date && $dayDate <= $checkEndDate) {
+                             $dayStart = ($current->format('Y-m-d') == $bufferedStart->format('Y-m-d')) 
+                                ? $bufferedStart->format('H:i') : '00:00';
+                             $dayEnd = ($current->format('Y-m-d') == $bufferedEnd->format('Y-m-d')) 
+                                ? $bufferedEnd->format('H:i') : '23:59';
+                             
+                             $occupiedSlots[] = [
+                                 'date' => $dayDate,
+                                 'start' => $dayStart,
+                                 'end' => $dayEnd,
+                                 'booking_id' => $booking['id'],
+                                 'customer_name' => $booking['customer_name'] ?? 'Booked',
+                                 'booking' => $booking
+                             ];
+                        }
+                        $current->modify('+1 day');
+                        $current->setTime(0, 0, 0);
+                    }
+                }
+            }
+
+            // Generate Slots (15 min intervals)
+            $allSlots = [];
+            $currentDate = new DateTime($date);
+            $finalDate = new DateTime($checkEndDate);
+
+            while ($currentDate <= $finalDate) {
+                $currentDay = $currentDate->format('Y-m-d');
+                $currentH = $startHour;
+
+                while ($currentH < $endHour) {
+                    for ($minute = 0; $minute < 60; $minute += 15) {
+                        $slotStartStr = str_pad($currentH, 2, '0', STR_PAD_LEFT) . ':' . str_pad($minute, 2, '0', STR_PAD_LEFT);
+                        $slotStartDT = new DateTime($currentDay . ' ' . $slotStartStr);
+                        
+                        $slotEndDT = clone $slotStartDT;
+                        $slotEndDT->modify('+1 hour'); // 1 hour slots
+                        $slotEndStr = $slotEndDT->format('H:i');
+                        
+                        // If slot end goes beyond endHour (e.g. starts at 21:45, ends 22:45, but close is 22:00)
+                        if ($slotEndDT->format('H') > $endHour || ($slotEndDT->format('H') == $endHour && $slotEndDT->format('i') > 0)) {
+                             continue;
+                        }
+
+                        // Check availability
+                        $isOccupied = false;
+                        $occupier = null;
+                        $bookingData = null;
+                        
+                        foreach ($occupiedSlots as $occupied) {
+                            if ($occupied['date'] == $currentDay) {
+                                // Overlap logic: (StartA < EndB) and (EndA > StartB)
+                                if ($slotStartStr < $occupied['end'] && $slotEndStr > $occupied['start']) {
+                                    $isOccupied = true;
+                                    $occupier = $occupied['customer_name'];
+                                    $bookingData = $occupied['booking'];
+                                    break;
+                                }
+                            }
+                        }
+
+                        $allSlots[] = [
+                            'date' => $currentDay,
+                            'start' => $slotStartStr,
+                            'end' => $slotEndStr,
+                            'available' => !$isOccupied,
+                            'occupied_by' => $occupier,
+                            'booking' => $bookingData,
+                            'display' => $slotStartDT->format('g:i A') . ' - ' . $slotEndDT->format('g:i A')
+                        ];
+                    }
+                    $currentH++;
+                }
+                $currentDate->modify('+1 day');
+            }
+
+            $availableSlots = array_values(array_filter($allSlots, fn($s) => $s['available']));
+            $occupiedSlotsDisplay = array_values(array_filter($allSlots, fn($s) => !$s['available']));
+
+            return [
+                'success' => true,
+                'slots' => $availableSlots,
+                'occupied' => $occupiedSlotsDisplay,
+                'min_duration' => 1,
+                'max_duration' => 24
+            ];
+
+        } catch (Exception $e) {
+             error_log('Facility_model getAvailableTimeSlots error: ' . $e->getMessage());
+             return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
     public function checkAvailability($facilityId, $bookingDate, $startTime, $endTime, $excludeBookingId = null, $endDate = null) {
         try {
             // Use endDate if provided (for multi-day bookings), otherwise use bookingDate

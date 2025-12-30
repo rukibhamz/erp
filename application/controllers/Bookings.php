@@ -76,34 +76,30 @@ class Bookings extends Base_Controller {
             
             if ($viewType === 'day') {
                 // Day view with time slots
-                $timeSlots = $this->generateTimeSlots('08:00', '22:00', 60); // 1-hour intervals
-                $bookings = $this->bookingModel->getByDate($date, $facilityId);
+                // Use centralized logic from Facility_model
+                $slotsData = $this->facilityModel->getAvailableTimeSlots($facilityId, $date);
                 
-                // Check availability for each slot and find bookings
+                // Map to view expectations
                 $slotsWithAvailability = [];
-                foreach ($timeSlots as $slot) {
-                    $available = true;
-                    $booking = null;
+                if (!empty($slotsData['slots']) || !empty($slotsData['occupied'])) {
+                    // Combine and sort
+                    $allSlots = array_merge($slotsData['slots'], $slotsData['occupied']);
+                    usort($allSlots, function($a, $b) {
+                        return strcmp($a['start'], $b['start']);
+                    });
                     
-                    if ($facilityId) {
-                        $available = $this->facilityModel->checkAvailability(
-                            $facilityId,
-                            $date,
-                            $slot['start'],
-                            $slot['end']
-                        );
-                        
-                        // Find booking for this slot
-                        $booking = $this->getBookingForSlot($bookings, $slot);
+                    foreach ($allSlots as $slot) {
+                        $slotsWithAvailability[] = [
+                            'start_time' => $slot['start'],
+                            'end_time' => $slot['end'],
+                            'label' => $slot['display'],
+                            'available' => $slot['available'],
+                            'booking' => $slot['booking'] ?? null
+                        ];
                     }
-                    
-                    $slotsWithAvailability[] = [
-                        'start_time' => $slot['start'],
-                        'end_time' => $slot['end'],
-                        'label' => $slot['label'],
-                        'available' => $available,
-                        'booking' => $booking
-                    ];
+                } else {
+                     // Empty state - maybe generate default slots if errors?
+                     // But getAvailableTimeSlots should return empty if closed/unavailable
                 }
                 
                 $data = [
@@ -199,22 +195,22 @@ class Bookings extends Base_Controller {
         }
         
         try {
-            $timeSlots = $this->generateTimeSlots('08:00', '22:00', 60);
-            $availability = [];
+            // Use centralized logic
+            $slotsData = $this->facilityModel->getAvailableTimeSlots($facilityId, $date);
             
-            foreach ($timeSlots as $slot) {
-                $available = $this->facilityModel->checkAvailability(
-                    $facilityId,
-                    $date,
-                    $slot['start'],
-                    $slot['end']
-                );
-                
+            $availability = [];
+            // Combine and sort
+            $allSlots = array_merge($slotsData['slots'], $slotsData['occupied']);
+            usort($allSlots, function($a, $b) {
+                return strcmp($a['start'], $b['start']);
+            });
+
+            foreach ($allSlots as $slot) {
                 $availability[] = [
                     'start_time' => $slot['start'],
                     'end_time' => $slot['end'],
-                    'label' => $slot['label'],
-                    'available' => $available
+                    'label' => $slot['display'],
+                    'available' => $slot['available']
                 ];
             }
             
