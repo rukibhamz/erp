@@ -284,12 +284,15 @@ class Facility_model extends Base_Model {
     
     public function getAvailableTimeSlots($facilityId, $date, $endDate = null) {
         $checkEndDate = $endDate ?? $date;
+        error_log("DEBUG: getAvailableTimeSlots called for Facility: $facilityId, Date: $date, End: $checkEndDate");
         
         try {
             $facility = $this->getById($facilityId);
             if (!$facility) {
+                error_log("DEBUG: Facility $facilityId not found in DB.");
                 return ['success' => false, 'message' => 'Facility/Space not found'];
             }
+            error_log("DEBUG: Facility found: " . ($facility['facility_name'] ?? 'Unnamed'));
             
             // Fetch configuration just once
             $availabilityRules = [];
@@ -304,7 +307,12 @@ class Facility_model extends Base_Model {
                  $config = $this->db->fetchOne("SELECT availability_rules FROM `" . $this->db->getPrefix() . "bookable_config` WHERE space_id = ?", [$facility['space_id']]);
                  if ($config && !empty($config['availability_rules'])) {
                      $availabilityRules = json_decode($config['availability_rules'], true) ?: [];
+                     error_log("DEBUG: Found bookable_config rules: " . print_r($availabilityRules, true));
+                 } else {
+                     error_log("DEBUG: No bookable_config found for Space ID: " . $facility['space_id']);
                  }
+            } else {
+                error_log("DEBUG: Facility has no linked space_id.");
             }
 
             // Get Resource Rules from DB
@@ -314,12 +322,15 @@ class Facility_model extends Base_Model {
                 foreach ($resourceAvailability as $avail) {
                     $availabilityByDay[$avail['day_of_week']] = $avail;
                 }
+                error_log("DEBUG: Found Resource Availability rules for days: " . implode(', ', array_keys($availabilityByDay)));
+            } else {
+                error_log("DEBUG: No Resource Availability rules found in DB.");
             }
 
             // Get Bookings
             $bookingModel = $this->loadModel('Booking_model');
             $bookings = $bookingModel->getByDateRange($date, $checkEndDate, $facilityId);
-            $recurringBookings = $bookingModel->getRecurringBookingsForDate($facilityId, $date); // This only gets for start date? 
+            $recurringBookings = $bookingModel->getRecurringBookingsForDate($facilityId, $date); 
             // We need recurring for the range. The loop below checks recurring daily, so we will handle recurring inside the loop logic?
             // Actually getRecurringBookingsForDate checks if a recurring booking hits a specific date.
             // For efficiency, we should fetch all relevant recurring bookings or check per day.
@@ -335,6 +346,7 @@ class Facility_model extends Base_Model {
             // We will do a robust check per day.
             
             $bookings = array_merge($bookings, $recurringBookings);
+            error_log("DEBUG: Found " . count($bookings) . " bookings overlapping this range.");
 
             // Build Occupied Slots (with 1 hour buffer)
             $occupiedSlots = [];
@@ -380,6 +392,7 @@ class Facility_model extends Base_Model {
             $allSlots = [];
             $currentDate = new DateTime($date);
             $finalDate = new DateTime($checkEndDate);
+            error_log("DEBUG: Starting slot generation loop from " . $currentDate->format('Y-m-d') . " to " . $finalDate->format('Y-m-d'));
 
             while ($currentDate <= $finalDate) {
                 $currentDay = $currentDate->format('Y-m-d');
@@ -401,6 +414,7 @@ class Facility_model extends Base_Model {
                     $avail = $availabilityByDay[$dayOfWeek];
                     if (!$avail['is_available']) {
                         $isDayAvailable = false;
+                        error_log("DEBUG: Day $currentDay (DOW: $dayOfWeek) is marked unavailable in Resource Availability.");
                     } else {
                         if ($avail['start_time']) $startHour = intval(substr($avail['start_time'], 0, 2));
                         if ($avail['end_time']) $endHour = intval(substr($avail['end_time'], 0, 2));
@@ -409,6 +423,7 @@ class Facility_model extends Base_Model {
                     // Fallback to config if DB rules are empty but config exists
                     if (!in_array($dayOfWeek, $availabilityRules['days_available'])) {
                         $isDayAvailable = false;
+                        error_log("DEBUG: Day $currentDay (DOW: $dayOfWeek) is excluded in bookable_config days_available.");
                     }
                 }
 
@@ -417,6 +432,8 @@ class Facility_model extends Base_Model {
                     $currentDate->modify('+1 day');
                     continue;
                 }
+                
+                error_log("DEBUG: Day $currentDay operating hours: $startHour to $endHour");
 
                 $currentH = $startHour;
 
@@ -468,6 +485,8 @@ class Facility_model extends Base_Model {
 
             $availableSlots = array_values(array_filter($allSlots, fn($s) => $s['available']));
             $occupiedSlotsDisplay = array_values(array_filter($allSlots, fn($s) => !$s['available']));
+            
+            error_log("DEBUG: Finished generation. Available Slots: " . count($availableSlots) . ", Occupied: " . count($occupiedSlotsDisplay));
 
             return [
                 'success' => true,
