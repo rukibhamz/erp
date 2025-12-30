@@ -297,11 +297,35 @@ class Booking_wizard extends Base_Controller {
         header('Content-Type: application/json');
         
         $spaceId = intval($_GET['space_id'] ?? 0);
-        $date = sanitize_input($_GET['date'] ?? '');
-        $endDate = sanitize_input($_GET['end_date'] ?? $date); // For multi-day bookings
+        $rawDate = $_GET['date'] ?? '';
+        $rawEndDate = $_GET['end_date'] ?? $rawDate;
+
+        // Helper to normalize date to Y-m-d
+        $normalizeDate = function($d) {
+            if (empty($d)) return '';
+            // Try d/m/Y first (common frontend format)
+            $dt = DateTime::createFromFormat('d/m/Y', $d);
+            if ($dt && $dt->format('d/m/Y') === $d) {
+                return $dt->format('Y-m-d');
+            }
+            // Try Y-m-d
+            $dt = DateTime::createFromFormat('Y-m-d', $d);
+            if ($dt && $dt->format('Y-m-d') === $d) {
+                return $dt->format('Y-m-d');
+            }
+            // Fallback to strtotime (risky with slashed dates, but last resort)
+            return date('Y-m-d', strtotime($d));
+        };
+
+        $date = $normalizeDate(sanitize_input($rawDate));
+        $endDate = $normalizeDate(sanitize_input($rawEndDate));
+        
+        if (empty($endDate)) {
+            $endDate = $date;
+        }
         
         if (!$spaceId || !$date) {
-            echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
+            echo json_encode(['success' => false, 'message' => 'Invalid parameters: Space ID or Date missing']);
             exit;
         }
 
