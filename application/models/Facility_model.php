@@ -447,7 +447,8 @@ class Facility_model extends Base_Model {
                 $currentH = $startHour;
 
                 while ($currentH < $endHour) {
-                    for ($minute = 0; $minute < 60; $minute += 15) {
+                    // FIX: User requested 1 hour slots (on the hour), not 15 min intervals
+                    for ($minute = 0; $minute < 60; $minute += 60) {
                         $slotStartStr = str_pad($currentH, 2, '0', STR_PAD_LEFT) . ':' . str_pad($minute, 2, '0', STR_PAD_LEFT);
                         $slotStartDT = new DateTime($currentDay . ' ' . $slotStartStr);
                         
