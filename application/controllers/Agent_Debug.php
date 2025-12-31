@@ -1,22 +1,30 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Agent_Debug extends CI_Controller {
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class Agent_Debug extends Base_Controller {
+    
+    // Override auth check to allow public access for debugging
+    protected function checkAuth() {
+        return true;
+    }
+
     public function index() {
         echo "<h1>Agent Debugger</h1>";
         
-        $spaceId = $this->input->get('space_id') ? $this->input->get('space_id') : 1;
-        $date = $this->input->get('date') ? $this->input->get('date') : date('Y-m-d');
-        
-        // Load dependencies manually to mimic Booking_wizard
-        $this->load->model('Facility_model');
-        $this->load->model('Space_model');
+        $spaceId = isset($_GET['space_id']) ? intval($_GET['space_id']) : 1;
+        $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
         
         echo "<h3>Testing logic for Space ID: $spaceId, Date: $date</h3>";
         
         try {
+            // Load Models using Base_Controller method
+            $this->facilityModel = $this->loadModel('Facility_model');
+            $this->spaceModel = $this->loadModel('Space_model');
+            
             // 1. Get Space
-            $space = $this->Space_model->getWithProperty($spaceId);
+            $space = $this->spaceModel->getWithProperty($spaceId);
             if (!$space) {
                 die("Space not found.");
             }
@@ -28,7 +36,7 @@ class Agent_Debug extends CI_Controller {
             
             if (!$facilityId) {
                 echo "Attempting sync...<br>";
-                $facilityId = $this->Space_model->syncToBookingModule($spaceId);
+                $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
                 echo "Sync result ID: " . ($facilityId ? $facilityId : "FAILED") . "<br>";
             }
             
@@ -38,7 +46,12 @@ class Agent_Debug extends CI_Controller {
             
             // 3. Call Facility Model
             echo "Calling Facility_model->getAvailableTimeSlots...<br>";
-            $result = $this->Facility_model->getAvailableTimeSlots($facilityId, $date, $date);
+            // Ensure db is connected
+            if (!$this->db) {
+                die("DB Not initialized in Controller.");
+            }
+            
+            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $date);
             
             echo "<h4>Result:</h4>";
             echo "<pre>" . print_r($result, true) . "</pre>";
