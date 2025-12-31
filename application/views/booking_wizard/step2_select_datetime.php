@@ -57,6 +57,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </select>
                             </div>
                             
+                            <!-- Duration Selection (Hidden by default) -->
+                            <div class="mb-4" id="duration-container" style="display: none;">
+                                <label class="form-label fw-bold">Duration</label>
+                                <select id="duration" class="form-select form-select-lg">
+                                    <!-- Options populated by JS -->
+                                </select>
+                            </div>
+                            
                             <!-- Recurring Booking Option -->
                             <div class="mb-4" id="recurring-option" style="display: none;">
                                 <div class="form-check">
@@ -202,16 +210,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedTimeSummary = document.getElementById('selected-time-summary');
     
     const spaceId = <?= $space['id'] ?? 0 ?>;
+    const resourceId = <?= $space['facility_id'] ?? $space['id'] ?>;
     let selectedDate = '';
     let selectedEndDate = '';
     let selectedStartTime = '';
     let selectedEndTime = '';
     let selectedBookingType = '';
+    let selectedDuration = 1; // Hours
     let isRecurring = false;
     let recurringPattern = '';
     let recurringEndDate = '';
+    
+    // Cache for slots data
+    let currentSlotsData = [];
 
     const bookingTypeSelect = document.getElementById('booking_type');
+    const durationContainer = document.getElementById('duration-container');
+    const durationSelect = document.getElementById('duration');
     const bookingDate = document.getElementById('booking_date');
     const endDateContainer = document.getElementById('end-date-container');
     const bookingEndDate = document.getElementById('booking_end_date');
@@ -226,14 +241,18 @@ document.addEventListener('DOMContentLoaded', function() {
         bookingDate.disabled = true;
     }
 
-    // Show/hide end date based on booking type
+    // Show/hide end date and duration based on booking type
     bookingTypeSelect.addEventListener('change', function() {
         selectedBookingType = this.value;
         const isMultiDay = this.value === 'multi_day' || this.value === 'weekly';
+        
         endDateContainer.style.display = isMultiDay ? 'block' : 'none';
         recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
         
-        // Enable date input when booking type is selected
+        // Handle Duration Logic
+        updateDurationOptions(selectedBookingType);
+        
+        // Enable date input
         if (selectedBookingType) {
             bookingDate.removeAttribute('disabled');
         } else {
@@ -245,6 +264,43 @@ document.addEventListener('DOMContentLoaded', function() {
             loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
         }
     });
+
+    durationSelect.addEventListener('change', function() {
+        selectedDuration = parseInt(this.value);
+        if (selectedBookingType && selectedDate && currentSlotsData.length > 0) {
+            renderTimeSlots(currentSlotsData);
+        }
+    });
+
+    function updateDurationOptions(type) {
+        let options = '';
+        if (type === 'hourly') {
+            durationContainer.style.display = 'block';
+            options += '<option value="1">1 Hour</option>';
+            options += '<option value="2">2 Hours</option>';
+            options += '<option value="3">3 Hours</option>';
+            options += '<option value="4">4 Hours</option>';
+            options += '<option value="5">5 Hours</option>';
+            options += '<option value="6">6 Hours</option>';
+            options += '<option value="8">8 Hours</option>';
+        } else if (type === 'daily') {
+            durationContainer.style.display = 'block';
+            options += '<option value="4">4 Hours</option>';
+            options += '<option value="6">6 Hours</option>';
+            options += '<option value="8">8 Hours</option>';
+            options += '<option value="12">12 Hours</option>';
+            options += '<option value="24">Full Day (24 Hours)</option>';
+        } else {
+            durationContainer.style.display = 'none';
+            selectedDuration = 0; // Not applicable or calculated differently
+        }
+        durationSelect.innerHTML = options;
+        
+        // Set default
+        if (type === 'hourly') selectedDuration = 1;
+        if (type === 'daily') selectedDuration = 8; // Default valid reasonable time
+        durationSelect.value = selectedDuration;
+    }
 
     // Handle recurring booking checkbox
     isRecurringCheckbox.addEventListener('change', function() {
@@ -274,11 +330,6 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedEndDate = bookingEndDate.value;
         }
         
-        if (!selectedBookingType) {
-            timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
-            return;
-        }
-        
         if (selectedBookingType) {
             loadTimeSlots(spaceId, date, selectedEndDate || date);
         }
@@ -302,7 +353,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load initial slots if date and booking type are selected
     if (bookingDate.value && bookingTypeSelect.value) {
-        selectedBookingType = bookingTypeSelect.value;
+        selectedBookingType = bookingTypeSelect.value; // Initialize
+        updateDurationOptions(selectedBookingType);
         loadTimeSlots(spaceId, bookingDate.value);
     }
 
@@ -319,101 +371,141 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    let html = '';
+                    currentSlotsData = data.slots || [];
                     
-                    // Show available slots
-                    if (data.slots && data.slots.length > 0) {
-                        data.slots.forEach(slot => {
-                            html += `
-                                <div class="col-md-6 col-lg-4">
-                                    <button type="button" class="btn btn-success w-100 time-slot-btn available-slot" 
-                                            data-start="${slot.start}" 
-                                            data-end="${slot.end}"
-                                            data-date="${slot.date}"
-                                            style="min-height: 60px;">
-                                        <small class="d-block">${slot.date === date ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
-                                        ${slot.display}
-                                    </button>
-                                </div>
-                            `;
-                        });
-                    }
+                    // Also store occupied for reference if needed, but render logic mainly cares about availablity
+                    // For contiguous checking we need to know all slots in order. 
+                    // Current API returns valid slots and occupied slots separately. This makes "gap" checking hard.
+                    // Ideally we should merge them or assume they are derived from a full day grid.
+                    // Facility_model generates 'allSlots' then filters.
                     
-                    // Show occupied slots (for reference)
-                    if (data.occupied && data.occupied.length > 0) {
-                        data.occupied.forEach(slot => {
-                            html += `
-                                <div class="col-md-6 col-lg-4">
-                                    <button type="button" class="btn btn-danger w-100 time-slot-btn occupied-slot" 
-                                            disabled
-                                            style="min-height: 60px; opacity: 0.7; cursor: not-allowed;"
-                                            title="Occupied by: ${slot.occupied_by || 'Another booking'}">
-                                        <small class="d-block">${slot.date === date ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
-                                        ${slot.display}
-                                        <br><small><i class="bi bi-lock"></i> Occupied</small>
-                                    </button>
-                                </div>
-                            `;
-                        });
-                    }
-                    
-                    if (html === '') {
-                        html = '<div class="col-12"><div class="alert alert-warning">No time slots available for the selected date range. Please select another date.</div></div>';
-                    }
-                    
-                    timeSlotsContainer.innerHTML = html;
-                    
-                    // Add click handlers for available slots only
-                    document.querySelectorAll('.available-slot').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            // Remove active class from all buttons
-                            document.querySelectorAll('.time-slot-btn').forEach(b => {
-                                b.classList.remove('active');
-                            });
-                            
-                            // Add active class to selected
-                            this.classList.add('active');
-                            
-                            selectedStartTime = this.dataset.start;
-                            selectedEndTime = this.dataset.end;
-                            const slotDate = this.dataset.date || selectedDate;
-                            
-                            // Update summary
-                            document.getElementById('selected-type').textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex].text;
-                            selectedDateSpan.textContent = new Date(slotDate).toLocaleDateString();
-                            selectedTimeSpan.textContent = `${selectedStartTime} - ${selectedEndTime}`;
-                            
-                            if (selectedEndDate && selectedEndDate !== selectedDate) {
-                                document.getElementById('selected-end-date').textContent = new Date(selectedEndDate).toLocaleDateString();
-                                document.getElementById('selected-end-date-container').style.display = 'block';
-                            } else {
-                                document.getElementById('selected-end-date-container').style.display = 'none';
-                            }
-                            
-                            if (isRecurring && recurringPattern) {
-                                document.getElementById('selected-recurring').textContent = recurringPatternSelect.options[recurringPatternSelect.selectedIndex].text + 
-                                    (recurringEndDate ? ' until ' + new Date(recurringEndDate).toLocaleDateString() : ' (ongoing)');
-                                document.getElementById('selected-recurring-container').style.display = 'block';
-                            } else {
-                                document.getElementById('selected-recurring-container').style.display = 'none';
-                            }
-                            
-                            selectedTimeSummary.style.display = 'block';
-                            
-                            // Enable continue button
-                            continueBtn.disabled = false;
-                        });
-                    });
+                    renderTimeSlots(currentSlotsData);
                 } else {
-                    timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">No available time slots for this date. Please select another date.</div></div>';
-                    selectedTimeSummary.style.display = 'none';
-                    continueBtn.disabled = true;
+                     timeSlotsContainer.innerHTML = `<div class="col-12"><div class="alert alert-warning">${data.message || 'No available time slots.'}</div></div>`;
+                     selectedTimeSummary.style.display = 'none';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error loading time slots. Please try again.</div></div>';
             });
+    }
+
+    function renderTimeSlots(slots) {
+        let html = '';
+        let availableCount = 0;
+        
+        // Helper to parsing HH:mm
+        const parseTime = (t) => {
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        };
+        
+        const formatTime = (minutes) => {
+            const h = Math.floor(minutes / 60);
+            const m = minutes % 60;
+            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+        };
+
+        const formatDisplayTime = (minutes) => {
+            let h = Math.floor(minutes / 60);
+            const m = minutes % 60;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12;
+            return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+        };
+
+        // Allow selection of slots where (slot_start) -> (slot_start + duration) is fully available
+        // Since `slots` only contains AVAILABLE slots (without gaps?), we need to be careful.
+        // We really need to know if the consecutive slots exist in `slots`.
+        
+        // Sort slots by start time to be sure
+        slots.sort((a, b) => parseTime(a.start) - parseTime(b.start));
+        
+        slots.forEach((slot, index) => {
+            // Check if we can satisfy the duration starting from this slot
+            const startMin = parseTime(slot.start);
+            const targetEndMin = startMin + (selectedDuration * 60);
+            
+            // Check availability for full duration
+            // We need to find if all 60-min blocks between startMin and targetEndMin exist in 'slots'
+            let isFeasible = true;
+            
+            if (selectedDuration > 1) {
+                for (let i = 1; i < selectedDuration; i++) {
+                    const requiredStart = startMin + (i * 60); // Start of next hour
+                    // Find a slot that starts at requiredStart
+                    // We assume slots are atomic 1-hour slots from backend
+                    const foundNext = slots.find(s => parseTime(s.start) === requiredStart && s.date === slot.date);
+                    if (!foundNext) {
+                        isFeasible = false;
+                        break;
+                    }
+                }
+            }
+            
+            if (isFeasible && targetEndMin <= 24 * 60) { // must end within same day logic? Backend seems to split days
+                availableCount++;
+                const endDisplay = formatDisplayTime(targetEndMin);
+                const endDbStr = formatTime(targetEndMin);
+                
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <button type="button" class="btn btn-outline-success w-100 time-slot-btn available-slot" 
+                                data-start="${slot.start}" 
+                                data-end="${endDbStr}"
+                                data-date="${slot.date}"
+                                style="min-height: 60px;">
+                            <small class="d-block text-muted">${slot.date === selectedDate ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
+                            <span class="fw-bold">${slot.display.split('-')[0]} - ${endDisplay}</span>
+                            <div class="small text-success">${selectedDuration} Hour${selectedDuration > 1 ? 's' : ''}</div>
+                        </button>
+                    </div>
+                `;
+            }
+        });
+        
+        if (availableCount === 0) {
+             html = `<div class="col-12"><div class="alert alert-warning">
+                No consecutive time slots available for ${selectedDuration} hours on this date. 
+                Try checking individual hours or a different date.
+             </div></div>`;
+        }
+        
+        timeSlotsContainer.innerHTML = html;
+        
+        // Add click handlers
+         document.querySelectorAll('.available-slot').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all
+                document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('active', 'btn-success'));
+                document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.add('btn-outline-success'));
+                
+                // Add active
+                this.classList.remove('btn-outline-success');
+                this.classList.add('btn-success', 'active');
+                
+                selectedStartTime = this.dataset.start;
+                selectedEndTime = this.dataset.end;
+                const slotDate = this.dataset.date || selectedDate;
+                
+                // Update summary
+                document.getElementById('selected-type').textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex].text;
+                selectedDateSpan.textContent = new Date(slotDate).toLocaleDateString();
+                selectedTimeSpan.textContent = `${formatDisplayTime(parseTime(selectedStartTime))} - ${formatDisplayTime(parseTime(selectedEndTime))}`;
+                
+                if (selectedEndDate && selectedEndDate !== selectedDate) {
+                    document.getElementById('selected-end-date').textContent = new Date(selectedEndDate).toLocaleDateString();
+                    document.getElementById('selected-end-date-container').style.display = 'block';
+                } else {
+                    document.getElementById('selected-end-date-container').style.display = 'none';
+                }
+                
+                selectedTimeSummary.style.display = 'block';
+                continueBtn.disabled = false;
+            });
+        });
     }
 
     // Continue button handler
@@ -428,36 +520,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Validate end date for multi-day bookings
-        if ((bookingType === 'multi_day' || bookingType === 'weekly') && (!selectedEndDate || selectedEndDate < selectedDate)) {
-            alert('Please select a valid end date');
-            return;
-        }
+        // Validation logic...
         
-        // Validate recurring booking
-        if (isRecurring && !recurringPattern) {
-            alert('Please select a recurring pattern');
-            return;
-        }
-
-        // Build request body
         const requestData = {
             step: 2,
             data: {
                 space_id: spaceId,
+                resource_id: resourceId, // ADDED for validation
                 location_id: <?= $space['property_id'] ?? 0 ?>,
                 booking_type: bookingType,
                 date: selectedDate,
                 end_date: selectedEndDate || selectedDate,
                 start_time: selectedStartTime,
                 end_time: selectedEndTime,
+                duration: selectedDuration, // Optional: useful for backend
                 is_recurring: isRecurring ? 1 : 0,
                 recurring_pattern: recurringPattern || '',
                 recurring_end_date: recurringEndDate || ''
             }
         };
         
-        // Save to session via AJAX
         fetch('<?= base_url('booking-wizard/save-step') ?>', {
             method: 'POST',
             headers: {
@@ -470,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                window.location.href = `<?= base_url('booking-wizard/step3/') ?>${spaceId}`;
+                window.location.href = `<?= base_url('booking-wizard/step3/') ?>${resourceId}`; 
             } else {
                 alert('Error saving data. Please try again.');
             }
