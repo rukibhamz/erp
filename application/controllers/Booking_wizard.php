@@ -294,7 +294,11 @@ class Booking_wizard extends Base_Controller {
      * Get available and occupied time slots for a date (with 1-hour buffer)
      */
     public function getTimeSlots() {
+        // Prevent partial output or warnings from breaking JSON
+        while (ob_get_level()) { ob_end_clean(); }
         header('Content-Type: application/json');
+        ini_set('display_errors', 0);
+        error_reporting(E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED);
         
         $spaceId = intval($_GET['space_id'] ?? 0);
         $spaceId = intval($_GET['space_id'] ?? 0);
