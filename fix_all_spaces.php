@@ -84,8 +84,11 @@ while ($space = $spacesResult->fetch_assoc()) {
         
         // Create Facility
         $facName = $spaceName; // Use space name
-        $stmt = $mysqli->prepare("INSERT INTO {$prefix}facilities (facility_name, status, created_at, updated_at) VALUES (?, 'active', NOW(), NOW())");
-        $stmt->bind_param("s", $facName);
+        // Generate Unique Code: FAC-{SpaceID}-{RandomHex} to ensure uniqueness
+        $facCode = 'FAC-' . $spaceId . '-' . substr(md5(uniqid()), 0, 6);
+        
+        $stmt = $mysqli->prepare("INSERT INTO {$prefix}facilities (facility_name, facility_code, status, created_at, updated_at) VALUES (?, ?, 'active', NOW(), NOW())");
+        $stmt->bind_param("ss", $facName, $facCode);
         if ($stmt->execute()) {
             $newFacId = $mysqli->insert_id;
             
