@@ -322,7 +322,9 @@ class Facility_model extends Base_Model {
 
 
             // Get Resource Rules from DB
-            $resourceAvailability = $this->loadModel('Resource_availability_model')->getByResource($facilityId);
+            require_once BASEPATH . 'models/Resource_availability_model.php';
+            $resAvailModel = new Resource_availability_model($this->db);
+            $resourceAvailability = $resAvailModel->getByResource($facilityId);
             $availabilityByDay = [];
             if (!empty($resourceAvailability)) {
                 foreach ($resourceAvailability as $avail) {
@@ -334,7 +336,8 @@ class Facility_model extends Base_Model {
             }
 
             // Get Bookings
-            $bookingModel = $this->loadModel('Booking_model');
+            require_once BASEPATH . 'models/Booking_model.php';
+            $bookingModel = new Booking_model($this->db);
             $bookings = $bookingModel->getByDateRange($date, $checkEndDate, $facilityId);
             $recurringBookings = $bookingModel->getRecurringBookingsForDate($facilityId, $date); 
             // We need recurring for the range. The loop below checks recurring daily, so we will handle recurring inside the loop logic?
@@ -541,7 +544,8 @@ class Facility_model extends Base_Model {
             
             // Also check recurring bookings
             if (!$hasConflict) {
-                $bookingModel = $this->loadModel('Booking_model');
+                require_once BASEPATH . 'models/Booking_model.php';
+                $bookingModel = new Booking_model($this->db);
                 $currentDate = new DateTime($bookingDate);
                 $finalDate = new DateTime($checkEndDate);
                 
