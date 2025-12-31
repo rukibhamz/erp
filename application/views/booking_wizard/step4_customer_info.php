@@ -2,8 +2,8 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
+    <div class="row">
+        <div class="col-lg-12">
             <!-- Progress Steps -->
             <div class="mb-5">
                 <ul class="nav nav-pills nav-justified">
@@ -24,11 +24,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </li>
                 </ul>
             </div>
+        </div>
+    </div>
 
-            <div class="text-center mb-4">
-                <h1 class="display-6 fw-bold mb-3">Your Information</h1>
-                <p class="lead text-muted">Please provide your contact details</p>
-            </div>
+    <div class="text-center mb-4">
+        <h1 class="display-6 fw-bold mb-3">Your Information</h1>
+        <p class="lead text-muted">Please provide your contact details</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
 
             <div class="card">
                 <div class="card-body p-4">
