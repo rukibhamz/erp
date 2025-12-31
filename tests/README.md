@@ -1,32 +1,34 @@
-# Test Files
+# ERP System Tests
 
-This directory contains test and utility scripts for the ERP system.
+This directory contains automated test scripts to verify the functionality and integrity of the ERP system.
 
-## Files
+## Available Tests
 
-### test_email.php
-Standalone test script for email functionality. Tests SMTP configuration and email sending.
-- **Usage:** `php tests/test_email.php?to=your-email@example.com`
-- **Note:** Requires authentication (user must be logged in)
+### 1. Functional Test Runner (`run_functional_tests.php`)
+**Purpose**: Tests specific business logic and module functions (e.g., Booking Wizard pricing, availability, Invoicing).
+**Method**: Uses database transactions to run tests safely without modifying your real data (rollback is performed at the end).
+**Usage**:
+```bash
+php tests/run_functional_tests.php
+```
 
-### test_permission_system.php
-Comprehensive permission system testing script. Tests all roles and their permissions.
-- **Usage:** `php tests/test_permission_system.php`
-- **Note:** Run after migrations to verify permission system works correctly
+### 2. Comprehensive System Test (`comprehensive_system_test.php`)
+**Purpose**: Checks system integrity, file existence, database structure, and basic counts.
+**Usage**:
+```bash
+php tests/comprehensive_system_test.php
+```
 
-### Legacy Invoice Files
-These are legacy standalone endpoints that have been replaced by controller methods:
-- `view_invoice_legacy.php` - Legacy PDF viewer (replaced by `Receivables::pdfInvoice()`)
-- `download_invoice_legacy.php` - Legacy PDF downloader (replaced by `Receivables::downloadInvoice()`)
-- `send_invoice_email_legacy.php` - Legacy email sender (replaced by `Receivables::sendInvoiceEmail()`)
+## Troubleshooting: "could not find driver"
 
-### debug.php
-Debug utility script from install folder.
+If you see a `Database Connection Error: could not find driver` message, it means your PHP CLI environment does not have the **MySQL PDO driver** enabled.
 
-## Important Notes
-
-⚠️ **These files are for testing and development only.**
-- Do not expose these files in production
-- Some files may require authentication
-- Legacy files are kept for reference only
-
+**Fix for XAMPP:**
+1. Locate your PHP configuration file (`php.ini`). It is usually in `C:\xampp\php\php.ini`.
+2. Open it and search for `;extension=pdo_mysql`.
+3. Remove the semicolon (`;`) to uncomment it:
+   ```ini
+   extension=pdo_mysql
+   ```
+4. Save the file.
+5. Try running the test command again.
