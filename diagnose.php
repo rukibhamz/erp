@@ -123,22 +123,58 @@ if ($colsRes) {
     }
 }
 
-// Logic Replication - PAUSED
-die("Stopping for Schema verification.");
+// Logic Replication from Facility_model
+// 1. Get Space
+$space = fetchOne($mysqli, "SELECT * FROM spaces WHERE id = ? LIMIT 1", [$spaceId]);
+if (!$space) {
+    die("Space ID $spaceId not found in DB.");
+}
+echo "Found Space: " . $space['space_name'] . " (ID: {$space['id']})<br>";
+echo "Linked Facility ID: " . ($space['facility_id'] ?? 'NULL') . "<br>";
 
-/*
-// Get Facility linked to Space
-$facility = fetchOne($mysqli, "SELECT * FROM facilities WHERE space_id = ? LIMIT 1", [$spaceId]);
-if (!$facility) {
-    die("No facility found for Space ID $spaceId (Checked table: {$prefix}facilities)");
+if (empty($space['facility_id'])) {
+    die("Space is not linked to any facility!");
 }
 
-echo "Found Facility: " . $facility['facility_name'] . " (ID: {$facility['id']})<br>";
-*/
+$facilityId = $space['facility_id'];
 
-// Get Availability Rules
+// 2. Get Facility
+$facility = fetchOne($mysqli, "SELECT * FROM facilities WHERE id = ? LIMIT 1", [$facilityId]);
+if (!$facility) {
+    die("Linked Facility ID $facilityId not found in DB.");
+}
+echo "Found Facility: " . $facility['facility_name'] . " (ID: {$facility['id']})<br>";
+
+// 3. Get Availability Rules (from bookable_config using Space ID)
 $availabilityRules = [];
 $config = fetchOne($mysqli, "SELECT availability_rules FROM bookable_config WHERE space_id = ?", [$spaceId]);
+
+if ($config && !empty($config['availability_rules'])) {
+    $availabilityRules = json_decode($config['availability_rules'], true) ?: [];
+    echo "Rules Found in bookable_config: " . print_r($availabilityRules, true) . "<br>";
+} else {
+    echo "No specific rules in bookable_config for Space $spaceId. Using defaults.<br>";
+}
+
+// 4. Get Bookings (using Facility ID)
+$bookingsRes = $mysqli->query("SELECT * FROM {$prefix}bookings WHERE facility_id = {$facilityId} AND 
+    status NOT IN ('cancelled', 'no_show', 'refunded') AND
+    (
+       (booking_date BETWEEN '$date' AND '$endDate') OR
+       (booking_date <= '$endDate' AND DATE_ADD(booking_date, INTERVAL 1 DAY) > '$date')
+    )");
+    
+if (!$bookingsRes) {
+    echo "Booking query failed: " . $mysqli->error;
+    $bookings = [];
+} else {
+    $bookings = [];
+    while ($row = $bookingsRes->fetch_assoc()) {
+        $bookings[] = $row;
+    }
+}
+echo "Found " . count($bookings) . " bookings for Facility $facilityId.<br>";
+
 
 if ($config && !empty($config['availability_rules'])) {
     $availabilityRules = json_decode($config['availability_rules'], true) ?: [];
