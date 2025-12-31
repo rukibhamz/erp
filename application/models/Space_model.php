@@ -167,7 +167,7 @@ class Space_model extends Base_Model {
             $bookingTypes = json_decode($config['booking_types'] ?? '[]', true) ?: [];
             
             $facilityData = [
-                'facility_code' => $space['space_number'] ?: ('SP-' . $spaceId),
+                'facility_code' => 'FAC-' . $spaceId . '-' . substr(md5(uniqid()), 0, 6),
                 'facility_name' => $space['space_name'],
                 'description' => $space['description'] ?? '',
                 'capacity' => $space['capacity'] ?? 0,
