@@ -98,12 +98,14 @@ try {
     
     // 1. Create a Test Facility
     $facilityId = $db->insert('facilities', [
-        'name' => 'TEST_FACILITY_' . uniqid(),
+        'facility_name' => 'TEST_FACILITY_' . uniqid(),
+        'facility_code' => 'TEST-' . rand(1000,9999),
         'description' => 'Functional Test Facility',
-        'type' => 'meeting_room',
+        'resource_type' => 'meeting_room',
         'capacity' => 10,
-        'base_price' => 100, // Hourly
-        'active' => 1,
+        'hourly_rate' => 100,
+        'status' => 'active',
+        'is_bookable' => 1,
         'created_at' => date('Y-m-d H:i:s')
     ]);
     
