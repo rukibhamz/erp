@@ -303,17 +303,23 @@ class Facility_model extends Base_Model {
             }
 
             // Get config directly if it's a space
-            if (!empty($facility['space_id'])) {
-                 $config = $this->db->fetchOne("SELECT availability_rules FROM `" . $this->db->getPrefix() . "bookable_config` WHERE space_id = ?", [$facility['space_id']]);
+            // FIX: Facilities table doesn't have space_id, Spaces table has facility_id.
+            // We need to find the Space that links to this Facility.
+            $space = $this->db->fetchOne("SELECT id, space_name FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ?", [$facilityId]);
+            
+            if ($space) {
+                 error_log("DEBUG: Found linked Space: " . $space['space_name'] . " (ID: " . $space['id'] . ")");
+                 $config = $this->db->fetchOne("SELECT availability_rules FROM `" . $this->db->getPrefix() . "bookable_config` WHERE space_id = ?", [$space['id']]);
                  if ($config && !empty($config['availability_rules'])) {
                      $availabilityRules = json_decode($config['availability_rules'], true) ?: [];
                      error_log("DEBUG: Found bookable_config rules: " . print_r($availabilityRules, true));
                  } else {
-                     error_log("DEBUG: No bookable_config found for Space ID: " . $facility['space_id']);
+                     error_log("DEBUG: No bookable_config found for Space ID: " . $space['id']);
                  }
             } else {
-                error_log("DEBUG: Facility has no linked space_id.");
+                error_log("DEBUG: No Space linked to Facility ID $facilityId.");
             }
+
 
             // Get Resource Rules from DB
             $resourceAvailability = $this->loadModel('Resource_availability_model')->getByResource($facilityId);
