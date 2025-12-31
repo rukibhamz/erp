@@ -6,13 +6,28 @@ ini_set('display_errors', 1);
 echo "<h1>Diagnostic-Tool</h1>";
 
 // 1. Load Config
+// Bypass security check in config file
+if (!defined('BASEPATH')) {
+    define('BASEPATH', 'system');
+}
+
 $configFile = __DIR__ . '/application/config/config.installed.php';
 if (!file_exists($configFile)) {
     die("Config file not found at $configFile");
 }
 
 $config = include $configFile;
-$dbConf = $config['db'];
+if (!is_array($config) || !isset($config['db'])) {
+    // If include didn't return config, try to extract vars if it defined them
+    if (isset($db)) {
+        $dbConf = $db['default'] ?? $db;
+    } else {
+        die("Could not load DB config. config.installed.php did not return array or set \$db.");
+    }
+} else {
+    $dbConf = $config['db']['default'] ?? $config['db'];
+}
+
 
 echo "<h3>1. Database Connection</h3>";
 echo "Host: " . $dbConf['hostname'] . "<br>";
