@@ -8,16 +8,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="mb-5">
                 <ul class="nav nav-pills nav-justified">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#"><strong>Step 1:</strong> Select Location & Space</a>
+                        <a class="nav-link active" href="#"><strong>Step 1:</strong> Location & Space</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link disabled" href="#"><strong>Step 2:</strong> Date & Time</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link disabled" href="#"><strong>Step 3:</strong> Add Extras</a>
+                        <a class="nav-link disabled" href="#"><strong>Step 3:</strong> Extras</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link disabled" href="#"><strong>Step 4:</strong> Your Info</a>
+                        <a class="nav-link disabled" href="#"><strong>Step 4:</strong> Information</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link disabled" href="#"><strong>Step 5:</strong> Review & Pay</a>
@@ -26,7 +26,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
 
             <div class="text-center mb-4">
-                <h1 class="display-5 fw-bold mb-3">Select Location & Space</h1>
+                <h1 class="display-6 fw-bold mb-3">Select Location & Space</h1>
                 <p class="lead text-muted">Choose a location and then select the space you'd like to book</p>
             </div>
 

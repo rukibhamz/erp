@@ -8,16 +8,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="mb-5">
                 <ul class="nav nav-pills nav-justified">
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('booking-wizard') ?>"><strong>Step 1:</strong> Select Resource</a>
+                        <a class="nav-link" href="<?= base_url('booking-wizard') ?>"><strong>Step 1:</strong> Location & Space</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="<?= base_url('booking-wizard/step2/' . $resource['id']) ?>"><strong>Step 2:</strong> Date & Time</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="#"><strong>Step 3:</strong> Add Extras</a>
+                        <a class="nav-link active" href="#"><strong>Step 3:</strong> Extras</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link disabled" href="#"><strong>Step 4:</strong> Your Info</a>
+                        <a class="nav-link disabled" href="#"><strong>Step 4:</strong> Information</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link disabled" href="#"><strong>Step 5:</strong> Review & Pay</a>
