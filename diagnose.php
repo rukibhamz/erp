@@ -103,7 +103,30 @@ function fetchOne($mysqli, $sql, $params = []) {
     return $res->fetch_assoc();
 }
 
-// Logic Replication from Facility_model
+// 1.2 Schema Check
+echo "<h3>1.2 Schema Check (Facilities)</h3>";
+$colsRes = $mysqli->query("SHOW COLUMNS FROM {$prefix}facilities");
+if ($colsRes) {
+    while ($row = $colsRes->fetch_assoc()) {
+        echo $row['Field'] . " (" . $row['Type'] . ")<br>";
+    }
+} else {
+    echo "Could not describe facilities table: " . $mysqli->error;
+}
+
+// Check Spaces table too
+echo "<h3>1.3 Schema Check (Spaces)</h3>";
+$colsRes = $mysqli->query("SHOW COLUMNS FROM {$prefix}spaces");
+if ($colsRes) {
+    while ($row = $colsRes->fetch_assoc()) {
+        echo $row['Field'] . " (" . $row['Type'] . ")<br>";
+    }
+}
+
+// Logic Replication - PAUSED
+die("Stopping for Schema verification.");
+
+/*
 // Get Facility linked to Space
 $facility = fetchOne($mysqli, "SELECT * FROM facilities WHERE space_id = ? LIMIT 1", [$spaceId]);
 if (!$facility) {
@@ -111,6 +134,7 @@ if (!$facility) {
 }
 
 echo "Found Facility: " . $facility['facility_name'] . " (ID: {$facility['id']})<br>";
+*/
 
 // Get Availability Rules
 $availabilityRules = [];
