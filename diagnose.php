@@ -132,17 +132,62 @@ if (!$space) {
 echo "Found Space: " . $space['space_name'] . " (ID: {$space['id']})<br>";
 echo "Linked Facility ID: " . ($space['facility_id'] ?? 'NULL') . "<br>";
 
-if (empty($space['facility_id'])) {
-    die("Space is not linked to any facility!");
-}
-
 $facilityId = $space['facility_id'];
+
+// AUTO-FIX: If no facility linked, create one
+if (empty($facilityId)) {
+    echo "<div style='background:#fff3cd; padding:10px; border:1px solid #ffeeba; margin:10px 0;'>";
+    echo "<strong>WARNING: Space not linked to booking facility! Attempting Auto-Fix...</strong><br>";
+    
+    // 1. Create Facility
+    $facName = $space['space_name'];
+    $insertFac = $mysqli->prepare("INSERT INTO {$prefix}facilities (facility_name, status, created_at, updated_at) VALUES (?, 'active', NOW(), NOW())");
+    $insertFac->bind_param("s", $facName);
+    
+    if ($insertFac->execute()) {
+        $facilityId = $mysqli->insert_id;
+        echo "Created new Facility with ID: $facilityId<br>";
+        
+        // 2. Link Space to Facility
+        $updateSpace = $mysqli->prepare("UPDATE {$prefix}spaces SET facility_id = ? WHERE id = ?");
+        $updateSpace->bind_param("ii", $facilityId, $spaceId); // Corrected bind types
+        if ($updateSpace->execute()) {
+            echo "Linked Space $spaceId to Facility $facilityId.<br>";
+        } else {
+            echo "Failed to link Space: " . $mysqli->error . "<br>";
+        }
+        
+        // 3. Create Default Config
+        $defaultRules = json_encode([
+            'operating_hours' => ['start' => '08:00', 'end' => '22:00'],
+            'days_available' => [0,1,2,3,4,5,6]
+        ]);
+        
+        // Check if config exists
+        $checkConf = $mysqli->query("SELECT id FROM {$prefix}bookable_config WHERE space_id = $spaceId");
+        if ($checkConf->num_rows == 0) {
+            $insertConf = $mysqli->prepare("INSERT INTO {$prefix}bookable_config (space_id, availability_rules, created_at) VALUES (?, ?, NOW())");
+            $insertConf->bind_param("is", $spaceId, $defaultRules);
+            if ($insertConf->execute()) {
+                 echo "Created default bookable_config.<br>";
+            } else {
+                 echo "Failed to create config: " . $mysqli->error . "<br>";
+            }
+        }
+        
+    } else {
+        echo "Failed to create Facility: " . $mysqli->error . "<br>";
+        die("Fix failed.");
+    }
+    echo "</div>";
+}
 
 // 2. Get Facility
 $facility = fetchOne($mysqli, "SELECT * FROM facilities WHERE id = ? LIMIT 1", [$facilityId]);
 if (!$facility) {
     die("Linked Facility ID $facilityId not found in DB.");
 }
+
 echo "Found Facility: " . $facility['facility_name'] . " (ID: {$facility['id']})<br>";
 
 // 3. Get Availability Rules (from bookable_config using Space ID)
