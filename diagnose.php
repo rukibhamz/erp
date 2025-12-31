@@ -163,6 +163,23 @@ if (empty($facilityId)) {
             'days_available' => [0,1,2,3,4,5,6]
         ]);
         
+        // AUTO-FIX: Create table if missing
+        $createTable = "CREATE TABLE IF NOT EXISTS {$prefix}bookable_config (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `space_id` int(11) NOT NULL,
+            `availability_rules` text,
+            `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `space_id` (`space_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+        
+        if (!$mysqli->query($createTable)) {
+             echo "Failed to create bookable_config table: " . $mysqli->error . "<br>";
+        } else {
+             echo "Ensured bookable_config table exists.<br>";
+        }
+        
         // Check if config exists
         $checkConf = $mysqli->query("SELECT id FROM {$prefix}bookable_config WHERE space_id = $spaceId");
         if ($checkConf->num_rows == 0) {
@@ -174,6 +191,7 @@ if (empty($facilityId)) {
                  echo "Failed to create config: " . $mysqli->error . "<br>";
             }
         }
+
         
     } else {
         echo "Failed to create Facility: " . $mysqli->error . "<br>";
