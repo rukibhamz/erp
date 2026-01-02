@@ -65,10 +65,10 @@ try {
         'facility_id' => $facilityId,
         'space_name' => 'Test Space',
         'space_number' => 'TS-001',
+        'category' => 'event_space',
         'capacity' => 10,
-        'hourly_rate' => 100,
-        'daily_rate' => 800,
         'operational_status' => 'active',
+        'is_bookable' => 1,
         'created_at' => date('Y-m-d H:i:s')
     ]);
     pass("Created Test Space");
@@ -77,6 +77,7 @@ try {
     echo "  > Creating Bookable Config...\n";
     $db->insert('bookable_config', [
         'space_id' => $spaceId,
+        'is_bookable' => 1,
         'booking_types' => json_encode(['hourly', 'daily']),
         'availability_rules' => json_encode([
             'operating_hours' => ['start' => '08:00', 'end' => '22:00'],

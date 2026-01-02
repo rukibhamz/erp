@@ -95,10 +95,10 @@ try {
     $spaceId = $db->insert('spaces', [
         'facility_id' => $facilityId,
         'space_name' => 'TEST_SPACE_' . uniqid(),
+        'category' => 'event_space',
         'capacity' => 5,
-        'hourly_rate' => 50,
-        'daily_rate' => 400,
         'status' => 'active',
+        'is_bookable' => 1,
         'created_at' => date('Y-m-d H:i:s')
     ]);
     
