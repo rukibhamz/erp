@@ -35,7 +35,8 @@ $db->beginTransaction();
 try {
     echo "<h3>SETTING UP TEST ENVIRONMENT</h3>";
     
-    // 1. Create Property
+    // 1. Create a Property
+    echo "  > Creating Test Property...\n";
     $propertyId = $db->insert('properties', [
         'property_code' => 'TEST-PROP-' . rand(1000,9999),
         'property_name' => 'Test Location',
@@ -45,6 +46,7 @@ try {
     pass("Created Test Property");
 
     // 2. Create Facility
+    echo "  > Creating Test Facility...\n";
     $facilityId = $db->insert('facilities', [
         'facility_name' => 'Test Facility',
         'facility_code' => 'TEST-FAC-' . rand(1000,9999),
@@ -57,6 +59,7 @@ try {
     pass("Created Test Facility");
 
     // 3. Create Space
+    echo "  > Creating Test Space...\n";
     $spaceId = $db->insert('spaces', [
         'property_id' => $propertyId,
         'facility_id' => $facilityId,
@@ -66,15 +69,14 @@ try {
         'hourly_rate' => 100,
         'daily_rate' => 800,
         'operational_status' => 'active',
-        'is_bookable' => 1,
         'created_at' => date('Y-m-d H:i:s')
     ]);
     pass("Created Test Space");
 
     // 4. Create Bookable Config
+    echo "  > Creating Bookable Config...\n";
     $db->insert('bookable_config', [
         'space_id' => $spaceId,
-        'is_bookable' => 1,
         'booking_types' => json_encode(['hourly', 'daily']),
         'availability_rules' => json_encode([
             'operating_hours' => ['start' => '08:00', 'end' => '22:00'],
