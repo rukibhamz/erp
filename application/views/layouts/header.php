@@ -17,12 +17,29 @@
     <link href="<?= base_url('assets/css/module-navigation.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/buttons-override.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/ui-consistency.css') ?>" rel="stylesheet">
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="<?= base_url('pwa_manifest.php') ?>">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="ERP">
+    
     <script>
         // Initialize theme before page loads to prevent flash
         (function() {
             const theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', theme);
         })();
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('<?= base_url('sw.js') ?>')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed', err));
+            });
+        }
     </script>
 </head>
 <body>

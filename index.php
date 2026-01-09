@@ -52,8 +52,9 @@ if (!isset($config['installed']) || $config['installed'] !== true) {
     die('Application not installed. Please run the installer.');
 }
 
-// Set error reporting based on environment
-$environment = $config['environment'] ?? 'development';
+// Set error reporting based on environment and debug mode
+$environment = $config['environment'] ?? 'production';
+$debugMode = $config['debug_mode'] ?? false;
 
 // Ensure logs directory exists
 $logsDir = ROOTPATH . 'logs';
@@ -61,16 +62,16 @@ if (!is_dir($logsDir)) {
     @mkdir($logsDir, 0755, true);
 }
 
-if ($environment === 'production') {
-    // Production: Hide errors from users, log everything
+if ($debugMode || $environment === 'development') {
+    // Development or Debug Mode: Show errors for debugging
     error_reporting(E_ALL);
-    ini_set('display_errors', 0);
+    ini_set('display_errors', 1);
     ini_set('log_errors', 1);
     ini_set('error_log', ROOTPATH . 'logs/error.log');
 } else {
-    // Development: Show errors for debugging
+    // Production: Hide errors from users, log everything
     error_reporting(E_ALL);
-    ini_set('display_errors', 1);
+    ini_set('display_errors', 0);
     ini_set('log_errors', 1);
     ini_set('error_log', ROOTPATH . 'logs/error.log');
 }
