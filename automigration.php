@@ -75,13 +75,19 @@ ini_set('display_errors', 1);
         
         $prefix = $dbConfig['dbprefix'] ?? 'erp_';
         
+        // Helper function to get a fresh PDO connection
+        function getConnection($dbConfig) {
+            $dsn = "mysql:host={$dbConfig['hostname']};dbname={$dbConfig['database']};charset=" . ($dbConfig['charset'] ?? 'utf8mb4');
+            return new PDO($dsn, $dbConfig['username'], $dbConfig['password'], [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true
+            ]);
+        }
+        
         // Connect to database
         try {
-            $dsn = "mysql:host={$dbConfig['hostname']};dbname={$dbConfig['database']};charset=" . ($dbConfig['charset'] ?? 'utf8mb4');
-            $pdo = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-            ]);
+            $pdo = getConnection($dbConfig);
             echo '<div class="success">✓ Connected to database: <strong>' . htmlspecialchars($dbConfig['database']) . '</strong></div>';
         } catch (PDOException $e) {
             echo '<div class="error"><strong>Database connection failed:</strong> ' . htmlspecialchars($e->getMessage()) . '</div>';
@@ -100,7 +106,10 @@ ini_set('display_errors', 1);
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         
         // Get executed migrations
-        $executed = $pdo->query("SELECT migration FROM `{$prefix}migrations`")->fetchAll(PDO::FETCH_COLUMN);
+        $stmt = $pdo->query("SELECT migration FROM `{$prefix}migrations`");
+        $executed = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $stmt->closeCursor();
+        $stmt = null;
         
         // Get migration files
         $migrationDir = __DIR__ . '/database/migrations';
@@ -108,7 +117,10 @@ ini_set('display_errors', 1);
         sort($files);
         
         // Get current batch
-        $batchResult = $pdo->query("SELECT MAX(batch) as max_batch FROM `{$prefix}migrations`")->fetch();
+        $stmt = $pdo->query("SELECT MAX(batch) as max_batch FROM `{$prefix}migrations`");
+        $batchResult = $stmt->fetch();
+        $stmt->closeCursor();
+        $stmt = null;
         $batch = (int)($batchResult['max_batch'] ?? 0) + 1;
         
         // Check if migration requested
@@ -127,6 +139,10 @@ ini_set('display_errors', 1);
                     continue;
                 }
                 
+                // Get a fresh connection for each file to avoid buffering issues
+                $pdo = null;
+                $pdo = getConnection($dbConfig);
+                
                 $sql = file_get_contents($file);
                 
                 // Remove comments
@@ -135,7 +151,7 @@ ini_set('display_errors', 1);
                 // Split by semicolon
                 $statements = array_filter(array_map('trim', explode(';', $sql)));
                 
-                $fileSuccess = true;
+                $fileErrors = 0;
                 foreach ($statements as $stmt) {
                     $stmt = trim($stmt);
                     if (empty($stmt)) continue;
@@ -144,28 +160,41 @@ ini_set('display_errors', 1);
                         $pdo->exec($stmt);
                     } catch (PDOException $e) {
                         $msg = $e->getMessage();
-                        // Ignore "already exists" errors
-                        if (strpos($msg, 'already exists') === false && strpos($msg, 'Duplicate') === false) {
-                            echo '<div class="warning">⚠ Error in ' . htmlspecialchars($name) . ': ' . htmlspecialchars($msg) . '</div>';
+                        // Ignore "already exists" and duplicate errors
+                        if (strpos($msg, 'already exists') === false && 
+                            strpos($msg, 'Duplicate') === false &&
+                            strpos($msg, '1060') === false &&
+                            strpos($msg, '1061') === false) {
+                            $fileErrors++;
+                            if ($fileErrors <= 3) { // Only show first 3 errors per file
+                                echo '<div class="warning">⚠ ' . htmlspecialchars($name) . ': ' . htmlspecialchars(substr($msg, 0, 100)) . '</div>';
+                            }
                         }
                     }
                 }
                 
                 // Record migration
                 try {
-                    $pdo->prepare("INSERT INTO `{$prefix}migrations` (migration, batch, executed_at) VALUES (?, ?, NOW())")
-                        ->execute([$name, $batch]);
-                    echo '<div class="success">✓ Executed: ' . htmlspecialchars($name) . '</div>';
+                    $insertStmt = $pdo->prepare("INSERT INTO `{$prefix}migrations` (migration, batch, executed_at) VALUES (?, ?, NOW())");
+                    $insertStmt->execute([$name, $batch]);
+                    $insertStmt->closeCursor();
+                    echo '<div class="success">✓ Executed: ' . htmlspecialchars($name) . ($fileErrors > 0 ? " ({$fileErrors} warnings)" : '') . '</div>';
                     $success++;
                 } catch (PDOException $e) {
-                    // Already recorded
+                    // Already recorded or error
+                    if (strpos($e->getMessage(), 'Duplicate') !== false) {
+                        $skipped++;
+                    }
                 }
             }
             
             echo '<div class="info"><strong>Summary:</strong> ' . $success . ' migrations executed, ' . $skipped . ' already done.</div>';
             
-            // Refresh executed list
-            $executed = $pdo->query("SELECT migration FROM `{$prefix}migrations`")->fetchAll(PDO::FETCH_COLUMN);
+            // Get fresh connection and refresh executed list
+            $pdo = getConnection($dbConfig);
+            $stmt = $pdo->query("SELECT migration FROM `{$prefix}migrations`");
+            $executed = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $stmt->closeCursor();
         }
         
         // Get pending migrations
@@ -177,8 +206,13 @@ ini_set('display_errors', 1);
             }
         }
         
+        // Get fresh connection for remaining queries
+        $pdo = getConnection($dbConfig);
+        
         // Get list of existing tables
-        $tables = $pdo->query("SHOW TABLES LIKE '{$prefix}%'")->fetchAll(PDO::FETCH_COLUMN);
+        $stmt = $pdo->query("SHOW TABLES LIKE '{$prefix}%'");
+        $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $stmt->closeCursor();
         
         // Required tables
         $requiredTables = [
