@@ -20,8 +20,8 @@ class Meters extends Base_Controller {
         $this->spaceModel = $this->loadModel('Space_model');
         $this->tenantModel = $this->loadModel('Tenant_model');
         $this->activityModel = $this->loadModel('Activity_model');
-        $this->billModel = $this->loadModel('Bill_model');
-        $this->readingModel = $this->loadModel('Reading_model');
+        $this->billModel = $this->loadModel('Utility_bill_model');
+        $this->readingModel = $this->loadModel('Meter_reading_model');
     }
     
     public function index() {

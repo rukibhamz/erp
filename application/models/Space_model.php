@@ -120,7 +120,7 @@ class Space_model extends Base_Model {
                 $defaultConfig = [
                     'space_id' => $spaceId,
                     'is_bookable' => 1,
-                    'booking_types' => json_encode(['hourly', 'daily']),
+                    'booking_types' => json_encode(['hourly', 'daily', 'half_day', 'weekly', 'multi_day']),
                     'minimum_duration' => 1,
                     'maximum_duration' => null,
                     'advance_booking_days' => 365,

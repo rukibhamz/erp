@@ -11,16 +11,17 @@ class Utility_bills extends Base_Controller {
     private $transactionModel;
     private $accountModel;
     private $activityModel;
+    private $transactionService;
     
     public function __construct() {
         parent::__construct();
         $this->requirePermission('utilities', 'read');
-        $this->billModel = $this->loadModel('Bill_model');
+        $this->billModel = $this->loadModel('Utility_bill_model');
         $this->meterModel = $this->loadModel('Meter_model');
-        $this->readingModel = $this->loadModel('Reading_model');
+        $this->readingModel = $this->loadModel('Meter_reading_model');
         $this->tariffModel = $this->loadModel('Tariff_model');
-        $this->providerModel = $this->loadModel('Provider_model');
-        $this->paymentModel = $this->loadModel('Payment_model');
+        $this->providerModel = $this->loadModel('Utility_provider_model');
+        $this->paymentModel = $this->loadModel('Utility_payment_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->activityModel = $this->loadModel('Activity_model');
         
@@ -131,7 +132,7 @@ class Utility_bills extends Base_Controller {
                     'provider_id' => $provider['id'] ?? null,
                     'billing_period_start' => $periodStart,
                     'billing_period_end' => $periodEnd,
-                    'billing_date' => date('Y-m-d'),
+                    'bill_date' => date('Y-m-d'),
                     'due_date' => date('Y-m-d', strtotime('+30 days')),
                     'previous_reading' => $previousReading,
                     'current_reading' => $currentReading,
@@ -268,7 +269,7 @@ class Utility_bills extends Base_Controller {
             
             // Create Journal Entry
             $journalData = [
-                'date' => $billData['billing_date'],
+                'date' => $billData['bill_date'],
                 'reference_type' => 'utility_bill',
                 'reference_id' => $billId,
                 'description' => 'Utility Bill #' . $billData['bill_number'],

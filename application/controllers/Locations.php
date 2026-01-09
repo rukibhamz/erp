@@ -546,7 +546,7 @@ class Locations extends Base_Controller {
             
             foreach ($spaces as $space) {
                 $config = $this->spaceModel->getBookableConfig($space['id']);
-                $bookingTypes = ['hourly', 'daily'];
+                $bookingTypes = ['hourly', 'daily', 'half_day', 'weekly', 'multi_day'];
                 
                 if ($config && !empty($config['booking_types'])) {
                     $bookingTypes = json_decode($config['booking_types'], true) ?: $bookingTypes;

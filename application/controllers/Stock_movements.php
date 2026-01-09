@@ -22,6 +22,10 @@ class Stock_movements extends Base_Controller {
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
+    public function index() {
+        $this->receive();
+    }
+    
     public function receive() {
         $this->requirePermission('inventory', 'create');
         

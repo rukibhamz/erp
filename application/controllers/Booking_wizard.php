@@ -40,6 +40,10 @@ class Booking_wizard extends Base_Controller {
         $this->spaceModel = $this->loadModel('Space_model');
     }
     
+    public function index() {
+        redirect('booking_wizard/step1');
+    }
+    
     protected function checkAuth() {
         // Public controller - allow guest booking
         return true;

@@ -33,6 +33,13 @@ class Auth extends Base_Controller {
     }
     
     /**
+     * Default index page
+     */
+    public function index() {
+        redirect('auth/login');
+    }
+    
+    /**
      * Login page and authentication handler
      * 
      * Displays login form on GET request. Processes login on POST request.

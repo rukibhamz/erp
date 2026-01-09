@@ -72,12 +72,12 @@ class Inventory_reports extends Base_Controller {
     public function movements() {
         try {
             $sql = "SELECT st.*, i.item_name, i.sku, 
-                    lf.location_name as location_from_name, 
-                    lt.location_name as location_to_name
+                    lf.property_name as location_from_name, 
+                    lt.property_name as location_to_name
                     FROM `" . $this->db->getPrefix() . "stock_transactions` st
                     LEFT JOIN `" . $this->db->getPrefix() . "items` i ON st.item_id = i.id
-                    LEFT JOIN `" . $this->db->getPrefix() . "locations` lf ON st.location_from_id = lf.id
-                    LEFT JOIN `" . $this->db->getPrefix() . "locations` lt ON st.location_to_id = lt.id
+                    LEFT JOIN `" . $this->db->getPrefix() . "properties` lf ON st.location_from_id = lf.id
+                    LEFT JOIN `" . $this->db->getPrefix() . "properties` lt ON st.location_to_id = lt.id
                     ORDER BY st.transaction_date DESC, st.id DESC
                     LIMIT 200";
             
