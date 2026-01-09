@@ -16,8 +16,15 @@ class Customer_portal extends Base_Controller {
     
     protected function checkAuth() {
         // Public controller for registration/login
-        // Individual methods will check authentication
         return true;
+    }
+    
+    public function index() {
+        if (isset($this->session['customer_user_id'])) {
+            redirect('customer-portal/dashboard');
+        } else {
+            redirect('customer-portal/login');
+        }
     }
     
     protected function loadView($view, $data = []) {

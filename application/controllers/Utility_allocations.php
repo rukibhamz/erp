@@ -18,6 +18,10 @@ class Utility_allocations extends Base_Controller {
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
+    public function index() {
+        redirect('utilities/bills');
+    }
+    
     public function allocate($billId) {
         $this->requirePermission('utilities', 'create');
         

@@ -8,7 +8,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  */
 class System_log_model extends CI_Model {
     
-    private $table = 'system_logs';
+    protected $table = 'system_logs';
     
     /**
      * Get logs with filters

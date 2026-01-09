@@ -2,6 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Wholesale_pricing_model extends Base_Model {
+    protected $table = 'price_history';
     private $itemModel;
     private $customerTypeModel;
     private $discountTierModel;

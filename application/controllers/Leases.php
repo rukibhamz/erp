@@ -191,6 +191,73 @@ class Leases extends Base_Controller {
         $this->loadView('leases/view', $data);
     }
     
+    public function edit($id) {
+        $this->requirePermission('locations', 'update');
+        
+        $id = intval($id);
+        if (!$id) {
+            $this->setFlashMessage('danger', 'Invalid lease ID.');
+            redirect('leases');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(); // CSRF Protection
+            
+            $data = [
+                'lease_type' => sanitize_input($_POST['lease_type'] ?? 'commercial'),
+                'lease_term' => sanitize_input($_POST['lease_term'] ?? 'fixed_term'),
+                'start_date' => sanitize_input($_POST['start_date'] ?? ''),
+                'end_date' => !empty($_POST['end_date']) ? sanitize_input($_POST['end_date']) : null,
+                'rent_amount' => floatval($_POST['rent_amount'] ?? 0),
+                'payment_frequency' => sanitize_input($_POST['payment_frequency'] ?? 'monthly'),
+                'rent_due_date' => intval($_POST['rent_due_date'] ?? 5),
+                'security_deposit' => floatval($_POST['security_deposit'] ?? 0),
+                'service_charge' => floatval($_POST['service_charge'] ?? 0),
+                'utility_responsibility' => sanitize_input($_POST['utility_responsibility'] ?? 'tenant'),
+                'maintenance_responsibility' => sanitize_input($_POST['maintenance_responsibility'] ?? 'landlord'),
+                'permitted_use' => sanitize_input($_POST['permitted_use'] ?? ''),
+                'subletting_allowed' => !empty($_POST['subletting_allowed']) ? 1 : 0,
+                'rent_escalation_rate' => floatval($_POST['rent_escalation_rate'] ?? 0),
+                'terms' => !empty($_POST['terms']) ? json_encode($_POST['terms']) : null,
+                'status' => sanitize_input($_POST['status'] ?? 'active'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            if ($this->leaseModel->update($id, $data)) {
+                $this->activityModel->log($this->session['user_id'], 'update', 'Leases', 'Updated lease: ' . $id);
+                $this->setFlashMessage('success', 'Lease updated successfully.');
+                redirect('leases/view/' . $id);
+            } else {
+                $this->setFlashMessage('danger', 'Failed to update lease.');
+            }
+        }
+        
+        try {
+            $lease = $this->leaseModel->getWithDetails($id);
+            if (!$lease) {
+                $this->setFlashMessage('danger', 'Lease not found.');
+                redirect('leases');
+            }
+            
+            $spaces = $this->spaceModel->getAll();
+            $tenants = $this->tenantModel->getActive();
+        } catch (Exception $e) {
+            $lease = null;
+            $spaces = [];
+            $tenants = [];
+        }
+        
+        $data = [
+            'page_title' => 'Edit Lease: ' . ($lease['lease_number'] ?? ''),
+            'lease' => $lease,
+            'spaces' => $spaces,
+            'tenants' => $tenants,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('leases/edit', $data);
+    }
+    
     /**
      * Post security deposit to accounting
      */

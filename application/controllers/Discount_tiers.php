@@ -14,6 +14,10 @@ class Discount_tiers extends Base_Controller {
         $this->activityModel = $this->loadModel('Activity_model');
     }
     
+    public function index() {
+        redirect('inventory/items');
+    }
+    
     public function item($itemId) {
         $item = $this->itemModel->getById($itemId);
         $tiers = $this->tierModel->getByItem($itemId);

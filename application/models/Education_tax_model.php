@@ -2,6 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Education_tax_model extends Base_Model {
+    protected $table = 'education_tax_config';
     
     public function getConfig($year) {
         return $this->db->fetchOne(

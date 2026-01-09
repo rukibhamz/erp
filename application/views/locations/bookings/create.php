@@ -74,7 +74,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <option value="">Select Location First</option>
                                     <?php if ($selected_location && !empty($spaces)): ?>
                                         <?php foreach ($spaces as $space): ?>
-                                            <option value="<?= $space['id'] ?>" <?= ($selected_space && $selected_space['id'] == $space['id']) ? 'selected' : '' ?>>
+                                            <option value="<?= $space['id'] ?>" 
+                                                <?= ($selected_space && $selected_space['id'] == $space['id']) ? 'selected' : '' ?>
+                                                data-facility-id="<?= $space['facility_id'] ?? '' ?>"
+                                                data-booking-types='<?= json_encode($space['booking_types'] ?? ['hourly', 'daily']) ?>'
+                                                data-hourly-rate="<?= $space['hourly_rate'] ?? 0 ?>"
+                                                data-daily-rate="<?= $space['daily_rate'] ?? 0 ?>"
+                                                data-half-day-rate="<?= $space['half_day_rate'] ?? 0 ?>"
+                                                data-weekly-rate="<?= $space['weekly_rate'] ?? 0 ?>"
+                                                data-security-deposit="<?= $space['security_deposit'] ?? 0 ?>"
+                                                data-capacity="<?= $space['capacity'] ?? 0 ?>"
+                                                data-minimum-duration="<?= $space['minimum_duration'] ?? 1 ?>"
+                                                data-maximum-duration="<?= $space['maximum_duration'] ?? '' ?>"
+                                                data-operating-hours='<?= json_encode($space['operating_hours'] ?? ["start" => "08:00", "end" => "22:00"]) ?>'
+                                                data-days-available='<?= json_encode($space['days_available'] ?? [0,1,2,3,4,5,6]) ?>'
+                                            >
                                                 <?= htmlspecialchars($space['space_name']) ?> 
                                                 <?= $space['space_number'] ? '(' . htmlspecialchars($space['space_number']) . ')' : '' ?>
                                             </option>
@@ -99,18 +113,26 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     <!-- Booking Type and Date -->
                     <div class="row mb-4">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 <label class="form-label">Booking Type <span class="text-danger">*</span></label>
-                                <select name="booking_type" id="booking_type" class="form-select" required onchange="calculatePrice()" disabled>
+                                <select name="booking_type" id="booking_type" class="form-select" required onchange="updateDurationOptions(this.value); calculatePrice()" <?= (!$selected_space) ? 'disabled' : '' ?>>
                                     <option value="">Select Space First</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3" id="duration-container" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Duration <span class="text-danger">*</span></label>
+                                <select name="duration" id="duration" class="form-select" onchange="calculatePrice(); checkAvailability();">
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 <label class="form-label">Booking Date <span class="text-danger">*</span></label>
-                                <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots(); loadCalendar(); if (currentSpaceData && currentSpaceData.operating_hours) { generateTimeSlots(this.value); }">
+                                <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots(); loadCalendar();">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -240,6 +262,23 @@ const BASE_URL = '<?= base_url() ?>';
 let currentSpaceData = null;
 let spacesData = {};
 let selectedDate = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const locationId = document.getElementById('location_id').value;
+    const spaceId = document.getElementById('space_id').value;
+    
+    if (locationId) {
+        // If location is pre-selected but spaces are not populated by JS, load them
+        if (Object.keys(spacesData).length === 0) {
+            loadSpaces();
+        }
+    }
+    
+    if (spaceId) {
+        loadSpaceDetails();
+    }
+});
 
 // Load spaces when location is selected
 function loadSpaces() {
@@ -402,6 +441,33 @@ function loadSpaceDetails() {
     calculatePrice();
 }
 
+function updateDurationOptions(type) {
+    const durationContainer = document.getElementById('duration-container');
+    const durationSelect = document.getElementById('duration');
+    let options = '';
+    
+    if (type === 'hourly') {
+        durationContainer.style.display = 'block';
+        options += '<option value="1">1 Hour</option>';
+        options += '<option value="2">2 Hours</option>';
+        options += '<option value="3">3 Hours</option>';
+        options += '<option value="4">4 Hours</option>';
+        options += '<option value="5">5 Hours</option>';
+        options += '<option value="6">6 Hours</option>';
+        options += '<option value="8">8 Hours</option>';
+    } else if (type === 'daily') {
+        durationContainer.style.display = 'block';
+        options += '<option value="4">4 Hours</option>';
+        options += '<option value="6">6 Hours</option>';
+        options += '<option value="8">8 Hours</option>';
+        options += '<option value="12">12 Hours</option>';
+        options += '<option value="24">Full Day (24 Hours)</option>';
+    } else {
+        durationContainer.style.display = 'none';
+    }
+    durationSelect.innerHTML = options;
+}
+
 function loadCalendar() {
     const spaceId = document.getElementById('space_id').value;
     const bookingDate = document.getElementById('booking_date').value;
@@ -441,12 +507,39 @@ function calculatePrice() {
     
     const bookingDate = document.getElementById('booking_date').value;
     const startTime = document.getElementById('start_time').value;
-    const endTime = document.getElementById('end_time').value;
     const bookingType = document.getElementById('booking_type').value;
+    const durationSelect = document.getElementById('duration');
+    const duration = durationSelect ? parseInt(durationSelect.value) : 1;
     
-    if (!bookingDate || !startTime || !endTime || !bookingType) {
+    if (!bookingDate || !startTime || !bookingType) {
         document.getElementById('pricePreview').style.display = 'none';
         return;
+    }
+
+    let rate = 0;
+    if (bookingType === 'hourly') rate = currentSpaceData.hourly_rate;
+    else if (bookingType === 'daily') rate = currentSpaceData.daily_rate;
+    else if (bookingType === 'half_day') rate = currentSpaceData.half_day_rate;
+    else if (bookingType === 'weekly') rate = currentSpaceData.weekly_rate;
+    
+    let totalPrice = 0;
+    if (bookingType === 'hourly') {
+        totalPrice = rate * duration;
+    } else {
+        totalPrice = rate;
+    }
+    
+    document.getElementById('estimatedPrice').textContent = '₦' + totalPrice.toLocaleString();
+    document.getElementById('securityDeposit').textContent = '₦' + currentSpaceData.security_deposit.toLocaleString();
+    document.getElementById('pricePreview').style.display = 'block';
+
+    // Auto-fill end time based on duration if start time is selected
+    if (startTime && (bookingType === 'hourly' || bookingType === 'daily')) {
+        const [h, m] = startTime.split(':').map(Number);
+        let endH = h + duration;
+        if (endH >= 24) endH = 23; // Cap at end of day for simple internal form
+        const endTime = String(endH).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+        document.getElementById('end_time').value = endTime;
     }
     
     const start = new Date(bookingDate + 'T' + startTime);

@@ -22,6 +22,10 @@ class Payment extends Base_Controller {
         return true;
     }
     
+    public function index() {
+        redirect('dashboard');
+    }
+    
     /**
      * Initialize payment
      */

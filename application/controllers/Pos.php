@@ -113,6 +113,18 @@ class Pos extends Base_Controller {
         
         $this->loadView('pos/index', $data);
     }
+
+    /**
+     * Alias for index or specific terminal view
+     * Handles calls to pos/terminal
+     */
+    public function terminal($id = null) {
+        if ($id) {
+            redirect('pos/index?terminal=' . $id);
+        } else {
+            redirect('pos/index');
+        }
+    }
     
     public function processSale() {
         $this->requirePermission('pos', 'create');

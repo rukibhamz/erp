@@ -1,0 +1,13 @@
+[
+  {
+    "id": "add_lease_edit_method",
+    "description": "Add edit method to Leases controller and create edit view",
+    "tasks": [
+      "Add edit($id) to application/controllers/Leases.php",
+      "Create application/views/leases/edit.php",
+      "Create application/views/accounting/index.php",
+      "Create application/views/pos/terminal.php (redirect or copy from terminals.php)",
+      "Verify other missing views"
+    ]
+  }
+]

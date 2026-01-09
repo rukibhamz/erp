@@ -34,6 +34,10 @@ class Receivables extends Base_Controller {
         $this->transactionService = new Transaction_service();
     }
     
+    public function index() {
+        redirect('receivables/customers');
+    }
+    
     // Customers Management
     public function customers() {
         try {

@@ -4,13 +4,11 @@
  * Manages custom module labels for navigation
  */
 
-class Module_label_model {
-    private $db;
-    private $prefix;
+class Module_label_model extends Base_Model {
+    protected $table = 'module_labels';
     
     public function __construct() {
-        $this->db = Database::getInstance();
-        $this->prefix = $this->db->getPrefix();
+        parent::__construct();
     }
     
     /**
@@ -28,7 +26,7 @@ class Module_label_model {
                         icon_class,
                         display_order,
                         is_active
-                    FROM `{$this->prefix}module_labels`";
+                    FROM `{$this->db->getPrefix()}module_labels`";
             
             if ($activeOnly) {
                 $sql .= " WHERE is_active = 1";
@@ -59,7 +57,7 @@ class Module_label_model {
     public function getLabel($moduleCode) {
         try {
             $sql = "SELECT COALESCE(custom_label, default_label) as display_label
-                    FROM `{$this->prefix}module_labels`
+                    FROM `{$this->db->getPrefix()}module_labels`
                     WHERE module_code = ?";
             
             $result = $this->db->fetchOne($sql, [$moduleCode]);
@@ -91,7 +89,7 @@ class Module_label_model {
                 throw new Exception("Custom label too long (max 100 characters)");
             }
             
-            $sql = "UPDATE `{$this->prefix}module_labels`
+            $sql = "UPDATE `{$this->db->getPrefix()}module_labels`
                     SET custom_label = ?,
                         updated_by = ?,
                         updated_at = NOW()
@@ -120,7 +118,7 @@ class Module_label_model {
      */
     public function resetLabel($moduleCode, $userId) {
         try {
-            $sql = "UPDATE `{$this->prefix}module_labels`
+            $sql = "UPDATE `{$this->db->getPrefix()}module_labels`
                     SET custom_label = NULL,
                         updated_by = ?,
                         updated_at = NOW()
@@ -150,7 +148,7 @@ class Module_label_model {
      */
     public function updateOrder($moduleCode, $order, $userId) {
         try {
-            $sql = "UPDATE `{$this->prefix}module_labels`
+            $sql = "UPDATE `{$this->db->getPrefix()}module_labels`
                     SET display_order = ?,
                         updated_by = ?,
                         updated_at = NOW()
@@ -175,13 +173,13 @@ class Module_label_model {
         try {
             // First, check if the module exists in the table
             $existing = $this->db->fetchOne(
-                "SELECT id, is_active FROM `{$this->prefix}module_labels` WHERE module_code = ?",
+                "SELECT id, is_active FROM `{$this->db->getPrefix()}module_labels` WHERE module_code = ?",
                 [$moduleCode]
             );
             
             if ($existing) {
                 // Module exists, update it
-                $sql = "UPDATE `{$this->prefix}module_labels`
+                $sql = "UPDATE `{$this->db->getPrefix()}module_labels`
                         SET is_active = ?,
                             updated_by = ?,
                             updated_at = NOW()
@@ -215,7 +213,7 @@ class Module_label_model {
                     $defaultIcon = $defaults[$moduleCode]['icon_class'] ?? $defaultIcon;
                 }
                 
-                $sql = "INSERT INTO `{$this->prefix}module_labels`
+                $sql = "INSERT INTO `{$this->db->getPrefix()}module_labels`
                         (module_code, default_label, custom_label, icon_class, display_order, is_active, updated_by, created_at, updated_at)
                         VALUES (?, ?, NULL, ?, 999, ?, ?, NOW(), NOW())";
                 
@@ -250,7 +248,7 @@ class Module_label_model {
      */
     public function updateIcon($moduleCode, $iconClass, $userId) {
         try {
-            $sql = "UPDATE `{$this->prefix}module_labels`
+            $sql = "UPDATE `{$this->db->getPrefix()}module_labels`
                     SET icon_class = ?,
                         updated_by = ?,
                         updated_at = NOW()
@@ -275,7 +273,7 @@ class Module_label_model {
             $this->db->beginTransaction();
             
             foreach ($orders as $moduleCode => $order) {
-                $sql = "UPDATE `{$this->prefix}module_labels`
+                $sql = "UPDATE `{$this->db->getPrefix()}module_labels`
                         SET display_order = ?,
                             updated_by = ?,
                             updated_at = NOW()
@@ -329,8 +327,8 @@ class Module_label_model {
                         ml.custom_label,
                         ml.updated_at,
                         u.name as updated_by_name
-                    FROM `{$this->prefix}module_labels` ml
-                    LEFT JOIN `{$this->prefix}users` u ON ml.updated_by = u.id
+                    FROM `{$this->db->getPrefix()}module_labels` ml
+                    LEFT JOIN `{$this->db->getPrefix()}users` u ON ml.updated_by = u.id
                     WHERE ml.custom_label IS NOT NULL
                     ORDER BY ml.updated_at DESC
                     LIMIT ?";

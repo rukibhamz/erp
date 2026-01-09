@@ -34,6 +34,10 @@ class Payables extends Base_Controller {
         }
     }
     
+    public function index() {
+        redirect('payables/vendors');
+    }
+    
     public function vendors() {
         try {
             $vendors = $this->vendorModel->getAll();

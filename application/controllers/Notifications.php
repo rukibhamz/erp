@@ -10,6 +10,27 @@ class Notifications extends Base_Controller {
         $this->notificationModel = $this->loadModel('Notification_model');
     }
     
+    public function index() {
+        $userId = $this->session['user_id'] ?? null;
+        $limit = intval($_GET['limit'] ?? 100);
+        $unreadOnly = !empty($_GET['unread_only']);
+        
+        try {
+            $notifications = $this->notificationModel->getUserNotifications($userId, $unreadOnly, $limit);
+        } catch (Exception $e) {
+            $notifications = [];
+        }
+        
+        $data = [
+            'page_title' => 'Notifications',
+            'notifications' => $notifications,
+            'unread_only' => $unreadOnly,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('notifications/index', $data);
+    }
+    
     /**
      * Get notifications (AJAX)
      */

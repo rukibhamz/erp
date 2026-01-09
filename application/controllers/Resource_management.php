@@ -20,6 +20,10 @@ class Resource_management extends Base_Controller {
         $this->activityModel = $this->loadModel('Activity_model');
     }
 
+    public function index() {
+        redirect('facilities');
+    }
+
     /**
      * Manage resource availability
      */
