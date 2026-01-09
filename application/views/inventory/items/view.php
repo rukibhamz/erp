@@ -225,10 +225,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-arrow-left-right"></i> Transfer Stock
                 </a>
                 <hr>
-                <a href="<?= base_url('wholesale_pricing/setup/' . $item['id']) ?>" class="btn btn-outline-primary w-100 mb-2">
+                <a href="<?= base_url('wholesale_pricing/setup/' . $item['id']) ?>" class="btn btn-outline-dark w-100 mb-2">
                     <i class="bi bi-tag"></i> Wholesale Rules
                 </a>
-                <a href="<?= base_url('discount_tiers/item/' . $item['id']) ?>" class="btn btn-outline-info w-100 mb-2">
+                <a href="<?= base_url('discount_tiers/item/' . $item['id']) ?>" class="btn btn-outline-dark w-100 mb-2">
                     <i class="bi bi-layers"></i> Discount Tiers
                 </a>
                 <hr>

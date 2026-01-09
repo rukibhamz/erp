@@ -17,8 +17,8 @@ $is_assets = isset($uri_segments[1]) && $uri_segments[1] === 'assets';
 ?>
 
 <!-- Inventory Management Navigation -->
-<div class="property-nav mb-4 mt-0">
-    <nav class="nav nav-pills nav-fill">
+<div class="property-nav mb-4 mt-0 overflow-auto">
+    <nav class="nav nav-pills flex-nowrap">
         <a class="nav-link <?= $is_dashboard ? 'active' : '' ?>" href="<?= base_url('inventory') ?>">
             <i class="bi bi-speedometer2"></i> Dashboard
         </a>

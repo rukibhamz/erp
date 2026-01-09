@@ -22,9 +22,12 @@ class System_settings extends Base_Controller {
                 "SELECT setting_key, setting_value FROM `{$prefix}settings`"
             );
             $settings = [];
+            error_log('System_settings settingsResult count: ' . count($settingsResult));
             foreach ($settingsResult as $row) {
+                error_log('Setting row: ' . json_encode($row));
                 $settings[$row['setting_key']] = $row['setting_value'];
             }
+            error_log('Final settings array count: ' . count($settings));
         } catch (Exception $e) {
             error_log('System_settings index error: ' . $e->getMessage());
             $settings = [];
