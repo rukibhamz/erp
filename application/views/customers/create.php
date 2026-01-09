@@ -1,7 +1,6 @@
 <?php
 /**
- * Customers Create View
- * Alias for receivables/create_customer
+ * Customers Create View - Alias to receivables/create_customer
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
-redirect('receivables/createCustomer');
+$this->view('receivables/create_customer');

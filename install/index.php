@@ -451,6 +451,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 createHtaccess();
                 error_log("Installation completed successfully");
                 
+                // Run all final SQL migrations from database/migrations to ensure completeness
+                error_log("Running all final SQL migrations from database/migrations...");
+                $migrationDir = dirname(__DIR__) . '/database/migrations';
+                $sqlFiles = glob($migrationDir . '/*.sql');
+                if ($sqlFiles) {
+                    sort($sqlFiles);
+                    foreach ($sqlFiles as $sqlFile) {
+                        $fileName = basename($sqlFile);
+                        error_log("Executing migration: {$fileName}");
+                        
+                        $sql = file_get_contents($sqlFile);
+                        // Replace erp_ prefix with the user-defined prefix
+                        $sql = str_replace('erp_', $_SESSION['db_prefix'], $sql);
+                        
+                        // Split by semicolon and execute each statement
+                        // Note: This is a simple parser, but works for the current migration files
+                        $statements = array_filter(array_map('trim', explode(';', $sql)));
+                        foreach ($statements as $statement) {
+                            if (!empty($statement) && !preg_match('/^--/', $statement)) {
+                                try {
+                                    $pdo->exec($statement);
+                                } catch (PDOException $e) {
+                                    // Log but continue for non-critical errors (like duplicate columns/tables)
+                                    if (strpos($e->getMessage(), 'Duplicate') === false && 
+                                        strpos($e->getMessage(), 'already exists') === false) {
+                                        error_log("Migration {$fileName} statement warning: " . $e->getMessage());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                error_log("All final SQL migrations completed");
+                
                 header('Location: ?step=' . STEP_COMPLETE);
                 exit;
             } catch (Exception $e) {

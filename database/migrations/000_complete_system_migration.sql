@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- COMPLETE SYSTEM MIGRATION (ALL-IN-ONE FOR NEW INSTALLATIONS)
 -- ============================================================================
 -- This is the COMPLETE migration for the entire ERP system
@@ -706,12 +706,1405 @@ ORDER BY p.module, p.permission;
 -- END OF COMPLETE SYSTEM MIGRATION
 -- ============================================================================
 -- This migration includes:
--- ✅ All permission system tables (erp_permissions, erp_roles, erp_role_permissions)
--- ✅ All roles (super_admin, admin, manager, staff, user, accountant)
--- ✅ All permissions for all modules including Accounting sub-modules and POS
--- ✅ Manager: All business modules + Accounting sub-modules + POS (Tax excluded)
--- ✅ Staff: POS, Bookings, Inventory, Utilities (read, update, create)
--- ✅ Accountant: All accounting permissions
--- ✅ All business module tables (properties, spaces, stock_levels, items, leases, work_orders, tax_deadlines, utility_bills)
+-- Ã¢Å“â€¦ All permission system tables (erp_permissions, erp_roles, erp_role_permissions)
+-- Ã¢Å“â€¦ All roles (super_admin, admin, manager, staff, user, accountant)
+-- Ã¢Å“â€¦ All permissions for all modules including Accounting sub-modules and POS
+-- Ã¢Å“â€¦ Manager: All business modules + Accounting sub-modules + POS (Tax excluded)
+-- Ã¢Å“â€¦ Staff: POS, Bookings, Inventory, Utilities (read, update, create)
+-- Ã¢Å“â€¦ Accountant: All accounting permissions
+-- Ã¢Å“â€¦ All business module tables (properties, spaces, stock_levels, items, leases, work_orders, tax_deadlines, utility_bills)
 -- ============================================================================
 
+- -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   C O M P L E T E   S Y S T E M   T A B L E S   F I X   -   R U N   D I R E C T L Y   I N   P H P M Y A D M I N 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   T h i s   m i g r a t i o n   c r e a t e s   A L L   m i s s i n g   t a b l e s   a n d   v i e w s   f o r   t h e   E R P   s y s t e m . 
+ 
+ - -   R U N   T H I S   I N   P H P M Y A D M I N :   S e l e c t   y o u r   ' e r p s '   d a t a b a s e ,   g o   t o   S Q L   t a b ,   p a s t e ,   E x e c u t e 
+ 
+ - -   I D E M P O T E N T   -   S a f e   t o   r u n   m u l t i p l e   t i m e s 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ S E T   F O R E I G N _ K E Y _ C H E C K S   =   0 ; 
+ 
+ S E T   S Q L _ M O D E   =   ' N O _ A U T O _ V A L U E _ O N _ Z E R O ' ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   I N V E N T O R Y   T A B L E S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   S t o c k   T r a n s a c t i o n s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ s t o c k _ t r a n s a c t i o n s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` t r a n s a c t i o n _ n u m b e r `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` t r a n s a c t i o n _ t y p e `   E N U M ( ' r e c e i v e ' , ' i s s u e ' , ' t r a n s f e r ' , ' a d j u s t ' , ' r e t u r n ' , ' s a l e ' )   N O T   N U L L , 
+ 
+         ` i t e m _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` l o c a t i o n _ f r o m _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` l o c a t i o n _ t o _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` q u a n t i t y `   D E C I M A L ( 1 5 , 4 )   N O T   N U L L , 
+ 
+         ` u n i t _ c o s t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` u n i t _ p r i c e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` r e f e r e n c e _ t y p e `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` r e f e r e n c e _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` t r a n s a c t i o n _ d a t e `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ b y `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ t r a n s a c t i o n _ n u m b e r `   ( ` t r a n s a c t i o n _ n u m b e r ` ) , 
+ 
+         K E Y   ` i d x _ i t e m _ i d `   ( ` i t e m _ i d ` ) , 
+ 
+         K E Y   ` i d x _ t r a n s a c t i o n _ d a t e `   ( ` t r a n s a c t i o n _ d a t e ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   S t o c k   A d j u s t m e n t s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ s t o c k _ a d j u s t m e n t s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` a d j u s t m e n t _ n u m b e r `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` i t e m _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` l o c a t i o n _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` a d j u s t m e n t _ t y p e `   E N U M ( ' a d d i t i o n ' ,   ' s u b t r a c t i o n ' ,   ' r e s e t ' )   N O T   N U L L , 
+ 
+         ` q u a n t i t y `   D E C I M A L ( 1 5 , 4 )   N O T   N U L L , 
+ 
+         ` r e a s o n `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` a d j u s t e d _ b y `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` a d j u s t m e n t _ d a t e `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         ` s t a t u s `   E N U M ( ' d r a f t ' ,   ' p o s t e d ' ,   ' c a n c e l l e d ' )   D E F A U L T   ' d r a f t ' , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ a d j u s t m e n t _ n u m b e r `   ( ` a d j u s t m e n t _ n u m b e r ` ) , 
+ 
+         K E Y   ` i d x _ i t e m _ i d `   ( ` i t e m _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   S t o c k   T a k e s   ( P h y s i c a l   I n v e n t o r y ) 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ s t o c k _ t a k e s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` s t o c k _ t a k e _ n u m b e r `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` l o c a t i o n _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` s t a r t _ d a t e `   D A T E T I M E   N O T   N U L L , 
+ 
+         ` e n d _ d a t e `   D A T E T I M E   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' i n _ p r o g r e s s ' ,   ' c o m p l e t e d ' ,   ' c a n c e l l e d ' )   D E F A U L T   ' i n _ p r o g r e s s ' , 
+ 
+         ` c o n d u c t e d _ b y `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ s t o c k _ t a k e _ n u m b e r `   ( ` s t o c k _ t a k e _ n u m b e r ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   S t o c k   T a k e   I t e m s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ s t o c k _ t a k e _ i t e m s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` s t o c k _ t a k e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` i t e m _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` s y s t e m _ q u a n t i t y `   D E C I M A L ( 1 5 , 4 )   D E F A U L T   0 , 
+ 
+         ` c o u n t e d _ q u a n t i t y `   D E C I M A L ( 1 5 , 4 )   D E F A U L T   N U L L , 
+ 
+         ` v a r i a n c e `   D E C I M A L ( 1 5 , 4 )   D E F A U L T   0 , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ s t o c k _ t a k e _ i d `   ( ` s t o c k _ t a k e _ i d ` ) , 
+ 
+         K E Y   ` i d x _ i t e m _ i d `   ( ` i t e m _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   S U P P L I E R / P U R C H A S I N G   T A B L E S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   S u p p l i e r s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ s u p p l i e r s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` s u p p l i e r _ c o d e `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` s u p p l i e r _ n a m e `   V A R C H A R ( 2 5 5 )   N O T   N U L L , 
+ 
+         ` c o n t a c t _ p e r s o n `   V A R C H A R ( 2 5 5 )   D E F A U L T   N U L L , 
+ 
+         ` e m a i l `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` p h o n e `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` a d d r e s s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c i t y `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` s t a t e `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` c o u n t r y `   V A R C H A R ( 1 0 0 )   D E F A U L T   ' N i g e r i a ' , 
+ 
+         ` t a x _ n u m b e r `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` p a y m e n t _ t e r m s `   I N T ( 1 1 )   D E F A U L T   0 , 
+ 
+         ` s t a t u s `   E N U M ( ' a c t i v e ' , ' i n a c t i v e ' )   D E F A U L T   ' a c t i v e ' , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         ` u p d a t e d _ a t `   D A T E T I M E   D E F A U L T   N U L L   O N   U P D A T E   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ s u p p l i e r _ c o d e `   ( ` s u p p l i e r _ c o d e ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   P u r c h a s e   O r d e r s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ p u r c h a s e _ o r d e r s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` p o _ n u m b e r `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` s u p p l i e r _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` o r d e r _ d a t e `   D A T E   N O T   N U L L , 
+ 
+         ` e x p e c t e d _ d a t e `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` s u b t o t a l `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t a x _ t o t a l `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t o t a l _ a m o u n t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` s t a t u s `   E N U M ( ' d r a f t ' , ' s e n t ' , ' p a r t i a l l y _ r e c e i v e d ' , ' r e c e i v e d ' , ' c a n c e l l e d ' , ' c l o s e d ' )   D E F A U L T   ' d r a f t ' , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ b y `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         ` u p d a t e d _ a t `   D A T E T I M E   D E F A U L T   N U L L   O N   U P D A T E   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ p o _ n u m b e r `   ( ` p o _ n u m b e r ` ) , 
+ 
+         K E Y   ` i d x _ s u p p l i e r _ i d `   ( ` s u p p l i e r _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   P u r c h a s e   O r d e r   I t e m s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ p u r c h a s e _ o r d e r _ i t e m s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` p o _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` i t e m _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` d e s c r i p t i o n `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` q u a n t i t y `   D E C I M A L ( 1 5 , 4 )   N O T   N U L L , 
+ 
+         ` r e c e i v e d _ q u a n t i t y `   D E C I M A L ( 1 5 , 4 )   D E F A U L T   0 , 
+ 
+         ` u n i t _ p r i c e `   D E C I M A L ( 1 5 , 2 )   N O T   N U L L , 
+ 
+         ` t a x _ r a t e `   D E C I M A L ( 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t a x _ a m o u n t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` l i n e _ t o t a l `   D E C I M A L ( 1 5 , 2 )   N O T   N U L L , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ p o _ i d `   ( ` p o _ i d ` ) , 
+ 
+         K E Y   ` i d x _ i t e m _ i d `   ( ` i t e m _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   G o o d s   R e c e i p t s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ g o o d s _ r e c e i p t s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` g r n _ n u m b e r `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` p o _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` s u p p l i e r _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` r e c e i v e d _ d a t e `   D A T E   N O T   N U L L , 
+ 
+         ` l o c a t i o n _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' d r a f t ' , ' p o s t e d ' , ' c a n c e l l e d ' )   D E F A U L T   ' d r a f t ' , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ b y `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ g r n _ n u m b e r `   ( ` g r n _ n u m b e r ` ) , 
+ 
+         K E Y   ` i d x _ s u p p l i e r _ i d `   ( ` s u p p l i e r _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   G o o d s   R e c e i p t   I t e m s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ g o o d s _ r e c e i p t _ i t e m s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` g r n _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` i t e m _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` d e s c r i p t i o n `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` r e c e i v e d _ q u a n t i t y `   D E C I M A L ( 1 5 , 4 )   N O T   N U L L , 
+ 
+         ` u n i t _ c o s t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` l i n e _ t o t a l `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ g r n _ i d `   ( ` g r n _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   B O O K I N G   T A B L E S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   B o o k i n g   A d d - o n s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ b o o k i n g _ a d d o n s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` b o o k i n g _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` a d d o n _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` a d d o n _ n a m e `   V A R C H A R ( 2 5 5 )   N O T   N U L L , 
+ 
+         ` q u a n t i t y `   D E C I M A L ( 1 0 , 2 )   D E F A U L T   1 , 
+ 
+         ` u n i t _ p r i c e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t o t a l _ p r i c e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ b o o k i n g _ i d `   ( ` b o o k i n g _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   P R O P E R T Y / L O C A T I O N   T A B L E S   &   V I E W S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   L o c a t i o n s   V i e w   ( p o i n t s   t o   p r o p e r t i e s   f o r   c o m p a t i b i l i t y ) 
+ 
+ D R O P   V I E W   I F   E X I S T S   ` e r p _ l o c a t i o n s ` ; 
+ 
+ C R E A T E   V I E W   ` e r p _ l o c a t i o n s `   A S   
+ 
+ S E L E C T   * ,   i d   A S   l o c a t i o n _ i d ,   p r o p e r t y _ n a m e   A S   l o c a t i o n _ n a m e   F R O M   ` e r p _ p r o p e r t i e s ` ; 
+ 
+ 
+ 
+ - -   T e n a n t s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ t e n a n t s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` t e n a n t _ n a m e `   V A R C H A R ( 2 5 5 )   N O T   N U L L , 
+ 
+         ` t e n a n t _ t y p e `   E N U M ( ' i n d i v i d u a l ' ,   ' c o r p o r a t e ' )   D E F A U L T   ' i n d i v i d u a l ' , 
+ 
+         ` e m a i l `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` p h o n e `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` i d e n t i f i c a t i o n _ t y p e `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` i d e n t i f i c a t i o n _ n u m b e r `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` a d d r e s s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' a c t i v e ' ,   ' i n a c t i v e ' )   D E F A U L T   ' a c t i v e ' , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         ` u p d a t e d _ a t `   D A T E T I M E   D E F A U L T   N U L L   O N   U P D A T E   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   R e n t   I n v o i c e s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ r e n t _ i n v o i c e s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` i n v o i c e _ n u m b e r `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` l e a s e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` t e n a n t _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` p r o p e r t y _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` s p a c e _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` p e r i o d _ s t a r t `   D A T E   N O T   N U L L , 
+ 
+         ` p e r i o d _ e n d `   D A T E   N O T   N U L L , 
+ 
+         ` d u e _ d a t e `   D A T E   N O T   N U L L , 
+ 
+         ` s u b t o t a l `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t a x _ t o t a l `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t o t a l _ a m o u n t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` b a l a n c e _ a m o u n t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` s t a t u s `   E N U M ( ' d r a f t ' ,   ' s e n t ' ,   ' p a r t i a l ' ,   ' p a i d ' ,   ' c a n c e l l e d ' ,   ' o v e r d u e ' )   D E F A U L T   ' d r a f t ' , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ i n v o i c e _ n u m b e r `   ( ` i n v o i c e _ n u m b e r ` ) , 
+ 
+         K E Y   ` i d x _ l e a s e _ i d `   ( ` l e a s e _ i d ` ) , 
+ 
+         K E Y   ` i d x _ t e n a n t _ i d `   ( ` t e n a n t _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   U T I L I T I E S   T A B L E S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   U t i l i t y   M e t e r s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ m e t e r s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` m e t e r _ n u m b e r `   V A R C H A R ( 1 0 0 )   N O T   N U L L , 
+ 
+         ` u t i l i t y _ t y p e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` p r o p e r t y _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` s p a c e _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` t e n a n t _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` m e t e r _ l o c a t i o n `   V A R C H A R ( 2 5 5 )   D E F A U L T   N U L L , 
+ 
+         ` i n i t i a l _ r e a d i n g `   D E C I M A L ( 1 5 , 4 )   D E F A U L T   0 , 
+ 
+         ` c u r r e n t _ r e a d i n g `   D E C I M A L ( 1 5 , 4 )   D E F A U L T   0 , 
+ 
+         ` l a s t _ r e a d i n g _ d a t e `   D A T E T I M E   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' a c t i v e ' , ' i n a c t i v e ' , ' m a i n t e n a n c e ' )   D E F A U L T   ' a c t i v e ' , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         ` u p d a t e d _ a t `   D A T E T I M E   D E F A U L T   N U L L   O N   U P D A T E   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ m e t e r _ n u m b e r `   ( ` m e t e r _ n u m b e r ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   M e t e r   R e a d i n g s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ m e t e r _ r e a d i n g s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` m e t e r _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` r e a d i n g _ d a t e `   D A T E T I M E   N O T   N U L L , 
+ 
+         ` r e a d i n g _ v a l u e `   D E C I M A L ( 1 5 , 4 )   N O T   N U L L , 
+ 
+         ` c o n s u m p t i o n `   D E C I M A L ( 1 5 , 4 )   D E F A U L T   0 , 
+ 
+         ` r e a d i n g _ t y p e `   E N U M ( ' a c t u a l ' , ' e s t i m a t e d ' , ' i n i t i a l ' )   D E F A U L T   ' a c t u a l ' , 
+ 
+         ` r e c o r d e d _ b y `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` i m a g e _ p a t h `   V A R C H A R ( 2 5 5 )   D E F A U L T   N U L L , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ m e t e r _ i d `   ( ` m e t e r _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   U t i l i t y   P r o v i d e r s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ u t i l i t y _ p r o v i d e r s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` p r o v i d e r _ n a m e `   V A R C H A R ( 2 5 5 )   N O T   N U L L , 
+ 
+         ` u t i l i t y _ t y p e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` c o n t a c t _ p e r s o n `   V A R C H A R ( 2 5 5 )   D E F A U L T   N U L L , 
+ 
+         ` e m a i l `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` p h o n e `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` a d d r e s s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` a c c o u n t _ n u m b e r `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' a c t i v e ' , ' i n a c t i v e ' )   D E F A U L T   ' a c t i v e ' , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   U t i l i t y   T a r i f f s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ t a r i f f s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` u t i l i t y _ t y p e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` t a r i f f _ n a m e `   V A R C H A R ( 1 0 0 )   N O T   N U L L , 
+ 
+         ` r a t e _ p e r _ u n i t `   D E C I M A L ( 1 5 , 4 )   N O T   N U L L , 
+ 
+         ` f i x e d _ c h a r g e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` m i n _ c h a r g e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` e f f e c t i v e _ f r o m `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` e f f e c t i v e _ t o `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' a c t i v e ' , ' e x p i r e d ' , ' p e n d i n g ' )   D E F A U L T   ' a c t i v e ' , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   U t i l i t y   P a y m e n t s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ u t i l i t y _ p a y m e n t s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` b i l l _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` p a y m e n t _ n u m b e r `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` p a y m e n t _ d a t e `   D A T E   N O T   N U L L , 
+ 
+         ` a m o u n t `   D E C I M A L ( 1 5 , 2 )   N O T   N U L L , 
+ 
+         ` p a y m e n t _ m e t h o d `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` r e f e r e n c e _ n u m b e r `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ p a y m e n t _ n u m b e r `   ( ` p a y m e n t _ n u m b e r ` ) , 
+ 
+         K E Y   ` i d x _ b i l l _ i d `   ( ` b i l l _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4 ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   P A Y R O L L   T A B L E S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   P a y r o l l   R u n s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ p a y r o l l _ r u n s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` p e r i o d _ n a m e `   V A R C H A R ( 1 0 0 )   N O T   N U L L , 
+ 
+         ` p e r i o d _ s t a r t `   D A T E   N O T   N U L L , 
+ 
+         ` p e r i o d _ e n d `   D A T E   N O T   N U L L , 
+ 
+         ` r u n _ d a t e `   D A T E   N O T   N U L L , 
+ 
+         ` t o t a l _ g r o s s `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t o t a l _ d e d u c t i o n s `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t o t a l _ n e t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` s t a t u s `   E N U M ( ' d r a f t ' ,   ' p r o c e s s e d ' ,   ' a p p r o v e d ' ,   ' p a i d ' ,   ' c a n c e l l e d ' )   D E F A U L T   ' d r a f t ' , 
+ 
+         ` c r e a t e d _ b y `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4 ; 
+ 
+ 
+ 
+ - -   P a y s l i p s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ p a y s l i p s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` p a y r o l l _ r u n _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` e m p l o y e e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` b a s i c _ s a l a r y `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` a l l o w a n c e s `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` b o n u s `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` g r o s s _ p a y `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t a x _ d e d u c t i o n `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` p e n s i o n _ d e d u c t i o n `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` o t h e r _ d e d u c t i o n s `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` t o t a l _ d e d u c t i o n s `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` n e t _ p a y `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` p a y m e n t _ s t a t u s `   E N U M ( ' u n p a i d ' ,   ' p a i d ' )   D E F A U L T   ' u n p a i d ' , 
+ 
+         ` p a y m e n t _ d a t e `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` p a y m e n t _ m e t h o d `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ p a y r o l l _ r u n _ i d `   ( ` p a y r o l l _ r u n _ i d ` ) , 
+ 
+         K E Y   ` i d x _ e m p l o y e e _ i d `   ( ` e m p l o y e e _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4 ; 
+ 
+ 
+ 
+ - -   P A Y E   D e d u c t i o n s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ p a y e _ d e d u c t i o n s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` p a y s l i p _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` e m p l o y e e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` p e r i o d `   V A R C H A R ( 7 )   N O T   N U L L , 
+ 
+         ` t a x a b l e _ i n c o m e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` p a y e _ a m o u n t `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` p o s t e d _ t o _ t a x `   T I N Y I N T ( 1 )   D E F A U L T   0 , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ p a y s l i p _ i d `   ( ` p a y s l i p _ i d ` ) , 
+ 
+         K E Y   ` i d x _ e m p l o y e e _ i d `   ( ` e m p l o y e e _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4 ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   T A X   T A B L E S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   T a x   P a y m e n t s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ t a x _ p a y m e n t s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` t a x _ t y p e _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` p a y m e n t _ d a t e `   D A T E   N O T   N U L L , 
+ 
+         ` p e r i o d _ s t a r t `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` p e r i o d _ e n d `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` a m o u n t `   D E C I M A L ( 1 5 , 2 )   N O T   N U L L , 
+ 
+         ` r e f e r e n c e _ n u m b e r `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` p a y m e n t _ m e t h o d `   V A R C H A R ( 5 0 )   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' d r a f t ' , ' p o s t e d ' , ' c a n c e l l e d ' )   D E F A U L T   ' p o s t e d ' , 
+ 
+         ` n o t e s `   T E X T   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         K E Y   ` i d x _ t a x _ t y p e _ i d `   ( ` t a x _ t y p e _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4 ; 
+ 
+ 
+ 
+ - -   W H T   C e r t i f i c a t e s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ w h t _ c e r t i f i c a t e s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` c e r t i f i c a t e _ n u m b e r `   V A R C H A R ( 1 0 0 )   N O T   N U L L , 
+ 
+         ` v e n d o r _ i d `   I N T ( 1 1 )   N O T   N U L L , 
+ 
+         ` b i l l _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` i s s u e _ d a t e `   D A T E   N O T   N U L L , 
+ 
+         ` a m o u n t _ w i t h h e l d `   D E C I M A L ( 1 5 , 2 )   N O T   N U L L , 
+ 
+         ` f i l e _ p a t h `   V A R C H A R ( 2 5 5 )   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' p e n d i n g ' , ' r e c e i v e d ' , ' u s e d ' )   D E F A U L T   ' p e n d i n g ' , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ c e r t _ n u m b e r `   ( ` c e r t i f i c a t e _ n u m b e r ` ) , 
+ 
+         K E Y   ` i d x _ v e n d o r _ i d `   ( ` v e n d o r _ i d ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4 ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   F I X E D   A S S E T S   T A B L E S 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   F i x e d   A s s e t s 
+ 
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   ` e r p _ f i x e d _ a s s e t s `   ( 
+ 
+         ` i d `   I N T ( 1 1 )   N O T   N U L L   A U T O _ I N C R E M E N T , 
+ 
+         ` a s s e t _ c o d e `   V A R C H A R ( 5 0 )   N O T   N U L L , 
+ 
+         ` a s s e t _ n a m e `   V A R C H A R ( 2 5 5 )   N O T   N U L L , 
+ 
+         ` c a t e g o r y _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` p r o p e r t y _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` s p a c e _ i d `   I N T ( 1 1 )   D E F A U L T   N U L L , 
+ 
+         ` p u r c h a s e _ d a t e `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` p u r c h a s e _ v a l u e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` c u r r e n t _ v a l u e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` d e p r e c i a t i o n _ m e t h o d `   E N U M ( ' s t r a i g h t _ l i n e ' , ' d e c l i n i n g _ b a l a n c e ' , ' n o n e ' )   D E F A U L T   ' s t r a i g h t _ l i n e ' , 
+ 
+         ` u s e f u l _ l i f e _ y e a r s `   I N T ( 1 1 )   D E F A U L T   5 , 
+ 
+         ` r e s i d u a l _ v a l u e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   0 , 
+ 
+         ` s e r i a l _ n u m b e r `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` m a n u f a c t u r e r `   V A R C H A R ( 1 0 0 )   D E F A U L T   N U L L , 
+ 
+         ` s t a t u s `   E N U M ( ' a c t i v e ' , ' d i s p o s e d ' , ' u n d e r _ r e p a i r ' , ' l o s t ' )   D E F A U L T   ' a c t i v e ' , 
+ 
+         ` d i s p o s a l _ d a t e `   D A T E   D E F A U L T   N U L L , 
+ 
+         ` d i s p o s a l _ v a l u e `   D E C I M A L ( 1 5 , 2 )   D E F A U L T   N U L L , 
+ 
+         ` c r e a t e d _ a t `   D A T E T I M E   N O T   N U L L   D E F A U L T   C U R R E N T _ T I M E S T A M P , 
+ 
+         ` u p d a t e d _ a t `   D A T E T I M E   D E F A U L T   N U L L   O N   U P D A T E   C U R R E N T _ T I M E S T A M P , 
+ 
+         P R I M A R Y   K E Y   ( ` i d ` ) , 
+ 
+         U N I Q U E   K E Y   ` u n i q u e _ a s s e t _ c o d e `   ( ` a s s e t _ c o d e ` ) 
+ 
+ )   E N G I N E = I n n o D B   D E F A U L T   C H A R S E T = u t f 8 m b 4   C O L L A T E = u t f 8 m b 4 _ u n i c o d e _ c i ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   R E C O R D   M I G R A T I O N   E X E C U T I O N 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+ 
+ - -   M a r k   m i g r a t i o n s   a s   e x e c u t e d   ( i f   m i g r a t i o n s   t a b l e   e x i s t s ) 
+ 
+ I N S E R T   I G N O R E   I N T O   ` e r p _ m i g r a t i o n s `   ( ` m i g r a t i o n ` ,   ` b a t c h ` ,   ` e x e c u t e d _ a t ` )   V A L U E S 
+ 
+ ( ' 0 1 8 _ c o m p r e h e n s i v e _ b u s i n e s s _ f i x . s q l ' ,   9 9 ,   N O W ( ) ) , 
+ 
+ ( ' 0 1 9 _ m a s s i v e _ s y s t e m _ f i x . s q l ' ,   9 9 ,   N O W ( ) ) , 
+ 
+ ( ' 0 2 0 _ c o m p l e t e _ s y s t e m _ t a b l e s . s q l ' ,   9 9 ,   N O W ( ) ) ; 
+ 
+ 
+ 
+ S E T   F O R E I G N _ K E Y _ C H E C K S   =   1 ; 
+ 
+ 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ - -   D O N E !   A l l   t a b l e s   c r e a t e d   s u c c e s s f u l l y . 
+ 
+ - -   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = 
+ 
+ 
+-- ============================================================================
+-- COMPLETE SYSTEM TABLES FIX - RUN DIRECTLY IN PHPMYADMIN
+-- ============================================================================
+-- This migration creates ALL missing tables and views for the ERP system.
+-- RUN THIS IN PHPMYADMIN: Select your 'erps' database, go to SQL tab, paste, Execute
+-- IDEMPOTENT - Safe to run multiple times
+-- ============================================================================
+
+SET FOREIGN_KEY_CHECKS = 0;
+SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
+
+-- ============================================================================
+-- INVENTORY TABLES
+-- ============================================================================
+
+-- Stock Transactions
+CREATE TABLE IF NOT EXISTS `erp_stock_transactions` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `transaction_number` VARCHAR(50) NOT NULL,
+    `transaction_type` ENUM('receive','issue','transfer','adjust','return','sale') NOT NULL,
+    `item_id` INT(11) NOT NULL,
+    `location_from_id` INT(11) DEFAULT NULL,
+    `location_to_id` INT(11) DEFAULT NULL,
+    `quantity` DECIMAL(15,4) NOT NULL,
+    `unit_cost` DECIMAL(15,2) DEFAULT 0,
+    `unit_price` DECIMAL(15,2) DEFAULT 0,
+    `reference_type` VARCHAR(50) DEFAULT NULL,
+    `reference_id` INT(11) DEFAULT NULL,
+    `transaction_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `notes` TEXT DEFAULT NULL,
+    `created_by` INT(11) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_transaction_number` (`transaction_number`),
+    KEY `idx_item_id` (`item_id`),
+    KEY `idx_transaction_date` (`transaction_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Stock Adjustments
+CREATE TABLE IF NOT EXISTS `erp_stock_adjustments` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `adjustment_number` VARCHAR(50) NOT NULL,
+    `item_id` INT(11) NOT NULL,
+    `location_id` INT(11) DEFAULT NULL,
+    `adjustment_type` ENUM('addition', 'subtraction', 'reset') NOT NULL,
+    `quantity` DECIMAL(15,4) NOT NULL,
+    `reason` TEXT DEFAULT NULL,
+    `adjusted_by` INT(11) DEFAULT NULL,
+    `adjustment_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `status` ENUM('draft', 'posted', 'cancelled') DEFAULT 'draft',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_adjustment_number` (`adjustment_number`),
+    KEY `idx_item_id` (`item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Stock Takes (Physical Inventory)
+CREATE TABLE IF NOT EXISTS `erp_stock_takes` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `stock_take_number` VARCHAR(50) NOT NULL,
+    `location_id` INT(11) DEFAULT NULL,
+    `start_date` DATETIME NOT NULL,
+    `end_date` DATETIME DEFAULT NULL,
+    `status` ENUM('in_progress', 'completed', 'cancelled') DEFAULT 'in_progress',
+    `conducted_by` INT(11) DEFAULT NULL,
+    `notes` TEXT DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_stock_take_number` (`stock_take_number`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Stock Take Items
+CREATE TABLE IF NOT EXISTS `erp_stock_take_items` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `stock_take_id` INT(11) NOT NULL,
+    `item_id` INT(11) NOT NULL,
+    `system_quantity` DECIMAL(15,4) DEFAULT 0,
+    `counted_quantity` DECIMAL(15,4) DEFAULT NULL,
+    `variance` DECIMAL(15,4) DEFAULT 0,
+    `notes` TEXT DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_stock_take_id` (`stock_take_id`),
+    KEY `idx_item_id` (`item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- SUPPLIER/PURCHASING TABLES
+-- ============================================================================
+
+-- Suppliers
+CREATE TABLE IF NOT EXISTS `erp_suppliers` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `supplier_code` VARCHAR(50) NOT NULL,
+    `supplier_name` VARCHAR(255) NOT NULL,
+    `contact_person` VARCHAR(255) DEFAULT NULL,
+    `email` VARCHAR(100) DEFAULT NULL,
+    `phone` VARCHAR(50) DEFAULT NULL,
+    `address` TEXT DEFAULT NULL,
+    `city` VARCHAR(100) DEFAULT NULL,
+    `state` VARCHAR(100) DEFAULT NULL,
+    `country` VARCHAR(100) DEFAULT 'Nigeria',
+    `tax_number` VARCHAR(50) DEFAULT NULL,
+    `payment_terms` INT(11) DEFAULT 0,
+    `status` ENUM('active','inactive') DEFAULT 'active',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_supplier_code` (`supplier_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Purchase Orders
+CREATE TABLE IF NOT EXISTS `erp_purchase_orders` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `po_number` VARCHAR(50) NOT NULL,
+    `supplier_id` INT(11) NOT NULL,
+    `order_date` DATE NOT NULL,
+    `expected_date` DATE DEFAULT NULL,
+    `subtotal` DECIMAL(15,2) DEFAULT 0,
+    `tax_total` DECIMAL(15,2) DEFAULT 0,
+    `total_amount` DECIMAL(15,2) DEFAULT 0,
+    `status` ENUM('draft','sent','partially_received','received','cancelled','closed') DEFAULT 'draft',
+    `notes` TEXT DEFAULT NULL,
+    `created_by` INT(11) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_po_number` (`po_number`),
+    KEY `idx_supplier_id` (`supplier_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Purchase Order Items
+CREATE TABLE IF NOT EXISTS `erp_purchase_order_items` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `po_id` INT(11) NOT NULL,
+    `item_id` INT(11) NOT NULL,
+    `description` TEXT DEFAULT NULL,
+    `quantity` DECIMAL(15,4) NOT NULL,
+    `received_quantity` DECIMAL(15,4) DEFAULT 0,
+    `unit_price` DECIMAL(15,2) NOT NULL,
+    `tax_rate` DECIMAL(5,2) DEFAULT 0,
+    `tax_amount` DECIMAL(15,2) DEFAULT 0,
+    `line_total` DECIMAL(15,2) NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_po_id` (`po_id`),
+    KEY `idx_item_id` (`item_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goods Receipts
+CREATE TABLE IF NOT EXISTS `erp_goods_receipts` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `grn_number` VARCHAR(50) NOT NULL,
+    `po_id` INT(11) DEFAULT NULL,
+    `supplier_id` INT(11) NOT NULL,
+    `received_date` DATE NOT NULL,
+    `location_id` INT(11) DEFAULT NULL,
+    `status` ENUM('draft','posted','cancelled') DEFAULT 'draft',
+    `notes` TEXT DEFAULT NULL,
+    `created_by` INT(11) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_grn_number` (`grn_number`),
+    KEY `idx_supplier_id` (`supplier_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Goods Receipt Items
+CREATE TABLE IF NOT EXISTS `erp_goods_receipt_items` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `grn_id` INT(11) NOT NULL,
+    `item_id` INT(11) NOT NULL,
+    `description` TEXT DEFAULT NULL,
+    `received_quantity` DECIMAL(15,4) NOT NULL,
+    `unit_cost` DECIMAL(15,2) DEFAULT 0,
+    `line_total` DECIMAL(15,2) DEFAULT 0,
+    PRIMARY KEY (`id`),
+    KEY `idx_grn_id` (`grn_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- BOOKING TABLES
+-- ============================================================================
+
+-- Booking Add-ons
+CREATE TABLE IF NOT EXISTS `erp_booking_addons` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `booking_id` INT(11) NOT NULL,
+    `addon_id` INT(11) NOT NULL,
+    `addon_name` VARCHAR(255) NOT NULL,
+    `quantity` DECIMAL(10,2) DEFAULT 1,
+    `unit_price` DECIMAL(15,2) DEFAULT 0,
+    `total_price` DECIMAL(15,2) DEFAULT 0,
+    PRIMARY KEY (`id`),
+    KEY `idx_booking_id` (`booking_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- PROPERTY/LOCATION TABLES & VIEWS
+-- ============================================================================
+
+-- Locations View (points to properties for compatibility)
+DROP VIEW IF EXISTS `erp_locations`;
+CREATE VIEW `erp_locations` AS 
+SELECT *, id AS location_id, property_name AS location_name FROM `erp_properties`;
+
+-- Tenants
+CREATE TABLE IF NOT EXISTS `erp_tenants` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `tenant_name` VARCHAR(255) NOT NULL,
+    `tenant_type` ENUM('individual', 'corporate') DEFAULT 'individual',
+    `email` VARCHAR(100) DEFAULT NULL,
+    `phone` VARCHAR(50) DEFAULT NULL,
+    `identification_type` VARCHAR(50) DEFAULT NULL,
+    `identification_number` VARCHAR(50) DEFAULT NULL,
+    `address` TEXT DEFAULT NULL,
+    `status` ENUM('active', 'inactive') DEFAULT 'active',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Rent Invoices
+CREATE TABLE IF NOT EXISTS `erp_rent_invoices` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `invoice_number` VARCHAR(50) NOT NULL,
+    `lease_id` INT(11) NOT NULL,
+    `tenant_id` INT(11) NOT NULL,
+    `property_id` INT(11) NOT NULL,
+    `space_id` INT(11) DEFAULT NULL,
+    `period_start` DATE NOT NULL,
+    `period_end` DATE NOT NULL,
+    `due_date` DATE NOT NULL,
+    `subtotal` DECIMAL(15,2) DEFAULT 0,
+    `tax_total` DECIMAL(15,2) DEFAULT 0,
+    `total_amount` DECIMAL(15,2) DEFAULT 0,
+    `balance_amount` DECIMAL(15,2) DEFAULT 0,
+    `status` ENUM('draft', 'sent', 'partial', 'paid', 'cancelled', 'overdue') DEFAULT 'draft',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_invoice_number` (`invoice_number`),
+    KEY `idx_lease_id` (`lease_id`),
+    KEY `idx_tenant_id` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- UTILITIES TABLES
+-- ============================================================================
+
+-- Utility Meters
+CREATE TABLE IF NOT EXISTS `erp_meters` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `meter_number` VARCHAR(100) NOT NULL,
+    `utility_type_id` INT(11) NOT NULL,
+    `property_id` INT(11) DEFAULT NULL,
+    `space_id` INT(11) DEFAULT NULL,
+    `tenant_id` INT(11) DEFAULT NULL,
+    `meter_location` VARCHAR(255) DEFAULT NULL,
+    `initial_reading` DECIMAL(15,4) DEFAULT 0,
+    `current_reading` DECIMAL(15,4) DEFAULT 0,
+    `last_reading_date` DATETIME DEFAULT NULL,
+    `status` ENUM('active','inactive','maintenance') DEFAULT 'active',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_meter_number` (`meter_number`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Meter Readings
+CREATE TABLE IF NOT EXISTS `erp_meter_readings` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `meter_id` INT(11) NOT NULL,
+    `reading_date` DATETIME NOT NULL,
+    `reading_value` DECIMAL(15,4) NOT NULL,
+    `consumption` DECIMAL(15,4) DEFAULT 0,
+    `reading_type` ENUM('actual','estimated','initial') DEFAULT 'actual',
+    `recorded_by` INT(11) DEFAULT NULL,
+    `image_path` VARCHAR(255) DEFAULT NULL,
+    `notes` TEXT DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_meter_id` (`meter_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Utility Providers
+CREATE TABLE IF NOT EXISTS `erp_utility_providers` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `provider_name` VARCHAR(255) NOT NULL,
+    `utility_type_id` INT(11) NOT NULL,
+    `contact_person` VARCHAR(255) DEFAULT NULL,
+    `email` VARCHAR(100) DEFAULT NULL,
+    `phone` VARCHAR(50) DEFAULT NULL,
+    `address` TEXT DEFAULT NULL,
+    `account_number` VARCHAR(100) DEFAULT NULL,
+    `status` ENUM('active','inactive') DEFAULT 'active',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Utility Tariffs
+CREATE TABLE IF NOT EXISTS `erp_tariffs` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `utility_type_id` INT(11) NOT NULL,
+    `tariff_name` VARCHAR(100) NOT NULL,
+    `rate_per_unit` DECIMAL(15,4) NOT NULL,
+    `fixed_charge` DECIMAL(15,2) DEFAULT 0,
+    `min_charge` DECIMAL(15,2) DEFAULT 0,
+    `effective_from` DATE DEFAULT NULL,
+    `effective_to` DATE DEFAULT NULL,
+    `status` ENUM('active','expired','pending') DEFAULT 'active',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Utility Payments
+CREATE TABLE IF NOT EXISTS `erp_utility_payments` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `bill_id` INT(11) NOT NULL,
+    `payment_number` VARCHAR(50) NOT NULL,
+    `payment_date` DATE NOT NULL,
+    `amount` DECIMAL(15,2) NOT NULL,
+    `payment_method` VARCHAR(50) DEFAULT NULL,
+    `reference_number` VARCHAR(100) DEFAULT NULL,
+    `notes` TEXT DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_payment_number` (`payment_number`),
+    KEY `idx_bill_id` (`bill_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================================
+-- PAYROLL TABLES
+-- ============================================================================
+
+-- Payroll Runs
+CREATE TABLE IF NOT EXISTS `erp_payroll_runs` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `period_name` VARCHAR(100) NOT NULL,
+    `period_start` DATE NOT NULL,
+    `period_end` DATE NOT NULL,
+    `run_date` DATE NOT NULL,
+    `total_gross` DECIMAL(15,2) DEFAULT 0,
+    `total_deductions` DECIMAL(15,2) DEFAULT 0,
+    `total_net` DECIMAL(15,2) DEFAULT 0,
+    `status` ENUM('draft', 'processed', 'approved', 'paid', 'cancelled') DEFAULT 'draft',
+    `created_by` INT(11) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Payslips
+CREATE TABLE IF NOT EXISTS `erp_payslips` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `payroll_run_id` INT(11) NOT NULL,
+    `employee_id` INT(11) NOT NULL,
+    `basic_salary` DECIMAL(15,2) DEFAULT 0,
+    `allowances` DECIMAL(15,2) DEFAULT 0,
+    `bonus` DECIMAL(15,2) DEFAULT 0,
+    `gross_pay` DECIMAL(15,2) DEFAULT 0,
+    `tax_deduction` DECIMAL(15,2) DEFAULT 0,
+    `pension_deduction` DECIMAL(15,2) DEFAULT 0,
+    `other_deductions` DECIMAL(15,2) DEFAULT 0,
+    `total_deductions` DECIMAL(15,2) DEFAULT 0,
+    `net_pay` DECIMAL(15,2) DEFAULT 0,
+    `payment_status` ENUM('unpaid', 'paid') DEFAULT 'unpaid',
+    `payment_date` DATE DEFAULT NULL,
+    `payment_method` VARCHAR(50) DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_payroll_run_id` (`payroll_run_id`),
+    KEY `idx_employee_id` (`employee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- PAYE Deductions
+CREATE TABLE IF NOT EXISTS `erp_paye_deductions` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `payslip_id` INT(11) NOT NULL,
+    `employee_id` INT(11) NOT NULL,
+    `period` VARCHAR(7) NOT NULL,
+    `taxable_income` DECIMAL(15,2) DEFAULT 0,
+    `paye_amount` DECIMAL(15,2) DEFAULT 0,
+    `posted_to_tax` TINYINT(1) DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_payslip_id` (`payslip_id`),
+    KEY `idx_employee_id` (`employee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================================
+-- TAX TABLES
+-- ============================================================================
+
+-- Tax Payments
+CREATE TABLE IF NOT EXISTS `erp_tax_payments` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `tax_type_id` INT(11) NOT NULL,
+    `payment_date` DATE NOT NULL,
+    `period_start` DATE DEFAULT NULL,
+    `period_end` DATE DEFAULT NULL,
+    `amount` DECIMAL(15,2) NOT NULL,
+    `reference_number` VARCHAR(100) DEFAULT NULL,
+    `payment_method` VARCHAR(50) DEFAULT NULL,
+    `status` ENUM('draft','posted','cancelled') DEFAULT 'posted',
+    `notes` TEXT DEFAULT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_tax_type_id` (`tax_type_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- WHT Certificates
+CREATE TABLE IF NOT EXISTS `erp_wht_certificates` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `certificate_number` VARCHAR(100) NOT NULL,
+    `vendor_id` INT(11) NOT NULL,
+    `bill_id` INT(11) DEFAULT NULL,
+    `issue_date` DATE NOT NULL,
+    `amount_withheld` DECIMAL(15,2) NOT NULL,
+    `file_path` VARCHAR(255) DEFAULT NULL,
+    `status` ENUM('pending','received','used') DEFAULT 'pending',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_cert_number` (`certificate_number`),
+    KEY `idx_vendor_id` (`vendor_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================================
+-- FIXED ASSETS TABLES
+-- ============================================================================
+
+-- Fixed Assets
+CREATE TABLE IF NOT EXISTS `erp_fixed_assets` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `asset_code` VARCHAR(50) NOT NULL,
+    `asset_name` VARCHAR(255) NOT NULL,
+    `category_id` INT(11) DEFAULT NULL,
+    `property_id` INT(11) DEFAULT NULL,
+    `space_id` INT(11) DEFAULT NULL,
+    `purchase_date` DATE DEFAULT NULL,
+    `purchase_value` DECIMAL(15,2) DEFAULT 0,
+    `current_value` DECIMAL(15,2) DEFAULT 0,
+    `depreciation_method` ENUM('straight_line','declining_balance','none') DEFAULT 'straight_line',
+    `useful_life_years` INT(11) DEFAULT 5,
+    `residual_value` DECIMAL(15,2) DEFAULT 0,
+    `serial_number` VARCHAR(100) DEFAULT NULL,
+    `manufacturer` VARCHAR(100) DEFAULT NULL,
+    `status` ENUM('active','disposed','under_repair','lost') DEFAULT 'active',
+    `disposal_date` DATE DEFAULT NULL,
+    `disposal_value` DECIMAL(15,2) DEFAULT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_asset_code` (`asset_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- RECORD MIGRATION EXECUTION
+-- ============================================================================
+
+-- Mark migrations as executed (if migrations table exists)
+INSERT IGNORE INTO `erp_migrations` (`migration`, `batch`, `executed_at`) VALUES
+('018_comprehensive_business_fix.sql', 99, NOW()),
+('019_massive_system_fix.sql', 99, NOW()),
+('020_complete_system_tables.sql', 99, NOW());
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================================
+-- DONE! All tables created successfully.
+-- ============================================================================

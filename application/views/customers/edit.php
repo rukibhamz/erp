@@ -1,10 +1,6 @@
 <?php
 /**
- * Customers Edit View
- * Alias for receivables/edit_customer
+ * Customers Edit View - Alias to receivables/edit_customer
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
-if (isset($customer['id'])) {
-    redirect('receivables/editCustomer/' . $customer['id']);
-}
-redirect('receivables/customers');
+$this->view('receivables/edit_customer');
