@@ -14,6 +14,24 @@ class Utility_bills extends Base_Controller {
     
     public function __construct() {
         parent::__construct();
+        $this->requirePermission('utilities', 'read');
+        $this->billModel = $this->loadModel('Bill_model');
+        $this->meterModel = $this->loadModel('Meter_model');
+        $this->readingModel = $this->loadModel('Reading_model');
+        $this->tariffModel = $this->loadModel('Tariff_model');
+        $this->providerModel = $this->loadModel('Provider_model');
+        $this->paymentModel = $this->loadModel('Payment_model');
+        $this->accountModel = $this->loadModel('Account_model');
+        $this->activityModel = $this->loadModel('Activity_model');
+        
+        // Load Transaction Service
+        require_once BASEPATH . 'services/Transaction_service.php';
+        $this->transactionService = new Transaction_service();
+    }
+    
+    public function index() {
+        $status = $_GET['status'] ?? 'all';
+        
         try {
             $allBills = $this->billModel->getAll();
             if ($status !== 'all') {

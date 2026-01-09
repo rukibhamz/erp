@@ -7,6 +7,8 @@ class Fixed_assets extends Base_Controller {
     private $locationModel;
     private $supplierModel;
     private $activityModel;
+    private $accountModel;
+    private $transactionService;
     
     public function __construct() {
         parent::__construct();

@@ -8,6 +8,7 @@ class Locations extends Base_Controller {
     private $bookingModel;
     private $facilityModel;
     private $spaceBookingModel;
+    private $meterModel;
     
     public function __construct() {
         parent::__construct();

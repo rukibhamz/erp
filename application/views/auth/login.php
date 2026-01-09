@@ -85,18 +85,8 @@
                 <div class="text-center">
                     <a href="<?= base_url('forgot-password') ?>" class="text-decoration-none">Forgot your password?</a>
                     <hr>
-                    <?php
-                    // Get return link from settings
-                    try {
-                        $db = Database::getInstance();
-                        $prefix = $db->getPrefix();
-                        $returnSetting = $db->fetchOne("SELECT setting_value FROM `{$prefix}settings` WHERE setting_key = 'portal_return_link'");
-                        $returnLink = !empty($returnSetting['setting_value']) ? $returnSetting['setting_value'] : 'https://acropolispark.com/';
-                    } catch (Exception $e) {
-                        $returnLink = 'https://acropolispark.com/';
-                    }
-                    ?>
-                    <a href="<?= htmlspecialchars($returnLink) ?>" class="text-decoration-none text-muted small">
+                    
+                    <a href="/" class="text-decoration-none text-muted small">
                         <i class="bi bi-house"></i> Return to Home
                     </a>
                 </div>

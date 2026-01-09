@@ -266,18 +266,22 @@ function loadSpaces() {
     }
     
     fetch(BASE_URL + 'locations/get-spaces-for-booking?location_id=' + locationId)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 spacesData[locationId] = data.spaces;
                 populateSpaces(data.spaces);
             } else {
                 spaceSelect.innerHTML = '<option value="">No spaces available</option>';
-                alert('Error loading spaces: ' + (data.error || 'Unknown error'));
+                console.error('API Error:', data.error);
+                // alert('Error loading spaces: ' + (data.error || 'Unknown error')); // Avoid alert for better UX
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Fetch Error:', error);
             spaceSelect.innerHTML = '<option value="">Error loading spaces</option>';
         });
 }
@@ -507,7 +511,10 @@ function checkAvailability() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
         .then(data => {
             const statusDiv = document.getElementById('availabilityStatus');
             const messageSpan = document.getElementById('availabilityMessage');
@@ -530,7 +537,12 @@ function checkAvailability() {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Availability Check Error:', error);
+            const statusDiv = document.getElementById('availabilityStatus');
+            const messageSpan = document.getElementById('availabilityMessage');
+            statusDiv.className = 'alert alert-warning mb-4';
+            messageSpan.textContent = 'Could not verify availability. Please try again.';
+            statusDiv.style.display = 'block';
         });
     }
 }
@@ -546,7 +558,10 @@ function loadTimeSlots() {
     
     // Fetch available time slots for the selected date
     fetch(BASE_URL + 'booking-wizard/get-time-slots?space_id=' + spaceId + '&date=' + bookingDate)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
         .then(data => {
             if (data.success && data.slots) {
                 const container = document.getElementById('timeSlotsList');
@@ -575,10 +590,14 @@ function loadTimeSlots() {
                 } else {
                     document.getElementById('timeSlotsPreview').style.display = 'none';
                 }
+            } else {
+                document.getElementById('timeSlotsPreview').style.display = 'none';
+                console.error('Slots error:', data.message || 'Unknown error');
             }
         })
         .catch(error => {
             console.error('Error loading time slots:', error);
+            document.getElementById('timeSlotsPreview').style.display = 'none';
         });
 }
 

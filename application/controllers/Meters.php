@@ -8,6 +8,8 @@ class Meters extends Base_Controller {
     private $spaceModel;
     private $tenantModel;
     private $activityModel;
+    private $billModel;
+    private $readingModel;
     
     public function __construct() {
         parent::__construct();
