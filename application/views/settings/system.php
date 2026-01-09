@@ -93,10 +93,18 @@ $activeTab = $active_tab ?? 'company';
                 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
+                        <label class="form-label">Portal Return Link</label>
+                        <input type="url" name="portal_return_link" class="form-control" 
+                               value="<?= htmlspecialchars($settings['portal_return_link'] ?? 'https://acropolispark.com/') ?>"
+                               placeholder="https://acropolispark.com/">
+                        <small class="text-muted">The link for the "Return to Website" button on the public portal.</small>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Tax ID / Registration Number</label>
                         <input type="text" name="tax_id" class="form-control" 
                                value="<?= htmlspecialchars($settings['tax_id'] ?? '') ?>">
                     </div>
+                </div>
                     <div class="col-md-6">
                         <label class="form-label">Brand Color (Hex)</label>
                         <input type="color" name="brand_color" class="form-control form-control-color" 

@@ -604,6 +604,81 @@ class Receivables extends Base_Controller {
                 $this->generateInvoicePdf($id);
                 
                 $this->activityModel->log($this->session['user_id'], 'update', 'Receivables', 'Updated invoice: ' . $invoice['invoice_number']);
+                
+                // Update journal entry if status is 'sent'
+                if ($status === 'sent') {
+                    try {
+                        // Find existing journal entries for this invoice
+                        $existingEntries = $this->transactionService->getEntriesByReference('invoice', $id);
+                        foreach ($existingEntries as $entry) {
+                            if ($entry['status'] !== 'cancelled') {
+                                $this->transactionService->reverseEntry($entry['id'], $this->session['user_id']);
+                            }
+                        }
+                        
+                        // Create new journal entry
+                        // Get Accounts Receivable account (1200)
+                        $arAccount = $this->accountModel->getByCode('1200');
+                        
+                        // Get Sales Revenue account (4000)
+                        $revenueAccount = $this->accountModel->getByCode('4000');
+                        if (!$revenueAccount) {
+                            $revenueAccounts = $this->accountModel->getByType('Revenue');
+                            $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
+                        }
+                        
+                        // Get VAT Payable account (2300)
+                        $vatAccount = $this->accountModel->getByCode('2300');
+                        
+                        if ($arAccount && $revenueAccount) {
+                            $entries = [
+                                // Debit AR (Total Amount)
+                                [
+                                    'account_id' => $arAccount['id'],
+                                    'debit' => $totalAmount,
+                                    'credit' => 0.00,
+                                    'description' => 'Accounts Receivable - ' . $invoice['invoice_number']
+                                ],
+                                // Credit Revenue (Subtotal)
+                                [
+                                    'account_id' => $revenueAccount['id'],
+                                    'debit' => 0.00,
+                                    'credit' => $subtotal - $discountAmount, // Net Revenue
+                                    'description' => 'Sales Revenue - ' . $invoice['invoice_number']
+                                ]
+                            ];
+                            
+                            // Credit VAT Payable (Tax Amount)
+                            if ($totalTax > 0 && $vatAccount) {
+                                $entries[] = [
+                                    'account_id' => $vatAccount['id'],
+                                    'debit' => 0.00,
+                                    'credit' => $totalTax,
+                                    'description' => 'VAT Payable - ' . $invoice['invoice_number']
+                                ];
+                            } elseif ($totalTax > 0) {
+                                // If no VAT account, add to revenue (fallback)
+                                $entries[1]['credit'] += $totalTax;
+                            }
+                            
+                            $journalData = [
+                                'date' => $invoiceDate,
+                                'reference_type' => 'invoice',
+                                'reference_id' => $id,
+                                'description' => 'Invoice ' . $invoice['invoice_number'] . ' (Updated)',
+                                'journal_type' => 'sales',
+                                'entries' => $entries,
+                                'created_by' => $this->session['user_id'],
+                                'auto_post' => true
+                            ];
+                            
+                            $this->transactionService->postJournalEntry($journalData);
+                        }
+                    } catch (Exception $e) {
+                        error_log('Receivables editInvoice journal entry sync error: ' . $e->getMessage());
+                    }
+                }
+                
                 $this->setFlashMessage('success', 'Invoice updated successfully.');
                 redirect('receivables/invoices/edit/' . $id);
                 return;

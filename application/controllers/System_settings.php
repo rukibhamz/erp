@@ -59,6 +59,7 @@ class System_settings extends Base_Controller {
                         'company_website' => sanitize_input($_POST['company_website'] ?? ''),
                         'tax_id' => sanitize_input($_POST['tax_id'] ?? ''),
                         'brand_color' => sanitize_input($_POST['brand_color'] ?? '#000000'),
+                        'portal_return_link' => sanitize_input($_POST['portal_return_link'] ?? 'https://acropolispark.com/'),
                     ];
                     
                     // Handle logo upload

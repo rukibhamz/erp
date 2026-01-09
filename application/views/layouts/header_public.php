@@ -20,8 +20,18 @@
                 <i class="bi bi-calendar-check text-primary"></i> Booking Portal
             </a>
             <div class="ms-auto d-flex align-items-center gap-2">
+                <?php
+                // Get return link from settings
+                $db = Database::getInstance();
+                $prefix = $db->getPrefix();
+                $returnSetting = $db->fetchOne("SELECT setting_value FROM `{$prefix}settings` WHERE setting_key = 'portal_return_link'");
+                $returnLink = !empty($returnSetting['setting_value']) ? $returnSetting['setting_value'] : 'https://acropolispark.com/';
+                ?>
+                <a href="<?= htmlspecialchars($returnLink) ?>" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Return to Website
+                </a>
                 <a href="<?= base_url('login') ?>" class="btn btn-primary btn-sm">
-                    <i class="bi bi-box-arrow-in-right"></i> Admin Login
+                    <i class="bi bi-box-arrow-in-right"></i> Login
                 </a>
             </div>
         </div>

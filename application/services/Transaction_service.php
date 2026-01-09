@@ -84,7 +84,9 @@ class Transaction_service {
             $entryData = [
                 'entry_number' => $this->journalModel->getNextEntryNumber(),
                 'entry_date' => $data['date'],
-                'reference' => $data['reference_type'] ?? null,
+                'reference' => isset($data['reference_type']) && isset($data['reference_id']) 
+                               ? $data['reference_type'] . ':' . $data['reference_id'] 
+                               : ($data['reference'] ?? null),
                 'description' => $data['description'] ?? '',
                 'amount' => $totalDebit,
                 'status' => 'draft',
@@ -249,7 +251,7 @@ class Transaction_service {
                 "SELECT * FROM `" . $this->db->getPrefix() . "journal_entries` 
                  WHERE reference = ? 
                  ORDER BY entry_date DESC, id DESC",
-                [$type . '_' . $refId]
+                [$type . ':' . $refId]
             );
         } catch (Exception $e) {
             error_log('Transaction_service getEntriesByReference error: ' . $e->getMessage());

@@ -244,7 +244,7 @@ class Pos extends Base_Controller {
             }
             
             // Create accounting entries
-            $this->createAccountingEntries($saleId, $totalAmount, $taxAmount, $paymentMethod, $terminalId);
+            $this->createAccountingEntries($saleId, $totalAmount, $taxAmount, $paymentMethod, $terminalId, $saleItems);
             
             // Update session totals
             $session = $this->sessionModel->getOpenSession($terminalId, $this->session['user_id']);
@@ -275,7 +275,7 @@ class Pos extends Base_Controller {
         }
     }
     
-    private function createAccountingEntries($saleId, $totalAmount, $taxAmount, $paymentMethod, $terminalId) {
+    private function createAccountingEntries($saleId, $totalAmount, $taxAmount, $paymentMethod, $terminalId, $saleItems = []) {
         try {
             // Get terminal cash account
             $terminal = $this->terminalModel->getById($terminalId);
@@ -384,6 +384,20 @@ class Pos extends Base_Controller {
             // Link invoice to sale
             if ($invoiceId) {
                 $this->saleModel->update(['invoice_id' => $invoiceId], "id = ?", [$saleId]);
+                
+                // Add invoice items
+                foreach ($saleItems as $item) {
+                    $this->invoiceModel->addItem($invoiceId, [
+                        'product_id' => $item['item_id'],
+                        'item_description' => $item['item_name'],
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['unit_price'],
+                        'tax_rate' => $item['tax_rate'],
+                        'tax_amount' => $item['tax_amount'],
+                        'discount_amount' => $item['discount_amount'],
+                        'line_total' => $item['line_total']
+                    ]);
+                }
             }
             
         } catch (Exception $e) {
