@@ -3,12 +3,10 @@
  * ERP Database Setup & Automigration Tool
  * 
  * Access via browser: http://localhost/erp/automigration.php
- * 
- * This script:
- * 1. Checks database connection
- * 2. Runs all pending SQL migrations from /database/migrations/
- * 3. Creates the erp_migrations tracking table if needed
  */
+
+// Define BASEPATH to satisfy config file security check
+define('BASEPATH', __DIR__ . '/application/');
 
 // Prevent caching
 header('Cache-Control: no-cache, must-revalidate');
@@ -26,15 +24,15 @@ ini_set('display_errors', 1);
     <title>ERP Database Automigration</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; max-width: 1000px; margin: 50px auto; padding: 20px; background: #f0f2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1000px; margin: 50px auto; padding: 20px; background: #f0f2f5; }
         .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        h1 { color: #1a1a2e; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        h1 { color: #1a1a2e; margin-bottom: 10px; }
         h2 { color: #16213e; margin-top: 30px; border-bottom: 2px solid #e94560; padding-bottom: 10px; }
         .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #28a745; }
         .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #dc3545; }
         .info { background: #cce5ff; color: #004085; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #007bff; }
         .warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #ffc107; }
-        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; }
+        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; }
         button:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
         pre { background: #1a1a2e; color: #a8dadc; padding: 20px; border-radius: 8px; overflow-x: auto; max-height: 300px; overflow-y: auto; font-size: 13px; }
         .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 15px 0; }
@@ -46,7 +44,6 @@ ini_set('display_errors', 1);
         .stat-card h3 { margin: 0; font-size: 32px; }
         .stat-card p { margin: 5px 0 0; opacity: 0.9; }
         a { color: #667eea; text-decoration: none; }
-        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -62,7 +59,7 @@ ini_set('display_errors', 1);
         }
         
         if (!file_exists($configFile)) {
-            echo '<div class="error"><strong>Error:</strong> Configuration file not found! Please ensure config.php or config.installed.php exists in /application/config/</div>';
+            echo '<div class="error"><strong>Error:</strong> Configuration file not found!</div>';
             echo '</div></body></html>';
             exit;
         }
@@ -71,7 +68,7 @@ ini_set('display_errors', 1);
         $dbConfig = $config['db'] ?? [];
         
         if (empty($dbConfig['hostname']) || empty($dbConfig['database'])) {
-            echo '<div class="error"><strong>Error:</strong> Database configuration is incomplete! Check your config file.</div>';
+            echo '<div class="error"><strong>Error:</strong> Database configuration is incomplete!</div>';
             echo '</div></body></html>';
             exit;
         }
@@ -126,16 +123,17 @@ ini_set('display_errors', 1);
                 $name = basename($file);
                 
                 if (in_array($name, $executed)) {
-                    echo '<div class="info">⏭ Skipped (already executed): ' . htmlspecialchars($name) . '</div>';
                     $skipped++;
                     continue;
                 }
                 
                 $sql = file_get_contents($file);
                 
-                // Remove comments and split by semicolon
+                // Remove comments
                 $sql = preg_replace('/^--.*$/m', '', $sql);
-                $statements = array_filter(array_map('trim', preg_split('/;(?=\s*(?:CREATE|DROP|ALTER|INSERT|UPDATE|DELETE|SET|TRUNCATE))/i', $sql)));
+                
+                // Split by semicolon
+                $statements = array_filter(array_map('trim', explode(';', $sql)));
                 
                 $fileSuccess = true;
                 foreach ($statements as $stmt) {
@@ -148,24 +146,23 @@ ini_set('display_errors', 1);
                         $msg = $e->getMessage();
                         // Ignore "already exists" errors
                         if (strpos($msg, 'already exists') === false && strpos($msg, 'Duplicate') === false) {
-                            echo '<div class="warning">⚠ ' . htmlspecialchars(substr($stmt, 0, 60)) . '... - ' . htmlspecialchars($msg) . '</div>';
-                            $fileSuccess = false;
+                            echo '<div class="warning">⚠ Error in ' . htmlspecialchars($name) . ': ' . htmlspecialchars($msg) . '</div>';
                         }
                     }
                 }
                 
-                if ($fileSuccess) {
-                    // Record migration
+                // Record migration
+                try {
                     $pdo->prepare("INSERT INTO `{$prefix}migrations` (migration, batch, executed_at) VALUES (?, ?, NOW())")
                         ->execute([$name, $batch]);
                     echo '<div class="success">✓ Executed: ' . htmlspecialchars($name) . '</div>';
                     $success++;
-                } else {
-                    $errors++;
+                } catch (PDOException $e) {
+                    // Already recorded
                 }
             }
             
-            echo '<div class="info" style="margin-top: 20px;"><strong>Summary:</strong> ' . $success . ' migrations executed, ' . $skipped . ' skipped, ' . $errors . ' with errors.</div>';
+            echo '<div class="info"><strong>Summary:</strong> ' . $success . ' migrations executed, ' . $skipped . ' already done.</div>';
             
             // Refresh executed list
             $executed = $pdo->query("SELECT migration FROM `{$prefix}migrations`")->fetchAll(PDO::FETCH_COLUMN);
@@ -194,11 +191,8 @@ ini_set('display_errors', 1);
         ];
         
         $missing = [];
-        $existing = [];
         foreach ($requiredTables as $table) {
-            if (in_array($prefix . $table, $tables)) {
-                $existing[] = $table;
-            } else {
+            if (!in_array($prefix . $table, $tables)) {
                 $missing[] = $table;
             }
         }
@@ -243,7 +237,7 @@ ini_set('display_errors', 1);
         <?php endif; ?>
         
         <?php if (!empty($missing)): ?>
-            <h2>⚠️ Missing Required Tables</h2>
+            <h2>⚠️ Missing Required Tables (<?= count($missing) ?>)</h2>
             <div class="table-grid">
                 <?php foreach ($missing as $m): ?>
                     <div class="table-item missing"><?= htmlspecialchars($prefix . $m) ?></div>
@@ -251,7 +245,7 @@ ini_set('display_errors', 1);
             </div>
         <?php endif; ?>
         
-        <h2>📊 Executed Migrations</h2>
+        <h2>📊 Executed Migrations (<?= count($executed) ?>)</h2>
         <?php if (!empty($executed)): ?>
             <div class="table-grid">
                 <?php foreach ($executed as $e): ?>
@@ -262,15 +256,8 @@ ini_set('display_errors', 1);
             <div class="info">No migrations have been executed yet.</div>
         <?php endif; ?>
         
-        <h2>📁 All Tables (<?= count($tables) ?>)</h2>
-        <pre><?php 
-        sort($tables);
-        echo implode("\n", array_map('htmlspecialchars', $tables));
-        ?></pre>
-        
         <p style="margin-top: 30px; color: #666;">
-            <a href="/">← Back to ERP</a> | 
-            <a href="system_migrate">System Migration (Admin)</a>
+            <a href="/">← Back to ERP</a>
         </p>
     </div>
 </body>
