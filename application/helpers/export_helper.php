@@ -93,7 +93,7 @@ function wrapPdfHtml($title, $content) {
     <title>' . htmlspecialchars($title) . '</title>
     <style>
         body {
-            font-family: 'DejaVu Sans', sans-serif;
+            font-family: \'DejaVu Sans\', sans-serif;
             font-size: 12px;
             margin: 20px;
         }
