@@ -89,11 +89,11 @@ function wrapPdfHtml($title, $content) {
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>' . htmlspecialchars($title) . '</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'DejaVu Sans', sans-serif;
             font-size: 12px;
             margin: 20px;
         }
