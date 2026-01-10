@@ -7,14 +7,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title">General Ledger</h1>
     </div>
     <div class="d-flex gap-2">
-         <?php if ($selected_account_id): ?>
-            <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=pdf&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-danger btn-sm" title="Export PDF">
-                <i class="bi bi-file-pdf"></i> Export PDF
-            </a>
-            <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=excel&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-success btn-sm" title="Export Excel">
-                <i class="bi bi-file-earmark-excel"></i> Export Excel
-            </a>
-        <?php endif; ?>
+        <a href="<?= base_url('reports/general-ledger?account_id=' . ($selected_account_id ?? '') . '&format=pdf&start_date=' . ($start_date ?? '') . '&end_date=' . ($end_date ?? '')) ?>" class="btn btn-danger btn-sm" title="Export PDF">
+            <i class="bi bi-file-pdf"></i> Export PDF
+        </a>
+        <a href="<?= base_url('reports/general-ledger?account_id=' . ($selected_account_id ?? '') . '&format=excel&start_date=' . ($start_date ?? '') . '&end_date=' . ($end_date ?? '')) ?>" class="btn btn-success btn-sm" title="Export Excel">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </a>
         <a href="<?= base_url('reports') ?>" class="btn btn-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Back to Reports
         </a>

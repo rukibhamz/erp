@@ -2,8 +2,10 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="page-header">
-    <h1 class="page-title mb-0">Cost Report</h1>
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Cost Report</h1>
+    </div>
 </div>
 
 <?php include(BASEPATH . 'views/utilities/_nav.php'); ?>
@@ -16,12 +18,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Meter</label>
-                <select name="meter_id" class="form-select" onchange="this.form.submit()">
+                <select name="meter_id" class="form-select select2" onchange="this.form.submit()">
                     <option value="">All Meters</option>
                     <?php foreach ($meters as $m): ?>
                         <option value="<?= $m['id'] ?>" <?= ($selected_meter_id ?? null) == $m['id'] ? 'selected' : '' ?>>
@@ -39,8 +41,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="date" name="end_date" class="form-control" value="<?= $end_date ?>" onchange="this.form.submit()">
             </div>
             <div class="col-md-3">
-                <a href="<?= base_url('utilities/reports/cost') ?>" class="btn btn-outline-secondary w-100">
-                    <i class="bi bi-x-circle"></i> Clear
+                <a href="<?= base_url('utilities/reports/cost') ?>" class="btn btn-secondary w-100">
+                    <i class="bi bi-x-circle"></i> Clear Filter
                 </a>
             </div>
         </form>

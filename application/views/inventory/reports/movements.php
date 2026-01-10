@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="page-header d-flex justify-content-between align-items-center">
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="page-title">Stock Movements Report</h1>
         <p class="text-muted">History of all stock transactions across all locations.</p>

@@ -3,19 +3,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 include(BASEPATH . 'views/staff_management/_nav.php');
 ?>
 
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <h1 class="page-title mb-0">Payroll</h1>
-        <div class="d-flex gap-2">
-            <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('staff_management/payroll/process') ?>" class="btn btn-success">
-                    <i class="bi bi-plus-circle"></i> Process Payroll
-                </a>
-            <?php endif; ?>
-            <a href="<?= base_url('employees') ?>" class="btn btn-primary">
-                <i class="bi bi-people"></i> Employees
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Payroll</h1>
+    </div>
+    <div class="d-flex gap-2">
+        <?php if (hasPermission('payroll', 'create')): ?>
+            <a href="<?= base_url('staff_management/payroll/process') ?>" class="btn btn-success btn-sm">
+                <i class="bi bi-plus-circle"></i> Process Payroll
             </a>
-        </div>
+        <?php endif; ?>
+        <a href="<?= base_url('employees') ?>" class="btn btn-primary btn-sm">
+            <i class="bi bi-people"></i> Employees
+        </a>
     </div>
 </div>
 
@@ -27,15 +27,15 @@ include(BASEPATH . 'views/staff_management/_nav.php');
 <?php endif; ?>
 
 <!-- Period Filter -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
-        <form method="GET" class="row g-3">
+        <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Period (YYYY-MM)</label>
                 <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($selected_period ?? date('Y-m')) ?>" onchange="this.form.submit()">
             </div>
-            <div class="col-md-9">
-                <a href="<?= base_url('payroll') ?>" class="btn btn-primary">
+            <div class="col-md-3">
+                <a href="<?= base_url('payroll') ?>" class="btn btn-secondary w-100">
                     <i class="bi bi-x-circle"></i> Clear Filter
                 </a>
             </div>

@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="page-header d-flex justify-content-between align-items-center">
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="page-title">Inventory Valuation Report</h1>
         <p class="text-muted">Current valuation of all stock based on weighted average cost.</p>
