@@ -355,15 +355,6 @@ function populateSpaces(spaces) {
     });
     
     spaceSelect.disabled = false;
-    
-    // If space is pre-selected, load its details
-    <?php if ($selected_space): ?>
-    const preSelectedSpaceId = '<?= $selected_space['id'] ?>';
-    if (preSelectedSpaceId) {
-        spaceSelect.value = preSelectedSpaceId;
-        loadSpaceDetails();
-    }
-    <?php endif; ?>
 }
 
 function loadSpaceDetails() {
@@ -387,21 +378,35 @@ function loadSpaceDetails() {
         return;
     }
     
-    currentSpaceData = {
-        id: selectedOption.value,
-        facility_id: selectedOption.dataset.facilityId || '',
-        booking_types: JSON.parse(selectedOption.dataset.bookingTypes || '[]'),
-        hourly_rate: parseFloat(selectedOption.dataset.hourlyRate || 0),
-        daily_rate: parseFloat(selectedOption.dataset.dailyRate || 0),
-        half_day_rate: parseFloat(selectedOption.dataset.halfDayRate || 0),
-        weekly_rate: parseFloat(selectedOption.dataset.weeklyRate || 0),
-        security_deposit: parseFloat(selectedOption.dataset.securityDeposit || 0),
-        capacity: parseInt(selectedOption.dataset.capacity || 0),
-        minimum_duration: parseInt(selectedOption.dataset.minimumDuration || 1),
-        maximum_duration: selectedOption.dataset.maximumDuration ? parseInt(selectedOption.dataset.maximumDuration) : null,
-        operating_hours: JSON.parse(selectedOption.dataset.operatingHours || '{"start":"08:00","end":"22:00"}'),
-        days_available: JSON.parse(selectedOption.dataset.daysAvailable || '[0,1,2,3,4,5,6]')
-    };
+    try {
+        currentSpaceData = {
+            id: selectedOption.value,
+            facility_id: selectedOption.dataset.facilityId || '',
+            booking_types: JSON.parse(selectedOption.dataset.bookingTypes || '[]'),
+            hourly_rate: parseFloat(selectedOption.dataset.hourlyRate || 0),
+            daily_rate: parseFloat(selectedOption.dataset.dailyRate || 0),
+            half_day_rate: parseFloat(selectedOption.dataset.halfDayRate || 0),
+            weekly_rate: parseFloat(selectedOption.dataset.weeklyRate || 0),
+            security_deposit: parseFloat(selectedOption.dataset.securityDeposit || 0),
+            capacity: parseInt(selectedOption.dataset.capacity || 0),
+            minimum_duration: parseInt(selectedOption.dataset.minimumDuration || 1),
+            maximum_duration: selectedOption.dataset.maximumDuration ? parseInt(selectedOption.dataset.maximumDuration) : null,
+            operating_hours: JSON.parse(selectedOption.dataset.operatingHours || '{"start":"08:00","end":"22:00"}'),
+            days_available: JSON.parse(selectedOption.dataset.daysAvailable || '[0,1,2,3,4,5,6]')
+        };
+    } catch (e) {
+        console.error('Error parsing space data:', e);
+        console.log('Raw bookingTypes:', selectedOption.dataset.bookingTypes);
+        // Fallback to defaults if JSON parse fails
+        currentSpaceData = {
+            id: selectedOption.value,
+            booking_types: ['hourly', 'daily'],
+            hourly_rate: 0, daily_rate: 0, half_day_rate: 0, weekly_rate: 0,
+            security_deposit: 0, capacity: 0, minimum_duration: 1,
+            operating_hours: {"start":"08:00","end":"22:00"},
+            days_available: [0,1,2,3,4,5,6]
+        };
+    }
     
     document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
     document.getElementById('spaceBookingTypes').textContent = currentSpaceData.booking_types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'N/A';
@@ -516,64 +521,6 @@ function calculatePrice() {
         return;
     }
 
-    let rate = 0;
-    if (bookingType === 'hourly') rate = currentSpaceData.hourly_rate;
-    else if (bookingType === 'daily') rate = currentSpaceData.daily_rate;
-    else if (bookingType === 'half_day') rate = currentSpaceData.half_day_rate;
-    else if (bookingType === 'weekly') rate = currentSpaceData.weekly_rate;
-    
-    let totalPrice = 0;
-    if (bookingType === 'hourly') {
-        totalPrice = rate * duration;
-    } else {
-        totalPrice = rate;
-    }
-    
-    document.getElementById('estimatedPrice').textContent = '₦' + totalPrice.toLocaleString();
-    document.getElementById('securityDeposit').textContent = '₦' + currentSpaceData.security_deposit.toLocaleString();
-    document.getElementById('pricePreview').style.display = 'block';
-
-    // Auto-fill end time based on duration if start time is selected
-    if (startTime && (bookingType === 'hourly' || bookingType === 'daily')) {
-        const [h, m] = startTime.split(':').map(Number);
-        let endH = h + duration;
-        if (endH >= 24) endH = 23; // Cap at end of day for simple internal form
-        const endTime = String(endH).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-        document.getElementById('end_time').value = endTime;
-    }
-    
-    const start = new Date(bookingDate + 'T' + startTime);
-    const end = new Date(bookingDate + 'T' + endTime);
-    const hours = (end - start) / (1000 * 60 * 60);
-    
-    if (hours <= 0) {
-        document.getElementById('pricePreview').style.display = 'none';
-        return;
-    }
-    
-    let basePrice = 0;
-    const days = Math.ceil(hours / 24);
-    
-    switch(bookingType) {
-        case 'hourly':
-            basePrice = currentSpaceData.hourly_rate * hours;
-            break;
-        case 'daily':
-            basePrice = currentSpaceData.daily_rate * days;
-            break;
-        case 'half_day':
-            basePrice = currentSpaceData.half_day_rate * Math.ceil(days * 2);
-            break;
-        case 'weekly':
-            basePrice = currentSpaceData.weekly_rate * Math.ceil(days / 7);
-            break;
-        case 'multi_day':
-            basePrice = currentSpaceData.daily_rate * days;
-            break;
-        default:
-            basePrice = currentSpaceData.hourly_rate * hours;
-    }
-    
     const deposit = currentSpaceData.security_deposit || 0;
     
     document.getElementById('estimatedPrice').textContent = '₦' + basePrice.toFixed(2);

@@ -13,6 +13,7 @@ class Pos extends Base_Controller {
     private $stockModel;
     private $activityModel;
     private $taxTypeModel;
+    private $transactionService;
     
     public function __construct() {
         parent::__construct();

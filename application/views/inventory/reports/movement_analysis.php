@@ -38,7 +38,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <small class="text-muted"><?= htmlspecialchars($item['sku']) ?></small>
                                     </td>
                                     <td class="text-end"><?= number_format($item['txn_count']) ?></td>
-                                    <td class="text-end"><?= number_format($item['total_qty'], 2) ?></td>
+                                    <td class="text-end"><?= number_format((float)($item['total_qty'] ?? 0), 2) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -71,7 +71,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <small class="text-muted"><?= htmlspecialchars($item['sku']) ?></small>
                                     </td>
                                     <td class="text-end"><?= number_format($item['txn_count']) ?></td>
-                                    <td class="text-end"><?= number_format($item['total_qty'], 2) ?></td>
+                                    <td class="text-end"><?= number_format((float)($item['total_qty'] ?? 0), 2) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

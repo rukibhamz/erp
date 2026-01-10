@@ -227,6 +227,15 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['tax/payments'] = 'Tax_payments/index';
         $route['tax/payments/create'] = 'Tax_payments/create';
         
+        // Education Tax
+        $route['education_tax'] = 'Education_tax/index';
+        $route['education_tax/config'] = 'Education_tax/config';
+        $route['education_tax/payments'] = 'Education_tax/payments';
+        $route['education_tax/record_payment'] = 'Education_tax/record_payment';
+        $route['education_tax/returns'] = 'Education_tax/returns';
+        $route['education_tax/file_return'] = 'Education_tax/file_return';
+        $route['education_tax/file_return/(:num)'] = 'Education_tax/file_return/$1';
+        
         // POS System
         $route['pos'] = 'Pos/terminals';
         $route['pos/index'] = 'Pos/index';

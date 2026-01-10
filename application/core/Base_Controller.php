@@ -4,11 +4,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Base_Controller {
     protected $db;
     protected $loader;
+    protected $load;
     protected $config;
     protected $session;
     
     public function __construct() {
         $this->loader = new Loader();
+        $this->load = $this->loader;
         $this->config = require BASEPATH . 'config/config.php';
         $this->session = &$_SESSION;
         
