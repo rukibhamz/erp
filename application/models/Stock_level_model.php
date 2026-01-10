@@ -98,5 +98,66 @@ class Stock_level_model extends Base_Model {
             return false;
         }
     }
+    
+    /**
+     * Decrease stock for an item (used by POS sales)
+     * 
+     * @param int $itemId Item ID
+     * @param float $quantity Quantity to decrease
+     * @param string $reason Reason for the decrease (e.g., 'POS Sale')
+     * @param int|null $referenceId Optional reference ID (e.g., sale ID)
+     * @return bool Success status
+     */
+    public function decreaseStock($itemId, $quantity, $reason = 'Sale', $referenceId = null) {
+        try {
+            // Get existing stock levels for this item across all locations
+            $stocks = $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE item_id = ? AND quantity > 0
+                 ORDER BY quantity DESC",
+                [$itemId]
+            );
+            
+            if (empty($stocks)) {
+                // No stock exists - create a negative stock entry at default location (ID 1)
+                error_log("decreaseStock: No stock found for item {$itemId}, creating negative stock");
+                return $this->updateStock($itemId, 1, -$quantity);
+            }
+            
+            $remainingQty = $quantity;
+            
+            foreach ($stocks as $stock) {
+                if ($remainingQty <= 0) break;
+                
+                $availableQty = floatval($stock['quantity']);
+                $deductQty = min($availableQty, $remainingQty);
+                
+                // Update this stock level
+                $newQuantity = $availableQty - $deductQty;
+                $newAvailable = $newQuantity - floatval($stock['reserved_qty'] ?? 0);
+                
+                $this->update($stock['id'], [
+                    'quantity' => $newQuantity,
+                    'available_qty' => $newAvailable,
+                    'last_movement_date' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+                
+                $remainingQty -= $deductQty;
+            }
+            
+            // If there's still remaining quantity to deduct (overselling), log it
+            if ($remainingQty > 0) {
+                error_log("decreaseStock: Oversold item {$itemId} by {$remainingQty} units (Reason: {$reason})");
+                // Deduct from first location with negative balance
+                $this->updateStock($itemId, $stocks[0]['location_id'], -$remainingQty);
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log('Stock_level_model decreaseStock error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
 
