@@ -2,21 +2,23 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <h1 class="page-title mb-0">Trial Balance</h1>
-        <a href="<?= base_url('reports') ?>" class="btn btn-primary">
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Trial Balance</h1>
+    </div>
+    <div class="d-flex gap-2">
+         <a href="<?= base_url('reports/trial-balance?start_date=' . ($start_date ?? date('Y-m-01')) . '&end_date=' . ($end_date ?? date('Y-m-t')) . '&format=pdf') ?>" class="btn btn-danger btn-sm">
+            <i class="bi bi-file-pdf"></i> Export PDF
+        </a>
+        <a href="<?= base_url('reports') ?>" class="btn btn-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Back to Reports
         </a>
     </div>
 </div>
 
-<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
-
-<!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
-        <form method="GET" action="<?= base_url('reports/trial-balance') ?>" class="row g-3">
+        <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-4">
                 <label for="start_date" class="form-label">Start Date</label>
                 <input type="date" class="form-control" id="start_date" name="start_date" value="<?= htmlspecialchars($start_date ?? date('Y-m-01')) ?>">
@@ -26,14 +28,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="date" class="form-control" id="end_date" name="end_date" value="<?= htmlspecialchars($end_date ?? date('Y-m-t')) ?>">
             </div>
             <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100 mb-2">Generate Report</button>
-                 <a href="<?= base_url('reports/trial-balance?start_date=' . ($start_date ?? date('Y-m-01')) . '&end_date=' . ($end_date ?? date('Y-m-t')) . '&format=pdf') ?>" class="btn btn-outline-danger w-100">
-                    <i class="bi bi-file-pdf"></i> Export PDF
-                </a>
+                <button type="submit" class="btn btn-primary w-100">Generate Report</button>
             </div>
         </form>
     </div>
 </div>
+
+<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
 <!-- Trial Balance Table -->
 <div class="card">

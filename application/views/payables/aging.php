@@ -1,18 +1,21 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title"><i class="fas fa-clock me-2"></i>Payables Aging Report</h1>
+    </div>
+    <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-primary" onclick="exportReport('excel')">
+            <i class="fas fa-file-excel me-1"></i> <span class="hide-mobile">Export </span>Excel
+        </button>
+        <button type="button" class="btn btn-danger" onclick="exportReport('pdf')">
+            <i class="fas fa-file-pdf me-1"></i> <span class="hide-mobile">Export </span>PDF
+        </button>
+    </div>
+</div>
             <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Payables Aging Report</h5>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-primary" onclick="exportReport('excel')">
-                            <i class="fas fa-file-excel me-1"></i> <span class="hide-mobile">Export </span>Excel
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" onclick="exportReport('pdf')">
-                            <i class="fas fa-file-pdf me-1"></i> <span class="hide-mobile">Export </span>PDF
-                        </button>
-                    </div>
-                </div>
+                <!-- card-header removed -->
                 <div class="card-body">
                     <?php if (isset($flash) && $flash): ?>
                         <div class="alert alert-<?= htmlspecialchars($flash['type']) ?> alert-dismissible fade show">

@@ -2,10 +2,20 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <h1 class="page-title mb-0">General Ledger</h1>
-        <a href="<?= base_url('reports') ?>" class="btn btn-primary">
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">General Ledger</h1>
+    </div>
+    <div class="d-flex gap-2">
+         <?php if ($selected_account_id): ?>
+            <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=pdf&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-danger btn-sm" title="Export PDF">
+                <i class="bi bi-file-pdf"></i> Export PDF
+            </a>
+            <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=excel&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-success btn-sm" title="Export Excel">
+                <i class="bi bi-file-earmark-excel"></i> Export Excel
+            </a>
+        <?php endif; ?>
+        <a href="<?= base_url('reports') ?>" class="btn btn-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Back to Reports
         </a>
     </div>
@@ -14,15 +24,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
-        <form method="GET" action="<?= base_url('reports/general-ledger') ?>" class="row g-3">
+        <form method="GET" class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label for="account_id" class="form-label">Account</label>
-                <select class="form-select" id="account_id" name="account_id">
-                    <option value="">All Accounts</option>
+                <select name="account_id" id="account_id" class="form-select select2">
+                    <option value="">Select Account</option>
                     <?php foreach ($accounts ?? [] as $account): ?>
-                        <option value="<?= $account['id'] ?>" <?= ($selected_account_id ?? '') == $account['id'] ? 'selected' : '' ?>>
+                        <option value="<?= $account['id'] ?>" <?= ($selected_account_id == $account['id']) ? 'selected' : '' ?>>
                             <?= htmlspecialchars($account['account_code'] . ' - ' . $account['account_name']) ?>
                         </option>
                     <?php endforeach; ?>
@@ -38,14 +48,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="col-md-3 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Generate Report</button>
-                <?php if ($selected_account_id): ?>
-                    <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=pdf&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-outline-danger ms-2" title="Export PDF">
-                        <i class="bi bi-file-pdf"></i>
-                    </a>
-                    <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=excel&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-outline-success ms-2" title="Export Excel">
-                        <i class="bi bi-file-earmark-excel"></i>
-                    </a>
-                <?php endif; ?>
             </div>
         </form>
     </div>

@@ -2,34 +2,35 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <h1 class="page-title mb-0">Balance Sheet</h1>
-        <a href="<?= base_url('reports') ?>" class="btn btn-primary">
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="page-title">Balance Sheet</h1>
+    </div>
+    <div class="d-flex gap-2">
+         <a href="<?= base_url('reports/balance-sheet?as_of_date=' . ($as_of_date ?? date('Y-m-t')) . '&format=pdf') ?>" class="btn btn-danger btn-sm">
+            <i class="bi bi-file-pdf"></i> Export PDF
+        </a>
+        <a href="<?= base_url('reports') ?>" class="btn btn-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Back to Reports
         </a>
     </div>
 </div>
 
-<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
-
-<!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4">
     <div class="card-body">
-        <form method="GET" action="<?= base_url('reports/balance-sheet') ?>" class="row g-3">
-            <div class="col-md-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-8">
                 <label for="as_of_date" class="form-label">As Of Date</label>
                 <input type="date" class="form-control" id="as_of_date" name="as_of_date" value="<?= htmlspecialchars($as_of_date ?? date('Y-m-t')) ?>">
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100 mb-2">Generate Report</button>
-                 <a href="<?= base_url('reports/balance-sheet?as_of_date=' . ($as_of_date ?? date('Y-m-t')) . '&format=pdf') ?>" class="btn btn-outline-danger w-100">
-                    <i class="bi bi-file-pdf"></i> Export PDF
-                </a>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Generate Report</button>
             </div>
         </form>
     </div>
 </div>
+
+<?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
 <!-- Balance Sheet -->
 <div class="card">
