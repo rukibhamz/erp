@@ -9,9 +9,40 @@ class Wholesale_pricing_model extends Base_Model {
     
     public function __construct() {
         parent::__construct();
-        $this->itemModel = $this->loadModel('Item_model');
-        $this->customerTypeModel = $this->loadModel('Customer_type_model');
-        $this->discountTierModel = $this->loadModel('Discount_tier_model');
+        // Lazy load models - don't instantiate in constructor to avoid circular dependencies
+    }
+    
+    /**
+     * Get or create Item_model instance
+     */
+    private function getItemModel() {
+        if ($this->itemModel === null) {
+            require_once BASEPATH . '../application/models/Item_model.php';
+            $this->itemModel = new Item_model();
+        }
+        return $this->itemModel;
+    }
+    
+    /**
+     * Get or create Customer_type_model instance
+     */
+    private function getCustomerTypeModel() {
+        if ($this->customerTypeModel === null) {
+            require_once BASEPATH . '../application/models/Customer_type_model.php';
+            $this->customerTypeModel = new Customer_type_model();
+        }
+        return $this->customerTypeModel;
+    }
+    
+    /**
+     * Get or create Discount_tier_model instance
+     */
+    private function getDiscountTierModel() {
+        if ($this->discountTierModel === null) {
+            require_once BASEPATH . '../application/models/Discount_tier_model.php';
+            $this->discountTierModel = new Discount_tier_model();
+        }
+        return $this->discountTierModel;
     }
     
     /**
@@ -24,7 +55,7 @@ class Wholesale_pricing_model extends Base_Model {
      * @return array [price, unit_discount, final_price, source, moq_valid]
      */
     public function calculatePricing($itemId, $customerId, $quantity) {
-        $item = $this->itemModel->getById($itemId);
+        $item = $this->getItemModel()->getById($itemId);
         if (!$item) return null;
         
         $customer = $this->db->fetchOne(
@@ -71,7 +102,7 @@ class Wholesale_pricing_model extends Base_Model {
         }
         
         // 3. Check for Quantity-based Discount Tiers (Overwrites previous price if tier is met)
-        $tier = $this->discountTierModel->getBestTier($itemId, $quantity);
+        $tier = $this->getDiscountTierModel()->getBestTier($itemId, $quantity);
         if ($tier) {
             if ($tier['discount_type'] === 'fixed_price') {
                 $price = floatval($tier['discount_value']);
