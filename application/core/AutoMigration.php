@@ -127,6 +127,10 @@ class AutoMigration {
         if ($needsMigration && file_exists($migrationFile)) {
             $this->executeMigration($migrationFile, '000_complete_system_migration.sql');
         }
+
+        // Run all other numbered migrations automatically
+        $this->runNumberedMigrations($executed);
+
         
         // ALWAYS check and create properties table if missing
         try {
@@ -1413,6 +1417,49 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring default POS terminal: " . $e->getMessage());
             return false;
+        }
+    }
+
+
+    /**
+     * Run all numbered migrations from the migrations directory
+     * 
+     * Scans for files like 001_name.sql, 002_name.sql etc.
+     * and runs them if they haven't been executed yet.
+     */
+    private function runNumberedMigrations($executedMigrations) {
+        $migrationsDir = __DIR__ . '/../../database/migrations/';
+        
+        if (!is_dir($migrationsDir)) {
+            return;
+        }
+        
+        // Get all sql files
+        $files = glob($migrationsDir . '*.sql');
+        
+        if (empty($files)) {
+            return;
+        }
+        
+        // Sort files to ensure order (001, 002, etc.)
+        sort($files);
+        
+        foreach ($files as $file) {
+            $filename = basename($file);
+            
+            // Skip 000 as it's handled separately
+            if ($filename === '000_complete_system_migration.sql') {
+                continue;
+            }
+            
+            // Check if already executed
+            if (!in_array($filename, $executedMigrations)) {
+                error_log("AutoMigration: Found new migration: {$filename}");
+                $this->executeMigration($file, $filename);
+                
+                // Add to executed list to prevent re-running in same request if called again
+                $executedMigrations[] = $filename;
+            }
         }
     }
 }
