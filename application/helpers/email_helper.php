@@ -141,17 +141,28 @@ if (!function_exists('send_email_smtp')) {
                 return false;
             }
             
-            // Use PHPMailer if available, otherwise use socket-based SMTP
+            // Try to load vendor autoload if not already loaded
+            if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+                 $autoloadPath = BASEPATH . '../vendor/autoload.php';
+                 if (file_exists($autoloadPath)) {
+                     require_once $autoloadPath;
+                 }
+            }
+
+            // Use PHPMailer if available
             if (class_exists('PHPMailer\PHPMailer\PHPMailer')) {
                 return send_email_phpmailer($to, $subject, $message, $fromEmail, $fromName,
                     $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml, $attachments);
             } else {
-                // Fallback to socket-based SMTP (basic implementation - no attachment support)
+                // FALLBACK: If PHPMailer is missing (no vendor folder), we cannot use SMTP reliably.
+                // Fall back to native PHP mail() so the email at least tries to go out.
+                error_log("Warning: PHPMailer dependency missing. Falling back to native mail() function.");
+                
                 if (!empty($attachments)) {
-                    error_log("Warning: Attachments require PHPMailer. Email sent without attachments.");
+                    error_log("Warning: Attachments cannot be sent without PHPMailer.");
                 }
-                return send_email_smtp_socket($to, $subject, $message, $fromEmail, $fromName,
-                    $smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $smtpEncryption, $isHtml);
+                
+                return send_email_php($to, $subject, $message, $fromEmail, $fromName, $isHtml);
             }
         } catch (Exception $e) {
             error_log("SMTP email error: " . $e->getMessage());
