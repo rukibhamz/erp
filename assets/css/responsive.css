@@ -176,6 +176,11 @@
     flex-shrink: 0;
   }
 
+  /* Prevent last items from being clipped by mobile browser chrome */
+  .sidebar-nav {
+    padding-bottom: 100px !important;
+  }
+
   /* Table responsive */
   .table-responsive {
     display: block;
