@@ -236,6 +236,12 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['education_tax/file_return'] = 'Education_tax/file_return';
         $route['education_tax/file_return/(:num)'] = 'Education_tax/file_return/$1';
         
+        // Customer Types
+        $route['customer_types'] = 'Customer_types/index';
+        $route['customer_types/create'] = 'Customer_types/create';
+        $route['customer_types/edit/(:num)'] = 'Customer_types/edit/$1';
+        $route['customer_types/delete/(:num)'] = 'Customer_types/delete/$1';
+        
         // POS System
         $route['pos'] = 'Pos/terminals';
         $route['pos/index'] = 'Pos/index';
@@ -321,7 +327,6 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['booking-reports/revenue'] = 'Booking_reports/revenue';
         $route['booking-reports/utilization'] = 'Booking_reports/utilization';
         $route['booking-reports/customer-history'] = 'Booking_reports/customerHistory';
-        $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
         $route['booking-reports/pending-payments'] = 'Booking_reports/pendingPayments';
         
         // Currencies

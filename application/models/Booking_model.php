@@ -188,8 +188,8 @@ class Booking_model extends Base_Model {
                     
                     // Check if buffered times overlap
                     if (!($bufferEnd <= $recurringBufferStart || $bufferStart >= $recurringBufferEnd)) {
-                        $result = $this->db->fetchOne($sql, $params);
-                        return ($result['count'] ?? 0) == 0 ? false : false; // Conflict found
+                        // Conflict found with recurring booking
+                        return false;
                     }
                 }
                 $currentDate->modify('+1 day');
