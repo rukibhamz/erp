@@ -152,6 +152,7 @@ $route['receivables/invoices/payment/(:num)'] = 'Receivables/recordPayment/$1';
 $route['receivables/payments'] = 'Receivables/payments';
 $route['receivables/payments/create'] = 'Receivables/createPayment';
 $route['receivables/aging'] = 'Receivables/aging';
+$route['receivables/export-aging/(:any)'] = 'Receivables/exportAging/$1';
 
 // Accounts Payable
 $route['payables'] = 'Payables/vendors';
@@ -166,6 +167,7 @@ $route['payables/vendors/delete/(:num)'] = 'Payables/deleteVendor/$1';
         $route['payables/bills/delete/(:num)'] = 'Payables/deleteBill/$1';
 $route['payables/batch-payment'] = 'Payables/batchPayment';
 $route['payables/aging'] = 'Payables/aging';
+$route['payables/export-aging/(:any)'] = 'Payables/exportAging/$1';
 
 // General Ledger (consolidated - duplicates removed)
 $route['ledger'] = 'Ledger/index';

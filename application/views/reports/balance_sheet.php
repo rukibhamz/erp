@@ -22,7 +22,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="date" class="form-control" id="as_of_date" name="as_of_date" value="<?= htmlspecialchars($as_of_date ?? date('Y-m-t')) ?>">
             </div>
             <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                <button type="submit" class="btn btn-primary w-100 mb-2">Generate Report</button>
+                 <a href="<?= base_url('reports/balance-sheet?as_of_date=' . ($as_of_date ?? date('Y-m-t')) . '&format=pdf') ?>" class="btn btn-outline-danger w-100">
+                    <i class="bi bi-file-pdf"></i> Export PDF
+                </a>
             </div>
         </form>
     </div>

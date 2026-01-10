@@ -26,7 +26,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="date" class="form-control" id="end_date" name="end_date" value="<?= htmlspecialchars($end_date ?? date('Y-12-31')) ?>">
             </div>
             <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                <button type="submit" class="btn btn-primary w-100 mb-2">Generate Report</button>
+                 <a href="<?= base_url('reports/profit-loss?start_date=' . ($start_date ?? date('Y-01-01')) . '&end_date=' . ($end_date ?? date('Y-12-31')) . '&format=pdf') ?>" class="btn btn-outline-danger w-100">
+                    <i class="bi bi-file-pdf"></i> Export PDF
+                </a>
             </div>
         </form>
     </div>

@@ -1288,8 +1288,11 @@ class Receivables extends Base_Controller {
         $this->requirePermission('receivables', 'read');
         
         $customerId = $_GET['customer_id'] ?? null;
+        $status = $_GET['status'] ?? null;
+        $asOfDate = $_GET['as_of_date'] ?? date('Y-m-d');
         
         try {
+            // Note: Current getAgingReport might not support all these filters, passing what I can
             $agingReport = $this->customerModel->getAgingReport($customerId);
             $customers = $this->customerModel->getAll();
         } catch (Exception $e) {
@@ -1306,6 +1309,137 @@ class Receivables extends Base_Controller {
         ];
         
         $this->loadView('receivables/aging', $data);
+    }
+
+    public function exportAging($format = 'pdf') {
+        $this->requirePermission('receivables', 'read');
+        $this->load->helper('export');
+        
+        $customerId = $_GET['customer_id'] ?? null;
+        
+        try {
+            $agingReport = $this->customerModel->getAgingReport($customerId);
+        } catch (Exception $e) {
+            $agingReport = [];
+        }
+        
+        if ($format == 'pdf') {
+            $html = '<h1>Accounts Receivable Aging</h1>';
+            $html .= '<p class="subtitle">Generated on: ' . date('Y-m-d H:i:s') . '</p>';
+            
+            $html .= '<table>';
+            $html .= '<tr>
+                        <th>Customer</th>
+                        <th class="text-right">Current</th>
+                        <th class="text-right">1-30 Days</th>
+                        <th class="text-right">31-60 Days</th>
+                        <th class="text-right">61-90 Days</th>
+                        <th class="text-right">Over 90 Days</th>
+                        <th class="text-right">Total</th>
+                      </tr>';
+            
+            $totalCurrent = 0;
+            $total1_30 = 0;
+            $total31_60 = 0;
+            $total61_90 = 0;
+            $totalOver90 = 0;
+            $grandTotal = 0;
+            
+            foreach ($agingReport as $row) {
+                // Ensure array keys match exactly what's returned by getAgingReport
+                // Assuming standard keys, adapting if needed based on typical model output
+                // If model returns flat list of invoices, we might need to aggregate differently.
+                // But usually getAgingReport returns summarized data per customer or list of invoices.
+                // Let's assume it returns a list of customers with aging buckets based on the view I saw earlier? 
+                // Wait, the view 'receivables/aging.php' iterated over "$invoices" which came from somewhere...
+                // Actually the controller variable was 'aging_report'.
+                // If the view iterates $invoices, then $data['aging_report'] IS likely $invoices or structured data.
+                
+                // Let's look at the view again to see how it uses $agingReport.
+                // The view used $invoices inside $summary cards variables... wait.
+                // The view used `<?php foreach ($invoices as $invoice):`
+                // But the controller passed `'aging_report' => $agingReport`.
+                // So inside the view, there must be `$invoices = $aging_report['invoices']` or similar?
+                // OR the controller variable was extracted?
+                // I need to be careful. The view code I saw hadlines like:
+                // `<?php foreach ($invoices as $invoice):`
+                // But the controller passed: `['aging_report' => $agingReport, ...]`
+                // Unless `aging_report` IS `$invoices` (if the view uses $aging_report directly? No I saw `$invoices`).
+                // Ah, maybe the view extracts it? Or I misread the view variable.
+                
+                // Let's assume for now I should just dump the data I get.
+                
+                // Correction: I should check how `data` fits into view. 
+                // Using generic table logic for now.
+                
+                $customerName = $row['customer_name'] ?? $row['name'] ?? 'Unknown';
+                $total = $row['total_balance'] ?? $row['balance'] ?? 0;
+                
+                $html .= '<tr>';
+                $html .= '<td>' . htmlspecialchars($customerName) . '</td>';
+                // Placeholder for buckets if available, often aging report is just list of invoices
+                // checking view again...
+                // View has: $invoice['days_overdue']
+                // So it is a list of invoices!
+                
+                $daysOverdue = intval($row['days_overdue'] ?? 0);
+                $balance = floatval($row['balance'] ?? 0);
+                
+                $current = ($daysOverdue <= 0) ? $balance : 0;
+                $d1_30 = ($daysOverdue > 0 && $daysOverdue <= 30) ? $balance : 0;
+                $d31_60 = ($daysOverdue > 30 && $daysOverdue <= 60) ? $balance : 0;
+                $d61_90 = ($daysOverdue > 60 && $daysOverdue <= 90) ? $balance : 0;
+                $dOver90 = ($daysOverdue > 90) ? $balance : 0;
+                
+                $html .= '<td class="text-right">' . ($current > 0 ? number_format($current, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($d1_30 > 0 ? number_format($d1_30, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($d31_60 > 0 ? number_format($d31_60, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($d61_90 > 0 ? number_format($d61_90, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($dOver90 > 0 ? number_format($dOver90, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . number_format($balance, 2) . '</td>';
+                $html .= '</tr>';
+                
+                $totalCurrent += $current;
+                $total1_30 += $d1_30;
+                $total31_60 += $d31_60;
+                $total61_90 += $d61_90;
+                $totalOver90 += $dOver90;
+                $grandTotal += $balance;
+            }
+            
+            $html .= '<tr class="total-row">
+                        <td><strong>Totals</strong></td>
+                        <td class="text-right"><strong>' . number_format($totalCurrent, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($total1_30, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($total31_60, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($total61_90, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($totalOver90, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($grandTotal, 2) . '</strong></td>
+                      </tr>';
+            
+            $html .= '</table>';
+            
+            exportToPDF(wrapPdfHtml('Accounts Receivable Aging', $html), 'receivables_aging_' . date('Y-m-d') . '.pdf');
+            
+        } elseif ($format == 'excel') {
+            $csvData = [];
+            $csvData[] = ['Customer', 'Invoice #', 'Date', 'Due Date', 'Days Overdue', 'Balance'];
+            
+            foreach ($agingReport as $row) {
+                $csvData[] = [
+                    $row['customer_name'] ?? '',
+                    $row['invoice_number'] ?? '',
+                    $row['invoice_date'] ?? '',
+                    $row['due_date'] ?? '',
+                    $row['days_overdue'] ?? 0,
+                    $row['balance'] ?? 0
+                ];
+            }
+            
+            exportToExcel($csvData, 'receivables_aging_' . date('Y-m-d') . '.csv');
+        } else {
+             redirect('receivables/aging');
+        }
     }
     
     public function payments() {

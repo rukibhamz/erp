@@ -39,6 +39,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="col-md-3 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Generate Report</button>
                 <?php if ($selected_account_id): ?>
+                    <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=pdf&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-outline-danger ms-2" title="Export PDF">
+                        <i class="bi bi-file-pdf"></i>
+                    </a>
                     <a href="<?= base_url('reports/general-ledger?account_id=' . $selected_account_id . '&format=excel&start_date=' . $start_date . '&end_date=' . $end_date) ?>" class="btn btn-outline-success ms-2" title="Export Excel">
                         <i class="bi bi-file-earmark-excel"></i>
                     </a>

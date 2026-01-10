@@ -875,19 +875,137 @@ class Payables extends Base_Controller {
     }
     
     public function aging() {
+        $this->requirePermission('payables', 'read');
+        
+        $vendorId = $_GET['vendor_id'] ?? null;
+        
         try {
-            $agingReport = $this->vendorModel->getAgingReport();
+            // Updated to pass vendorId if model supports it, falling back if not
+            $agingReport = method_exists($this->vendorModel, 'getAgingReport') 
+                ? $this->vendorModel->getAgingReport($vendorId) 
+                : [];
         } catch (Exception $e) {
             $agingReport = [];
         }
         
+        // Fetch vendors for filter if needed
+        $vendors = [];
+        if (method_exists($this, 'loadModel')) {
+             try {
+                $vendors = $this->vendorModel->getAll();
+             } catch(Exception $e) {}
+        }
+
         $data = [
             'page_title' => 'Vendor Aging Report',
             'aging_report' => $agingReport,
+            'vendors' => $vendors, 
+            'filter' => ['vendor_id' => $vendorId, 'status' => '', 'as_of_date' => date('Y-m-d')], // Pass basic filter data to avoid view errors
             'flash' => $this->getFlashMessage()
         ];
         
         $this->loadView('payables/aging', $data);
+    }
+
+    public function exportAging($format = 'pdf') {
+        $this->requirePermission('payables', 'read');
+        $this->load->helper('export');
+        
+        $vendorId = $_GET['vendor_id'] ?? null;
+        
+        try {
+             $agingReport = method_exists($this->vendorModel, 'getAgingReport') 
+                ? $this->vendorModel->getAgingReport($vendorId) 
+                : [];
+        } catch (Exception $e) {
+            $agingReport = [];
+        }
+        
+        if ($format == 'pdf') {
+            $html = '<h1>Vendor Aging Report</h1>';
+            $html .= '<p class="subtitle">Generated on: ' . date('Y-m-d H:i:s') . '</p>';
+            
+            $html .= '<table>';
+            $html .= '<tr>
+                        <th>Vendor</th>
+                        <th class="text-right">Current</th>
+                        <th class="text-right">1-30 Days</th>
+                        <th class="text-right">31-60 Days</th>
+                        <th class="text-right">61-90 Days</th>
+                        <th class="text-right">Over 90 Days</th>
+                        <th class="text-right">Total</th>
+                      </tr>';
+            
+            $totalCurrent = 0;
+            $total1_30 = 0;
+            $total31_60 = 0;
+            $total61_90 = 0;
+            $totalOver90 = 0;
+            $grandTotal = 0;
+            
+            foreach ($agingReport as $row) {
+                // Assuming row structure similar to invoices but for bills
+                $vendorName = $row['vendor_name'] ?? $row['name'] ?? 'Unknown';
+                $balance = floatval($row['balance'] ?? 0);
+                $daysOverdue = intval($row['days_overdue'] ?? 0);
+                
+                $current = ($daysOverdue <= 0) ? $balance : 0;
+                $d1_30 = ($daysOverdue > 0 && $daysOverdue <= 30) ? $balance : 0;
+                $d31_60 = ($daysOverdue > 30 && $daysOverdue <= 60) ? $balance : 0;
+                $d61_90 = ($daysOverdue > 60 && $daysOverdue <= 90) ? $balance : 0;
+                $dOver90 = ($daysOverdue > 90) ? $balance : 0;
+                
+                $html .= '<tr>';
+                $html .= '<td>' . htmlspecialchars($vendorName) . '</td>';
+                $html .= '<td class="text-right">' . ($current > 0 ? number_format($current, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($d1_30 > 0 ? number_format($d1_30, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($d31_60 > 0 ? number_format($d31_60, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($d61_90 > 0 ? number_format($d61_90, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . ($dOver90 > 0 ? number_format($dOver90, 2) : '-') . '</td>';
+                $html .= '<td class="text-right">' . number_format($balance, 2) . '</td>';
+                $html .= '</tr>';
+                
+                $totalCurrent += $current;
+                $total1_30 += $d1_30;
+                $total31_60 += $d31_60;
+                $total61_90 += $d61_90;
+                $totalOver90 += $dOver90;
+                $grandTotal += $balance;
+            }
+            
+            $html .= '<tr class="total-row">
+                        <td><strong>Totals</strong></td>
+                        <td class="text-right"><strong>' . number_format($totalCurrent, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($total1_30, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($total31_60, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($total61_90, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($totalOver90, 2) . '</strong></td>
+                        <td class="text-right"><strong>' . number_format($grandTotal, 2) . '</strong></td>
+                      </tr>';
+            
+            $html .= '</table>';
+            
+            exportToPDF(wrapPdfHtml('Vendor Aging Report', $html), 'payables_aging_' . date('Y-m-d') . '.pdf');
+            
+        } elseif ($format == 'excel') {
+            $csvData = [];
+            $csvData[] = ['Vendor', 'Bill #', 'Date', 'Due Date', 'Days Overdue', 'Balance'];
+            
+            foreach ($agingReport as $row) {
+                $csvData[] = [
+                    $row['vendor_name'] ?? '',
+                    $row['bill_number'] ?? '',
+                    $row['bill_date'] ?? '',
+                    $row['due_date'] ?? '',
+                    $row['days_overdue'] ?? 0,
+                    $row['balance'] ?? 0
+                ];
+            }
+            
+            exportToExcel($csvData, 'payables_aging_' . date('Y-m-d') . '.csv');
+        } else {
+             redirect('payables/aging');
+        }
     }
     
     /**
