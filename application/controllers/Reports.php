@@ -67,11 +67,15 @@ class Reports extends Base_Controller {
         }
         
         // Get COGS accounts (5000-5999)
-        $cogsAccounts = $this->accountModel->getByCode('5%');
+        $cogsAccounts = $this->accountModel->getByType('Expenses');
         $cogs = [];
         $totalCOGS = 0;
         
         foreach ($cogsAccounts as $account) {
+            // Only include accounts starting with 5 (COGS range)
+            $code = $account['account_code'] ?? '';
+            if (substr($code, 0, 1) !== '5') continue;
+            
             $balance = $this->db->fetchOne(
                 "SELECT COALESCE(SUM(debit - credit), 0) as balance
                  FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
@@ -82,7 +86,7 @@ class Reports extends Base_Controller {
                 [$account['id'], $startDate, $endDate]
             );
             
-            if ($balance['balance'] > 0) {
+            if ($balance && ($balance['balance'] ?? 0) > 0) {
                 $cogs[] = [
                     'account' => $account['account_name'],
                     'amount' => $balance['balance']
@@ -293,6 +297,117 @@ class Reports extends Base_Controller {
     }
     
     /**
+     * General Ledger
+     */
+    public function generalLedger() {
+        $accountId = $_GET['account_id'] ?? null;
+        $startDate = $_GET['start_date'] ?? date('Y-m-01');
+        $endDate = $_GET['end_date'] ?? date('Y-m-t');
+        $format = $_GET['format'] ?? 'html';
+        
+        $accounts = $this->accountModel->getAll();
+        $transactions = [];
+        $selectedAccount = null;
+        
+        if ($accountId) {
+            $selectedAccount = $this->accountModel->getById($accountId);
+            if ($selectedAccount) {
+                $openingBalance = $this->balanceCalculator->calculateBalance(
+                    $accountId, 
+                    date('Y-m-d', strtotime($startDate . ' -1 day'))
+                );
+                
+                $transactions = $this->db->fetchAll(
+                    "SELECT je.entry_date, je.description, je.reference_type, je.reference_id,
+                            jel.debit, jel.credit, jel.description as line_description
+                     FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                     JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                     WHERE jel.account_id = ? 
+                     AND je.entry_date BETWEEN ? AND ?
+                     AND je.status = 'posted'
+                     ORDER BY je.entry_date, je.id",
+                    [$accountId, $startDate, $endDate]
+                );
+            }
+        }
+        
+        $data = [
+            'page_title' => 'General Ledger',
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'accounts' => $accounts,
+            'selected_account_id' => $accountId,
+            'selected_account' => $selectedAccount,
+            'opening_balance' => $openingBalance ?? 0,
+            'transactions' => $transactions,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        if ($format == 'pdf') {
+            $this->exportGeneralLedgerPDF($data);
+        } elseif ($format == 'excel') {
+            $this->exportGeneralLedgerExcel($data);
+        } else {
+            $this->loadView('reports/general_ledger', $data);
+        }
+    }
+    
+    private function exportGeneralLedgerPDF($data) {
+        $html = '<h1>General Ledger</h1>';
+        $html .= '<p class="subtitle">Account: ' . htmlspecialchars($data['selected_account']['account_name'] ?? 'All Accounts') . '</p>';
+        $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
+        
+        $html .= '<p><strong>Opening Balance:</strong> ₦' . number_format($data['opening_balance'], 2) . '</p>';
+        
+        $html .= '<table>';
+        $html .= '<tr><th>Date</th><th>Description</th><th class="text-right">Debit</th><th class="text-right">Credit</th><th class="text-right">Balance</th></tr>';
+        
+        $runningBalance = $data['opening_balance'];
+        foreach ($data['transactions'] as $txn) {
+            $runningBalance += $txn['debit'] - $txn['credit'];
+            $html .= '<tr>';
+            $html .= '<td>' . htmlspecialchars($txn['entry_date']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($txn['description'] . ($txn['line_description'] ? ' - ' . $txn['line_description'] : '')) . '</td>';
+            $html .= '<td class="text-right">' . ($txn['debit'] > 0 ? '₦' . number_format($txn['debit'], 2) : '-') . '</td>';
+            $html .= '<td class="text-right">' . ($txn['credit'] > 0 ? '₦' . number_format($txn['credit'], 2) : '-') . '</td>';
+            $html .= '<td class="text-right">₦' . number_format($runningBalance, 2) . '</td>';
+            $html .= '</tr>';
+        }
+        
+        $html .= '</table>';
+        $html .= '<p><strong>Closing Balance:</strong> ₦' . number_format($runningBalance, 2) . '</p>';
+        
+        exportToPDF(wrapPdfHtml('General Ledger', $html), 'general_ledger_' . date('Y-m-d') . '.pdf');
+    }
+    
+    private function exportGeneralLedgerExcel($data) {
+        $csvData = [];
+        $csvData[] = ['General Ledger'];
+        $csvData[] = ['Account:', $data['selected_account']['account_name'] ?? ''];
+        $csvData[] = ['Period:', $data['start_date'] . ' to ' . $data['end_date']];
+        $csvData[] = [];
+        $csvData[] = ['Opening Balance:', $data['opening_balance']];
+        $csvData[] = [];
+        $csvData[] = ['Date', 'Description', 'Debit', 'Credit', 'Balance'];
+        
+        $runningBalance = $data['opening_balance'];
+        foreach ($data['transactions'] as $txn) {
+            $runningBalance += $txn['debit'] - $txn['credit'];
+            $csvData[] = [
+                $txn['entry_date'],
+                $txn['description'],
+                $txn['debit'],
+                $txn['credit'],
+                $runningBalance
+            ];
+        }
+        $csvData[] = [];
+        $csvData[] = ['Closing Balance:', '', '', '', $runningBalance];
+        
+        exportToExcel($csvData, 'general_ledger_' . date('Y-m-d') . '.csv');
+    }
+    
+    /**
      * Cash Flow Statement
      */
     public function cashFlow() {
@@ -333,9 +448,16 @@ class Reports extends Base_Controller {
         
         $netIncome = $totalRevenue - $totalExpenses;
         
-        // Get cash accounts
-        $cashAccounts = $this->accountModel->getByCode('1000');
-        $cashAccount = !empty($cashAccounts) ? $cashAccounts[0] : null;
+        // Get cash accounts (1000-1999)
+        $cashAccounts = $this->accountModel->getByType('Assets');
+        $cashAccount = null;
+        foreach ($cashAccounts as $account) {
+            $code = $account['account_code'] ?? '';
+            if (substr($code, 0, 1) === '1') { // Assets start with 1
+                $cashAccount = $account;
+                break;
+            }
+        }
         
         $beginningCash = 0;
         $endingCash = 0;

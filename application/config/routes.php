@@ -124,6 +124,7 @@ $route['reports/general-ledger'] = 'Reports/generalLedger';
 $route['reports/profit-loss'] = 'Reports/profitLoss';
 $route['reports/balance-sheet'] = 'Reports/balanceSheet';
 $route['reports/cash-flow'] = 'Reports/cashFlow';
+$route['reports/equity-statement'] = 'Reports/equityStatement';
 
 // Cash Management
         $route['cash'] = 'Cash/index';

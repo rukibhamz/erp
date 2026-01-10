@@ -43,8 +43,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <tbody>
                             <?php foreach ($assets as $item): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) ?></td>
-                                    <td class="text-end"><?= format_currency($item['balance'] ?? 0) ?></td>
+                                    <td><?= htmlspecialchars($item['account'] ?? '') ?></td>
+                                    <td class="text-end"><?= format_currency($item['amount'] ?? 0) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -67,8 +67,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <tbody>
                             <?php foreach ($liabilities as $item): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) ?></td>
-                                    <td class="text-end"><?= format_currency($item['balance'] ?? 0) ?></td>
+                                    <td><?= htmlspecialchars($item['account'] ?? '') ?></td>
+                                    <td class="text-end"><?= format_currency($item['amount'] ?? 0) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -89,8 +89,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <tbody>
                             <?php foreach ($equity as $item): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) ?></td>
-                                    <td class="text-end"><?= format_currency($item['balance'] ?? 0) ?></td>
+                                    <td><?= htmlspecialchars($item['account'] ?? '') ?></td>
+                                    <td class="text-end"><?= format_currency($item['amount'] ?? 0) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
