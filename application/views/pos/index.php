@@ -305,7 +305,7 @@ function updateCart() {
             document.getElementById('changeDisplay').style.display = change > 0 ? 'block' : 'none';
         }
         
-        document.getElementById('processBtn').disabled = total <= 0;
+        document.getElementById('processBtn').disabled = cart.length === 0;
     }
 }
 
