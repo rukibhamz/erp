@@ -351,8 +351,9 @@ class Item_model extends Base_Model {
                 ($data['retail_price'] ?? $currentItem['retail_price']) != $currentItem['retail_price'] || 
                 ($data['wholesale_price'] ?? $currentItem['wholesale_price']) != $currentItem['wholesale_price']
             )) {
-                $this->load->model('Wholesale_pricing_model');
-                $this->Wholesale_pricing_model->logPriceChange(
+                $CI =& get_instance();
+                $CI->load->model('Wholesale_pricing_model');
+                $CI->Wholesale_pricing_model->logPriceChange(
                     $id, 
                     $currentItem['retail_price'], 
                     $data['retail_price'] ?? $currentItem['retail_price'],
