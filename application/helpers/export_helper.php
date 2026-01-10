@@ -14,9 +14,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @param string $orientation Page orientation (P=Portrait, L=Landscape)
  * @return void
  */
-function exportToPDF($html, $filename, $orientation = 'P') {
     // Use Dompdf
-    require_once BASEPATH . '../vendor/autoload.php';
+    $autoloadPath = BASEPATH . '../vendor/autoload.php';
+    if (!file_exists($autoloadPath)) {
+        show_error('Dependencies are missing. Please run "composer install" in the application root directory to install DomPDF and other required libraries.', 500, 'Composer Dependencies Missing');
+        return;
+    }
+    require_once $autoloadPath;
     
     $options = new \Dompdf\Options();
     $options->set('isHtml5ParserEnabled', true);

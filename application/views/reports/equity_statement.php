@@ -8,7 +8,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <p class="text-muted">For the period <?= format_date($start_date) ?> to <?= format_date($end_date) ?></p>
     </div>
     <div class="d-flex gap-2">
-        <a href="?start_date=<?= $start_date ?>&end_date=<?= $end_date ?>&format=pdf" class="btn btn-outline-danger btn-sm">
+        <a href="?start_date=<?= $start_date ?>&end_date=<?= $end_date ?>&format=pdf" class="btn btn-danger btn-sm">
             <i class="bi bi-file-pdf"></i> Export PDF
         </a>
         <a href="<?= base_url('reports') ?>" class="btn btn-secondary btn-sm">
