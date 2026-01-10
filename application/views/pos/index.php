@@ -55,7 +55,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="row g-2" id="itemsGrid">
                         <?php foreach ($items as $item): ?>
                             <div class="col-md-3 col-sm-4 col-6">
-                                <div class="card item-card" onclick="addToCart(<?= $item['id'] ?>, '<?= htmlspecialchars(addslashes($item['name'])) ?>', <?= $item['selling_price'] ?? 0 ?>)">
+                                <div class="card item-card" data-item-id="<?= $item['id'] ?>" data-item-name="<?= htmlspecialchars($item['item_name'] ?? $item['name'] ?? '') ?>" data-item-price="<?= $item['selling_price'] ?? 0 ?>">
                                     <div class="card-body text-center p-2">
                                         <div class="fw-bold small"><?= htmlspecialchars(substr($item['item_name'] ?? $item['name'] ?? '', 0, 20)) ?></div>
                                         <div class="text-muted small"><?= htmlspecialchars($item['sku'] ?? $item['item_code'] ?? '') ?></div>
@@ -165,6 +165,24 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <script>
 let cart = [];
+
+// Event delegation for item clicks
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsGrid = document.getElementById('itemsGrid');
+    if (itemsGrid) {
+        itemsGrid.addEventListener('click', function(e) {
+            const itemCard = e.target.closest('.item-card');
+            if (itemCard) {
+                const itemId = parseInt(itemCard.dataset.itemId);
+                const itemName = itemCard.dataset.itemName;
+                const itemPrice = parseFloat(itemCard.dataset.itemPrice);
+                if (itemId && itemName !== undefined) {
+                    addToCart(itemId, itemName, itemPrice);
+                }
+            }
+        });
+    }
+});
 
 function addToCart(itemId, itemName, price) {
     const existing = cart.find(i => i.item_id === itemId);
