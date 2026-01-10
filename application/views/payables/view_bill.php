@@ -11,6 +11,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-pencil"></i> Edit
                 </a>
             <?php endif; ?>
+            <a href="<?= base_url('payables/bills/downloadBill/' . $bill['id']) ?>" class="btn btn-primary">
+                <i class="bi bi-download"></i> Download PDF
+            </a>
+            <?php if (hasPermission('payables', 'update') && !empty($vendor['email'])): ?>
+                <a href="<?= base_url('payables/bills/sendBillEmail/' . $bill['id']) ?>" 
+                   class="btn btn-success" 
+                   onclick="return confirm('Send bill to <?= htmlspecialchars($vendor['email']) ?>?')">
+                    <i class="bi bi-envelope"></i> Send Email
+                </a>
+            <?php endif; ?>
             <a href="<?= base_url('payables/bills') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>

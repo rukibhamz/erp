@@ -89,8 +89,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     .container-fluid { padding: 0; }
     .btn { display: none; }
     .card { border: none; box-shadow: none; }
+    /* Hide URL/Page info if supported by browser */
+    @page { margin: 0; }
+    body { margin: 1.6cm; }
 }
 </style>
+
+<script>
+// Auto-print receipt on load
+window.onload = function() {
+    setTimeout(function() {
+        window.print();
+    }, 500); // Small delay to ensure styles load
+};
+</script>
 
 
 

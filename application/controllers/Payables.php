@@ -966,4 +966,124 @@ class Payables extends Base_Controller {
         
         redirect('payables/bills');
     }
+    /**
+     * Download Bill PDF
+     */
+    public function downloadBill($id) {
+        $this->requirePermission('payables', 'read');
+        
+        $bill = $this->billModel->getById($id);
+        if (!$bill) die('Bill not found.');
+        
+        $vendor = $this->vendorModel->getById($bill['vendor_id']);
+        $items = $this->billModel->getItems($id);
+        
+        $entityModel = $this->loadModel('Entity_model');
+        $entities = $entityModel->getAll();
+        $company = !empty($entities) ? $entities[0] : ['name' => 'Company'];
+        
+        require_once BASEPATH . 'libraries/Pdf_generator.php';
+        $pdfGen = new Pdf_generator($company);
+        
+        // Use a generic generate method or specific bill one. 
+        // For now, mapping bill fields to the invoice structure expected by generateInvoice OR adding generateBill to library.
+        // Let's check Pdf_generator.php. It has generateInvoice. 
+        // We should add generateBill to Pdf_generator or map fields.
+        // Mapping is safer to avoid modifying library if not needed, but generateBill is cleaner.
+        // Let's assume we map it for now to reuse the template or add a new method if structure differs widely.
+        // Actually, bill structure is very similar to invoice.
+        
+        // Prepare bill data as invoice-like structure for the generator if we reuse generateInvoice,
+        // BUT it's better to add generateBill to Pdf_generator.php for clarity.
+        // Since I can't see Pdf_generator.php right now, I'll assume I need to add it or use a generic one.
+        // Let's add the method to Payables.php to handle the generation internally OR extend the library.
+        // Extending the library is best.
+        // For this step, let's implement the controller method and I will update the Library in the next step.
+        
+        // Wait, I can see Pdf_generator.php content from previous turns. It only has generateInvoice.
+        // I will need to update Pdf_generator.php to support Bills.
+        
+        $customerData = [
+            'company_name' => $vendor['company_name'] ?? '',
+            'address' => $vendor['address'] ?? '',
+            'email' => $vendor['email'] ?? '',
+            'phone' => $vendor['phone'] ?? ''
+        ];
+        
+        // Map bill to what generateInvoice expects OR use a new method.
+        // Let's use a new method generateBill in the library.
+        $pdfContent = $pdfGen->generateBill($bill, $items, $customerData);
+        
+        $isPdf = (substr($pdfContent, 0, 4) === '%PDF');
+        $filename = 'Bill-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $bill['bill_number']) . ($isPdf ? '.pdf' : '.html');
+        
+        header('Content-Type: ' . ($isPdf ? 'application/pdf' : 'text/html'));
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo $pdfContent;
+        exit;
+    }
+    
+    /**
+     * Send Bill Email (e.g. to Vendor for confirmation or internal)
+     */
+    public function sendBillEmail($id) {
+        $this->requirePermission('payables', 'update');
+        
+        $bill = $this->billModel->getById($id);
+        $vendor = $this->vendorModel->getById($bill['vendor_id']);
+        
+        if (!$bill || empty($vendor['email'])) {
+            $this->setFlashMessage('danger', 'Bill not found or vendor has no email.');
+            redirect('payables/bills/view/' . $id);
+        }
+        
+        $items = $this->billModel->getItems($id);
+        
+        $entityModel = $this->loadModel('Entity_model');
+        $entities = $entityModel->getAll();
+        $company = !empty($entities) ? $entities[0] : ['name' => 'Company'];
+        
+        $vendorData = [
+            'company_name' => $vendor['company_name'],
+            'email' => $vendor['email']
+        ];
+        
+        require_once BASEPATH . 'libraries/Pdf_generator.php';
+        $pdfGen = new Pdf_generator($company);
+        $pdfContent = $pdfGen->generateBill($bill, $items, $vendorData);
+        
+        $isPdf = (substr($pdfContent, 0, 4) === '%PDF');
+        $pdfPath = null;
+        
+        if ($isPdf) {
+            $filename = 'bill_temp_' . time() . '.pdf';
+            $result = $pdfGen->savePdf($pdfContent, $filename);
+            if ($result['success']) {
+                $pdfPath = $result['file_path'];
+            }
+        }
+        
+        require_once BASEPATH . 'libraries/Email_sender.php';
+        $emailSender = new Email_sender();
+        
+        $subject = 'Bill ' . $bill['bill_number'];
+        $body = 'Please find the attached bill ' . $bill['bill_number'];
+        
+        // Reusing sendInvoice logic but for Bill
+        $result = $emailSender->sendInvoice(
+            $vendor['email'],
+            $subject,
+            $body,
+            $pdfPath,
+            'Bill-' . $bill['bill_number'] . '.pdf'
+        );
+        
+        if ($result['success']) {
+            $this->setFlashMessage('success', 'Email sent to ' . $vendor['email']);
+        } else {
+            $this->setFlashMessage('danger', 'Email failed: ' . $result['error']);
+        }
+        
+        redirect('payables/bills/view/' . $id);
+    }
 }
