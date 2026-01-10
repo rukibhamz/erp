@@ -14,6 +14,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @param string $orientation Page orientation (P=Portrait, L=Landscape)
  * @return void
  */
+function exportToPDF($html, $filename, $orientation = 'P') {
     // Use Dompdf
     $autoloadPath = BASEPATH . '../vendor/autoload.php';
     if (!file_exists($autoloadPath)) {
