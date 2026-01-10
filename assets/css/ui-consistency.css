@@ -55,7 +55,7 @@
 }
 
 .card-header.bg-primary {
-    background-color: #000000 !important;
+    background-color: var(--color-primary, #0066cc) !important;
     color: #ffffff !important;
     border-bottom: none;
 }
@@ -373,22 +373,24 @@
     .page-header {
         margin-bottom: var(--space-lg, 1.5rem);
     }
-    
+
     .page-title {
         font-size: var(--font-size-xl, 1.25rem);
     }
-    
+
     .card-body {
         padding: var(--space-md, 1rem);
     }
-    
+
     .btn-group {
         flex-direction: column;
         width: 100%;
+        gap: 0.5rem;
     }
-    
+
     .btn-group .btn {
         width: 100%;
+        justify-content: center;
     }
 }
 
@@ -439,9 +441,9 @@
 .module-nav .nav-link.active,
 .tax-nav .nav-link.active,
 .utilities-nav .nav-link.active {
-    background-color: #000000;
+    background-color: var(--color-primary, #0066cc);
     color: #ffffff;
-    border-color: #000000;
+    border-color: var(--color-primary, #0066cc);
     font-weight: var(--font-weight-semibold, 600);
 }
 
@@ -466,19 +468,20 @@
    PRINT STYLES
    ============================================ */
 @media print {
+
     .btn,
     .btn-group,
     .page-header .btn-group,
     .action-buttons {
         display: none !important;
     }
-    
+
     .card {
         border: 1px solid #000;
         box-shadow: none;
         page-break-inside: avoid;
     }
-    
+
     .sidebar,
     .top-navbar,
     .module-nav,
@@ -487,4 +490,3 @@
         display: none !important;
     }
 }
-

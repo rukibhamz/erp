@@ -176,11 +176,11 @@
                             <textarea name="notes" id="notes" class="form-control" rows="2"><?= htmlspecialchars($bill['notes'] ?? '') ?></textarea>
                         </div>
 
-                        <div class="d-flex justify-content-between">
-                            <a href="<?= site_url('payables') ?>" class="btn btn-secondary">
+                        <div class="d-flex justify-content-between flex-column flex-sm-row gap-2">
+                            <a href="<?= site_url('payables') ?>" class="btn btn-secondary order-2 order-sm-1">
                                 <i class="fas fa-arrow-left me-1"></i> Back
                             </a>
-                            <div>
+                            <div class="order-1 order-sm-2">
                                 <button type="submit" name="action" value="save" class="btn btn-primary">
                                     <i class="fas fa-save me-1"></i> Save Changes
                                 </button>

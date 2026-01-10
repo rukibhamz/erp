@@ -19,6 +19,6 @@ class Error404 extends Base_Controller {
             'page_title' => '404 Page Not Found'
         ];
         
-        $this->loadView('errors/404', $data);
+        $this->load->view('errors/404', $data);
     }
 }

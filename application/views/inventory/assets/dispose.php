@@ -91,13 +91,15 @@
 
                         <hr>
 
-                        <div class="d-flex justify-content-between">
-                            <a href="<?= site_url('inventory/assets/view/' . ($asset['id'] ?? '')) ?>" class="btn btn-secondary">
+                        <div class="d-flex justify-content-between flex-column flex-sm-row gap-2">
+                            <a href="<?= site_url('inventory/assets/view/' . ($asset['id'] ?? '')) ?>" class="btn btn-secondary order-2 order-sm-1">
                                 <i class="fas fa-arrow-left me-1"></i> Cancel
                             </a>
-                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to dispose of this asset? This action cannot be undone.')">
-                                <i class="fas fa-trash-alt me-1"></i> Dispose Asset
-                            </button>
+                            <div class="order-1 order-sm-2">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to dispose of this asset? This action cannot be undone.')">
+                                    <i class="fas fa-trash-alt me-1"></i> Dispose Asset
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
