@@ -379,5 +379,33 @@ class Item_model extends Base_Model {
             return false;
         }
     }
+    
+    /**
+     * Get sellable items for POS
+     * Returns only items that are:
+     * - is_sellable = 1
+     * - item_status = 'active' (or status = 'active')
+     * - item_type is NOT 'fixed_asset'
+     * 
+     * @return array
+     */
+    public function getSellableItems() {
+        try {
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                    WHERE (is_sellable = 1 OR is_sellable IS NULL)
+                    AND (item_status = 'active' OR status = 'active' OR item_status IS NULL)
+                    AND (item_type != 'fixed_asset' OR item_type IS NULL)
+                    ORDER BY item_name";
+            
+            $items = $this->db->fetchAll($sql);
+            
+            error_log('Item_model getSellableItems returned ' . count($items) . ' items');
+            return $items;
+        } catch (Exception $e) {
+            error_log('Item_model getSellableItems error: ' . $e->getMessage());
+            // Fallback to getAllActive if new column doesn't exist yet
+            return $this->getAllActive();
+        }
+    }
 }
 

@@ -119,6 +119,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <option value="out_of_stock">Out of Stock</option>
                             </select>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" name="is_sellable" id="is_sellable" value="1" checked>
+                                <label class="form-check-label" for="is_sellable">Sellable in POS</label>
+                                <small class="text-muted d-block">Uncheck for items that shouldn't appear in POS</small>
+                            </div>
+                        </div>
                         
                         <div class="col-12">
                             <label for="description" class="form-label">Description</label>
@@ -206,6 +213,30 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <input type="number" class="form-control" id="lead_time_days" name="lead_time_days" value="0">
                             <small class="text-muted">Days to restock after ordering</small>
                         </div>
+                        
+                        <!-- Opening Stock Section -->
+                        <div class="col-12 mt-4" id="opening_stock_section">
+                            <hr>
+                            <h6 class="text-primary"><i class="bi bi-box-seam"></i> Opening Stock</h6>
+                            <p class="text-muted small">Set initial stock quantities for this item (only for Inventory items)</p>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="opening_quantity" class="form-label">Opening Quantity</label>
+                                    <input type="number" step="0.01" class="form-control" id="opening_quantity" name="opening_quantity" value="0">
+                                    <small class="text-muted">Initial stock quantity</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="opening_location_id" class="form-label">Stock Location</label>
+                                    <select class="form-select" id="opening_location_id" name="opening_location_id">
+                                        <option value="">Default Location</option>
+                                        <?php foreach ($locations ?? [] as $loc): ?>
+                                            <option value="<?= $loc['id'] ?>"><?= htmlspecialchars($loc['location_name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <small class="text-muted">Where the initial stock is located</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -254,4 +285,43 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const itemTypeSelect = document.getElementById('item_type');
+    const isSellableCheckbox = document.getElementById('is_sellable');
+    const openingStockSection = document.getElementById('opening_stock_section');
+    
+    function updateFieldsBasedOnItemType() {
+        const itemType = itemTypeSelect.value;
+        
+        // Fixed assets should not be sellable
+        if (itemType === 'fixed_asset') {
+            isSellableCheckbox.checked = false;
+            isSellableCheckbox.disabled = true;
+            isSellableCheckbox.closest('.col-md-6').querySelector('small').textContent = 'Fixed assets are not sellable in POS';
+        } else {
+            isSellableCheckbox.disabled = false;
+            isSellableCheckbox.closest('.col-md-6').querySelector('small').textContent = "Uncheck for items that shouldn't appear in POS";
+            // Re-enable sellable for non-fixed-asset types (but don't force check)
+            if (itemType !== 'fixed_asset' && !isSellableCheckbox.checked) {
+                isSellableCheckbox.checked = true;
+            }
+        }
+        
+        // Show/hide opening stock section based on item type
+        if (itemType === 'inventory') {
+            openingStockSection.style.display = 'block';
+        } else {
+            openingStockSection.style.display = 'none';
+        }
+    }
+    
+    // Initial state
+    updateFieldsBasedOnItemType();
+    
+    // Update on change
+    itemTypeSelect.addEventListener('change', updateFieldsBasedOnItemType);
+});
+</script>
 

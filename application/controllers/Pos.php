@@ -51,9 +51,9 @@ class Pos extends Base_Controller {
         // Get open session
         $session = $this->sessionModel->getOpenSession($terminalId, $this->session['user_id']);
         
-        // Get items for quick add
+        // Get items for quick add (only sellable items)
         try {
-            $items = $this->itemModel->getAllActive(100);
+            $items = $this->itemModel->getSellableItems();
         } catch (Exception $e) {
             $items = [];
         }

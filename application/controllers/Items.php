@@ -125,8 +125,16 @@ class Items extends Base_Controller {
                 'track_serial' => !empty($_POST['track_serial']) ? 1 : 0,
                 'track_batch' => !empty($_POST['track_batch']) ? 1 : 0,
                 'expiry_tracking' => !empty($_POST['expiry_tracking']) ? 1 : 0,
+                'is_sellable' => isset($_POST['is_sellable']) ? 1 : 0,
+                'opening_quantity' => floatval($_POST['opening_quantity'] ?? 0),
+                'opening_location_id' => !empty($_POST['opening_location_id']) ? intval($_POST['opening_location_id']) : null,
                 'created_at' => date('Y-m-d H:i:s')
             ];
+            
+            // Fixed assets are never sellable
+            if ($data['item_type'] === 'fixed_asset') {
+                $data['is_sellable'] = 0;
+            }
             
             // Auto-generate SKU if empty (leave blank to auto-generate)
             if (is_empty_or_whitespace($data['sku'])) {
@@ -144,9 +152,25 @@ class Items extends Base_Controller {
                 $data['specifications'] = json_encode($specs);
             }
             
+            // Store opening stock info separately (not in items table)
+            $openingQuantity = $data['opening_quantity'];
+            $openingLocationId = $data['opening_location_id'];
+            unset($data['opening_quantity'], $data['opening_location_id']);
+            
             $itemId = $this->itemModel->create($data);
             
             if ($itemId) {
+                // Create initial stock level if opening quantity is provided and item type is 'inventory'
+                if ($data['item_type'] === 'inventory' && $openingQuantity > 0) {
+                    try {
+                        $locationId = $openingLocationId ?: 1; // Default to location ID 1 if not specified
+                        $this->stockLevelModel->updateStock($itemId, $locationId, $openingQuantity);
+                        error_log("Created opening stock for item {$itemId}: Qty {$openingQuantity} at location {$locationId}");
+                    } catch (Exception $e) {
+                        error_log("Failed to create opening stock for item {$itemId}: " . $e->getMessage());
+                    }
+                }
+                
                 $this->activityModel->log($this->session['user_id'], 'create', 'Items', 'Created item: ' . $data['item_name']);
                 $this->setFlashMessage('success', 'Item created successfully.');
                 redirect('inventory/items/view/' . $itemId);
