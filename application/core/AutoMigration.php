@@ -248,6 +248,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error applying new feature migrations: " . $e->getMessage());
         }
+        
+        // ALWAYS ensure items table has is_sellable column
+        try {
+            $this->ensureItemsSellableColumn();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring items sellable column: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -1460,6 +1467,56 @@ class AutoMigration {
                 // Add to executed list to prevent re-running in same request if called again
                 $executedMigrations[] = $filename;
             }
+        }
+    }
+    
+    /**
+     * Ensure items table has is_sellable, opening_quantity, and opening_location_id columns
+     * These columns support POS sellability filtering and opening stock entry
+     */
+    private function ensureItemsSellableColumn() {
+        try {
+            // Check if is_sellable column exists
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}items` LIKE 'is_sellable'");
+            $columnExists = $stmt->rowCount() > 0;
+            
+            if (!$columnExists) {
+                error_log("AutoMigration: Adding is_sellable column to items table");
+                
+                // Add is_sellable column
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}items` 
+                    ADD COLUMN `is_sellable` TINYINT(1) NOT NULL DEFAULT 1 
+                    AFTER `item_status`");
+                
+                // Add opening_quantity column
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}items` 
+                    ADD COLUMN `opening_quantity` DECIMAL(15,4) DEFAULT 0 
+                    AFTER `is_sellable`");
+                
+                // Add opening_location_id column
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}items` 
+                    ADD COLUMN `opening_location_id` INT(11) DEFAULT NULL 
+                    AFTER `opening_quantity`");
+                
+                // Update existing fixed_asset items to not be sellable
+                $this->pdo->exec("UPDATE `{$this->prefix}items` 
+                    SET `is_sellable` = 0 
+                    WHERE `item_type` = 'fixed_asset'");
+                
+                // Create index for faster POS queries
+                try {
+                    $this->pdo->exec("CREATE INDEX `idx_items_sellable` 
+                        ON `{$this->prefix}items` (`is_sellable`, `item_status`)");
+                } catch (Exception $e) {
+                    // Index might already exist
+                    error_log("AutoMigration: Index creation note: " . $e->getMessage());
+                }
+                
+                error_log("AutoMigration: Successfully added is_sellable column and related columns to items table");
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error in ensureItemsSellableColumn: " . $e->getMessage());
+            throw $e;
         }
     }
 }
