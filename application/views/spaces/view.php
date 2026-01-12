@@ -155,12 +155,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endif; ?>
                         <?php endif; ?>
                         
-                        <?php if ($space['bookable_config']['minimum_duration']): ?>
+                        <?php if (!empty($space['bookable_config']['minimum_duration'] ?? null)): ?>
                             <dt class="col-sm-6">Minimum Duration:</dt>
                             <dd class="col-sm-6"><?= $space['bookable_config']['minimum_duration'] ?> hours</dd>
                         <?php endif; ?>
                         
-                        <?php if ($space['bookable_config']['maximum_duration']): ?>
+                        <?php if (!empty($space['bookable_config']['maximum_duration'] ?? null)): ?>
                             <dt class="col-sm-6">Maximum Duration:</dt>
                             <dd class="col-sm-6"><?= $space['bookable_config']['maximum_duration'] ?> hours</dd>
                         <?php endif; ?>
