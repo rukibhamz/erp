@@ -108,11 +108,25 @@ class Space_model extends Base_Model {
      */
     public function syncToBookingModule($spaceId) {
         try {
+            error_log('Space_model syncToBookingModule: Starting sync for space ' . $spaceId);
+            
             $space = $this->getWithProperty($spaceId);
-            if (!$space || empty($space['is_bookable']) || $space['is_bookable'] == 0) {
-                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' is not bookable (is_bookable=' . ($space['is_bookable'] ?? 'null') . ')');
+            if (!$space) {
+                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' not found');
                 return false;
             }
+            
+            error_log('Space_model syncToBookingModule: Space found - ' . ($space['space_name'] ?? 'unnamed') . ', is_bookable=' . var_export($space['is_bookable'] ?? null, true));
+            
+            // Use strict comparison to handle string "1" or integer 1
+            // Also accept truthy values like "1", 1, true
+            $isBookable = !empty($space['is_bookable']) && (intval($space['is_bookable']) == 1 || $space['is_bookable'] === true);
+            if (!$isBookable) {
+                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' is not bookable (is_bookable=' . var_export($space['is_bookable'], true) . ')');
+                return false;
+            }
+            
+            error_log('Space_model syncToBookingModule: Space is bookable, proceeding with sync');
             
             $config = $this->getBookableConfig($spaceId);
             // If no config exists, create a default one
@@ -157,44 +171,73 @@ class Space_model extends Base_Model {
             require_once BASEPATH . 'models/Facility_model.php';
             $facilityModel = new Facility_model($this->db);
             
-            // Check if facility already exists
-            $existingFacility = $space['facility_id'] 
-                ? $facilityModel->getById($space['facility_id']) 
-                : false;
+            // Check if facility already exists - use direct DB query to avoid recursion
+            $existingFacility = null;
+            if (!empty($space['facility_id'])) {
+                $existingFacility = $this->db->fetchOne(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "facilities` WHERE id = ?",
+                    [$space['facility_id']]
+                );
+            }
             
             // Prepare facility data
             $pricingRules = json_decode($config['pricing_rules'] ?? '{}', true) ?: [];
             $bookingTypes = json_decode($config['booking_types'] ?? '[]', true) ?: [];
             
+            // Generate facility code only for new facilities
+            $facilityCode = $existingFacility
+                ? $existingFacility['facility_code']
+                : ('FAC-' . $spaceId . '-' . substr(md5(uniqid()), 0, 6));
+            
+            // Extract pricing - check both key formats (base_hourly and hourly)
+            $hourlyRate = floatval($pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0);
+            $dailyRate = floatval($pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0);
+            $halfDayRate = floatval($pricingRules['half_day'] ?? 0);
+            $weeklyRate = floatval($pricingRules['weekly'] ?? 0);
+            $deposit = floatval($pricingRules['deposit'] ?? $pricingRules['security_deposit'] ?? 0);
+            
+            error_log('Space_model syncToBookingModule: Extracted rates - hourly=' . $hourlyRate . ', daily=' . $dailyRate . ', half_day=' . $halfDayRate . ', weekly=' . $weeklyRate);
+            
             $facilityData = [
-                'facility_code' => 'FAC-' . $spaceId . '-' . substr(md5(uniqid()), 0, 6),
+                'facility_code' => $facilityCode,
                 'facility_name' => $space['space_name'],
                 'description' => $space['description'] ?? '',
                 'capacity' => $space['capacity'] ?? 0,
-                'hourly_rate' => $pricingRules['hourly'] ?? $pricingRules['base_hourly'] ?? 0,
-                'daily_rate' => $pricingRules['daily'] ?? $pricingRules['base_daily'] ?? 0,
-                'half_day_rate' => $pricingRules['half_day'] ?? 0,
-                'weekly_rate' => $pricingRules['weekly'] ?? 0,
+                'hourly_rate' => $hourlyRate,
+                'daily_rate' => $dailyRate,
+                'half_day_rate' => $halfDayRate,
+                'weekly_rate' => $weeklyRate,
                 'minimum_duration' => $config['minimum_duration'] ?? 1,
                 'max_duration' => $config['maximum_duration'] ?? null,
                 'setup_time' => $config['setup_time_buffer'] ?? 0,
                 'cleanup_time' => $config['cleanup_time_buffer'] ?? 0,
-                'security_deposit' => $pricingRules['deposit'] ?? 0,
+                'security_deposit' => $deposit,
                 'resource_type' => $this->mapCategoryToResourceType($space['category']),
                 'status' => $space['operational_status'] === 'active' ? 'available' : 'under_maintenance',
                 'is_bookable' => 1
             ];
             
+            error_log('Space_model syncToBookingModule: Pricing rules from config: ' . json_encode($pricingRules));
+            error_log('Space_model syncToBookingModule: Facility data to sync: ' . json_encode($facilityData));
+            
             if ($existingFacility) {
                 // Update existing facility
+                error_log('Space_model syncToBookingModule: Updating existing facility ID ' . $space['facility_id']);
                 $facilityModel->update($space['facility_id'], $facilityData);
                 $facilityId = $space['facility_id'];
             } else {
                 // Create new facility
+                error_log('Space_model syncToBookingModule: Creating new facility');
                 $facilityId = $facilityModel->create($facilityData);
+                
+                if (!$facilityId) {
+                    error_log('Space_model syncToBookingModule: Failed to create facility');
+                    return false;
+                }
                 
                 // Update space with facility_id
                 $this->update($spaceId, ['facility_id' => $facilityId]);
+                error_log('Space_model syncToBookingModule: Created facility ID ' . $facilityId);
             }
             
             // Update last synced time
@@ -207,6 +250,8 @@ class Space_model extends Base_Model {
             
             // Sync availability rules to Resource_availability table
             $this->syncAvailabilityRules($facilityId, $config);
+            
+            error_log('Space_model syncToBookingModule: Sync completed successfully for space ' . $spaceId . ', facility ID ' . $facilityId);
             
             return $facilityId;
         } catch (Exception $e) {
