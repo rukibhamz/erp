@@ -298,6 +298,9 @@ class Spaces extends Base_Controller {
      */
     private function createBookableConfig($spaceId, $postData) {
         try {
+            error_log('Spaces createBookableConfig: Starting for space ' . $spaceId);
+            error_log('Spaces createBookableConfig: POST data - hourly_rate=' . ($postData['hourly_rate'] ?? 'null') . ', daily_rate=' . ($postData['daily_rate'] ?? 'null'));
+            
             $bookingTypes = [];
             if (!empty($postData['booking_types']) && is_array($postData['booking_types'])) {
                 $bookingTypes = $postData['booking_types'];
@@ -312,12 +315,14 @@ class Spaces extends Base_Controller {
                 'peak_rate_multiplier' => floatval($postData['peak_rate_multiplier'] ?? 1.0)
             ];
             
+            error_log('Spaces createBookableConfig: Pricing rules = ' . json_encode($pricingRules));
+            
             $availabilityRules = [
                 'operating_hours' => [
                     'start' => $postData['operating_start'] ?? '08:00',
                     'end' => $postData['operating_end'] ?? '22:00'
                 ],
-                'days_available' => !empty($postData['days_available']) ? $postData['days_available'] : [0,1,2,3,4,5,6],
+                'days_available' => !empty($postData['days_available']) ? array_map('intval', $postData['days_available']) : [0,1,2,3,4,5,6],
                 'blackout_dates' => []
             ];
             
@@ -336,10 +341,14 @@ class Spaces extends Base_Controller {
                 'simultaneous_limit' => intval($postData['simultaneous_limit'] ?? 1)
             ];
             
-            $this->bookableConfigModel->create($configData);
+            error_log('Spaces createBookableConfig: Config data = ' . json_encode($configData));
+            
+            $createResult = $this->bookableConfigModel->create($configData);
+            error_log('Spaces createBookableConfig: Create result = ' . var_export($createResult, true));
             
             // Sync to booking module
-            $this->spaceModel->syncToBookingModule($spaceId);
+            $syncResult = $this->spaceModel->syncToBookingModule($spaceId);
+            error_log('Spaces createBookableConfig: Sync result = ' . var_export($syncResult, true));
             
             return true;
         } catch (Exception $e) {
@@ -353,12 +362,18 @@ class Spaces extends Base_Controller {
      */
     private function updateBookableConfig($spaceId, $postData) {
         try {
+            error_log('Spaces updateBookableConfig: Starting for space ' . $spaceId);
+            error_log('Spaces updateBookableConfig: POST data - hourly_rate=' . ($postData['hourly_rate'] ?? 'null') . ', daily_rate=' . ($postData['daily_rate'] ?? 'null'));
+            
             $config = $this->spaceModel->getBookableConfig($spaceId);
             
             if (!$config) {
+                error_log('Spaces updateBookableConfig: No existing config, creating new one');
                 // Create new config
                 return $this->createBookableConfig($spaceId, $postData);
             }
+            
+            error_log('Spaces updateBookableConfig: Found existing config ID ' . $config['id']);
             
             $bookingTypes = [];
             if (!empty($postData['booking_types']) && is_array($postData['booking_types'])) {
@@ -373,12 +388,14 @@ class Spaces extends Base_Controller {
                 'deposit' => floatval($postData['security_deposit'] ?? 0)
             ];
             
+            error_log('Spaces updateBookableConfig: Pricing rules = ' . json_encode($pricingRules));
+            
             $availabilityRules = [
                 'operating_hours' => [
                     'start' => $postData['operating_start'] ?? '08:00',
                     'end' => $postData['operating_end'] ?? '22:00'
                 ],
-                'days_available' => !empty($postData['days_available']) ? $postData['days_available'] : [0,1,2,3,4,5,6]
+                'days_available' => !empty($postData['days_available']) ? array_map('intval', $postData['days_available']) : [0,1,2,3,4,5,6]
             ];
             
             $updateData = [
@@ -391,10 +408,14 @@ class Spaces extends Base_Controller {
                 'cleanup_time_buffer' => intval($postData['cleanup_time_buffer'] ?? 0)
             ];
             
-            $this->bookableConfigModel->update($config['id'], $updateData);
+            error_log('Spaces updateBookableConfig: Update data = ' . json_encode($updateData));
+            
+            $updateResult = $this->bookableConfigModel->update($config['id'], $updateData);
+            error_log('Spaces updateBookableConfig: Update result = ' . var_export($updateResult, true));
             
             // Sync to booking module
-            $this->spaceModel->syncToBookingModule($spaceId);
+            $syncResult = $this->spaceModel->syncToBookingModule($spaceId);
+            error_log('Spaces updateBookableConfig: Sync result = ' . var_export($syncResult, true));
             
             return true;
         } catch (Exception $e) {
