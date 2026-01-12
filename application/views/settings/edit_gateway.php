@@ -76,16 +76,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="mb-3">
                                 <label class="form-label">Callback URL</label>
                                 <input type="url" name="callback_url" class="form-control" 
-                                       value="<?= htmlspecialchars($gateway['callback_url'] ?? '') ?>"
+                                       value="<?= htmlspecialchars($gateway['callback_url'] ?: base_url('payment/callback')) ?>"
                                        placeholder="<?= base_url('payment/callback') ?>">
-                                <small class="text-muted">URL where customers are redirected after payment (optional, defaults to system URL)</small>
+                                <small class="text-muted">URL where customers are redirected after payment</small>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Webhook URL</label>
                                 <div class="input-group">
                                     <input type="url" name="webhook_url" class="form-control" 
-                                           value="<?= htmlspecialchars($gateway['webhook_url'] ?? base_url('payment/webhook?gateway=' . $gateway['gateway_code'])) ?>"
+                                           value="<?= htmlspecialchars($gateway['webhook_url'] ?: base_url('payment/webhook?gateway=' . $gateway['gateway_code'])) ?>"
                                            placeholder="<?= base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>">
                                     <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('<?= base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>')">
                                         <i class="bi bi-clipboard"></i> Copy

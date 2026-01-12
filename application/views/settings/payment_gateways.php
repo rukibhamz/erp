@@ -79,15 +79,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     </td>
                                     <td>
                                         <a href="<?= base_url('settings/payment-gateways/edit/' . $gateway['id']) ?>" 
-                                           class="btn btn-sm btn-primary">
+                                           class="btn btn-sm btn-primary me-1">
                                             <i class="bi bi-gear"></i> Configure
                                         </a>
-                                        <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 
-                                           class="btn btn-sm <?= $gateway['is_active'] ? 'btn-outline-secondary' : 'btn-success' ?>"
-                                           onclick="return confirm('Are you sure you want to <?= $gateway['is_active'] ? 'deactivate' : 'activate' ?> this gateway?')">
-                                            <i class="bi bi-<?= $gateway['is_active'] ? 'x-circle' : 'check-circle' ?>"></i>
-                                            <?= $gateway['is_active'] ? 'Deactivate' : 'Activate' ?>
-                                        </a>
+                                        <?php if ($gateway['is_active']): ?>
+                                            <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 
+                                               class="btn btn-sm btn-danger"
+                                               onclick="return confirm('Are you sure you want to deactivate this gateway?')">
+                                                <i class="bi bi-x-circle"></i> Deactivate
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 
+                                               class="btn btn-sm btn-success"
+                                               onclick="return confirm('Are you sure you want to activate this gateway?')">
+                                                <i class="bi bi-check-circle"></i> Activate
+                                            </a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
