@@ -67,7 +67,7 @@ function runPaymentGatewayMigrations($pdo, $prefix = '') {
                 'test_mode' => 1,
                 'supported_currencies' => json_encode(['NGN', 'GHS', 'ZAR', 'KES']),
                 'display_order' => 1,
-                'logo_url' => 'https://paystack.com/assets/img/logo.png'
+                'logo_url' => null
             ],
             [
                 'gateway_code' => 'flutterwave',
@@ -77,7 +77,7 @@ function runPaymentGatewayMigrations($pdo, $prefix = '') {
                 'test_mode' => 1,
                 'supported_currencies' => json_encode(['NGN', 'USD', 'GBP', 'EUR', 'KES', 'ZAR', 'GHS']),
                 'display_order' => 2,
-                'logo_url' => 'https://flutterwave.com/images/logo.svg'
+                'logo_url' => null
             ],
             [
                 'gateway_code' => 'stripe',
@@ -87,7 +87,7 @@ function runPaymentGatewayMigrations($pdo, $prefix = '') {
                 'test_mode' => 1,
                 'supported_currencies' => json_encode(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY']),
                 'display_order' => 3,
-                'logo_url' => 'https://stripe.com/img/v3/home/social.png'
+                'logo_url' => null
             ],
             [
                 'gateway_code' => 'paypal',
@@ -97,7 +97,7 @@ function runPaymentGatewayMigrations($pdo, $prefix = '') {
                 'test_mode' => 1,
                 'supported_currencies' => json_encode(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY']),
                 'display_order' => 4,
-                'logo_url' => 'https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg'
+                'logo_url' => null
             ],
             [
                 'gateway_code' => 'monnify',
@@ -107,7 +107,7 @@ function runPaymentGatewayMigrations($pdo, $prefix = '') {
                 'test_mode' => 1,
                 'supported_currencies' => json_encode(['NGN']),
                 'display_order' => 5,
-                'logo_url' => 'https://monnify.com/images/logo.png'
+                'logo_url' => null
             ]
         ];
 

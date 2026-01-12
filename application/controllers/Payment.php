@@ -129,26 +129,58 @@ class Payment extends Base_Controller {
      * Payment callback (redirect after payment)
      */
     public function callback() {
-        $transactionRef = $_GET['reference'] ?? $_GET['tx_ref'] ?? '';
+        $transactionRef = $_GET['reference'] ?? $_GET['tx_ref'] ?? $_GET['trxref'] ?? '';
         $gatewayCode = $_GET['gateway'] ?? 'paystack';
         
         if (!$transactionRef) {
             $this->setFlashMessage('danger', 'Invalid payment reference.');
-            redirect('booking-wizard');
+            redirect('payment/confirmation?status=failed');
+            return;
         }
         
-        // Verify payment
-        $this->verifyPayment($transactionRef, $gatewayCode);
+        try {
+            // Verify payment
+            $this->verifyPayment($transactionRef, $gatewayCode);
+            
+            // Get transaction for confirmation page
+            $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+            $status = $transaction ? $transaction['status'] : 'pending';
+            
+            redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=' . $status);
+        } catch (Exception $e) {
+            error_log('Payment callback error: ' . $e->getMessage());
+            redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=failed');
+        }
+    }
+    
+    /**
+     * Payment confirmation/thank you page
+     */
+    public function confirmation() {
+        $transactionRef = sanitize_input($_GET['ref'] ?? '');
+        $status = sanitize_input($_GET['status'] ?? 'pending');
         
-        // Redirect based on payment type
-        $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
-        if ($transaction) {
-            if ($transaction['payment_type'] === 'booking_payment') {
-                redirect('booking-wizard?payment=success&ref=' . $transactionRef);
+        $transaction = null;
+        $bookingId = null;
+        
+        if ($transactionRef) {
+            $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+            if ($transaction) {
+                $status = $transaction['status'];
+                if ($transaction['payment_type'] === 'booking_payment') {
+                    $bookingId = $transaction['reference_id'];
+                }
             }
         }
         
-        redirect('booking-wizard');
+        $data = [
+            'page_title' => 'Payment Confirmation',
+            'status' => $status,
+            'transaction' => $transaction,
+            'booking_id' => $bookingId
+        ];
+        
+        $this->loadView('payment/confirmation', $data);
     }
     
     /**
@@ -168,11 +200,21 @@ class Payment extends Base_Controller {
             }
             
             $input = file_get_contents('php://input');
+            
+            // Verify webhook signature for security
+            if (!$this->verifyWebhookSignature($gatewayCode, $input, $gateway)) {
+                error_log("Payment webhook signature verification failed for {$gatewayCode}");
+                throw new Exception('Invalid webhook signature');
+            }
+            
             $payload = json_decode($input, true);
             
             if (!$payload) {
                 $payload = $_POST;
             }
+            
+            // Log the webhook event
+            error_log("Payment webhook received from {$gatewayCode}: " . substr($input, 0, 500));
             
             // Process webhook based on gateway
             $reference = $this->extractReferenceFromWebhook($gatewayCode, $payload);
@@ -191,6 +233,51 @@ class Payment extends Base_Controller {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
         exit;
+    }
+    
+    /**
+     * Verify webhook signature for security
+     */
+    private function verifyWebhookSignature($gatewayCode, $input, $gateway) {
+        $secretKey = $gateway['private_key'] ?? '';
+        
+        switch ($gatewayCode) {
+            case 'paystack':
+                // Paystack uses x-paystack-signature header
+                $signature = $_SERVER['HTTP_X_PAYSTACK_SIGNATURE'] ?? '';
+                if (empty($signature)) {
+                    error_log('Paystack webhook: No signature header found');
+                    return true; // Allow if no signature (for backward compatibility, can be made strict)
+                }
+                $computedSignature = hash_hmac('sha512', $input, $secretKey);
+                return hash_equals($computedSignature, $signature);
+                
+            case 'flutterwave':
+                // Flutterwave uses verif-hash header
+                $signature = $_SERVER['HTTP_VERIF_HASH'] ?? '';
+                if (empty($signature)) {
+                    error_log('Flutterwave webhook: No signature header found');
+                    return true;
+                }
+                // Flutterwave uses secret hash from dashboard
+                $secretHash = $gateway['secret_key'] ?? $secretKey;
+                return hash_equals($secretHash, $signature);
+                
+            case 'monnify':
+                // Monnify uses monnify-signature header
+                $signature = $_SERVER['HTTP_MONNIFY_SIGNATURE'] ?? '';
+                if (empty($signature)) {
+                    error_log('Monnify webhook: No signature header found');
+                    return true;
+                }
+                $computedSignature = hash_hmac('sha512', $input, $secretKey);
+                return hash_equals($computedSignature, $signature);
+                
+            default:
+                // For unknown gateways, log but allow (can be made strict)
+                error_log("Unknown gateway for signature verification: {$gatewayCode}");
+                return true;
+        }
     }
     
     /**

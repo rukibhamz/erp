@@ -43,11 +43,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <?php if ($gateway['logo_url']): ?>
-                                                <img src="<?= htmlspecialchars($gateway['logo_url']) ?>" 
-                                                     alt="<?= htmlspecialchars($gateway['gateway_name']) ?>" 
-                                                     style="height: 30px; margin-right: 10px;">
-                                            <?php endif; ?>
                                             <div>
                                                 <strong><?= htmlspecialchars($gateway['gateway_name']) ?></strong>
                                                 <?php if ($gateway['is_default']): ?>
@@ -88,7 +83,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-gear"></i> Configure
                                         </a>
                                         <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 
-                                           class="btn btn-sm btn-outline-<?= $gateway['is_active'] ? 'secondary' : 'success' ?>"
+                                           class="btn btn-sm <?= $gateway['is_active'] ? 'btn-outline-secondary' : 'btn-success' ?>"
                                            onclick="return confirm('Are you sure you want to <?= $gateway['is_active'] ? 'deactivate' : 'activate' ?> this gateway?')">
                                             <i class="bi bi-<?= $gateway['is_active'] ? 'x-circle' : 'check-circle' ?>"></i>
                                             <?= $gateway['is_active'] ? 'Deactivate' : 'Activate' ?>
