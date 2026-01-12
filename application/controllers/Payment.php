@@ -216,6 +216,14 @@ class Payment extends Base_Controller {
             // Log the webhook event
             error_log("Payment webhook received from {$gatewayCode}: " . substr($input, 0, 500));
             
+            // Check if this is a test/verification webhook (no actual payment data)
+            if ($this->isTestWebhook($gatewayCode, $payload)) {
+                error_log("Payment webhook: Test/verification event received from {$gatewayCode}");
+                http_response_code(200);
+                echo json_encode(['status' => 'success', 'message' => 'Webhook verified']);
+                exit;
+            }
+            
             // Process webhook based on gateway
             $reference = $this->extractReferenceFromWebhook($gatewayCode, $payload);
             
@@ -224,7 +232,10 @@ class Payment extends Base_Controller {
                 http_response_code(200);
                 echo json_encode(['status' => 'success']);
             } else {
-                throw new Exception('Reference not found in webhook');
+                // No reference but not a test event - still return success to prevent retries
+                error_log("Payment webhook: No reference found but accepting event from {$gatewayCode}");
+                http_response_code(200);
+                echo json_encode(['status' => 'success', 'message' => 'Event acknowledged']);
             }
             
         } catch (Exception $e) {
@@ -233,6 +244,52 @@ class Payment extends Base_Controller {
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
         exit;
+    }
+    
+    /**
+     * Check if webhook is a test/verification event
+     */
+    private function isTestWebhook($gatewayCode, $payload) {
+        switch ($gatewayCode) {
+            case 'paystack':
+                // Paystack sends 'charge.success' for real payments
+                // Test pings or other events may have different event types
+                $event = $payload['event'] ?? '';
+                if (empty($event) || !in_array($event, ['charge.success', 'transfer.success', 'subscription.create'])) {
+                    return true;
+                }
+                // Also check if data is empty or missing reference
+                if (empty($payload['data']) || empty($payload['data']['reference'])) {
+                    return true;
+                }
+                return false;
+                
+            case 'flutterwave':
+                // Flutterwave sends 'charge.completed' or 'transfer.completed' for real payments
+                $event = $payload['event'] ?? '';
+                if (empty($event) || !in_array($event, ['charge.completed', 'transfer.completed'])) {
+                    return true;
+                }
+                if (empty($payload['data']) || empty($payload['data']['tx_ref'])) {
+                    return true;
+                }
+                return false;
+                
+            case 'monnify':
+                // Monnify uses 'eventType' field
+                $eventType = $payload['eventType'] ?? '';
+                if (empty($eventType) || $eventType !== 'SUCCESSFUL_TRANSACTION') {
+                    return true;
+                }
+                if (empty($payload['transactionReference'])) {
+                    return true;
+                }
+                return false;
+                
+            default:
+                // For unknown gateways, check if reference exists
+                return empty($payload['reference']) && empty($payload['tx_ref']) && empty($payload['transactionReference']);
+        }
     }
     
     /**
