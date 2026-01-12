@@ -264,6 +264,14 @@ class Spaces extends Base_Controller {
     }
     
     /**
+     * Sync space to booking module (alias for syncToBooking)
+     * This method is called from the view via /spaces/sync/{id}
+     */
+    public function sync($id) {
+        return $this->syncToBooking($id);
+    }
+    
+    /**
      * Sync space to booking module
      */
     public function syncToBooking($id) {
