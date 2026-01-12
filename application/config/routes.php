@@ -357,16 +357,21 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         // Settings Routes
         $route['settings/modules'] = 'Settings/modules';
         
-        // Payment Gateway Settings
+        // Payment Gateway Settings (with both dash and underscore variants for compatibility)
         $route['settings/payment-gateways'] = 'Settings/paymentGateways';
         $route['settings/payment-gateways/edit/(:num)'] = 'Settings/editGateway/$1';
         $route['settings/payment-gateways/toggle/(:num)'] = 'Settings/toggleGateway/$1';
+        $route['settings/payment_gateways'] = 'Settings/paymentGateways';
+        $route['settings/payment_gateways/edit/(:num)'] = 'Settings/editGateway/$1';
+        $route['settings/payment_gateways/toggle/(:num)'] = 'Settings/toggleGateway/$1';
         
         // Payment Processing
         $route['payment/initialize'] = 'Payment/initialize';
         $route['payment/callback'] = 'Payment/callback';
+        $route['payment/confirmation'] = 'Payment/confirmation';
         $route['payment/webhook'] = 'Payment/webhook';
         $route['payment/verify'] = 'Payment/verify';
+        $route['payment/verify/(:any)'] = 'Payment/verify/$1';
         
         // Customer Portal
         $route['customer-portal'] = 'Customer_portal/login';

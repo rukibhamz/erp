@@ -617,6 +617,54 @@ class Router {
             return;
         }
         
+        // Special handling for settings routes with hyphens
+        if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'settings') {
+            $method = strtolower($urlParts[1]);
+            
+            // Map hyphenated settings routes to camelCase methods
+            if ($method === 'payment-gateways') {
+                $this->controller = 'Settings';
+                
+                if (count($urlParts) >= 3) {
+                    $action = strtolower($urlParts[2]);
+                    if ($action === 'edit' && isset($urlParts[3])) {
+                        $this->method = 'editGateway';
+                        $this->params = [intval($urlParts[3])];
+                    } elseif ($action === 'toggle' && isset($urlParts[3])) {
+                        $this->method = 'toggleGateway';
+                        $this->params = [intval($urlParts[3])];
+                    } else {
+                        $this->method = 'paymentGateways';
+                        $this->params = [];
+                    }
+                } else {
+                    $this->method = 'paymentGateways';
+                    $this->params = [];
+                }
+                
+                error_log("Router: Settings payment-gateways route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                return;
+            }
+        }
+        
+        // Special handling for payment routes
+        if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'payment') {
+            $method = strtolower($urlParts[1]);
+            $this->controller = 'Payment';
+            $this->method = $method;
+            
+            if (count($urlParts) > 2) {
+                $this->params = array_slice($urlParts, 2);
+                $this->params = array_map(function($param) {
+                    return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                }, $this->params);
+            } else {
+                $this->params = [];
+            }
+            
+            error_log("Router: Payment route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            return;
+        }
         if (isset($urlParts[0]) && !empty($urlParts[0])) {
             // Convert tax_compliance to Tax_compliance (preserve underscores)
             $parts = explode('_', $urlParts[0]);
