@@ -168,8 +168,9 @@ class Space_model extends Base_Model {
                 ];
                 
                 try {
-                    require_once __DIR__ . '/Bookable_config_model.php';
-                    $configModel = new Bookable_config_model();
+                    $CI =& get_instance();
+                    $CI->load->model('Bookable_config_model');
+                    $configModel = $CI->Bookable_config_model;
                     $configModel->create($defaultConfig);
                     $config = $this->getBookableConfig($spaceId);
                 } catch (Exception $e) {
@@ -179,9 +180,10 @@ class Space_model extends Base_Model {
                 }
             }
             
-            // Load Facility_model using database connection
-            require_once __DIR__ . '/Facility_model.php';
-            $facilityModel = new Facility_model();
+            // Load Facility_model using standard CI loader
+            $CI =& get_instance();
+            $CI->load->model('Facility_model');
+            $facilityModel = $CI->Facility_model;
             
             // Check if facility already exists - use direct DB query to avoid recursion
             $existingFacility = null;
@@ -277,8 +279,9 @@ class Space_model extends Base_Model {
      */
     private function syncAvailabilityRules($facilityId, $config) {
         try {
-            require_once __DIR__ . '/Resource_availability_model.php';
-            $availabilityModel = new Resource_availability_model();
+            $CI =& get_instance();
+            $CI->load->model('Resource_availability_model');
+            $availabilityModel = $CI->Resource_availability_model;
             
             $availabilityRules = json_decode($config['availability_rules'] ?? '{}', true) ?: [];
             $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '22:00'];
