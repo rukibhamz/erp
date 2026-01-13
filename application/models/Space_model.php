@@ -108,27 +108,61 @@ class Space_model extends Base_Model {
      */
     public function syncToBookingModule($spaceId) {
         try {
+            // #region agent log
+            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:109','message'=>'syncToBookingModule entry','data'=>['spaceId'=>$spaceId],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+            // #endregion
             error_log('Space_model syncToBookingModule: Starting sync for space ' . $spaceId);
             
             $space = $this->getWithProperty($spaceId);
             if (!$space) {
+                // #region agent log
+                file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:116','message'=>'Space not found','data'=>['spaceId'=>$spaceId],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+                // #endregion
                 error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' not found');
                 return false;
             }
             
+            // #region agent log
+            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:119','message'=>'Space retrieved','data'=>['spaceId'=>$spaceId,'is_bookable'=>$space['is_bookable']??null,'space_name'=>$space['space_name']??null],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+            // #endregion
             error_log('Space_model syncToBookingModule: Space found - ' . ($space['space_name'] ?? 'unnamed') . ', is_bookable=' . var_export($space['is_bookable'] ?? null, true));
+            
+            // Check if bookable config exists - if it does, allow sync even if is_bookable is 0
+            $config = $this->getBookableConfig($spaceId);
+            $hasBookableConfig = !empty($config);
+            
+            // #region agent log
+            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:131','message'=>'Config check','data'=>['spaceId'=>$spaceId,'hasBookableConfig'=>$hasBookableConfig,'is_bookable'=>$space['is_bookable']??null],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+            // #endregion
             
             // Use strict comparison to handle string "1" or integer 1
             // Also accept truthy values like "1", 1, true
             $isBookable = !empty($space['is_bookable']) && (intval($space['is_bookable']) == 1 || $space['is_bookable'] === true);
-            if (!$isBookable) {
-                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' is not bookable (is_bookable=' . var_export($space['is_bookable'], true) . ')');
+            
+            // Allow sync if space is bookable OR if bookable_config exists (for manual sync)
+            if (!$isBookable && !$hasBookableConfig) {
+                // #region agent log
+                file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:138','message'=>'Sync rejected - not bookable and no config','data'=>['spaceId'=>$spaceId,'isBookable'=>$isBookable,'hasBookableConfig'=>$hasBookableConfig],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+                // #endregion
+                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' is not bookable and has no config (is_bookable=' . var_export($space['is_bookable'], true) . ')');
                 return false;
             }
             
-            error_log('Space_model syncToBookingModule: Space is bookable, proceeding with sync');
+            // If space is not marked as bookable but has config, mark it as bookable
+            if (!$isBookable && $hasBookableConfig) {
+                // #region agent log
+                file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:145','message'=>'Auto-marking as bookable','data'=>['spaceId'=>$spaceId],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+                // #endregion
+                error_log('Space_model syncToBookingModule: Space has config but is_bookable=0, updating is_bookable to 1');
+                $this->update($spaceId, ['is_bookable' => 1]);
+                $space['is_bookable'] = 1; // Update local variable
+            }
             
-            $config = $this->getBookableConfig($spaceId);
+            // #region agent log
+            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:150','message'=>'Proceeding with sync','data'=>['spaceId'=>$spaceId,'isBookable'=>$isBookable,'hasBookableConfig'=>$hasBookableConfig],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+            // #endregion
+            error_log('Space_model syncToBookingModule: Space is bookable or has config, proceeding with sync');
+            
             // If no config exists, create a default one
             if (!$config) {
                 $defaultConfig = [
@@ -157,7 +191,7 @@ class Space_model extends Base_Model {
                 
                 try {
                     require_once BASEPATH . 'models/Bookable_config_model.php';
-                    $configModel = new Bookable_config_model($this->db);
+                    $configModel = new Bookable_config_model();
                     $configModel->create($defaultConfig);
                     $config = $this->getBookableConfig($spaceId);
                 } catch (Exception $e) {
@@ -169,7 +203,7 @@ class Space_model extends Base_Model {
             
             // Load Facility_model using database connection
             require_once BASEPATH . 'models/Facility_model.php';
-            $facilityModel = new Facility_model($this->db);
+            $facilityModel = new Facility_model();
             
             // Check if facility already exists - use direct DB query to avoid recursion
             $existingFacility = null;
@@ -253,8 +287,15 @@ class Space_model extends Base_Model {
             
             error_log('Space_model syncToBookingModule: Sync completed successfully for space ' . $spaceId . ', facility ID ' . $facilityId);
             
+            // #region agent log
+            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:256','message'=>'Sync success','data'=>['spaceId'=>$spaceId,'facilityId'=>$facilityId],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+            // #endregion
+            
             return $facilityId;
         } catch (Exception $e) {
+            // #region agent log
+            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'A','location'=>'Space_model.php:260','message'=>'Sync exception','data'=>['spaceId'=>$spaceId,'error'=>$e->getMessage()],'timestamp'=>time()*1000])."\n", FILE_APPEND);
+            // #endregion
             error_log('Space_model syncToBookingModule error: ' . $e->getMessage());
             return false;
         }
@@ -266,7 +307,7 @@ class Space_model extends Base_Model {
     private function syncAvailabilityRules($facilityId, $config) {
         try {
             require_once BASEPATH . 'models/Resource_availability_model.php';
-            $availabilityModel = new Resource_availability_model($this->db);
+            $availabilityModel = new Resource_availability_model();
             
             $availabilityRules = json_decode($config['availability_rules'] ?? '{}', true) ?: [];
             $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '22:00'];
