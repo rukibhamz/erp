@@ -194,23 +194,28 @@ class Spaces extends Base_Controller {
             }
             
             if ($this->spaceModel->update($id, $data)) {
-                // Update bookable config if needed
-                if (!empty($_POST['is_bookable'])) {
+                // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
+                $hasRateUpdates = isset($_POST['hourly_rate']) || isset($_POST['daily_rate']) || 
+                                  isset($_POST['half_day_rate']) || isset($_POST['weekly_rate']) ||
+                                  isset($_POST['minimum_duration']) || isset($_POST['maximum_duration']);
+                
+                // Get current space state after update
+                $currentSpace = $this->spaceModel->getById($id);
+                $isCurrentlyBookable = !empty($currentSpace['is_bookable']);
+                $hasBookableConfig = !empty($this->spaceModel->getBookableConfig($id));
+                
+                // Update bookable config if checkbox is checked OR if rates were updated
+                if (!empty($_POST['is_bookable']) || ($hasRateUpdates && $hasBookableConfig)) {
                     $this->updateBookableConfig($id, $_POST);
-                    // Auto-sync to booking module
+                }
+                
+                // Always sync if space is bookable or has bookable config
+                if ($isCurrentlyBookable || $hasBookableConfig) {
                     try {
                         $this->spaceModel->syncToBookingModule($id);
                     } catch (Exception $e) {
                         error_log('Spaces edit auto-sync error: ' . $e->getMessage());
-                    }
-                }
-                
-                // If still bookable, update sync
-                if (!empty($_POST['is_bookable']) && $wasBookable) {
-                    try {
-                        $this->spaceModel->syncToBookingModule($id);
-                    } catch (Exception $e) {
-                        error_log('Spaces edit update-sync error: ' . $e->getMessage());
+                        $this->setFlashMessage('warning', 'Space updated but sync to booking module failed: ' . $e->getMessage());
                     }
                 }
                 
@@ -380,42 +385,89 @@ class Spaces extends Base_Controller {
                 $bookingTypes = $postData['booking_types'];
             }
             
-            $pricingRules = [
-                'base_hourly' => floatval($postData['hourly_rate'] ?? 0),
-                'base_daily' => floatval($postData['daily_rate'] ?? 0),
-                'half_day' => floatval($postData['half_day_rate'] ?? 0),
-                'weekly' => floatval($postData['weekly_rate'] ?? 0),
-                'deposit' => floatval($postData['security_deposit'] ?? 0)
-            ];
+            // Get existing pricing rules to preserve values not being updated
+            $existingPricingRules = json_decode($config['pricing_rules'] ?? '{}', true) ?: [];
+            
+            // Start with existing rules and only update fields that are provided and not empty
+            $pricingRules = $existingPricingRules;
+            
+            if (isset($postData['hourly_rate']) && $postData['hourly_rate'] !== '' && $postData['hourly_rate'] !== null) {
+                $pricingRules['base_hourly'] = floatval($postData['hourly_rate']);
+            }
+            if (isset($postData['daily_rate']) && $postData['daily_rate'] !== '' && $postData['daily_rate'] !== null) {
+                $pricingRules['base_daily'] = floatval($postData['daily_rate']);
+            }
+            if (isset($postData['half_day_rate']) && $postData['half_day_rate'] !== '' && $postData['half_day_rate'] !== null) {
+                $pricingRules['half_day'] = floatval($postData['half_day_rate']);
+            }
+            if (isset($postData['weekly_rate']) && $postData['weekly_rate'] !== '' && $postData['weekly_rate'] !== null) {
+                $pricingRules['weekly'] = floatval($postData['weekly_rate']);
+            }
+            if (isset($postData['security_deposit']) && $postData['security_deposit'] !== '' && $postData['security_deposit'] !== null) {
+                $pricingRules['deposit'] = floatval($postData['security_deposit']);
+            }
+            // Preserve peak_rate_multiplier if it exists
+            if (!isset($pricingRules['peak_rate_multiplier']) && isset($existingPricingRules['peak_rate_multiplier'])) {
+                $pricingRules['peak_rate_multiplier'] = $existingPricingRules['peak_rate_multiplier'];
+            }
             
             error_log('Spaces updateBookableConfig: Pricing rules = ' . json_encode($pricingRules));
             
-            $availabilityRules = [
-                'operating_hours' => [
-                    'start' => $postData['operating_start'] ?? '08:00',
-                    'end' => $postData['operating_end'] ?? '22:00'
-                ],
-                'days_available' => !empty($postData['days_available']) ? array_map('intval', $postData['days_available']) : [0,1,2,3,4,5,6]
-            ];
+            // Get existing availability rules to preserve values
+            $existingAvailabilityRules = json_decode($config['availability_rules'] ?? '{}', true) ?: [];
+            
+            $availabilityRules = $existingAvailabilityRules; // Start with existing rules
+            
+            if (isset($postData['operating_start']) || isset($postData['operating_end'])) {
+                $availabilityRules['operating_hours'] = [
+                    'start' => $postData['operating_start'] ?? ($existingAvailabilityRules['operating_hours']['start'] ?? '08:00'),
+                    'end' => $postData['operating_end'] ?? ($existingAvailabilityRules['operating_hours']['end'] ?? '22:00')
+                ];
+            }
+            
+            if (!empty($postData['days_available']) && is_array($postData['days_available'])) {
+                $availabilityRules['days_available'] = array_map('intval', $postData['days_available']);
+            }
+            
+            // Preserve blackout_dates if they exist
+            if (!isset($availabilityRules['blackout_dates']) && isset($existingAvailabilityRules['blackout_dates'])) {
+                $availabilityRules['blackout_dates'] = $existingAvailabilityRules['blackout_dates'];
+            }
             
             $updateData = [
                 'booking_types' => json_encode($bookingTypes),
-                'minimum_duration' => intval($postData['minimum_duration'] ?? 1),
-                'maximum_duration' => !empty($postData['maximum_duration']) ? intval($postData['maximum_duration']) : null,
+                'minimum_duration' => isset($postData['minimum_duration']) ? intval($postData['minimum_duration']) : ($config['minimum_duration'] ?? 1),
+                'maximum_duration' => isset($postData['maximum_duration']) && $postData['maximum_duration'] !== '' ? intval($postData['maximum_duration']) : ($config['maximum_duration'] ?? null),
                 'pricing_rules' => json_encode($pricingRules),
                 'availability_rules' => json_encode($availabilityRules),
-                'setup_time_buffer' => intval($postData['setup_time_buffer'] ?? 0),
-                'cleanup_time_buffer' => intval($postData['cleanup_time_buffer'] ?? 0)
+                'setup_time_buffer' => isset($postData['setup_time_buffer']) ? intval($postData['setup_time_buffer']) : ($config['setup_time_buffer'] ?? 0),
+                'cleanup_time_buffer' => isset($postData['cleanup_time_buffer']) ? intval($postData['cleanup_time_buffer']) : ($config['cleanup_time_buffer'] ?? 0)
             ];
+            
+            // Only update advance_booking_days if provided
+            if (isset($postData['advance_booking_days'])) {
+                $updateData['advance_booking_days'] = intval($postData['advance_booking_days']);
+            }
+            
+            // Only update simultaneous_limit if provided
+            if (isset($postData['simultaneous_limit'])) {
+                $updateData['simultaneous_limit'] = intval($postData['simultaneous_limit']);
+            }
             
             error_log('Spaces updateBookableConfig: Update data = ' . json_encode($updateData));
             
             $updateResult = $this->bookableConfigModel->update($config['id'], $updateData);
+            
             error_log('Spaces updateBookableConfig: Update result = ' . var_export($updateResult, true));
             
-            // Sync to booking module
+            // Sync to booking module - ALWAYS sync when config is updated
             $syncResult = $this->spaceModel->syncToBookingModule($spaceId);
+            
             error_log('Spaces updateBookableConfig: Sync result = ' . var_export($syncResult, true));
+            
+            if (!$syncResult) {
+                error_log('Spaces updateBookableConfig: WARNING - Sync failed for space ' . $spaceId);
+            }
             
             return true;
         } catch (Exception $e) {
