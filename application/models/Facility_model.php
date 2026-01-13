@@ -49,7 +49,7 @@ class Facility_model extends Base_Model {
             foreach ($spaces as &$space) {
                 if (empty($space['facility_id'])) {
                     try {
-                        require_once BASEPATH . 'models/Space_model.php';
+                        require_once __DIR__ . '/Space_model.php';
                         $spaceModel = new Space_model($this->db);
                         $facilityId = $spaceModel->syncToBookingModule($space['id']);
                         if ($facilityId) {
@@ -322,7 +322,7 @@ class Facility_model extends Base_Model {
 
 
             // Get Resource Rules from DB
-            require_once BASEPATH . 'models/Resource_availability_model.php';
+            require_once __DIR__ . '/Resource_availability_model.php';
             $resAvailModel = new Resource_availability_model($this->db);
             $resourceAvailability = $resAvailModel->getByResource($facilityId);
             $availabilityByDay = [];
@@ -336,7 +336,7 @@ class Facility_model extends Base_Model {
             }
 
             // Get Bookings
-            require_once BASEPATH . 'models/Booking_model.php';
+            require_once __DIR__ . '/Booking_model.php';
             $bookingModel = new Booking_model($this->db);
             $bookings = $bookingModel->getByDateRange($date, $checkEndDate, $facilityId);
             $recurringBookings = $bookingModel->getRecurringBookingsForDate($facilityId, $date); 
@@ -545,7 +545,7 @@ class Facility_model extends Base_Model {
             
             // Also check recurring bookings
             if (!$hasConflict) {
-                require_once BASEPATH . 'models/Booking_model.php';
+                require_once __DIR__ . '/Booking_model.php';
                 $bookingModel = new Booking_model($this->db);
                 $currentDate = new DateTime($bookingDate);
                 $finalDate = new DateTime($checkEndDate);

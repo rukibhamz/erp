@@ -122,8 +122,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-primary" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="<?= base_url('spaces?property_id=' . $Location['id']) ?>" class="btn btn-primary" title="View Spaces">
                                     <i class="bi bi-door-open"></i>
+                                </a>
+                                <a href="<?= base_url('locations/delete/' . $Location['id']) ?>" class="btn btn-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this location?');">
+                                    <i class="bi bi-trash"></i>
                                 </a>
                             </div>
                         </div>

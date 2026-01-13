@@ -15,6 +15,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('locations') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
+            <a href="<?= base_url('locations/delete/' . $Location['id']) ?>" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this location? All associated spaces must be deleted first.');">
+                <i class="bi bi-trash"></i> Delete
+            </a>
         </div>
     </div>
 </div>
