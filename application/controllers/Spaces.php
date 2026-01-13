@@ -512,46 +512,35 @@ class Spaces extends Base_Controller {
             $propertyId = $space['property_id'] ?? null;
             
             // Check for active bookings
-            try {
-                $bookingModel = $this->loadModel('Space_booking_model');
-                $activeBookingsCount = $bookingModel->countBy([
-                    'space_id' => $id,
-                    'status' => 'confirmed' // Check confirmed bookings separately or just use countBy loop if needed
-                ]);
-                
-                // OR better, checking for non-cancelled bookings using a custom query or multiple checks
-                // Let's use getBySpaceAndDate or checkAvailability logic which we know works
-                // actually Base_Model::countBy handles simple array.
-                // But status IN array is not supported by standard Base_Model::countBy unless tailored.
-                // Let's use a direct DB check to be safe and robust
+            // Check for active bookings via Facility link (bookings are linked to facilities, not directly to spaces ID if synced)
+            // But we should also check if 'space_id' exists in bookings table just in case? 
+            // Based on Booking_model, it uses facility_id.
+            
+            if (!empty($space['facility_id'])) {
                 $activeBookings = $this->db->fetchAll(
-                    "SELECT id FROM `" . $this->db->getPrefix() . "space_bookings` 
-                     WHERE space_id = ? AND status IN ('pending', 'confirmed')",
-                    [$id]
+                    "SELECT id FROM `" . $this->db->getPrefix() . "bookings` 
+                     WHERE facility_id = ? AND status IN ('pending', 'confirmed', 'checked_in')",
+                    [$space['facility_id']]
                 );
                 
                 if (!empty($activeBookings)) {
-                    $this->setFlashMessage('danger', 'Cannot delete space with active bookings. Please cancel or complete all bookings first.');
+                    $this->setFlashMessage('danger', 'Cannot delete space. It has ' . count($activeBookings) . ' active booking(s). Please cancel or complete them first.');
                     redirect('spaces/view/' . $id);
                 }
-            } catch (Exception $e) {
-                // Model might not exist, continue
             }
             
             // Check for active leases
-            try {
-                $leaseModel = $this->loadModel('Lease_model');
-                $activeLeases = $leaseModel->getBy([
-                    'space_id' => $id,
-                    'status' => 'active'
-                ]);
-                
-                if (!empty($activeLeases)) {
-                    $this->setFlashMessage('danger', 'Cannot delete space with active leases. Please terminate leases first.');
-                    redirect('spaces/view/' . $id);
-                }
-            } catch (Exception $e) {
-                // Model might not exist, continue
+            // Check for active leases
+            // Use direct DB check for robustness and consistency
+            $activeLeases = $this->db->fetchAll(
+                "SELECT id FROM `" . $this->db->getPrefix() . "leases` 
+                 WHERE space_id = ? AND status = 'active'",
+                [$id]
+            );
+            
+            if (!empty($activeLeases)) {
+                $this->setFlashMessage('danger', 'Cannot delete space with active leases. Please terminate leases first.');
+                redirect('spaces/view/' . $id);
             }
             
             // Deactivate in booking module first

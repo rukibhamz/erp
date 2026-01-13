@@ -233,15 +233,17 @@ class Locations extends Base_Controller {
                     // If ANY space has active booking, we block the WHOLE location delete to be safe.
                     
                     // Check bookings
-                    $activeBookings = $this->db->fetchAll(
-                        "SELECT id FROM `" . $this->db->getPrefix() . "space_bookings` 
-                         WHERE space_id = ? AND status IN ('pending', 'confirmed')",
-                        [$space['id']]
-                    );
-                    
-                    if (!empty($activeBookings)) {
-                        $this->setFlashMessage('danger', "Cannot delete location. Space '{$space['space_name']}' has active bookings.");
-                        redirect('locations/view/' . $id);
+                    if (!empty($space['facility_id'])) {
+                        $activeBookings = $this->db->fetchAll(
+                            "SELECT id FROM `" . $this->db->getPrefix() . "bookings` 
+                             WHERE facility_id = ? AND status IN ('pending', 'confirmed', 'checked_in')",
+                            [$space['facility_id']]
+                        );
+                        
+                        if (!empty($activeBookings)) {
+                            $this->setFlashMessage('danger', "Cannot delete location. Space '{$space['space_name']}' has active bookings.");
+                            redirect('locations/view/' . $id);
+                        }
                     }
                     
                     // Check leases
