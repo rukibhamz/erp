@@ -18,7 +18,7 @@ class Spaces extends Base_Controller {
         
         // Load Bookable_config_model dynamically
         require_once BASEPATH . 'models/Bookable_config_model.php';
-        $this->bookableConfigModel = new Bookable_config_model($this->db);
+        $this->bookableConfigModel = new Bookable_config_model();
     }
     
     public function index($propertyId = null) {
