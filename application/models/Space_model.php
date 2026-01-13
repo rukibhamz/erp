@@ -168,9 +168,10 @@ class Space_model extends Base_Model {
                 ];
                 
                 try {
-                    $CI =& get_instance();
-                    $CI->load->model('Bookable_config_model');
-                    $configModel = $CI->Bookable_config_model;
+                    if (!class_exists('Bookable_config_model')) {
+                        require_once APPPATH . 'models/Bookable_config_model.php';
+                    }
+                    $configModel = new Bookable_config_model();
                     $configModel->create($defaultConfig);
                     $config = $this->getBookableConfig($spaceId);
                 } catch (Exception $e) {
@@ -180,10 +181,11 @@ class Space_model extends Base_Model {
                 }
             }
             
-            // Load Facility_model using standard CI loader
-            $CI =& get_instance();
-            $CI->load->model('Facility_model');
-            $facilityModel = $CI->Facility_model;
+            // Load Facility_model
+            if (!class_exists('Facility_model')) {
+                require_once APPPATH . 'models/Facility_model.php';
+            }
+            $facilityModel = new Facility_model();
             
             // Check if facility already exists - use direct DB query to avoid recursion
             $existingFacility = null;
@@ -279,9 +281,10 @@ class Space_model extends Base_Model {
      */
     private function syncAvailabilityRules($facilityId, $config) {
         try {
-            $CI =& get_instance();
-            $CI->load->model('Resource_availability_model');
-            $availabilityModel = $CI->Resource_availability_model;
+            if (!class_exists('Resource_availability_model')) {
+                require_once APPPATH . 'models/Resource_availability_model.php';
+            }
+            $availabilityModel = new Resource_availability_model();
             
             $availabilityRules = json_decode($config['availability_rules'] ?? '{}', true) ?: [];
             $operatingHours = $availabilityRules['operating_hours'] ?? ['start' => '08:00', 'end' => '22:00'];
