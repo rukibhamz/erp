@@ -16,9 +16,8 @@ class Spaces extends Base_Controller {
         $this->facilityModel = $this->loadModel('Facility_model');
         $this->activityModel = $this->loadModel('Activity_model');
         
-        // Load Bookable_config_model dynamically
-        require_once dirname(__DIR__) . '/models/Bookable_config_model.php';
-        $this->bookableConfigModel = new Bookable_config_model();
+        // Load Bookable_config_model using standard CI loader
+        $this->bookableConfigModel = $this->loadModel('Bookable_config_model');
     }
     
     public function index($propertyId = null) {
