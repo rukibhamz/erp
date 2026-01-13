@@ -204,23 +204,13 @@ class Spaces extends Base_Controller {
                 $isCurrentlyBookable = !empty($currentSpace['is_bookable']);
                 $hasBookableConfig = !empty($this->spaceModel->getBookableConfig($id));
                 
-                // #region agent log
-                file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'C','location'=>'Spaces.php:196','message'=>'Edit update check','data'=>['spaceId'=>$id,'hasRateUpdates'=>$hasRateUpdates,'isCurrentlyBookable'=>$isCurrentlyBookable,'hasBookableConfig'=>$hasBookableConfig,'is_bookable_post'=>!empty($_POST['is_bookable'])],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-                // #endregion
-                
                 // Update bookable config if checkbox is checked OR if rates were updated
                 if (!empty($_POST['is_bookable']) || ($hasRateUpdates && $hasBookableConfig)) {
-                    // #region agent log
-                    file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'C','location'=>'Spaces.php:203','message'=>'Updating bookable config','data'=>['spaceId'=>$id],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-                    // #endregion
                     $this->updateBookableConfig($id, $_POST);
                 }
                 
                 // Always sync if space is bookable or has bookable config
                 if ($isCurrentlyBookable || $hasBookableConfig) {
-                    // #region agent log
-                    file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'C','location'=>'Spaces.php:210','message'=>'Syncing to booking module','data'=>['spaceId'=>$id],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-                    // #endregion
                     try {
                         $this->spaceModel->syncToBookingModule($id);
                     } catch (Exception $e) {
@@ -377,9 +367,6 @@ class Spaces extends Base_Controller {
      */
     private function updateBookableConfig($spaceId, $postData) {
         try {
-            // #region agent log
-            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'B','location'=>'Spaces.php:363','message'=>'updateBookableConfig entry','data'=>['spaceId'=>$spaceId,'hourly_rate'=>$postData['hourly_rate']??null,'daily_rate'=>$postData['daily_rate']??null],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-            // #endregion
             error_log('Spaces updateBookableConfig: Starting for space ' . $spaceId);
             error_log('Spaces updateBookableConfig: POST data - hourly_rate=' . ($postData['hourly_rate'] ?? 'null') . ', daily_rate=' . ($postData['daily_rate'] ?? 'null'));
             
@@ -400,10 +387,6 @@ class Spaces extends Base_Controller {
             
             // Get existing pricing rules to preserve values not being updated
             $existingPricingRules = json_decode($config['pricing_rules'] ?? '{}', true) ?: [];
-            
-            // #region agent log
-            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'B','location'=>'Spaces.php:383','message'=>'Existing pricing rules','data'=>['existingRules'=>$existingPricingRules,'postHourly'=>$postData['hourly_rate']??null,'postDaily'=>$postData['daily_rate']??null],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-            // #endregion
             
             // Start with existing rules and only update fields that are provided and not empty
             $pricingRules = $existingPricingRules;
@@ -428,9 +411,6 @@ class Spaces extends Base_Controller {
                 $pricingRules['peak_rate_multiplier'] = $existingPricingRules['peak_rate_multiplier'];
             }
             
-            // #region agent log
-            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'B','location'=>'Spaces.php:405','message'=>'Updated pricing rules','data'=>['pricingRules'=>$pricingRules],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-            // #endregion
             error_log('Spaces updateBookableConfig: Pricing rules = ' . json_encode($pricingRules));
             
             // Get existing availability rules to preserve values
@@ -474,24 +454,15 @@ class Spaces extends Base_Controller {
                 $updateData['simultaneous_limit'] = intval($postData['simultaneous_limit']);
             }
             
-            // #region agent log
-            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'B','location'=>'Spaces.php:425','message'=>'Before update','data'=>['updateData'=>$updateData],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-            // #endregion
             error_log('Spaces updateBookableConfig: Update data = ' . json_encode($updateData));
             
             $updateResult = $this->bookableConfigModel->update($config['id'], $updateData);
             
-            // #region agent log
-            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'B','location'=>'Spaces.php:430','message'=>'Update result','data'=>['updateResult'=>$updateResult],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-            // #endregion
             error_log('Spaces updateBookableConfig: Update result = ' . var_export($updateResult, true));
             
             // Sync to booking module - ALWAYS sync when config is updated
             $syncResult = $this->spaceModel->syncToBookingModule($spaceId);
             
-            // #region agent log
-            file_put_contents('.cursor/debug.log', json_encode(['sessionId'=>'debug-session','runId'=>'run1','hypothesisId'=>'B','location'=>'Spaces.php:435','message'=>'Sync result','data'=>['syncResult'=>$syncResult],'timestamp'=>time()*1000])."\n", FILE_APPEND);
-            // #endregion
             error_log('Spaces updateBookableConfig: Sync result = ' . var_export($syncResult, true));
             
             if (!$syncResult) {
