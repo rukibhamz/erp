@@ -168,7 +168,7 @@ class Space_model extends Base_Model {
                 ];
                 
                 try {
-                    require_once APPPATH . 'models/Bookable_config_model.php';
+                    require_once __DIR__ . '/Bookable_config_model.php';
                     $configModel = new Bookable_config_model();
                     $configModel->create($defaultConfig);
                     $config = $this->getBookableConfig($spaceId);
@@ -180,7 +180,7 @@ class Space_model extends Base_Model {
             }
             
             // Load Facility_model using database connection
-            require_once APPPATH . 'models/Facility_model.php';
+            require_once __DIR__ . '/Facility_model.php';
             $facilityModel = new Facility_model();
             
             // Check if facility already exists - use direct DB query to avoid recursion
@@ -277,7 +277,7 @@ class Space_model extends Base_Model {
      */
     private function syncAvailabilityRules($facilityId, $config) {
         try {
-            require_once APPPATH . 'models/Resource_availability_model.php';
+            require_once __DIR__ . '/Resource_availability_model.php';
             $availabilityModel = new Resource_availability_model();
             
             $availabilityRules = json_decode($config['availability_rules'] ?? '{}', true) ?: [];

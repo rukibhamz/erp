@@ -17,7 +17,7 @@ class Spaces extends Base_Controller {
         $this->activityModel = $this->loadModel('Activity_model');
         
         // Load Bookable_config_model dynamically
-        require_once APPPATH . 'models/Bookable_config_model.php';
+        require_once dirname(__DIR__) . '/models/Bookable_config_model.php';
         $this->bookableConfigModel = new Bookable_config_model();
     }
     
