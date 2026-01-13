@@ -63,7 +63,7 @@ class Locations extends Base_Controller {
                 'manager_id' => !empty($_POST['manager_id']) ? intval($_POST['manager_id']) : null,
                 'status' => sanitize_input($_POST['status'] ?? 'operational'),
                 'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
-                'is_bookable' => isset($_POST['is_bookable']) ? 1 : 0,
+                'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
@@ -163,7 +163,7 @@ class Locations extends Base_Controller {
                 'manager_id' => !empty($_POST['manager_id']) ? intval($_POST['manager_id']) : null,
                 'status' => sanitize_input($_POST['status'] ?? 'operational'),
                 'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
-                'is_bookable' => isset($_POST['is_bookable']) ? 1 : 0,
+                'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             

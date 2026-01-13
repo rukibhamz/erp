@@ -205,8 +205,13 @@ class Spaces extends Base_Controller {
                 $hasBookableConfig = !empty($this->spaceModel->getBookableConfig($id));
                 
                 // Update bookable config if checkbox is checked OR if rates were updated
+                error_log("Spaces Edit: POST is_bookable=" . ($_POST['is_bookable']??'null') . ", hasRateUpdates=" . ($hasRateUpdates?'yes':'no') . ", hasConfig=" . ($hasBookableConfig?'yes':'no'));
+                
                 if (!empty($_POST['is_bookable']) || ($hasRateUpdates && $hasBookableConfig)) {
+                    error_log("Spaces Edit: Calling updateBookableConfig");
                     $this->updateBookableConfig($id, $_POST);
+                } else {
+                    error_log("Spaces Edit: NOT calling updateBookableConfig");
                 }
                 
                 // Always sync if space is bookable or has bookable config
@@ -303,8 +308,7 @@ class Spaces extends Base_Controller {
      */
     private function createBookableConfig($spaceId, $postData) {
         try {
-            error_log('Spaces createBookableConfig: Starting for space ' . $spaceId);
-            error_log('Spaces createBookableConfig: POST data - hourly_rate=' . ($postData['hourly_rate'] ?? 'null') . ', daily_rate=' . ($postData['daily_rate'] ?? 'null'));
+            error_log("Spaces createBookableConfig ENTRY for $spaceId");
             
             $bookingTypes = [];
             if (!empty($postData['booking_types']) && is_array($postData['booking_types'])) {
@@ -367,14 +371,12 @@ class Spaces extends Base_Controller {
      */
     private function updateBookableConfig($spaceId, $postData) {
         try {
-            error_log('Spaces updateBookableConfig: Starting for space ' . $spaceId);
-            error_log('Spaces updateBookableConfig: POST data - hourly_rate=' . ($postData['hourly_rate'] ?? 'null') . ', daily_rate=' . ($postData['daily_rate'] ?? 'null'));
+            error_log("Spaces updateBookableConfig ENTRY for $spaceId");
             
             $config = $this->spaceModel->getBookableConfig($spaceId);
             
             if (!$config) {
-                error_log('Spaces updateBookableConfig: No existing config, creating new one');
-                // Create new config
+                error_log("Spaces updateBookableConfig: No config, calling create");
                 return $this->createBookableConfig($spaceId, $postData);
             }
             
