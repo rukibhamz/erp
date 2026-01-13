@@ -514,10 +514,21 @@ class Spaces extends Base_Controller {
             // Check for active bookings
             try {
                 $bookingModel = $this->loadModel('Space_booking_model');
-                $activeBookings = $bookingModel->getBy([
+                $activeBookingsCount = $bookingModel->countBy([
                     'space_id' => $id,
-                    'status' => ['pending', 'confirmed']
+                    'status' => 'confirmed' // Check confirmed bookings separately or just use countBy loop if needed
                 ]);
+                
+                // OR better, checking for non-cancelled bookings using a custom query or multiple checks
+                // Let's use getBySpaceAndDate or checkAvailability logic which we know works
+                // actually Base_Model::countBy handles simple array.
+                // But status IN array is not supported by standard Base_Model::countBy unless tailored.
+                // Let's use a direct DB check to be safe and robust
+                $activeBookings = $this->db->fetchAll(
+                    "SELECT id FROM `" . $this->db->getPrefix() . "space_bookings` 
+                     WHERE space_id = ? AND status IN ('pending', 'confirmed')",
+                    [$id]
+                );
                 
                 if (!empty($activeBookings)) {
                     $this->setFlashMessage('danger', 'Cannot delete space with active bookings. Please cancel or complete all bookings first.');
