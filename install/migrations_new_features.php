@@ -154,4 +154,51 @@ function fixNewFeatureColumns($pdo, $prefix = 'erp_') {
         $pdo->exec("ALTER TABLE `{$prefix}customers` ADD COLUMN `customer_type_id` INT(11) DEFAULT NULL AFTER `id`");
         $pdo->exec("ALTER TABLE `{$prefix}customers` ADD INDEX `idx_customer_type` (`customer_type_id`)");
     }
+    
+    // --- BOOKING CONFIGURATION & FACILITIES ---
+    
+    // Facilities table updates for rates
+    if (!$columnExists('facilities', 'half_day_rate')) {
+        $pdo->exec("ALTER TABLE `{$prefix}facilities` ADD COLUMN `half_day_rate` DECIMAL(15,2) DEFAULT 0.00 AFTER `daily_rate`");
+    }
+    if (!$columnExists('facilities', 'weekly_rate')) {
+        $pdo->exec("ALTER TABLE `{$prefix}facilities` ADD COLUMN `weekly_rate` DECIMAL(15,2) DEFAULT 0.00 AFTER `half_day_rate`");
+    }
+    if (!$columnExists('facilities', 'is_bookable')) {
+        $pdo->exec("ALTER TABLE `{$prefix}facilities` ADD COLUMN `is_bookable` TINYINT(1) DEFAULT 1 AFTER `status`");
+    }
+    if (!$columnExists('facilities', 'max_duration')) {
+        $pdo->exec("ALTER TABLE `{$prefix}facilities` ADD COLUMN `max_duration` INT(11) DEFAULT NULL COMMENT 'Max duration in hours' AFTER `minimum_duration`");
+    }
+    if (!$columnExists('facilities', 'resource_type')) {
+        $pdo->exec("ALTER TABLE `{$prefix}facilities` ADD COLUMN `resource_type` VARCHAR(50) DEFAULT 'other' AFTER `features`");
+    }
+    if (!$columnExists('facilities', 'category')) {
+        $pdo->exec("ALTER TABLE `{$prefix}facilities` ADD COLUMN `category` VARCHAR(100) DEFAULT NULL AFTER `resource_type`");
+    }
+    if (!$columnExists('facilities', 'simultaneous_limit')) {
+        $pdo->exec("ALTER TABLE `{$prefix}facilities` ADD COLUMN `simultaneous_limit` INT(11) DEFAULT 1 AFTER `max_duration`");
+    }
+    
+    // Bookable Config Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `{$prefix}bookable_config` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `space_id` int(11) NOT NULL,
+        `is_bookable` tinyint(1) DEFAULT 1,
+        `booking_types` text DEFAULT NULL,
+        `minimum_duration` int(11) DEFAULT 1,
+        `maximum_duration` int(11) DEFAULT NULL,
+        `advance_booking_days` int(11) DEFAULT 365,
+        `cancellation_policy_id` int(11) DEFAULT NULL,
+        `pricing_rules` text DEFAULT NULL,
+        `availability_rules` text DEFAULT NULL,
+        `setup_time_buffer` int(11) DEFAULT 0,
+        `cleanup_time_buffer` int(11) DEFAULT 0,
+        `simultaneous_limit` int(11) DEFAULT 1,
+        `last_synced_at` datetime DEFAULT NULL,
+        `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`),
+        KEY `space_id` (`space_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
