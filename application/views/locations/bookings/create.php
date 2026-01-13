@@ -361,19 +361,26 @@ function loadSpaceDetails() {
     const spaceSelect = document.getElementById('space_id');
     const selectedOption = spaceSelect.options[spaceSelect.selectedIndex];
     
+    const spaceDetailsEl = document.getElementById('spaceDetails');
+    const bookingTypeEl = document.getElementById('booking_type');
+    const startTimeEl = document.getElementById('start_time');
+    const endTimeEl = document.getElementById('end_time');
+
     if (!selectedOption || !selectedOption.value) {
-        document.getElementById('spaceDetails').style.display = 'none';
-        document.getElementById('booking_type').innerHTML = '<option value="">Select Space First</option>';
-        document.getElementById('booking_type').disabled = true;
+        if (spaceDetailsEl) spaceDetailsEl.style.display = 'none';
+        
+        if (bookingTypeEl) {
+            bookingTypeEl.innerHTML = '<option value="">Select Space First</option>';
+            bookingTypeEl.disabled = true;
+        }
+        
         currentSpaceData = null;
         // Clear time slots if using dropdowns
-        const startTimeSelect = document.getElementById('start_time');
-        const endTimeSelect = document.getElementById('end_time');
-        if (startTimeSelect && startTimeSelect.tagName === 'SELECT') {
-            startTimeSelect.innerHTML = '<option value="">Select Start Time</option>';
+        if (startTimeEl && startTimeEl.tagName === 'SELECT') {
+            startTimeEl.innerHTML = '<option value="">Select Start Time</option>';
         }
-        if (endTimeSelect && endTimeSelect.tagName === 'SELECT') {
-            endTimeSelect.innerHTML = '<option value="">Select End Time</option>';
+        if (endTimeEl && endTimeEl.tagName === 'SELECT') {
+            endTimeEl.innerHTML = '<option value="">Select End Time</option>';
         }
         return;
     }
@@ -527,14 +534,27 @@ function calculatePrice() {
     const securityDepositEl = document.getElementById('securityDeposit');
     if (!estimatedPriceEl || !securityDepositEl) return;
 
-    const bookingDate = document.getElementById('booking_date').value;
-    const startTime = document.getElementById('start_time').value;
-    const bookingType = document.getElementById('booking_type').value;
+    const bookingDateEl = document.getElementById('booking_date');
+    const startTimeEl = document.getElementById('start_time');
+    const bookingTypeEl = document.getElementById('booking_type');
+    
+    if (!bookingDateEl || !startTimeEl || !bookingTypeEl) {
+        if (document.getElementById('pricePreview')) {
+            document.getElementById('pricePreview').style.display = 'none';
+        }
+        return;
+    }
+    
+    const bookingDate = bookingDateEl.value;
+    const startTime = startTimeEl.value;
+    const bookingType = bookingTypeEl.value;
     const durationSelect = document.getElementById('duration');
     const duration = durationSelect ? parseInt(durationSelect.value) : 1;
     
     if (!bookingDate || !startTime || !bookingType) {
-        document.getElementById('pricePreview').style.display = 'none';
+        if (document.getElementById('pricePreview')) {
+            document.getElementById('pricePreview').style.display = 'none';
+        }
         return;
     }
 
@@ -544,20 +564,9 @@ function calculatePrice() {
     if (bookingType === 'hourly') {
         basePrice = (currentSpaceData.hourly_rate || 0) * duration;
     } else if (bookingType === 'daily') {
-        basePrice = (currentSpaceData.daily_rate || 0); // Daily is typically flat or checks duration which is 24h
+        basePrice = (currentSpaceData.daily_rate || 0);
+        // ... (rest of logic same)
         if(duration > 0 && duration < 24) {
-             // If partial day selected but type is daily, maybe fallback or pro-rate? 
-             // Simplest assumption: Daily Rate is per day.
-             // If duration logic for daily is just "1 day" then fine. 
-             // But the duration dropdown showed "4, 6, 8, 12, 24" for daily.
-             // If usage is < 24h but 'Daily' selected, assume Daily Rate applies once?
-             // Or usually daily rate is for full day.
-             // Let's stick to simple logic: Daily Rate * 1 (since duration is hours, but 'daily' implies per day)
-             // Actually check updateDurationOptions:
-             // For daily outputs: 4, 6, 8, 12, 24. 
-             // This implies daily booking CAN be partial day but using daily rate? That's confusing.
-             // Usually Daily Rate is capped. 
-             // Let's assume Daily Rate is the max cap for the day.
              basePrice = (currentSpaceData.daily_rate || 0);
         } else {
              basePrice = (currentSpaceData.daily_rate || 0);
@@ -572,65 +581,90 @@ function calculatePrice() {
     
     estimatedPriceEl.textContent = '₦' + basePrice.toFixed(2);
     securityDepositEl.textContent = '₦' + deposit.toFixed(2);
-    document.getElementById('pricePreview').style.display = 'block';
+    const pricePreviewEl = document.getElementById('pricePreview');
+    if (pricePreviewEl) {
+        pricePreviewEl.style.display = 'block';
+    }
 }
 
 function checkAvailability() {
-    const spaceId = document.getElementById('space_id').value;
-    const bookingDate = document.getElementById('booking_date').value;
-    const startTime = document.getElementById('start_time').value;
-    const endTime = document.getElementById('end_time').value;
+    const spaceIdEl = document.getElementById('space_id');
+    const bookingDateEl = document.getElementById('booking_date');
+    const startTimeEl = document.getElementById('start_time');
+    const endTimeEl = document.getElementById('end_time');
+    
+    if (!spaceIdEl || !bookingDateEl) {
+        if (document.getElementById('availabilityStatus')) {
+            document.getElementById('availabilityStatus').style.display = 'none';
+        }
+        return;
+    }
+    
+    const spaceId = spaceIdEl.value;
+    const bookingDate = bookingDateEl.value;
     
     if (!spaceId || !bookingDate) {
-        document.getElementById('availabilityStatus').style.display = 'none';
+        if (document.getElementById('availabilityStatus')) {
+            document.getElementById('availabilityStatus').style.display = 'none';
+        }
         return;
     }
     
     // If times are selected, check specific slot
-    if (startTime && endTime) {
-        const formData = new FormData();
-        formData.append('space_id', spaceId);
-        formData.append('booking_date', bookingDate);
-        formData.append('start_time', startTime);
-        formData.append('end_time', endTime);
+    if (startTimeEl && endTimeEl) {
+        const startTime = startTimeEl.value;
+        const endTime = endTimeEl.value;
         
-        fetch(BASE_URL + 'locations/check-booking-availability', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        })
-        .then(data => {
-            const statusDiv = document.getElementById('availabilityStatus');
-            const messageSpan = document.getElementById('availabilityMessage');
-            let icon = statusDiv.querySelector('i');
-            if (!icon) {
-                icon = document.createElement('i');
-                statusDiv.insertBefore(icon, messageSpan);
-            }
+        if (startTime && endTime) {
+            const formData = new FormData();
+            formData.append('space_id', spaceId);
+            formData.append('booking_date', bookingDate);
+            formData.append('start_time', startTime);
+            formData.append('end_time', endTime);
             
-            if (data.available) {
-                statusDiv.className = 'alert alert-success mb-4';
-                icon.className = 'bi bi-check-circle-fill me-2';
-                messageSpan.textContent = 'Time slot is available';
-                statusDiv.style.display = 'block';
-            } else {
-                statusDiv.className = 'alert alert-danger mb-4';
-                icon.className = 'bi bi-x-circle-fill me-2';
-                messageSpan.textContent = 'Time slot is not available. Please choose another time.';
-                statusDiv.style.display = 'block';
-            }
-        })
-        .catch(error => {
-            console.error('Availability Check Error:', error);
-            const statusDiv = document.getElementById('availabilityStatus');
-            const messageSpan = document.getElementById('availabilityMessage');
-            statusDiv.className = 'alert alert-warning mb-4';
-            messageSpan.textContent = 'Could not verify availability. Please try again.';
-            statusDiv.style.display = 'block';
-        });
+            fetch(BASE_URL + 'locations/check-booking-availability', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                const statusDiv = document.getElementById('availabilityStatus');
+                const messageSpan = document.getElementById('availabilityMessage');
+                
+                if (!statusDiv || !messageSpan) return;
+
+                let icon = statusDiv.querySelector('i');
+                if (!icon) {
+                    icon = document.createElement('i');
+                    statusDiv.insertBefore(icon, messageSpan);
+                }
+                
+                if (data.available) {
+                    statusDiv.className = 'alert alert-success mb-4';
+                    icon.className = 'bi bi-check-circle-fill me-2';
+                    messageSpan.textContent = 'Time slot is available';
+                    statusDiv.style.display = 'block';
+                } else {
+                    statusDiv.className = 'alert alert-danger mb-4';
+                    icon.className = 'bi bi-x-circle-fill me-2';
+                    messageSpan.textContent = 'Time slot is not available. Please choose another time.';
+                    statusDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Availability Check Error:', error);
+                const statusDiv = document.getElementById('availabilityStatus');
+                const messageSpan = document.getElementById('availabilityMessage');
+                if (statusDiv && messageSpan) {
+                    statusDiv.className = 'alert alert-warning mb-4';
+                    messageSpan.textContent = 'Could not verify availability. Please try again.';
+                    statusDiv.style.display = 'block';
+                }
+            });
+        }
     }
 }
 
