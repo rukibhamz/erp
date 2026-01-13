@@ -408,39 +408,51 @@ function loadSpaceDetails() {
         };
     }
     
-    document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
-    document.getElementById('spaceBookingTypes').textContent = currentSpaceData.booking_types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'N/A';
-    document.getElementById('spaceDetails').style.display = 'block';
+    const spaceCapacityEl = document.getElementById('spaceCapacity');
+    const spaceBookingTypesEl = document.getElementById('spaceBookingTypes');
+    const spaceDetailsEl = document.getElementById('spaceDetails');
+    
+    if (spaceCapacityEl) {
+        spaceCapacityEl.textContent = currentSpaceData.capacity || 'N/A';
+    }
+    if (spaceBookingTypesEl) {
+        spaceBookingTypesEl.textContent = currentSpaceData.booking_types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'N/A';
+    }
+    if (spaceDetailsEl) {
+        spaceDetailsEl.style.display = 'block';
+    }
     
     const bookingTypeSelect = document.getElementById('booking_type');
-    bookingTypeSelect.innerHTML = '<option value="">Select Booking Type</option>';
-    
-    const typeLabels = {
-        'hourly': 'Hourly',
-        'daily': 'Daily',
-        'half_day': 'Half Day',
-        'weekly': 'Weekly',
-        'multi_day': 'Multi-Day'
-    };
-    
-    if (currentSpaceData.booking_types && currentSpaceData.booking_types.length > 0) {
-        currentSpaceData.booking_types.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
-            bookingTypeSelect.appendChild(option);
-        });
-        bookingTypeSelect.disabled = false;
-    } else {
-        bookingTypeSelect.innerHTML = '<option value="hourly">Hourly</option><option value="daily">Daily</option>';
-        bookingTypeSelect.disabled = false;
+    if (bookingTypeSelect) {
+        bookingTypeSelect.innerHTML = '<option value="">Select Booking Type</option>';
+        
+        const typeLabels = {
+            'hourly': 'Hourly',
+            'daily': 'Daily',
+            'half_day': 'Half Day',
+            'weekly': 'Weekly',
+            'multi_day': 'Multi-Day'
+        };
+        
+        if (currentSpaceData.booking_types && currentSpaceData.booking_types.length > 0) {
+            currentSpaceData.booking_types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+                bookingTypeSelect.appendChild(option);
+            });
+            bookingTypeSelect.disabled = false;
+        } else {
+            bookingTypeSelect.innerHTML = '<option value="hourly">Hourly</option><option value="daily">Daily</option>';
+            bookingTypeSelect.disabled = false;
+        }
     }
     
     // Generate time slots if using dropdowns and date is selected
     const startTimeSelect = document.getElementById('start_time');
-    const bookingDate = document.getElementById('booking_date').value;
-    if (startTimeSelect && startTimeSelect.tagName === 'SELECT' && bookingDate) {
-        generateTimeSlots(bookingDate);
+    const bookingDateEl = document.getElementById('booking_date');
+    if (startTimeSelect && startTimeSelect.tagName === 'SELECT' && bookingDateEl && bookingDateEl.value) {
+        generateTimeSlots(bookingDateEl.value);
     }
     
     calculatePrice();
@@ -510,6 +522,11 @@ function calculatePrice() {
         return;
     }
     
+    // Safety check for keys
+    const estimatedPriceEl = document.getElementById('estimatedPrice');
+    const securityDepositEl = document.getElementById('securityDeposit');
+    if (!estimatedPriceEl || !securityDepositEl) return;
+
     const bookingDate = document.getElementById('booking_date').value;
     const startTime = document.getElementById('start_time').value;
     const bookingType = document.getElementById('booking_type').value;
@@ -521,10 +538,40 @@ function calculatePrice() {
         return;
     }
 
+    let basePrice = 0;
+    
+    // Calculate price based on type
+    if (bookingType === 'hourly') {
+        basePrice = (currentSpaceData.hourly_rate || 0) * duration;
+    } else if (bookingType === 'daily') {
+        basePrice = (currentSpaceData.daily_rate || 0); // Daily is typically flat or checks duration which is 24h
+        if(duration > 0 && duration < 24) {
+             // If partial day selected but type is daily, maybe fallback or pro-rate? 
+             // Simplest assumption: Daily Rate is per day.
+             // If duration logic for daily is just "1 day" then fine. 
+             // But the duration dropdown showed "4, 6, 8, 12, 24" for daily.
+             // If usage is < 24h but 'Daily' selected, assume Daily Rate applies once?
+             // Or usually daily rate is for full day.
+             // Let's stick to simple logic: Daily Rate * 1 (since duration is hours, but 'daily' implies per day)
+             // Actually check updateDurationOptions:
+             // For daily outputs: 4, 6, 8, 12, 24. 
+             // This implies daily booking CAN be partial day but using daily rate? That's confusing.
+             // Usually Daily Rate is capped. 
+             // Let's assume Daily Rate is the max cap for the day.
+             basePrice = (currentSpaceData.daily_rate || 0);
+        } else {
+             basePrice = (currentSpaceData.daily_rate || 0);
+        }
+    } else if (bookingType === 'half_day') {
+        basePrice = (currentSpaceData.half_day_rate || 0);
+    } else if (bookingType === 'weekly') {
+        basePrice = (currentSpaceData.weekly_rate || 0);
+    }
+    
     const deposit = currentSpaceData.security_deposit || 0;
     
-    document.getElementById('estimatedPrice').textContent = '₦' + basePrice.toFixed(2);
-    document.getElementById('securityDeposit').textContent = '₦' + deposit.toFixed(2);
+    estimatedPriceEl.textContent = '₦' + basePrice.toFixed(2);
+    securityDepositEl.textContent = '₦' + deposit.toFixed(2);
     document.getElementById('pricePreview').style.display = 'block';
 }
 

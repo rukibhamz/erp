@@ -187,5 +187,5 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<?php $this->load->view('leases/create_tenant_modal'); ?>
+<?php $this->view('leases/create_tenant_modal'); ?>
 

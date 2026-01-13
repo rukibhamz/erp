@@ -112,9 +112,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </select>
                 </div>
                 
-                <div class="col-md-6">
-                    <!-- Placeholder to maintain grid layout or remove entirely if preferred -->
-                </div>
+
                 
                 <div class="col-md-6">
                     <label for="manager_id" class="form-label">Location Manager</label>

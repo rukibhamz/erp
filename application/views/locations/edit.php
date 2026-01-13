@@ -114,9 +114,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </select>
                 </div>
                 
-                <div class="col-md-6">
-                    <!-- Placeholder -->
-                </div>
+
                 
                 <div class="col-md-6">
                     <label for="manager_id" class="form-label">Location Manager</label>

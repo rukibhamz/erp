@@ -9,6 +9,7 @@ class Leases extends Base_Controller {
     private $transactionModel;
     private $accountModel;
     private $activityModel;
+    private $transactionService;
     
     public function __construct() {
         parent::__construct();
