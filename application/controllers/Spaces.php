@@ -94,11 +94,11 @@ class Spaces extends Base_Controller {
             
             $spaceId = $this->spaceModel->create($data);
             
-                if ($spaceId) {
-                    // Handle photo uploads
-                    $this->uploadPhotos($spaceId);
+            if ($spaceId) {
+                // Handle photo uploads
+                $this->uploadPhotos($spaceId);
 
-                    // If marked as bookable, create bookable config and sync to booking module
+                // If marked as bookable, create bookable config and sync to booking module
                 if (!empty($_POST['is_bookable'])) {
                     $this->createBookableConfig($spaceId, $_POST);
                     // Auto-sync to booking module
@@ -195,11 +195,11 @@ class Spaces extends Base_Controller {
                 // Ignore
             }
             
-                if ($this->spaceModel->update($id, $data)) {
-                    // Handle photo uploads
-                    $this->uploadPhotos($id);
+            if ($this->spaceModel->update($id, $data)) {
+                // Handle photo uploads
+                $this->uploadPhotos($id);
 
-                    // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
+                // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
                 // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
                 $hasRateUpdates = isset($_POST['hourly_rate']) || isset($_POST['daily_rate']) || 
                                   isset($_POST['half_day_rate']) || isset($_POST['weekly_rate']) ||
@@ -648,6 +648,9 @@ class Spaces extends Base_Controller {
             $_FILES['photo']['error']    = $files['error'][$i];
             $_FILES['photo']['size']     = $files['size'][$i];
 
+            // Re-initialize for each file
+            $this->upload->initialize($config);
+
             if ($this->upload->do_upload('photo')) {
                 $uploadData = $this->upload->data();
                 $photoData = [
@@ -659,7 +662,7 @@ class Spaces extends Base_Controller {
                 ];
                 $this->spaceModel->addPhoto($photoData);
             } else {
-                error_log('Upload error: ' . $this->upload->display_errors());
+                error_log('Spaces uploadPhotos error: ' . $this->upload->display_errors());
             }
         }
     }
