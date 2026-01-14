@@ -5,7 +5,7 @@
  */
 
 // Load database configuration
-$db_config_path = __DIR__ . '/application/config/database.php';
+$db_config_path = dirname(__DIR__) . '/application/config/database.php';
 if (!file_exists($db_config_path)) {
     die("Error: Could not find database configuration at $db_config_path\n");
 }
@@ -150,8 +150,9 @@ try {
         'application/views/spaces/edit.php',
         'assets/css/calendar-timeslots.css'
     ];
+    $root = dirname(__DIR__);
     foreach ($view_files as $file) {
-        if (file_exists(__DIR__ . '/' . $file)) {
+        if (file_exists($root . '/' . $file)) {
             echo "<li>[OK] File exists: $file</li>";
         } else {
             echo "<li style='color:red;'>[MISSING] File missing: $file - Ensure you have uploaded all files from the local update.</li>";
