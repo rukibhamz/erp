@@ -41,6 +41,15 @@ class Space_model extends Base_Model {
     
     public function getBookableSpaces($propertyId = null) {
         try {
+            // Check if is_bookable column exists first to avoid fatal errors during migration
+            $checkColumn = $this->db->fetchOne("SHOW COLUMNS FROM `" . $this->db->getPrefix() . $this->table . "` LIKE 'is_bookable'");
+            
+            if (!$checkColumn) {
+                // Return empty if column doesn't exist yet, or handle as legacy if needed
+                error_log("Space_model: is_bookable column missing in " . $this->table);
+                return [];
+            }
+
             $sql = "SELECT s.*, p.property_name, p.property_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` s
                     JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id

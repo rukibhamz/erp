@@ -107,27 +107,7 @@ class Location_model extends Base_Model {
         return $location;
     }
     
-    public function getBookableSpaces($locationId = null) {
-        try {
-            $sql = "SELECT s.*, p.property_name, p.property_code 
-                    FROM `" . $this->db->getPrefix() . "spaces` s
-                    JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
-                    WHERE s.is_bookable = 1 AND s.operational_status = 'active'";
-            $params = [];
-            
-            if ($locationId) {
-                $sql .= " AND s.property_id = ?";
-                $params[] = $locationId;
-            }
-            
-            $sql .= " ORDER BY p.property_name, s.space_name";
-            
-            return $this->db->fetchAll($sql, $params);
-        } catch (Exception $e) {
-            error_log('Location_model getBookableSpaces error: ' . $e->getMessage());
-            return [];
-        }
-    }
+
 
     public function getBookable() {
         try {

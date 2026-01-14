@@ -310,18 +310,23 @@ function loadSpaces() {
             return response.json();
         })
         .then(data => {
-            if (data.success) {
+            if (data.success && data.spaces && data.spaces.length > 0) {
                 spacesData[locationId] = data.spaces;
                 populateSpaces(data.spaces);
+            } else if (data.success && (!data.spaces || data.spaces.length === 0)) {
+                spaceSelect.innerHTML = '<option value="">No bookable spaces found</option>';
+                spaceSelect.disabled = false;
+                console.log('No spaces for location:', locationId);
             } else {
-                spaceSelect.innerHTML = '<option value="">No spaces available</option>';
+                spaceSelect.innerHTML = '<option value="">Error loading spaces</option>';
+                spaceSelect.disabled = false;
                 console.error('API Error:', data.error);
-                // alert('Error loading spaces: ' + (data.error || 'Unknown error')); // Avoid alert for better UX
             }
         })
         .catch(error => {
             console.error('Fetch Error:', error);
             spaceSelect.innerHTML = '<option value="">Error loading spaces</option>';
+            spaceSelect.disabled = false;
         });
 }
 
@@ -329,8 +334,8 @@ function populateSpaces(spaces) {
     const spaceSelect = document.getElementById('space_id');
     
     if (!spaces || spaces.length === 0) {
-        spaceSelect.innerHTML = '<option value="">No spaces available for this location</option>';
-        spaceSelect.disabled = true;
+        spaceSelect.innerHTML = '<option value="">No bookable spaces found</option>';
+        spaceSelect.disabled = false;
         return;
     }
     
