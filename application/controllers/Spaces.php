@@ -639,7 +639,12 @@ class Spaces extends Base_Controller {
         $config['max_size']      = 5120; // 5MB
         $config['encrypt_name']  = TRUE;
 
-        $this->load->library('upload', $config);
+        $this->upload = $this->load->library('upload');
+        if (!$this->upload) {
+            error_log('Failed to load Upload library');
+            return;
+        }
+        $this->upload->initialize($config);
 
         for ($i = 0; $i < $count; $i++) {
             $_FILES['photo']['name']     = $files['name'][$i];

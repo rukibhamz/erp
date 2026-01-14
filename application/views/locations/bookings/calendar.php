@@ -102,13 +102,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
         <div class="card-body">
             <div class="calendar-header">
-                <div class="view-controls">
+                <div class="view-controls btn-group">
                     <a href="<?= base_url('locations/booking-calendar/' . ($selected_location['id'] ?? '') . '/' . $selected_space['id'] . '?view=month&date=' . $selected_date) ?>" 
-                       class="btn btn-sm <?= $view_type === 'month' ? 'btn-primary' : 'btn-outline-secondary' ?>">
+                       class="btn btn-sm <?= $view_type === 'month' ? 'btn-primary' : 'btn-outline-primary' ?>">
                         <i class="bi bi-calendar-month"></i> Month
                     </a>
                     <a href="<?= base_url('locations/booking-calendar/' . ($selected_location['id'] ?? '') . '/' . $selected_space['id'] . '?view=day&date=' . $selected_date) ?>" 
-                       class="btn btn-sm <?= $view_type === 'day' ? 'btn-primary' : 'btn-outline-secondary' ?>">
+                       class="btn btn-sm <?= $view_type === 'day' ? 'btn-primary' : 'btn-outline-primary' ?>">
                         <i class="bi bi-clock"></i> Day
                     </a>
                 </div>
