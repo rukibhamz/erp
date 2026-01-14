@@ -87,6 +87,49 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0"><i class="bi bi-door-open"></i> Space Details</h5>
             </div>
             <div class="card-body">
+                <?php if (!empty($space['photos'])): ?>
+                    <div id="spaceImageCarousel" class="carousel slide mb-4 shadow-sm rounded overflow-hidden" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            <?php foreach ($space['photos'] as $index => $photo): ?>
+                                <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
+                                    <img src="<?= base_url($photo['photo_url']) ?>" class="d-block w-100" style="height: 400px; object-fit: cover;" alt="Space Photo">
+                                    <?php if ($photo['caption']): ?>
+                                        <div class="carousel-caption d-none d-md-block">
+                                            <p><?= htmlspecialchars($photo['caption']) ?></p>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php if (count($space['photos']) > 1): ?>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#spaceImageCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#spaceImageCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                            <div class="carousel-indicators" style="position: relative; margin-top: 10px; margin-bottom: 0;">
+                                <?php foreach ($space['photos'] as $index => $photo): ?>
+                                    <button type="button" data-bs-target="#spaceImageCarousel" data-bs-slide-to="<?= $index ?>" 
+                                            class="<?= $index === 0 ? 'active' : '' ?> thumbnail-indicator" 
+                                            aria-current="<?= $index === 0 ? 'true' : 'false' ?>" 
+                                            aria-label="Slide <?= $index + 1 ?>"
+                                            style="width: 60px; height: 40px; text-indent: 0; opacity: 1; border: 2px solid transparent;">
+                                        <img src="<?= base_url($photo['photo_url']) ?>" class="d-block w-100 h-100" style="object-fit: cover;">
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <style>
+                        .thumbnail-indicator.active { border-color: #0d6efd !important; }
+                        .carousel-indicators [data-bs-target] { box-sizing: content-box; }
+                    </style>
+                <?php endif; ?>
+
                 <dl class="row mb-0">
                     <dt class="col-sm-4">Space Number:</dt>
                     <dd class="col-sm-8"><?= htmlspecialchars($space['space_number'] ?? '-') ?></dd>

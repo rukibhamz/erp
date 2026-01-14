@@ -89,6 +89,56 @@ class Space_model extends Base_Model {
             return [];
         }
     }
+
+    public function addPhoto($data) {
+        try {
+            return $this->db->insert('space_photos', $data);
+        } catch (Exception $e) {
+            error_log('Space_model addPhoto error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function deletePhoto($photoId) {
+        try {
+            // Get photo info first to delete file
+            $photo = $this->db->fetchOne(
+                "SELECT photo_url FROM `" . $this->db->getPrefix() . "space_photos` WHERE id = ?",
+                [$photoId]
+            );
+            
+            if ($photo && !empty($photo['photo_url'])) {
+                $filePath = FCPATH . $photo['photo_url'];
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+            
+            return $this->db->delete('space_photos', 'id = ?', [$photoId]);
+        } catch (Exception $e) {
+            error_log('Space_model deletePhoto error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function setPrimaryPhoto($spaceId, $photoId) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Unset current primary
+            $this->db->update('space_photos', ['is_primary' => 0], 'space_id = ?', [$spaceId]);
+            
+            // Set new primary
+            $this->db->update('space_photos', ['is_primary' => 1], 'id = ?', [$photoId]);
+            
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log('Space_model setPrimaryPhoto error: ' . $e->getMessage());
+            return false;
+        }
+    }
     
     public function getBookableConfig($spaceId) {
         try {

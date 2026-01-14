@@ -72,7 +72,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="card-title mb-0"><i class="bi bi-door-open"></i> Space Information</h5>
     </div>
     <div class="card-body">
-        <form action="<?= base_url('spaces/create') ?>" method="POST" id="spaceForm">
+        <form action="<?= base_url('spaces/create') ?>" method="POST" id="spaceForm" enctype="multipart/form-data">
             <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -166,6 +166,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="col-12">
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                </div>
+
+                <div class="col-12">
+                    <label for="photos" class="form-label">Space Photos (Select multiple)</label>
+                    <input type="file" class="form-control" id="photos" name="photos[]" multiple accept="image/*">
+                    <div class="form-text">Supported formats: JPG, PNG, WEBP. Max size: 5MB per image.</div>
                 </div>
                 
                 <!-- Bookable Configuration (Hidden by default) -->
