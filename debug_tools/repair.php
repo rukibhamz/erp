@@ -7,7 +7,7 @@ ini_set('display_errors', 1);
 
 echo "<h1>ERP Repair Tool</h1>";
 
-$config_file = __DIR__ . '/application/config/database.php';
+$config_file = dirname(__DIR__) . '/application/config/database.php';
 if (!file_exists($config_file)) {
     die("Database config not found at $config_file");
 }

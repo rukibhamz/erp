@@ -19,10 +19,11 @@ Options -Indexes
 # RewriteCond %{REQUEST_URI} ^/install
 # RewriteRule . - [F,L]
 
-# Route all requests to index.php (allow assets and install to pass through)
+# Route all requests to index.php (allow assets, install, and debug tools to pass through)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} !^/install
+RewriteCond %{REQUEST_URI} !^/debug_tools
 RewriteCond %{REQUEST_URI} !^/assets
 RewriteCond %{REQUEST_URI} !^/uploads
 RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
