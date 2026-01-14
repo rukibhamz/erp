@@ -67,15 +67,33 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <?php
                                     $photos = $space['photos'] ?? [];
                                     $amenities = json_decode($space['amenities'] ?? '[]', true) ?: [];
-                                    $primaryPhoto = !empty($photos) && !empty($photos[0]['photo_path']) 
-                                        ? base_url($photos[0]['photo_path']) 
+                                    $primaryPhoto = !empty($photos) && !empty($photos[0]['photo_url']) 
+                                        ? base_url($photos[0]['photo_url']) 
                                         : 'https://via.placeholder.com/400x200?text=No+Image';
                                     $bookingTypes = $space['booking_types'] ?? ['hourly', 'daily'];
                                     ?>
                                     <div class="col-md-6 col-lg-4">
                                         <div class="card h-100 shadow-sm">
-                                            <?php if (!empty($primaryPhoto)): ?>
-                                                <img src="<?= $primaryPhoto ?>" class="card-img-top" alt="<?= htmlspecialchars($space['space_name']) ?>" style="height: 200px; object-fit: cover;">
+                                            <?php if (!empty($photos)): ?>
+                                                <?php if (count($photos) > 1): ?>
+                                                    <div id="spaceCarousel<?= $space['id'] ?>" class="carousel slide" data-bs-ride="carousel">
+                                                        <div class="carousel-inner">
+                                                            <?php foreach ($photos as $index => $photo): ?>
+                                                                <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
+                                                                    <img src="<?= base_url($photo['photo_url']) ?>" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Space Photo">
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                        <button class="carousel-control-prev" type="button" data-bs-target="#spaceCarousel<?= $space['id'] ?>" data-bs-slide="prev">
+                                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                        </button>
+                                                        <button class="carousel-control-next" type="button" data-bs-target="#spaceCarousel<?= $space['id'] ?>" data-bs-slide="next">
+                                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                        </button>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <img src="<?= $primaryPhoto ?>" class="card-img-top" alt="<?= htmlspecialchars($space['space_name']) ?>" style="height: 200px; object-fit: cover;">
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                             <div class="card-body">
                                                 <h5 class="card-title"><?= htmlspecialchars($space['space_name']) ?></h5>
