@@ -422,7 +422,6 @@ function loadSpaceDetails() {
     
     const spaceCapacityEl = document.getElementById('spaceCapacity');
     const spaceBookingTypesEl = document.getElementById('spaceBookingTypes');
-    const spaceDetailsEl = document.getElementById('spaceDetails');
     
     if (spaceCapacityEl) {
         spaceCapacityEl.textContent = currentSpaceData.capacity || 'N/A';
