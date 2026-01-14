@@ -201,4 +201,12 @@ function fixNewFeatureColumns($pdo, $prefix = 'erp_') {
         PRIMARY KEY (`id`),
         KEY `space_id` (`space_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Fix existing Bookable Config columns
+    if (!$columnExists('bookable_config', 'pricing_rules')) {
+        $pdo->exec("ALTER TABLE `{$prefix}bookable_config` ADD COLUMN `pricing_rules` TEXT DEFAULT NULL AFTER `cancellation_policy_id`");
+    }
+    if (!$columnExists('bookable_config', 'booking_types')) {
+        $pdo->exec("ALTER TABLE `{$prefix}bookable_config` ADD COLUMN `booking_types` TEXT DEFAULT NULL AFTER `is_bookable`");
+    }
 }

@@ -166,9 +166,6 @@ if (file_exists($ctrlFile)) {
     record('Controller', 'Spaces.php', 'FAILED', 'Missing file!');
 }
 
-$viewFile = ROOTPATH . 'application/views/spaces/bookable_config.php';
-record('UI', 'Config View File', file_exists($viewFile) ? 'SUCCESS' : 'FAILED', file_exists($viewFile) ? 'Exists' : 'Missing: ' . $viewFile);
-
 // --- PRINT REPORT ---
 print_report();
 
