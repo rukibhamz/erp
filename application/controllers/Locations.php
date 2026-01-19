@@ -507,6 +507,9 @@ class Locations extends Base_Controller {
     public function bookingCalendar($locationId = null, $spaceId = null) {
         $this->requirePermission('locations', 'read');
         
+        $viewType = $_GET['view'] ?? 'month';
+        $date = $_GET['date'] ?? date('Y-m-d');
+        
         // Get location_id and space_id from query string if not in URL
         if (!$locationId && !empty($_GET['location_id'])) {
             $locationId = intval($_GET['location_id']);
@@ -529,6 +532,7 @@ class Locations extends Base_Controller {
             $spaces = [];
             $selectedSpace = null;
             $bookings = [];
+            $timeSlots = [];
             
             if ($locationId && $locationId > 0) {
                 $spaces = $this->spaceModel->getBookableSpaces($locationId);
@@ -537,19 +541,47 @@ class Locations extends Base_Controller {
             if ($spaceId && $spaceId > 0) {
                 $selectedSpace = $this->spaceModel->getById($spaceId);
                 if ($selectedSpace) {
-                    $startDate = date('Y-m-d');
-                    $endDate = date('Y-m-d', strtotime('+30 days'));
-                    $bookingsData = $this->spaceBookingModel->getAvailabilityCalendar($spaceId, $startDate, $endDate);
-                    
-                    foreach ($bookingsData as $booking) {
-                        $bookings[] = [
-                            'booking_date' => $booking['booking_date'],
-                            'start_time' => $booking['start_time'],
-                            'end_time' => $booking['end_time'],
-                            'status' => $booking['status'],
-                            'customer_name' => $booking['customer_name'] ?? ($booking['business_name'] ?? $booking['contact_person'] ?? 'N/A'),
-                            'id' => $booking['id'] ?? null
-                        ];
+                    if ($viewType === 'day') {
+                        // Day view with time slots
+                        // We need facility_id for the time slot logic
+                        if (!empty($selectedSpace['facility_id'])) {
+                            $slotsData = $this->facilityModel->getAvailableTimeSlots($selectedSpace['facility_id'], $date);
+                            
+                            if ($slotsData['success']) {
+                                // Combine and sort
+                                $allSlots = array_merge($slotsData['slots'], $slotsData['occupied']);
+                                usort($allSlots, function($a, $b) {
+                                    return strcmp($a['start'], $b['start']);
+                                });
+                                
+                                foreach ($allSlots as $slot) {
+                                    $timeSlots[] = [
+                                        'start_time' => $slot['start'],
+                                        'end_time' => $slot['end'],
+                                        'label' => $slot['display'],
+                                        'available' => $slot['available'],
+                                        'booking' => $slot['booking'] ?? null
+                                    ];
+                                }
+                            }
+                        }
+                    } else {
+                        // Month view - get bookings for next 30 days or specific month
+                        $startDate = date('Y-m-01', strtotime($date));
+                        $endDate = date('Y-m-t', strtotime($date));
+                        
+                        $bookingsData = $this->spaceBookingModel->getAvailabilityCalendar($spaceId, $startDate, $endDate);
+                        
+                        foreach ($bookingsData as $booking) {
+                            $bookings[] = [
+                                'booking_date' => $booking['booking_date'],
+                                'start_time' => $booking['start_time'],
+                                'end_time' => $booking['end_time'],
+                                'status' => $booking['status'],
+                                'customer_name' => $booking['customer_name'] ?? ($booking['business_name'] ?? $booking['contact_person'] ?? 'N/A'),
+                                'id' => $booking['id'] ?? null
+                            ];
+                        }
                     }
                 }
             }
@@ -560,6 +592,7 @@ class Locations extends Base_Controller {
             $spaces = [];
             $selectedSpace = null;
             $bookings = [];
+            $timeSlots = [];
         }
         
         $data = [
@@ -569,10 +602,63 @@ class Locations extends Base_Controller {
             'spaces' => $spaces,
             'selected_space' => $selectedSpace,
             'bookings' => $bookings,
+            'time_slots' => $timeSlots,
+            'view_type' => $viewType,
+            'selected_date' => $date,
             'flash' => $this->getFlashMessage()
         ];
         
         $this->loadView('locations/bookings/calendar', $data);
+    }
+
+    /**
+     * AJAX endpoint to get availability for a specific date (for Locations calendar)
+     */
+    public function getAvailabilityForDate() {
+        $this->requirePermission('locations', 'read');
+        
+        header('Content-Type: application/json');
+        
+        $spaceId = intval($_GET['space_id'] ?? 0);
+        $date = sanitize_input($_GET['date'] ?? date('Y-m-d'));
+        
+        if (!$spaceId) {
+            echo json_encode(['success' => false, 'error' => 'Space ID required']);
+            exit;
+        }
+        
+        try {
+            $space = $this->spaceModel->getById($spaceId);
+            if (!$space || empty($space['facility_id'])) {
+                echo json_encode(['success' => false, 'error' => 'Space not found or not synced with booking module']);
+                exit;
+            }
+            
+            $slotsData = $this->facilityModel->getAvailableTimeSlots($space['facility_id'], $date);
+            
+            $availability = [];
+            if ($slotsData['success']) {
+                $allSlots = array_merge($slotsData['slots'], $slotsData['occupied']);
+                usort($allSlots, function($a, $b) {
+                    return strcmp($a['start'], $b['start']);
+                });
+
+                foreach ($allSlots as $slot) {
+                    $availability[] = [
+                        'start_time' => $slot['start'],
+                        'end_time' => $slot['end'],
+                        'label' => $slot['display'],
+                        'available' => $slot['available']
+                    ];
+                }
+            }
+            
+            echo json_encode(['success' => true, 'slots' => $availability]);
+        } catch (Exception $e) {
+            error_log('Locations getAvailabilityForDate error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
     }
     
     public function getSpacesForBooking() {

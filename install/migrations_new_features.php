@@ -154,6 +154,37 @@ function fixNewFeatureColumns($pdo, $prefix = 'erp_') {
         $pdo->exec("ALTER TABLE `{$prefix}customers` ADD COLUMN `customer_type_id` INT(11) DEFAULT NULL AFTER `id`");
         $pdo->exec("ALTER TABLE `{$prefix}customers` ADD INDEX `idx_customer_type` (`customer_type_id`)");
     }
+
+    // --- PROPERTY MANAGEMENT & SPACES ---
+
+    // Spaces table updates
+    if (!$columnExists('spaces', 'operational_mode')) {
+        $pdo->exec("ALTER TABLE `{$prefix}spaces` ADD COLUMN `operational_mode` ENUM('available_for_booking','leased','owner_operated','reserved','vacant') DEFAULT 'vacant' AFTER `operational_status` ");
+    }
+    if (!$columnExists('spaces', 'is_bookable')) {
+        $pdo->exec("ALTER TABLE `{$prefix}spaces` ADD COLUMN `is_bookable` TINYINT(1) DEFAULT 0 AFTER `operational_mode` ");
+    }
+    if (!$columnExists('spaces', 'facility_id')) {
+        $pdo->exec("ALTER TABLE `{$prefix}spaces` ADD COLUMN `facility_id` INT(11) DEFAULT NULL AFTER `is_bookable` ");
+    }
+    if (!$columnExists('spaces', 'hourly_rate')) {
+        $pdo->exec("ALTER TABLE `{$prefix}spaces` ADD COLUMN `hourly_rate` DECIMAL(15,2) DEFAULT 0.00 AFTER `capacity` ");
+    }
+
+    // Space Photos Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `{$prefix}space_photos` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `space_id` int(11) NOT NULL,
+        `photo_url` varchar(500) NOT NULL,
+        `photo_type` enum('photo','floor_plan','virtual_tour') DEFAULT 'photo',
+        `is_primary` tinyint(1) DEFAULT 0,
+        `caption` varchar(255) DEFAULT NULL,
+        `display_order` int(11) DEFAULT 0,
+        `uploaded_at` datetime NOT NULL,
+        PRIMARY KEY (`id`),
+        KEY `space_id` (`space_id`),
+        KEY `is_primary` (`is_primary`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     
     // --- BOOKING CONFIGURATION & FACILITIES ---
     
@@ -201,4 +232,18 @@ function fixNewFeatureColumns($pdo, $prefix = 'erp_') {
         PRIMARY KEY (`id`),
         KEY `space_id` (`space_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Fix existing Bookable Config columns
+    if (!$columnExists('bookable_config', 'pricing_rules')) {
+        $pdo->exec("ALTER TABLE `{$prefix}bookable_config` ADD COLUMN `pricing_rules` TEXT DEFAULT NULL AFTER `cancellation_policy_id`");
+    }
+    if (!$columnExists('bookable_config', 'booking_types')) {
+        $pdo->exec("ALTER TABLE `{$prefix}bookable_config` ADD COLUMN `booking_types` TEXT DEFAULT NULL AFTER `is_bookable`");
+    }
+    if (!$columnExists('bookable_config', 'availability_rules')) {
+        $pdo->exec("ALTER TABLE `{$prefix}bookable_config` ADD COLUMN `availability_rules` TEXT DEFAULT NULL AFTER `pricing_rules` ");
+    }
+    if (!$columnExists('bookable_config', 'cancellation_policy_id')) {
+        $pdo->exec("ALTER TABLE `{$prefix}bookable_config` ADD COLUMN `cancellation_policy_id` INT(11) DEFAULT NULL AFTER `advance_booking_days` ");
+    }
 }

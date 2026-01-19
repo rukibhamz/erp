@@ -41,6 +41,15 @@ class Space_model extends Base_Model {
     
     public function getBookableSpaces($propertyId = null) {
         try {
+            // Check if is_bookable column exists first to avoid fatal errors during migration
+            $checkColumn = $this->db->fetchOne("SHOW COLUMNS FROM `" . $this->db->getPrefix() . $this->table . "` LIKE 'is_bookable'");
+            
+            if (!$checkColumn) {
+                // Return empty if column doesn't exist yet, or handle as legacy if needed
+                error_log("Space_model: is_bookable column missing in " . $this->table);
+                return [];
+            }
+
             $sql = "SELECT s.*, p.property_name, p.property_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` s
                     JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
@@ -87,6 +96,56 @@ class Space_model extends Base_Model {
         } catch (Exception $e) {
             error_log('Space_model getPhotos error: ' . $e->getMessage());
             return [];
+        }
+    }
+
+    public function addPhoto($data) {
+        try {
+            return $this->db->insert('space_photos', $data);
+        } catch (Exception $e) {
+            error_log('Space_model addPhoto error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function deletePhoto($photoId) {
+        try {
+            // Get photo info first to delete file
+            $photo = $this->db->fetchOne(
+                "SELECT photo_url FROM `" . $this->db->getPrefix() . "space_photos` WHERE id = ?",
+                [$photoId]
+            );
+            
+            if ($photo && !empty($photo['photo_url'])) {
+                $filePath = FCPATH . $photo['photo_url'];
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+            
+            return $this->db->delete('space_photos', 'id = ?', [$photoId]);
+        } catch (Exception $e) {
+            error_log('Space_model deletePhoto error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function setPrimaryPhoto($spaceId, $photoId) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Unset current primary
+            $this->db->update('space_photos', ['is_primary' => 0], 'space_id = ?', [$spaceId]);
+            
+            // Set new primary
+            $this->db->update('space_photos', ['is_primary' => 1], 'id = ?', [$photoId]);
+            
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log('Space_model setPrimaryPhoto error: ' . $e->getMessage());
+            return false;
         }
     }
     
@@ -168,7 +227,9 @@ class Space_model extends Base_Model {
                 ];
                 
                 try {
-                    require_once __DIR__ . '/Bookable_config_model.php';
+                    if (!class_exists('Bookable_config_model')) {
+                        require_once APPPATH . 'models/Bookable_config_model.php';
+                    }
                     $configModel = new Bookable_config_model();
                     $configModel->create($defaultConfig);
                     $config = $this->getBookableConfig($spaceId);
@@ -179,8 +240,10 @@ class Space_model extends Base_Model {
                 }
             }
             
-            // Load Facility_model using database connection
-            require_once __DIR__ . '/Facility_model.php';
+            // Load Facility_model
+            if (!class_exists('Facility_model')) {
+                require_once APPPATH . 'models/Facility_model.php';
+            }
             $facilityModel = new Facility_model();
             
             // Check if facility already exists - use direct DB query to avoid recursion
@@ -277,7 +340,9 @@ class Space_model extends Base_Model {
      */
     private function syncAvailabilityRules($facilityId, $config) {
         try {
-            require_once __DIR__ . '/Resource_availability_model.php';
+            if (!class_exists('Resource_availability_model')) {
+                require_once APPPATH . 'models/Resource_availability_model.php';
+            }
             $availabilityModel = new Resource_availability_model();
             
             $availabilityRules = json_decode($config['availability_rules'] ?? '{}', true) ?: [];

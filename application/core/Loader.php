@@ -4,6 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Loader {
     
     public function model($model) {
+        $model = ucfirst($model);
         $modelFile = BASEPATH . 'models/' . $model . '.php';
         
         if (file_exists($modelFile)) {
@@ -35,6 +36,7 @@ class Loader {
     }
     
     public function library($library) {
+        $library = ucfirst($library);
         $libraryFile = BASEPATH . 'libraries/' . $library . '.php';
         
         if (file_exists($libraryFile)) {

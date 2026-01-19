@@ -95,6 +95,9 @@ class Spaces extends Base_Controller {
             $spaceId = $this->spaceModel->create($data);
             
             if ($spaceId) {
+                // Handle photo uploads
+                $this->uploadPhotos($spaceId);
+
                 // If marked as bookable, create bookable config and sync to booking module
                 if (!empty($_POST['is_bookable'])) {
                     $this->createBookableConfig($spaceId, $_POST);
@@ -193,6 +196,10 @@ class Spaces extends Base_Controller {
             }
             
             if ($this->spaceModel->update($id, $data)) {
+                // Handle photo uploads
+                $this->uploadPhotos($id);
+
+                // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
                 // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
                 $hasRateUpdates = isset($_POST['hourly_rate']) || isset($_POST['daily_rate']) || 
                                   isset($_POST['half_day_rate']) || isset($_POST['weekly_rate']) ||
@@ -586,5 +593,82 @@ class Spaces extends Base_Controller {
         }
         
         redirect('spaces');
+    }
+
+    /**
+     * Delete a space photo
+     */
+    public function delete_photo($photoId) {
+        $this->requirePermission('locations', 'delete');
+        
+        try {
+            // Get photo to get space_id for redirect
+            $photo = $this->db->fetchOne(
+                "SELECT space_id FROM `" . $this->db->getPrefix() . "space_photos` WHERE id = ?",
+                [$photoId]
+            );
+            
+            if ($photo) {
+                if ($this->spaceModel->deletePhoto($photoId)) {
+                    $this->setFlashMessage('success', 'Photo deleted successfully.');
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to delete photo.');
+                }
+                redirect('spaces/edit/' . $photo['space_id']);
+            }
+        } catch (Exception $e) {
+            error_log('Spaces delete_photo error: ' . $e->getMessage());
+        }
+        
+        redirect('spaces');
+    }
+
+    /**
+     * Handle multi-photo uploads
+     */
+    private function uploadPhotos($spaceId) {
+        if (empty($_FILES['photos']['name'][0])) {
+            return;
+        }
+
+        $files = $_FILES['photos'];
+        $count = count($files['name']);
+        
+        $config['upload_path']   = './uploads/spaces/';
+        $config['allowed_types'] = 'gif|jpg|png|jpeg|webp';
+        $config['max_size']      = 5120; // 5MB
+        $config['encrypt_name']  = TRUE;
+
+        $this->upload = $this->load->library('upload');
+        if (!$this->upload) {
+            error_log('Failed to load Upload library');
+            return;
+        }
+        $this->upload->initialize($config);
+
+        for ($i = 0; $i < $count; $i++) {
+            $_FILES['photo']['name']     = $files['name'][$i];
+            $_FILES['photo']['type']     = $files['type'][$i];
+            $_FILES['photo']['tmp_name'] = $files['tmp_name'][$i];
+            $_FILES['photo']['error']    = $files['error'][$i];
+            $_FILES['photo']['size']     = $files['size'][$i];
+
+            // Re-initialize for each file
+            $this->upload->initialize($config);
+
+            if ($this->upload->do_upload('photo')) {
+                $uploadData = $this->upload->data();
+                $photoData = [
+                    'space_id'    => $spaceId,
+                    'photo_url'   => 'uploads/spaces/' . $uploadData['file_name'],
+                    'photo_type'  => 'photo',
+                    'is_primary'  => ($i == 0 && empty($this->spaceModel->getPhotos($spaceId))) ? 1 : 0,
+                    'uploaded_at' => date('Y-m-d H:i:s')
+                ];
+                $this->spaceModel->addPhoto($photoData);
+            } else {
+                error_log('Spaces uploadPhotos error: ' . $this->upload->display_errors());
+            }
+        }
     }
 }

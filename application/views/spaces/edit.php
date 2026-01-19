@@ -72,7 +72,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="card-title mb-0"><i class="bi bi-pencil-square"></i> Edit Space Information</h5>
     </div>
     <div class="card-body">
-        <form action="<?= base_url('spaces/edit/' . $space['id']) ?>" method="POST" id="spaceForm">
+        <form action="<?= base_url('spaces/edit/' . $space['id']) ?>" method="POST" id="spaceForm" enctype="multipart/form-data">
             <?php echo csrf_field(); ?>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -165,6 +165,46 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="col-12">
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control" id="description" name="description" rows="3"><?= htmlspecialchars($space['description'] ?? '') ?></textarea>
+                </div>
+
+                <!-- Photo Management -->
+                <div class="col-12">
+                    <hr>
+                    <h6 class="mb-3">Space Photos</h6>
+                    
+                    <div class="row g-3 mb-3">
+                        <?php if (!empty($space['photos'])): ?>
+                            <?php foreach ($space['photos'] as $photo): ?>
+                                <div class="col-6 col-md-3 col-lg-2">
+                                    <div class="card h-100 shadow-sm border-0">
+                                        <div class="position-absolute top-0 end-0 p-1">
+                                            <a href="<?= base_url('spaces/delete_photo/' . $photo['id']) ?>" 
+                                               class="btn btn-sm btn-danger rounded-circle" 
+                                               onclick="return confirm('Delete this photo?')">
+                                                <i class="bi bi-x"></i>
+                                            </a>
+                                        </div>
+                                        <img src="<?= base_url($photo['photo_url']) ?>" class="card-img-top rounded" style="height: 120px; object-fit: cover;">
+                                        <?php if ($photo['is_primary']): ?>
+                                            <div class="card-footer p-1 text-center bg-success text-white">
+                                                <small>Primary</small>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="col-12">
+                                <p class="text-muted small">No photos uploaded yet.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="photos" class="form-label">Upload New Photos (Select multiple)</label>
+                        <input type="file" class="form-control" id="photos" name="photos[]" multiple accept="image/*">
+                        <div class="form-text">Supported formats: JPG, PNG, WEBP. Max size: 5MB per image.</div>
+                    </div>
                 </div>
                 
                 <!-- Bookable Configuration -->

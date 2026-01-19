@@ -151,7 +151,27 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <h5 class="card-title">Space Details</h5>
                             
                             <?php if (!empty($photos)): ?>
-                                <img src="<?= base_url($photos[0]['photo_path'] ?? '') ?>" class="img-fluid rounded mb-3" alt="Space Image">
+                                <?php if (count($photos) > 1): ?>
+                                    <div id="spacePhotoCarousel" class="carousel slide mb-3 shadow-sm rounded overflow-hidden" data-bs-ride="carousel">
+                                        <div class="carousel-inner">
+                                            <?php foreach ($photos as $index => $photo): ?>
+                                                <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
+                                                    <img src="<?= base_url($photo['photo_url']) ?>" class="d-block w-100" style="height: 250px; object-fit: cover;" alt="Space Photo">
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#spacePhotoCarousel" data-bs-slide="prev">
+                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Previous</span>
+                                        </button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#spacePhotoCarousel" data-bs-slide="next">
+                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Next</span>
+                                        </button>
+                                    </div>
+                                <?php else: ?>
+                                    <img src="<?= base_url($photos[0]['photo_url'] ?? '') ?>" class="img-fluid rounded mb-3 shadow-sm" style="height: 250px; width: 100%; object-fit: cover;" alt="Space Image">
+                                <?php endif; ?>
                             <?php endif; ?>
                             
                             <?php if ($location): ?>
