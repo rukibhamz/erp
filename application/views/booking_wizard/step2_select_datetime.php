@@ -109,9 +109,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </div>
 
                             <!-- Time Slot Selection -->
-                            <div class="mb-4">
+                            <div class="mb-4" id="time-slots-section">
                                 <label class="form-label fw-bold">Time Slots</label>
-                                <div class="mb-2">
+                                <div class="mb-2" id="time-slot-legend">
                                     <span class="badge bg-success me-2">Available</span>
                                     <span class="badge bg-danger me-2">Occupied</span>
                                     <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
@@ -292,8 +292,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     durationSelect.addEventListener('change', function() {
         selectedDuration = parseInt(this.value);
-        if (selectedBookingType && selectedDate && currentSlotsData.length > 0) {
-            renderTimeSlots(currentSlotsData);
+        
+        // Check if full-day (24 hours) is selected
+        if (selectedDuration === 24) {
+            handleFullDayBooking();
+        } else {
+            // Show time slots section for partial day bookings
+            document.getElementById('time-slots-section').style.display = 'block';
+            document.getElementById('time-slot-legend').style.display = 'block';
+            
+            if (selectedBookingType && selectedDate) {
+                if (currentSlotsData.length > 0) {
+                    renderTimeSlots(currentSlotsData);
+                } else {
+                    loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
+                }
+            }
         }
     });
 
@@ -389,6 +403,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Skip loading time slots for full-day bookings
+        if (selectedDuration === 24) {
+            handleFullDayBooking();
+            return;
+        }
+        
         const checkEndDate = endDate || date;
         timeSlotsContainer.innerHTML = '<div class="col-12"><div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div></div>';
         
@@ -414,6 +434,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error loading time slots. Please try again.</div></div>';
             });
+    }
+    
+    function handleFullDayBooking() {
+        // Hide time slots section and legend for full-day bookings
+        document.getElementById('time-slot-legend').style.display = 'none';
+        
+        // Show info message instead of time slots
+        timeSlotsContainer.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="bi bi-calendar-check"></i> <strong>Full Day Booking Selected</strong><br>
+                    No time selection needed - your booking will cover the entire day.
+                </div>
+            </div>
+        `;
+        
+        // Auto-set times for full day (00:00 to 23:59)
+        selectedStartTime = '00:00';
+        selectedEndTime = '23:59';
+        
+        // Update summary if date is selected
+        if (selectedDate) {
+            document.getElementById('selected-type').textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex].text;
+            selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString();
+            selectedTimeSpan.textContent = 'Full Day';
+            
+            if (selectedEndDate && selectedEndDate !== selectedDate) {
+                document.getElementById('selected-end-date').textContent = new Date(selectedEndDate).toLocaleDateString();
+                document.getElementById('selected-end-date-container').style.display = 'block';
+            } else {
+                document.getElementById('selected-end-date-container').style.display = 'none';
+            }
+            
+            selectedTimeSummary.style.display = 'block';
+            continueBtn.disabled = false;
+        }
     }
 
     function renderTimeSlots(slots) {
