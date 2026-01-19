@@ -23,7 +23,7 @@ uploads/*
 Thumbs.db
 
 # Dependencies
-vendor/*
+# vendor/*
 !vendor/.htaccess
 
 # Temporary files
@@ -35,3 +35,5 @@ vendor/*
 .env
 .env.local
 
+tests/test_results.json
+debug_controllers.php

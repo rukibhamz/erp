@@ -532,7 +532,26 @@ class Booking_wizard extends Base_Controller {
         }
 
         $step = intval($_POST['step'] ?? 0);
-        $data = $_POST['data'] ?? [];
+        $rawData = $_POST['data'] ?? '';
+        
+        // Decode JSON data if it's a string
+        if (is_string($rawData)) {
+            $data = json_decode($rawData, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                log_message('error', 'Booking wizard saveStep: JSON decode error - ' . json_last_error_msg());
+                echo json_encode(['success' => false, 'message' => 'Invalid data format']);
+                exit;
+            }
+        } else {
+            $data = $rawData;
+        }
+        
+        // Validate that data is an array
+        if (!is_array($data)) {
+            log_message('error', 'Booking wizard saveStep: Data is not an array after decoding');
+            echo json_encode(['success' => false, 'message' => 'Invalid data structure']);
+            exit;
+        }
         
         if (!isset($_SESSION['booking_data'])) {
             $_SESSION['booking_data'] = [];
@@ -540,6 +559,8 @@ class Booking_wizard extends Base_Controller {
         
         // Merge step data
         $_SESSION['booking_data'] = array_merge($_SESSION['booking_data'], $data);
+        
+        log_message('debug', 'Booking wizard saveStep: Step ' . $step . ' data saved successfully');
         
         echo json_encode(['success' => true, 'next_step' => $step + 1]);
         exit;
