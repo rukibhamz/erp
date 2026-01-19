@@ -285,7 +285,16 @@ document.addEventListener('DOMContentLoaded', function() {
             timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
         }
         
-        if (selectedBookingType && selectedDate) {
+        // Check if full_day booking type is selected
+        if (selectedBookingType === 'full_day') {
+            // Hide duration container for full_day type
+            durationContainer.style.display = 'none';
+            selectedDuration = 24; // Set to 24 hours
+            
+            if (selectedDate) {
+                handleFullDayBooking();
+            }
+        } else if (selectedBookingType && selectedDate) {
             loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
         }
     });
@@ -329,6 +338,10 @@ document.addEventListener('DOMContentLoaded', function() {
             options += '<option value="8">8 Hours</option>';
             options += '<option value="12">12 Hours</option>';
             options += '<option value="24">Full Day (24 Hours)</option>';
+        } else if (type === 'full_day') {
+            // Full day booking type - hide duration, it's always 24 hours
+            durationContainer.style.display = 'none';
+            selectedDuration = 24;
         } else {
             durationContainer.style.display = 'none';
             selectedDuration = 0; // Not applicable or calculated differently
@@ -369,7 +382,10 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedEndDate = bookingEndDate.value;
         }
         
-        if (selectedBookingType) {
+        // Check if full_day booking type is selected
+        if (selectedBookingType === 'full_day') {
+            handleFullDayBooking();
+        } else if (selectedBookingType) {
             loadTimeSlots(spaceId, date, selectedEndDate || date);
         }
         
