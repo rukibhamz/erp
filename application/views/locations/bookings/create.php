@@ -145,7 +145,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
 
                     <!-- Time Selection -->
-                    <div class="row mb-4">
+                    <div class="row mb-4" id="time-selection-section">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Start Time <span class="text-danger">*</span></label>
@@ -494,6 +494,62 @@ function updateDurationOptions(type) {
         durationContainer.style.display = 'none';
     }
     durationSelect.innerHTML = options;
+    
+    // Add event listener to handle full-day selection
+    durationSelect.removeEventListener('change', handleDurationChange);
+    durationSelect.addEventListener('change', handleDurationChange);
+}
+
+function handleDurationChange() {
+    const duration = parseInt(this.value);
+    const timeSelectionSection = document.getElementById('time-selection-section');
+    const startTimeEl = document.getElementById('start_time');
+    const endTimeEl = document.getElementById('end_time');
+    const bookingDateEl = document.getElementById('booking_date');
+    
+    if (duration === 24) {
+        // Full day booking - hide time selection and auto-set times
+        if (timeSelectionSection) {
+            timeSelectionSection.style.display = 'none';
+        }
+        
+        // Auto-set times to full day
+        if (startTimeEl) startTimeEl.value = '00:00';
+        if (endTimeEl) endTimeEl.value = '23:59';
+        
+        // Show info message
+        let infoDiv = document.getElementById('full-day-info');
+        if (!infoDiv) {
+            infoDiv = document.createElement('div');
+            infoDiv.id = 'full-day-info';
+            infoDiv.className = 'alert alert-info mb-4';
+            infoDiv.innerHTML = '<i class="bi bi-calendar-check"></i> <strong>Full Day Booking Selected</strong><br>No time selection needed - your booking will cover the entire day (00:00 - 23:59).';
+            timeSelectionSection.parentNode.insertBefore(infoDiv, timeSelectionSection);
+        }
+        infoDiv.style.display = 'block';
+        
+        // Trigger price calculation
+        calculatePrice();
+        if (bookingDateEl && bookingDateEl.value) {
+            checkAvailability();
+        }
+    } else {
+        // Partial day - show time selection
+        if (timeSelectionSection) {
+            timeSelectionSection.style.display = 'flex';
+        }
+        
+        const infoDiv = document.getElementById('full-day-info');
+        if (infoDiv) {
+            infoDiv.style.display = 'none';
+        }
+        
+        // Clear auto-set times
+        if (startTimeEl && startTimeEl.value === '00:00') startTimeEl.value = '';
+        if (endTimeEl && endTimeEl.value === '23:59') endTimeEl.value = '';
+        
+        calculatePrice();
+    }
 }
 
 function loadCalendar() {
