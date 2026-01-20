@@ -872,6 +872,7 @@ class Booking_wizard extends Base_Controller {
                         if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
                             // Commit transaction and redirect to payment gateway
                             $pdo->commit();
+                            $transactionCommitted = true;
                             unset($_SESSION['booking_data']);
                             
                             // Redirect to Paystack
@@ -888,7 +889,10 @@ class Booking_wizard extends Base_Controller {
                 // Booking is created with unpaid status
             }
             
-            $pdo->commit();
+            // Only commit if not already committed
+            if (!isset($transactionCommitted) || !$transactionCommitted) {
+                $pdo->commit();
+            }
             
             // Clear booking data from session
             unset($_SESSION['booking_data']);
@@ -897,8 +901,13 @@ class Booking_wizard extends Base_Controller {
             redirect('booking-wizard/confirmation/' . $bookingId);
             
         } catch (Exception $e) {
-            if (isset($pdo)) {
-                $pdo->rollBack();
+            if (isset($pdo) && (!isset($transactionCommitted) || !$transactionCommitted)) {
+                try {
+                    $pdo->rollBack();
+                } catch (Exception $rollbackException) {
+                    // Transaction might already be finished
+                    error_log('Rollback note: ' . $rollbackException->getMessage());
+                }
             }
             error_log('Booking_wizard finalize error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Failed to create booking: ' . $e->getMessage());
