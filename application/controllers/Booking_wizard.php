@@ -891,8 +891,9 @@ class Booking_wizard extends Base_Controller {
                         
                         if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
                             // Commit transaction and redirect to payment gateway
-                            $pdo->commit();
-                            $transactionCommitted = true;
+                            if ($pdo->inTransaction()) {
+                                $pdo->commit();
+                            }
                             unset($_SESSION['booking_data']);
                             
                             // Redirect to Paystack
@@ -909,8 +910,8 @@ class Booking_wizard extends Base_Controller {
                 // Booking is created with unpaid status
             }
             
-            // Only commit if not already committed
-            if (!isset($transactionCommitted) || !$transactionCommitted) {
+            // Only commit if transaction is still active
+            if ($pdo->inTransaction()) {
                 $pdo->commit();
             }
             
@@ -921,7 +922,7 @@ class Booking_wizard extends Base_Controller {
             redirect('booking-wizard/confirmation/' . $bookingId);
             
         } catch (Exception $e) {
-            if (isset($pdo) && (!isset($transactionCommitted) || !$transactionCommitted)) {
+            if (isset($pdo) && $pdo->inTransaction()) {
                 try {
                     $pdo->rollBack();
                 } catch (Exception $rollbackException) {
