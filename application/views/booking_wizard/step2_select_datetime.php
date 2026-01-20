@@ -271,6 +271,9 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedBookingType = this.value;
         const isMultiDay = this.value === 'multi_day' || this.value === 'weekly';
         
+        // Reset state when changing booking type
+        resetBookingState();
+        
         endDateContainer.style.display = isMultiDay ? 'block' : 'none';
         recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
         
@@ -285,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
             timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
         }
         
-        // Check if full_day booking type is selected
+        // Check if full_day or half_day booking type is selected
         if (selectedBookingType === 'full_day') {
             // Hide duration container for full_day type
             durationContainer.style.display = 'none';
@@ -293,14 +296,53 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (selectedDate) {
                 handleFullDayBooking();
+            } else {
+                // Show message to select date
+                timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="bi bi-calendar-check"></i> <strong>Full Day Booking</strong><br>Please select a date to continue.</div></div>';
+            }
+        } else if (selectedBookingType === 'half_day') {
+            // Half day booking - hide duration, set to 4 hours
+            durationContainer.style.display = 'none';
+            selectedDuration = 4;
+            
+            if (selectedDate) {
+                handleHalfDayBooking();
+            } else {
+                timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="bi bi-clock"></i> <strong>Half Day Booking</strong><br>Please select a date to continue.</div></div>';
             }
         } else if (selectedBookingType && selectedDate) {
+            // Show time slot legend for other types
+            document.getElementById('time-slot-legend').style.display = 'block';
             loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
         }
     });
+    
+    // Reset booking state when changing booking type
+    function resetBookingState() {
+        selectedStartTime = '';
+        selectedEndTime = '';
+        currentSlotsData = [];
+        
+        // Hide and reset summary
+        selectedTimeSummary.style.display = 'none';
+        continueBtn.disabled = true;
+        
+        // Show time slot section and legend by default
+        document.getElementById('time-slots-section').style.display = 'block';
+        document.getElementById('time-slot-legend').style.display = 'block';
+        
+        // Clear end date container
+        document.getElementById('selected-end-date-container').style.display = 'none';
+    }
 
     durationSelect.addEventListener('change', function() {
         selectedDuration = parseInt(this.value);
+        
+        // Reset time selection when duration changes
+        selectedStartTime = '';
+        selectedEndTime = '';
+        selectedTimeSummary.style.display = 'none';
+        continueBtn.disabled = true;
         
         // Check if full-day (24 hours) is selected
         if (selectedDuration === 24) {
@@ -311,11 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('time-slot-legend').style.display = 'block';
             
             if (selectedBookingType && selectedDate) {
-                if (currentSlotsData.length > 0) {
-                    renderTimeSlots(currentSlotsData);
-                } else {
-                    loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
-                }
+                loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
             }
         }
     });
@@ -382,10 +420,19 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedEndDate = bookingEndDate.value;
         }
         
-        // Check if full_day booking type is selected
+        // Reset time selection when date changes (but keep booking type)
+        selectedStartTime = '';
+        selectedEndTime = '';
+        selectedTimeSummary.style.display = 'none';
+        continueBtn.disabled = true;
+        
+        // Handle different booking types
         if (selectedBookingType === 'full_day') {
             handleFullDayBooking();
+        } else if (selectedBookingType === 'half_day') {
+            handleHalfDayBooking();
         } else if (selectedBookingType) {
+            document.getElementById('time-slot-legend').style.display = 'block';
             loadTimeSlots(spaceId, date, selectedEndDate || date);
         }
         
@@ -476,16 +523,69 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString();
             selectedTimeSpan.textContent = 'Full Day';
             
-            if (selectedEndDate && selectedEndDate !== selectedDate) {
-                document.getElementById('selected-end-date').textContent = new Date(selectedEndDate).toLocaleDateString();
-                document.getElementById('selected-end-date-container').style.display = 'block';
-            } else {
-                document.getElementById('selected-end-date-container').style.display = 'none';
-            }
+            // Hide end date for single day booking
+            document.getElementById('selected-end-date-container').style.display = 'none';
             
             selectedTimeSummary.style.display = 'block';
             continueBtn.disabled = false;
         }
+    }
+    
+    function handleHalfDayBooking() {
+        // Hide time slots legend for half-day bookings
+        document.getElementById('time-slot-legend').style.display = 'none';
+        
+        // Show half-day options (Morning or Afternoon)
+        timeSlotsContainer.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-clock"></i> <strong>Half Day Booking</strong><br>
+                    Select morning or afternoon session.
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-outline-primary w-100 py-3 half-day-btn" data-session="morning" data-start="08:00" data-end="12:00">
+                            <i class="bi bi-sunrise"></i> <strong>Morning</strong><br>
+                            <small>8:00 AM - 12:00 PM</small>
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-outline-primary w-100 py-3 half-day-btn" data-session="afternoon" data-start="13:00" data-end="17:00">
+                            <i class="bi bi-sunset"></i> <strong>Afternoon</strong><br>
+                            <small>1:00 PM - 5:00 PM</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add click handlers for half-day buttons
+        document.querySelectorAll('.half-day-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active from all
+                document.querySelectorAll('.half-day-btn').forEach(b => {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-outline-primary');
+                });
+                
+                // Add active to this one
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary');
+                
+                selectedStartTime = this.dataset.start;
+                selectedEndTime = this.dataset.end;
+                const session = this.dataset.session === 'morning' ? 'Morning (8 AM - 12 PM)' : 'Afternoon (1 PM - 5 PM)';
+                
+                // Update summary
+                document.getElementById('selected-type').textContent = 'Half Day';
+                selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString();
+                selectedTimeSpan.textContent = session;
+                document.getElementById('selected-end-date-container').style.display = 'none';
+                
+                selectedTimeSummary.style.display = 'block';
+                continueBtn.disabled = false;
+            });
+        });
     }
 
     function renderTimeSlots(slots) {
