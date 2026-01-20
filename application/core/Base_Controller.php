@@ -89,6 +89,12 @@ class Base_Controller {
     }
     
     protected function checkModuleAccess() {
+        // Skip module check for public controllers (guest-accessible)
+        $publicControllers = ['Auth', 'Error404', 'Payment', 'Booking_wizard', 'Customer_portal'];
+        if (in_array(get_class($this), $publicControllers)) {
+            return;
+        }
+        
         // Super admin can access all modules
         if (isset($this->session['role']) && $this->session['role'] === 'super_admin') {
             return;
