@@ -966,13 +966,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 `data[${key}]=${encodeURIComponent(requestData.data[key])}`
             ).join('&') + `&step=${requestData.step}`
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = `<?= base_url('booking-wizard/step3/') ?>${resourceId}`; 
-            } else {
-                alert('Error saving data. Please try again.');
+        .then(response => {
+            // Check if response is ok
+            if (!response.ok) {
+                console.error('Server error:', response.status, response.statusText);
             }
+            return response.text(); // Get as text first to see raw response
+        })
+        .then(text => {
+            console.log('Server response:', text);
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    window.location.href = `<?= base_url('booking-wizard/step3/') ?>${resourceId}`; 
+                } else {
+                    alert('Error saving data: ' + (data.message || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('JSON parse error:', e);
+                console.error('Response was:', text.substring(0, 500));
+                alert('Server returned an invalid response. Check console for details.');
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Network error. Please try again.');
         });
     });
 });
