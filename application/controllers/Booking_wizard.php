@@ -391,10 +391,29 @@ class Booking_wizard extends Base_Controller {
             
             // Get selected date/time from session
             $bookingData = $_SESSION['booking_data'] ?? [];
+            
+            // Calculate resource cost based on booking type and duration
+            $resourceCost = 0;
+            if (!empty($bookingData['date']) && !empty($bookingData['start_time']) && !empty($bookingData['end_time'])) {
+                $resourceCost = $this->facilityModel->calculatePrice(
+                    $resourceId,
+                    $bookingData['date'],
+                    $bookingData['start_time'],
+                    $bookingData['end_time'],
+                    $bookingData['booking_type'] ?? 'hourly',
+                    1, // quantity
+                    false // isMember
+                );
+            }
+            
+            // Store the calculated resource cost in session
+            $_SESSION['booking_data']['base_amount'] = $resourceCost;
+            
         } catch (Exception $e) {
             $resource = null;
             $addons = [];
             $bookingData = [];
+            $resourceCost = 0;
         }
 
         if (!$resource) {
@@ -406,6 +425,7 @@ class Booking_wizard extends Base_Controller {
             'resource' => $resource,
             'addons' => $addons,
             'booking_data' => $bookingData,
+            'resource_cost' => $resourceCost,
             'flash' => $this->getFlashMessage()
         ];
 
@@ -855,7 +875,7 @@ class Booking_wizard extends Base_Controller {
                         ];
                         
                         $metadata = [
-                            'transaction_ref' => 'BKG-' . $bookingNumber,
+                            'transaction_ref' => 'BKG-' . $bookingNumber . '-' . time(),
                             'payment_type' => 'booking_payment',
                             'reference_id' => $bookingId,
                             'booking_id' => $bookingId,

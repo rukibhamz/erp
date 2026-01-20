@@ -99,7 +99,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="mb-2">
                                 <div class="d-flex justify-content-between">
                                     <span>Resource Cost:</span>
-                                    <span id="resource-cost">--</span>
+                                    <span id="resource-cost"><?= isset($resource_cost) ? format_currency($resource_cost) : '--' ?></span>
                                 </div>
                             </div>
                             <div class="mb-2">
@@ -196,8 +196,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         addonsTotalEl.textContent = '₦' + addonsTotal.toFixed(2);
-        // Resource cost would be calculated from backend, for now show placeholder
-        const resourceCost = 0; // This will be calculated
+        // Resource cost from PHP
+        const resourceCost = <?= isset($resource_cost) ? floatval($resource_cost) : 0 ?>;
         subtotalEl.textContent = '₦' + (resourceCost + addonsTotal).toFixed(2);
     }
 
