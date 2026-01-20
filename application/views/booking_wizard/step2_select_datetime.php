@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
             timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
         }
         
-        // Check if full_day or half_day booking type is selected
+        // Check if full_day, half_day, or multi_day booking type is selected
         if (selectedBookingType === 'full_day') {
             // Hide duration container for full_day type
             durationContainer.style.display = 'none';
@@ -309,6 +309,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 handleHalfDayBooking();
             } else {
                 timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="bi bi-clock"></i> <strong>Half Day Booking</strong><br>Please select a date to continue.</div></div>';
+            }
+        } else if (selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
+            // Multi-day or weekly booking
+            if (selectedDate) {
+                handleMultiDayBooking();
+            } else {
+                timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="bi bi-calendar-range"></i> <strong>Multi-Day Booking</strong><br>Please select a start date and end date to continue.</div></div>';
             }
         } else if (selectedBookingType && selectedDate) {
             // Show time slot legend for other types
@@ -439,10 +446,13 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedTimeSummary.style.display = 'none';
         continueBtn.disabled = true;
         
-        // Reset duration to 1 hour for hourly bookings when date changes
+        // Reset duration to default when date changes (prevents stale duration issues)
         if (selectedBookingType === 'hourly') {
             selectedDuration = 1;
             durationSelect.value = '1';
+        } else if (selectedBookingType === 'daily' || selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
+            selectedDuration = 8;
+            durationSelect.value = '8';
         }
         
         // Handle different booking types
@@ -450,6 +460,8 @@ document.addEventListener('DOMContentLoaded', function() {
             handleFullDayBooking();
         } else if (selectedBookingType === 'half_day') {
             handleHalfDayBooking();
+        } else if (selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
+            handleMultiDayBooking();
         } else if (selectedBookingType) {
             document.getElementById('time-slot-legend').style.display = 'block';
             loadTimeSlots(spaceId, date, selectedEndDate || date);
@@ -526,7 +538,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function handleFullDayBooking() {
         // Hide time slots section and legend for full-day bookings
-        document.getElementById('time-slot-legend').style.display = 'none';
+        const legendEl = document.getElementById('time-slot-legend');
+        if (legendEl) legendEl.style.display = 'none';
         
         // Show info message instead of time slots
         timeSlotsContainer.innerHTML = `
@@ -542,17 +555,32 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedStartTime = '00:00';
         selectedEndTime = '23:59';
         
-        // Update summary if date is selected
+        // For single-day bookings, set end date to same as start date
+        if (!selectedEndDate || selectedEndDate < selectedDate) {
+            selectedEndDate = selectedDate;
+        }
+        
+        // Update summary and enable button if date is selected
         if (selectedDate) {
-            document.getElementById('selected-type').textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex].text;
-            selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString();
-            selectedTimeSpan.textContent = 'Full Day';
+            try {
+                const typeEl = document.getElementById('selected-type');
+                if (typeEl) typeEl.textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex]?.text || 'Full Day';
+                
+                if (selectedDateSpan) selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString();
+                if (selectedTimeSpan) selectedTimeSpan.textContent = 'Full Day (00:00 - 23:59)';
+                
+                // Hide end date for single day booking
+                const endDateContainer = document.getElementById('selected-end-date-container');
+                if (endDateContainer) endDateContainer.style.display = 'none';
+                
+                if (selectedTimeSummary) selectedTimeSummary.style.display = 'block';
+            } catch (e) {
+                console.error('Error updating summary:', e);
+            }
             
-            // Hide end date for single day booking
-            document.getElementById('selected-end-date-container').style.display = 'none';
-            
-            selectedTimeSummary.style.display = 'block';
+            // ALWAYS enable the button when we have a valid date
             continueBtn.disabled = false;
+            console.log('Full day booking enabled, date:', selectedDate, 'startTime:', selectedStartTime, 'endTime:', selectedEndTime);
         }
     }
     
@@ -609,6 +637,113 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 selectedTimeSummary.style.display = 'block';
                 continueBtn.disabled = false;
+            });
+        });
+    }
+    
+    function handleMultiDayBooking() {
+        // Hide time slots legend for multi-day bookings
+        document.getElementById('time-slot-legend').style.display = 'none';
+        
+        if (!selectedDate || !selectedEndDate || selectedEndDate < selectedDate) {
+            timeSlotsContainer.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-calendar-range"></i> <strong>Multi-Day Booking</strong><br>
+                        Please select both a start date and end date to continue.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Calculate number of days
+        const startDateObj = new Date(selectedDate);
+        const endDateObj = new Date(selectedEndDate);
+        const timeDiff = endDateObj.getTime() - startDateObj.getTime();
+        const dayCount = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+        
+        // Get selected hours per day from duration
+        const hoursPerDay = selectedDuration || 8;
+        
+        // Show multi-day booking options
+        timeSlotsContainer.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-success mb-3">
+                    <i class="bi bi-calendar-range"></i> <strong>Multi-Day Booking Summary</strong><br>
+                    <strong>${dayCount} days</strong> from ${startDateObj.toLocaleDateString()} to ${endDateObj.toLocaleDateString()}<br>
+                    <strong>${hoursPerDay} hours</strong> per day
+                </div>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6>Select Daily Operating Hours:</h6>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-outline-info w-100 multi-day-time-btn active" data-start="08:00" data-end="17:00">
+                                    <strong>Business Hours</strong><br>
+                                    <small>8 AM - 5 PM</small>
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-outline-info w-100 multi-day-time-btn" data-start="09:00" data-end="18:00">
+                                    <strong>Standard Hours</strong><br>
+                                    <small>9 AM - 6 PM</small>
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-outline-info w-100 multi-day-time-btn" data-start="00:00" data-end="23:59">
+                                    <strong>24 Hours</strong><br>
+                                    <small>Full Day Access</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Set default times
+        selectedStartTime = '08:00';
+        selectedEndTime = '17:00';
+        
+        // Update summary
+        const bookingTypeText = selectedBookingType === 'weekly' ? 'Weekly' : 'Multi-Day';
+        document.getElementById('selected-type').textContent = bookingTypeText;
+        selectedDateSpan.textContent = startDateObj.toLocaleDateString();
+        document.getElementById('selected-end-date').textContent = endDateObj.toLocaleDateString();
+        document.getElementById('selected-end-date-container').style.display = 'block';
+        selectedTimeSpan.textContent = `${hoursPerDay} Hours/day (8 AM - 5 PM)`;
+        
+        selectedTimeSummary.style.display = 'block';
+        continueBtn.disabled = false;
+        
+        // Add click handlers for time selection
+        document.querySelectorAll('.multi-day-time-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active from all
+                document.querySelectorAll('.multi-day-time-btn').forEach(b => {
+                    b.classList.remove('btn-info', 'active');
+                    b.classList.add('btn-outline-info');
+                });
+                
+                // Add active to this one
+                this.classList.remove('btn-outline-info');
+                this.classList.add('btn-info', 'active');
+                
+                selectedStartTime = this.dataset.start;
+                selectedEndTime = this.dataset.end;
+                
+                // Update summary time display
+                const startDisplay = selectedStartTime === '00:00' ? '12 AM' : 
+                    (parseInt(selectedStartTime.split(':')[0]) > 12 ? 
+                        (parseInt(selectedStartTime.split(':')[0]) - 12) + ' PM' : 
+                        parseInt(selectedStartTime.split(':')[0]) + ' AM');
+                const endDisplay = selectedEndTime === '23:59' ? '12 AM' : 
+                    (parseInt(selectedEndTime.split(':')[0]) > 12 ? 
+                        (parseInt(selectedEndTime.split(':')[0]) - 12) + ' PM' : 
+                        parseInt(selectedEndTime.split(':')[0]) + ' AM');
+                        
+                selectedTimeSpan.textContent = `${hoursPerDay} Hours/day (${startDisplay} - ${endDisplay})`;
             });
         });
     }
@@ -762,17 +897,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Continue button handler
     continueBtn.addEventListener('click', function() {
+        console.log('Continue clicked. Values:', {
+            bookingType: bookingTypeSelect.value,
+            selectedDate,
+            selectedEndDate,
+            selectedStartTime,
+            selectedEndTime,
+            selectedDuration
+        });
+        
         const bookingType = bookingTypeSelect.value;
         if (!bookingType) {
-            alert('Please select a booking type and date');
+            alert('Please select a booking type');
             return;
         }
-        if (!selectedDate || !selectedStartTime || !selectedEndTime) {
-            alert('Please select a date and time slot');
+        if (!selectedDate) {
+            alert('Please select a date');
             return;
         }
         
-        // Validation logic...
+        // For types that auto-set times, ensure they're set
+        if (bookingType === 'full_day' && (!selectedStartTime || !selectedEndTime)) {
+            selectedStartTime = '00:00';
+            selectedEndTime = '23:59';
+        }
+        if (bookingType === 'half_day' && (!selectedStartTime || !selectedEndTime)) {
+            alert('Please select a morning or afternoon session');
+            return;
+        }
+        
+        // For other types, require time selection
+        if (!['full_day', 'multi_day', 'weekly'].includes(bookingType) && (!selectedStartTime || !selectedEndTime)) {
+            alert('Please select a time slot');
+            return;
+        }
+        
+        // Ensure end date is set for single-day bookings
+        if (!selectedEndDate) {
+            selectedEndDate = selectedDate;
+        }
+        
+        // Validation passed
         
         const requestData = {
             step: 2,
