@@ -255,6 +255,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring items sellable column: " . $e->getMessage());
         }
+        
+        // ALWAYS ensure bookings table has all required columns for booking wizard
+        try {
+            $this->ensureBookingsTableColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring bookings table columns: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -1517,6 +1524,77 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error in ensureItemsSellableColumn: " . $e->getMessage());
             throw $e;
+        }
+    }
+    
+    /**
+     * Ensure bookings table has all required columns for the booking wizard
+     * These columns support full booking functionality including pricing, payments, and special requests
+     */
+    private function ensureBookingsTableColumns() {
+        try {
+            // Check if bookings table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}bookings'");
+            if ($stmt->rowCount() == 0) {
+                // Table doesn't exist yet, skip
+                return true;
+            }
+            
+            $columnsAdded = 0;
+            
+            // List of columns to ensure exist with their definitions
+            $columns = [
+                'customer_address' => "VARCHAR(500) NULL AFTER `customer_phone`",
+                'duration_hours' => "DECIMAL(10,2) DEFAULT 0 AFTER `end_time`",
+                'number_of_guests' => "INT(11) DEFAULT 0 AFTER `duration_hours`",
+                'booking_type' => "ENUM('hourly','half_day','full_day','daily','multi_day','weekly') DEFAULT 'hourly' AFTER `number_of_guests`",
+                'base_amount' => "DECIMAL(15,2) DEFAULT 0 AFTER `booking_type`",
+                'subtotal' => "DECIMAL(15,2) DEFAULT 0 AFTER `base_amount`",
+                'discount_amount' => "DECIMAL(15,2) DEFAULT 0 AFTER `subtotal`",
+                'security_deposit' => "DECIMAL(15,2) DEFAULT 0 AFTER `discount_amount`",
+                'currency' => "VARCHAR(10) DEFAULT 'NGN' AFTER `balance_amount`",
+                'payment_plan' => "ENUM('full','deposit','installment','pay_later') DEFAULT 'full' AFTER `payment_status`",
+                'promo_code' => "VARCHAR(50) NULL AFTER `payment_plan`",
+                'booking_notes' => "TEXT NULL AFTER `promo_code`",
+                'special_requests' => "TEXT NULL AFTER `booking_notes`",
+                'booking_source' => "ENUM('online','dashboard','phone','walkin') DEFAULT 'online' AFTER `special_requests`",
+                'created_by' => "INT(11) NULL AFTER `recurring_end_date`",
+                'confirmed_at' => "DATETIME NULL AFTER `created_by`",
+                'cancelled_at' => "DATETIME NULL AFTER `confirmed_at`",
+                'completed_at' => "DATETIME NULL AFTER `cancelled_at`"
+            ];
+            
+            foreach ($columns as $columnName => $columnDef) {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}bookings` LIKE '{$columnName}'");
+                if ($stmt->rowCount() == 0) {
+                    try {
+                        $this->pdo->exec("ALTER TABLE `{$this->prefix}bookings` ADD COLUMN `{$columnName}` {$columnDef}");
+                        error_log("AutoMigration: Added {$columnName} column to bookings table");
+                        $columnsAdded++;
+                    } catch (Exception $e) {
+                        // Column might already exist or AFTER column doesn't exist
+                        error_log("AutoMigration: Note adding {$columnName}: " . $e->getMessage());
+                        // Try without AFTER clause
+                        try {
+                            $defWithoutAfter = preg_replace('/ AFTER `[^`]+`/', '', $columnDef);
+                            $this->pdo->exec("ALTER TABLE `{$this->prefix}bookings` ADD COLUMN `{$columnName}` {$defWithoutAfter}");
+                            error_log("AutoMigration: Added {$columnName} column (without position) to bookings table");
+                            $columnsAdded++;
+                        } catch (Exception $e2) {
+                            error_log("AutoMigration: Could not add {$columnName}: " . $e2->getMessage());
+                        }
+                    }
+                }
+            }
+            
+            if ($columnsAdded > 0) {
+                error_log("AutoMigration: Added {$columnsAdded} columns to bookings table for booking wizard");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring bookings table columns: " . $e->getMessage());
+            return false;
         }
     }
 }

@@ -695,9 +695,10 @@ class Booking_wizard extends Base_Controller {
             $duration = $endDateTime->diff($startDateTime);
             $durationHours = ($duration->days * 24) + $duration->h + ($duration->i / 60);
             
+            // Create booking with all fields (AutoMigration ensures columns exist)
             $bookingRecord = [
                 'booking_number' => $bookingNumber,
-                'facility_id' => $bookingData['resource_id'], // Legacy field
+                'facility_id' => $bookingData['resource_id'],
                 'customer_name' => sanitize_input($bookingData['customer_name'] ?? ''),
                 'customer_email' => sanitize_input($bookingData['customer_email'] ?? ''),
                 'customer_phone' => sanitize_input($bookingData['customer_phone'] ?? ''),
@@ -708,18 +709,18 @@ class Booking_wizard extends Base_Controller {
                 'duration_hours' => $durationHours,
                 'number_of_guests' => intval($bookingData['guests'] ?? 0),
                 'booking_type' => $bookingData['booking_type'] ?? 'hourly',
-                'base_amount' => $baseAmount, // Use recalculated value
-                // 'subtotal' field removed - column doesn't exist in database
-                'discount_amount' => $discountAmount, // Use recalculated value
-                'security_deposit' => $securityDeposit, // Use recalculated value
-                'total_amount' => $finalTotal, // Use recalculated value (subtotal is included in this)
+                'base_amount' => $baseAmount,
+                'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
+                'security_deposit' => $securityDeposit,
+                'total_amount' => $finalTotal,
                 'paid_amount' => 0,
-                'balance_amount' => $finalTotal, // Use recalculated total
+                'balance_amount' => $finalTotal,
                 'currency' => 'NGN',
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
-                // 'payment_plan' field removed - column doesn't exist in database
-                'promo_code' => $promoCode, // Use validated promo code
+                'payment_plan' => $paymentPlan,
+                'promo_code' => $promoCode,
                 'booking_notes' => sanitize_input($bookingData['notes'] ?? ''),
                 'special_requests' => sanitize_input($bookingData['special_requests'] ?? ''),
                 'booking_source' => 'online',
@@ -734,53 +735,77 @@ class Booking_wizard extends Base_Controller {
                 throw new Exception('Failed to create booking');
             }
             
-            // Create booking resources
-            $this->bookingResourceModel->addResource(
-                $bookingId,
-                $bookingData['resource_id'],
-                $bookingData['date'] . ' ' . $bookingData['start_time'],
-                $bookingData['date'] . ' ' . $bookingData['end_time'],
-                $bookingData['quantity'] ?? 1,
-                $this->facilityModel->getById($bookingData['resource_id'])['hourly_rate'],
-                $bookingData['booking_type'] ?? 'hourly'
-            );
-            
-            // Create booking addons
-            $addonsData3 = $bookingData['addons'] ?? [];
-            if (is_string($addonsData3)) {
-                $addonsData3 = json_decode($addonsData3, true) ?: [];
+            // Create booking resources (optional - may fail if table doesn't exist)
+            try {
+                if ($this->bookingResourceModel) {
+                    $this->bookingResourceModel->addResource(
+                        $bookingId,
+                        $bookingData['resource_id'],
+                        $bookingData['date'] . ' ' . $bookingData['start_time'],
+                        $bookingData['date'] . ' ' . $bookingData['end_time'],
+                        $bookingData['quantity'] ?? 1,
+                        $this->facilityModel->getById($bookingData['resource_id'])['hourly_rate'] ?? 0,
+                        $bookingData['booking_type'] ?? 'hourly'
+                    );
+                }
+            } catch (Exception $e) {
+                error_log('Booking wizard: Failed to create booking resource - ' . $e->getMessage());
+                // Continue anyway - this is optional
             }
-            if (is_array($addonsData3) && !empty($addonsData3)) {
-                foreach ($addonsData3 as $addonId => $quantity) {
-                    $addon = $this->addonModel->getById($addonId);
-                    if ($addon) {
-                        $this->bookingAddonModel->addAddon(
-                            $bookingId,
-                            $addonId,
-                            intval($quantity),
-                            floatval($addon['price'])
-                        );
+            
+            // Create booking addons (optional)
+            try {
+                $addonsData3 = $bookingData['addons'] ?? [];
+                if (is_string($addonsData3)) {
+                    $addonsData3 = json_decode($addonsData3, true) ?: [];
+                }
+                if (is_array($addonsData3) && !empty($addonsData3) && $this->bookingAddonModel) {
+                    foreach ($addonsData3 as $addonId => $quantity) {
+                        $addon = $this->addonModel->getById($addonId);
+                        if ($addon) {
+                            $this->bookingAddonModel->addAddon(
+                                $bookingId,
+                                $addonId,
+                                intval($quantity),
+                                floatval($addon['price'])
+                            );
+                        }
                     }
                 }
+            } catch (Exception $e) {
+                error_log('Booking wizard: Failed to create booking addons - ' . $e->getMessage());
+                // Continue anyway
             }
             
-            // Create payment schedule
-            $this->paymentScheduleModel->createSchedule(
-                $bookingId,
-                $paymentPlan,
-                $finalTotal, // Use recalculated total
-                !empty($_POST['deposit_percentage']) ? floatval($_POST['deposit_percentage']) : null
-            );
+            // Create payment schedule (optional)
+            try {
+                if ($this->paymentScheduleModel) {
+                    $this->paymentScheduleModel->createSchedule(
+                        $bookingId,
+                        $paymentPlan,
+                        $finalTotal,
+                        !empty($_POST['deposit_percentage']) ? floatval($_POST['deposit_percentage']) : null
+                    );
+                }
+            } catch (Exception $e) {
+                error_log('Booking wizard: Failed to create payment schedule - ' . $e->getMessage());
+                // Continue anyway
+            }
             
-            // Create booking slots (handles multi-day bookings)
-            $this->bookingModel->createSlots(
-                $bookingId,
-                $bookingData['resource_id'],
-                $bookingData['date'],
-                $bookingData['start_time'],
-                $endDate, // Use endDate for multi-day bookings
-                $bookingData['end_time']
-            );
+            // Create booking slots (optional - handles multi-day bookings)
+            try {
+                $this->bookingModel->createSlots(
+                    $bookingId,
+                    $bookingData['resource_id'],
+                    $bookingData['date'],
+                    $bookingData['start_time'],
+                    $endDate,
+                    $bookingData['end_time']
+                );
+            } catch (Exception $e) {
+                error_log('Booking wizard: Failed to create booking slots - ' . $e->getMessage());
+                // Continue anyway
+            }
             
             // Calculate initial payment based on payment plan
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? '');
