@@ -426,6 +426,12 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedTimeSummary.style.display = 'none';
         continueBtn.disabled = true;
         
+        // Reset duration to 1 hour for hourly bookings when date changes
+        if (selectedBookingType === 'hourly') {
+            selectedDuration = 1;
+            durationSelect.value = '1';
+        }
+        
         // Handle different booking types
         if (selectedBookingType === 'full_day') {
             handleFullDayBooking();
