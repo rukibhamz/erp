@@ -621,10 +621,18 @@ class Facility_model extends Base_Model {
                         $baseRate = floatval($facility['half_day_rate'] ?: ($facility['daily_rate'] / 2));
                         break;
                     case 'daily':
+                    case 'full_day': // Full day uses daily rate
                         $baseRate = floatval($facility['daily_rate']);
+                        break;
+                    case 'multi_day':
+                        $baseRate = floatval($facility['daily_rate']); // Per day rate for multi-day
                         break;
                     case 'weekly':
                         $baseRate = floatval($facility['weekly_rate'] ?: ($facility['daily_rate'] * 7));
+                        break;
+                    default:
+                        // Fallback to hourly rate
+                        $baseRate = floatval($facility['hourly_rate'] ?? 0);
                         break;
                 }
                 
@@ -640,8 +648,10 @@ class Facility_model extends Base_Model {
                 $totalPrice = $baseRate * $hours;
             } elseif ($bookingType === 'half_day') {
                 $totalPrice = $baseRate;
-            } elseif ($bookingType === 'daily') {
-                $totalPrice = $baseRate * $days;
+            } elseif ($bookingType === 'daily' || $bookingType === 'full_day') {
+                $totalPrice = $baseRate * max(1, $days); // At least 1 day
+            } elseif ($bookingType === 'multi_day') {
+                $totalPrice = $baseRate * max(1, $days); // Daily rate * number of days
             } elseif ($bookingType === 'weekly') {
                 $totalPrice = $baseRate;
             }

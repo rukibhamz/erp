@@ -459,8 +459,16 @@ class Booking_wizard extends Base_Controller {
             
             // Calculate addons total
             $addonsTotal = 0;
-            if (!empty($bookingData['addons'])) {
-                foreach ($bookingData['addons'] as $addonId => $qty) {
+            $addonsData = $bookingData['addons'] ?? [];
+            
+            // Handle if addons is a JSON string
+            if (is_string($addonsData)) {
+                $addonsData = json_decode($addonsData, true) ?: [];
+            }
+            
+            // Only iterate if it's an array
+            if (is_array($addonsData) && !empty($addonsData)) {
+                foreach ($addonsData as $addonId => $qty) {
                     $addon = $this->addonModel->getById($addonId);
                     if ($addon) {
                         $addonsTotal += floatval($addon['price']) * intval($qty);
@@ -633,8 +641,12 @@ class Booking_wizard extends Base_Controller {
             
             // Recalculate addons total
             $addonsTotal = 0;
-            if (!empty($bookingData['addons'])) {
-                foreach ($bookingData['addons'] as $addonId => $qty) {
+            $addonsData2 = $bookingData['addons'] ?? [];
+            if (is_string($addonsData2)) {
+                $addonsData2 = json_decode($addonsData2, true) ?: [];
+            }
+            if (is_array($addonsData2) && !empty($addonsData2)) {
+                foreach ($addonsData2 as $addonId => $qty) {
                     $addon = $this->addonModel->getById($addonId);
                     if ($addon) {
                         $addonsTotal += floatval($addon['price']) * intval($qty);
@@ -697,10 +709,10 @@ class Booking_wizard extends Base_Controller {
                 'number_of_guests' => intval($bookingData['guests'] ?? 0),
                 'booking_type' => $bookingData['booking_type'] ?? 'hourly',
                 'base_amount' => $baseAmount, // Use recalculated value
-                'subtotal' => $subtotal, // Use recalculated value
+                // 'subtotal' field removed - column doesn't exist in database
                 'discount_amount' => $discountAmount, // Use recalculated value
                 'security_deposit' => $securityDeposit, // Use recalculated value
-                'total_amount' => $finalTotal, // Use recalculated value
+                'total_amount' => $finalTotal, // Use recalculated value (subtotal is included in this)
                 'paid_amount' => 0,
                 'balance_amount' => $finalTotal, // Use recalculated total
                 'currency' => 'NGN',
@@ -734,8 +746,12 @@ class Booking_wizard extends Base_Controller {
             );
             
             // Create booking addons
-            if (!empty($bookingData['addons'])) {
-                foreach ($bookingData['addons'] as $addonId => $quantity) {
+            $addonsData3 = $bookingData['addons'] ?? [];
+            if (is_string($addonsData3)) {
+                $addonsData3 = json_decode($addonsData3, true) ?: [];
+            }
+            if (is_array($addonsData3) && !empty($addonsData3)) {
+                foreach ($addonsData3 as $addonId => $quantity) {
                     $addon = $this->addonModel->getById($addonId);
                     if ($addon) {
                         $this->bookingAddonModel->addAddon(
