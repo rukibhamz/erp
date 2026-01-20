@@ -467,8 +467,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Skip loading time slots for full-day bookings
-        if (selectedDuration === 24) {
+        if (selectedDuration === 24 || selectedBookingType === 'full_day') {
             handleFullDayBooking();
+            return;
+        }
+        
+        // Skip loading time slots for half-day bookings
+        if (selectedBookingType === 'half_day') {
+            handleHalfDayBooking();
             return;
         }
         
@@ -664,10 +670,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (availableCount === 0) {
-             html = `<div class="col-12"><div class="alert alert-warning">
-                No consecutive time slots available for ${selectedDuration} hours on this date. 
-                Try checking individual hours or a different date.
-             </div></div>`;
+             // If no consecutive slots available for the duration, show all available 1-hour slots as alternative
+             if (selectedDuration > 1 && slots.length > 0) {
+                 html = `<div class="col-12"><div class="alert alert-warning mb-3">
+                    <strong>No ${selectedDuration}-hour consecutive slots available.</strong><br>
+                    Try selecting a shorter duration, or choose from the available individual hours below:
+                 </div></div>`;
+                 
+                 // Show individual 1-hour slots
+                 slots.forEach((slot) => {
+                     const startMin = parseTime(slot.start);
+                     const endMin = startMin + 60;
+                     const endDisplay = formatDisplayTime(endMin);
+                     const endDbStr = formatTime(endMin);
+                     
+                     html += `
+                         <div class="col-md-6 col-lg-4">
+                             <button type="button" class="btn btn-outline-info w-100 time-slot-btn available-slot" 
+                                     data-start="${slot.start}" 
+                                     data-end="${endDbStr}"
+                                     data-date="${slot.date}"
+                                     data-duration="1"
+                                     style="min-height: 60px;">
+                                 <small class="d-block text-muted">${slot.date === selectedDate ? 'Available' : new Date(slot.date).toLocaleDateString()}</small>
+                                 <span class="fw-bold">${slot.display.split('-')[0]} - ${endDisplay}</span>
+                                 <div class="small text-info">1 Hour</div>
+                             </button>
+                         </div>
+                     `;
+                 });
+             } else {
+                 html = `<div class="col-12"><div class="alert alert-warning">
+                    No time slots available on this date. Please try a different date.
+                 </div></div>`;
+             }
         }
         
         timeSlotsContainer.innerHTML = html;
