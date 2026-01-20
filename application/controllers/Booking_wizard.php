@@ -718,7 +718,7 @@ class Booking_wizard extends Base_Controller {
                 'currency' => 'NGN',
                 'status' => 'pending',
                 'payment_status' => 'unpaid',
-                'payment_plan' => $paymentPlan,
+                // 'payment_plan' field removed - column doesn't exist in database
                 'promo_code' => $promoCode, // Use validated promo code
                 'booking_notes' => sanitize_input($bookingData['notes'] ?? ''),
                 'special_requests' => sanitize_input($bookingData['special_requests'] ?? ''),
@@ -782,16 +782,33 @@ class Booking_wizard extends Base_Controller {
                 $bookingData['end_time']
             );
             
-            // Process initial payment if provided
+            // Calculate initial payment based on payment plan
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? '');
-            $initialPayment = floatval($_POST['initial_payment'] ?? 0);
+            $paymentPlan = sanitize_input($_POST['payment_plan'] ?? 'full');
             
-            if ($paymentMethod && $initialPayment > 0) {
-                if ($paymentMethod === 'gateway') {
-                    $gatewayCode = sanitize_input($_POST['gateway_code'] ?? '');
+            // Determine initial payment amount based on plan
+            $initialPayment = $finalTotal; // Default to full payment
+            if ($paymentPlan === 'deposit') {
+                $initialPayment = $finalTotal * 0.5; // 50% deposit
+            } elseif ($paymentPlan === 'installment') {
+                $initialPayment = $finalTotal / 3; // First of 3 installments
+            } elseif ($paymentPlan === 'pay_later') {
+                $initialPayment = 0; // Pay later
+            }
+            
+            // Process online payment via gateway
+            if ($paymentMethod === 'gateway' && $initialPayment > 0) {
+                $gatewayCode = sanitize_input($_POST['gateway_code'] ?? 'paystack');
+                
+                // Initialize payment gateway
+                $gatewayPath = BASEPATH . 'libraries/Payment_gateway.php';
+                if (!file_exists($gatewayPath)) {
+                    $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
+                }
+                
+                if (file_exists($gatewayPath)) {
+                    require_once $gatewayPath;
                     
-                    // Initialize payment gateway
-                    require_once BASEPATH . 'libraries/Payment_gateway.php';
                     $gateway = $this->gatewayModel->getByCode($gatewayCode);
                     
                     if ($gateway && $gateway['is_active']) {
@@ -816,6 +833,7 @@ class Booking_wizard extends Base_Controller {
                             'transaction_ref' => 'BKG-' . $bookingNumber,
                             'payment_type' => 'booking_payment',
                             'reference_id' => $bookingId,
+                            'booking_id' => $bookingId,
                             'description' => 'Booking payment for ' . $bookingNumber
                         ];
                         
@@ -826,35 +844,23 @@ class Booking_wizard extends Base_Controller {
                             $metadata
                         );
                         
-                        if ($paymentResult['success']) {
-                            // Redirect to payment gateway
+                        if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
+                            // Commit transaction and redirect to payment gateway
                             $pdo->commit();
                             unset($_SESSION['booking_data']);
-                            echo json_encode([
-                                'success' => true,
-                                'redirect' => $paymentResult['authorization_url'],
-                                'booking_number' => $bookingNumber
-                            ]);
+                            
+                            // Redirect to Paystack
+                            redirect($paymentResult['authorization_url']);
                             exit;
+                        } else {
+                            // Gateway initialization failed, continue with offline booking
+                            error_log('Gateway initialization failed: ' . json_encode($paymentResult));
                         }
                     }
-                } elseif ($paymentMethod === 'cash' || $paymentMethod === 'bank') {
-                    // Record offline payment
-                    $paymentData = [
-                        'booking_id' => $bookingId,
-                        'payment_number' => $this->paymentModel->getNextPaymentNumber(),
-                        'payment_date' => date('Y-m-d'),
-                        'payment_type' => $paymentPlan === 'deposit' ? 'deposit' : 'partial',
-                        'payment_method' => $paymentMethod,
-                        'amount' => $initialPayment,
-                        'currency' => 'NGN',
-                        'status' => 'completed',
-                        'created_by' => $this->session['user_id'] ?? null
-                    ];
-                    
-                    $this->paymentModel->create($paymentData);
-                    $this->bookingModel->addPayment($bookingId, $initialPayment);
                 }
+            } elseif ($paymentMethod === 'cash' || $paymentMethod === 'bank') {
+                // Record offline payment intention - no immediate payment
+                // Booking is created with unpaid status
             }
             
             $pdo->commit();
