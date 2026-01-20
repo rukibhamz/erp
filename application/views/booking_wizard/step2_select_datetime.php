@@ -376,19 +376,32 @@ document.addEventListener('DOMContentLoaded', function() {
             options += '<option value="8">8 Hours</option>';
             options += '<option value="12">12 Hours</option>';
             options += '<option value="24">Full Day (24 Hours)</option>';
+        } else if (type === 'multi_day' || type === 'weekly') {
+            // Multi-day and weekly bookings - allow selecting hours per day
+            durationContainer.style.display = 'block';
+            options += '<option value="4">4 Hours/day</option>';
+            options += '<option value="6">6 Hours/day</option>';
+            options += '<option value="8">8 Hours/day (Full Business Day)</option>';
+            options += '<option value="12">12 Hours/day</option>';
+            options += '<option value="24">Full Day (24 Hours/day)</option>';
         } else if (type === 'full_day') {
             // Full day booking type - hide duration, it's always 24 hours
             durationContainer.style.display = 'none';
             selectedDuration = 24;
+        } else if (type === 'half_day') {
+            // Half day booking type - hide duration, it's 4 hours
+            durationContainer.style.display = 'none';
+            selectedDuration = 4;
         } else {
             durationContainer.style.display = 'none';
-            selectedDuration = 0; // Not applicable or calculated differently
+            selectedDuration = 1; // Default to 1 hour instead of 0
         }
         durationSelect.innerHTML = options;
         
-        // Set default
+        // Set defaults
         if (type === 'hourly') selectedDuration = 1;
-        if (type === 'daily') selectedDuration = 8; // Default valid reasonable time
+        if (type === 'daily') selectedDuration = 8;
+        if (type === 'multi_day' || type === 'weekly') selectedDuration = 8;
         durationSelect.value = selectedDuration;
     }
 
