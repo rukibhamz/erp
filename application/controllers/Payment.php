@@ -422,11 +422,12 @@ class Payment extends Base_Controller {
      */
     private function processPaymentSuccess($transaction) {
         try {
-            $this->loadModel('Booking_model');
-            $this->loadModel('Booking_payment_model');
-            $this->loadModel('Transaction_model');
-            $this->loadModel('Cash_account_model');
-            $this->loadModel('Account_model');
+            // Load models and assign to class properties
+            $this->bookingModel = $this->loadModel('Booking_model');
+            $this->bookingPaymentModel = $this->loadModel('Booking_payment_model');
+            $this->transactionModel = $this->loadModel('Transaction_model');
+            $this->cashAccountModel = $this->loadModel('Cash_account_model');
+            $this->accountModel = $this->loadModel('Account_model');
             
             if ($transaction['payment_type'] === 'booking_payment') {
                 $booking = $this->bookingModel->getById($transaction['reference_id']);
