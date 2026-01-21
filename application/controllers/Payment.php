@@ -429,9 +429,13 @@ class Payment extends Base_Controller {
             $this->cashAccountModel = $this->loadModel('Cash_account_model');
             $this->accountModel = $this->loadModel('Account_model');
             
+            error_log("processPaymentSuccess: Processing payment type: " . $transaction['payment_type'] . " for ref: " . $transaction['reference_id']);
+            
             if ($transaction['payment_type'] === 'booking_payment') {
                 $booking = $this->bookingModel->getById($transaction['reference_id']);
                 if ($booking) {
+                    error_log("processPaymentSuccess: Found booking #" . ($booking['booking_number'] ?? $booking['id']));
+                    
                     // Create booking payment record
                     $paymentData = [
                         'booking_id' => $booking['id'],
@@ -440,19 +444,59 @@ class Payment extends Base_Controller {
                         'payment_type' => 'full',
                         'payment_method' => 'gateway',
                         'amount' => $transaction['amount'],
-                        'currency' => $transaction['currency'],
+                        'currency' => $transaction['currency'] ?? 'NGN',
                         'status' => 'completed',
                         'gateway_transaction_id' => $transaction['transaction_ref'],
+                        'reference' => $transaction['transaction_ref'],
                         'created_by' => null
                     ];
                     
                     $paymentId = $this->bookingPaymentModel->create($paymentData);
+                    error_log("processPaymentSuccess: Created payment record ID: $paymentId");
                     
-                    // Update booking payment
-                    $this->bookingModel->addPayment($booking['id'], $transaction['amount']);
+                    // Update booking paid amount and balance
+                    $newPaidAmount = floatval($booking['paid_amount'] ?? 0) + floatval($transaction['amount']);
+                    $newBalance = floatval($booking['total_amount'] ?? 0) - $newPaidAmount;
                     
-                    // Create accounting entries (similar to Bookings controller)
-                    // This should integrate with the existing accounting system
+                    $updateData = [
+                        'paid_amount' => $newPaidAmount,
+                        'balance_amount' => max(0, $newBalance)
+                    ];
+                    
+                    // Update payment status based on balance
+                    if ($newBalance <= 0) {
+                        $updateData['payment_status'] = 'paid';
+                    } elseif ($newPaidAmount > 0) {
+                        $updateData['payment_status'] = 'partial';
+                    }
+                    
+                    $this->bookingModel->update($booking['id'], $updateData);
+                    error_log("processPaymentSuccess: Updated booking - paid: $newPaidAmount, balance: $newBalance");
+                    
+                    // Create accounting entry - credit to cash/bank account
+                    try {
+                        if ($this->cashAccountModel) {
+                            $defaultCashAccount = $this->cashAccountModel->getDefault();
+                            if ($defaultCashAccount && $this->transactionModel) {
+                                $this->transactionModel->create([
+                                    'account_id' => $defaultCashAccount['id'],
+                                    'transaction_type' => 'credit',
+                                    'amount' => $transaction['amount'],
+                                    'description' => 'Online payment for booking: ' . ($booking['booking_number'] ?? $booking['id']),
+                                    'reference_type' => 'booking_payment',
+                                    'reference_id' => $paymentId,
+                                    'transaction_date' => date('Y-m-d'),
+                                    'created_by' => null
+                                ]);
+                                error_log("processPaymentSuccess: Created accounting entry for cash account");
+                            }
+                        }
+                    } catch (Exception $e) {
+                        // Log but don't fail - accounting is secondary
+                        error_log('Booking payment accounting error: ' . $e->getMessage());
+                    }
+                } else {
+                    error_log("processPaymentSuccess: Booking not found for ID: " . $transaction['reference_id']);
                 }
             }
         } catch (Exception $e) {

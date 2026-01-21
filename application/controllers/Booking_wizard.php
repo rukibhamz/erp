@@ -42,6 +42,8 @@ class Booking_wizard extends Base_Controller {
         $this->spaceModel = $this->loadModel('Space_model');
         $this->userModel = $this->loadModel('User_model');
         $this->paymentTransactionModel = $this->loadModel('Payment_transaction_model');
+        $this->invoiceModel = $this->loadModel('Invoice_model');
+        $this->entityModel = $this->loadModel('Entity_model');
     }
     
     public function index() {
@@ -847,6 +849,17 @@ class Booking_wizard extends Base_Controller {
                 // Continue anyway
             }
             
+            // Create invoice for the booking
+            try {
+                $bookingForInvoice = $bookingRecord;
+                $bookingForInvoice['booking_number'] = $bookingNumber;
+                $bookingForInvoice['facility_name'] = $space['space_name'] ?? $space['name'] ?? 'Space';
+                $this->createBookingInvoice($bookingId, $bookingForInvoice);
+            } catch (Exception $e) {
+                error_log('Booking wizard: Failed to create invoice - ' . $e->getMessage());
+                // Continue anyway - invoice creation is optional
+            }
+            
             // Calculate initial payment based on payment plan
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? '');
             $paymentPlan = sanitize_input($_POST['payment_plan'] ?? 'full');
@@ -986,18 +999,61 @@ class Booking_wizard extends Base_Controller {
     /**
      * Booking confirmation page
      */
-    public function confirmation($bookingId) {
+    public function confirmation($bookingId = null) {
+        // Handle both path parameter and query parameter
+        if (!$bookingId) {
+            $bookingId = $_GET['id'] ?? null;
+        }
+        
+        if (!$bookingId) {
+            $this->setFlashMessage('danger', 'No booking ID provided.');
+            redirect('booking-wizard/step1');
+            return;
+        }
+        
+        error_log("Booking confirmation: Looking for booking ID: $bookingId");
+        
         try {
+            // Try getWithFacility first, fallback to getById
             $booking = $this->bookingModel->getWithFacility($bookingId);
             if (!$booking) {
-                $this->setFlashMessage('danger', 'Booking not found.');
-                redirect('booking-wizard/step1');
+                error_log("Booking confirmation: getWithFacility returned null, trying getById");
+                $booking = $this->bookingModel->getById($bookingId);
             }
             
-            $resources = $this->bookingModel->getResources($bookingId);
-            $addons = $this->bookingModel->getAddons($bookingId);
-            $paymentSchedule = $this->bookingModel->getPaymentSchedule($bookingId);
+            if (!$booking) {
+                error_log("Booking confirmation: Booking not found with ID: $bookingId");
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('booking-wizard/step1');
+                return;
+            }
+            
+            error_log("Booking confirmation: Found booking #" . ($booking['booking_number'] ?? $bookingId));
+            
+            $resources = [];
+            $addons = [];
+            $paymentSchedule = [];
+            
+            try {
+                $resources = $this->bookingModel->getResources($bookingId);
+            } catch (Exception $e) {
+                error_log("Booking confirmation: Error getting resources: " . $e->getMessage());
+            }
+            
+            try {
+                $addons = $this->bookingModel->getAddons($bookingId);
+            } catch (Exception $e) {
+                error_log("Booking confirmation: Error getting addons: " . $e->getMessage());
+            }
+            
+            try {
+                $paymentSchedule = $this->bookingModel->getPaymentSchedule($bookingId);
+            } catch (Exception $e) {
+                error_log("Booking confirmation: Error getting payment schedule: " . $e->getMessage());
+            }
+            
         } catch (Exception $e) {
+            error_log("Booking confirmation: Exception - " . $e->getMessage());
             $booking = null;
             $resources = [];
             $addons = [];
@@ -1087,6 +1143,97 @@ class Booking_wizard extends Base_Controller {
             return null;
         } catch (Exception $e) {
             error_log("Error creating guest user: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Create invoice for a booking
+     * @param int $bookingId
+     * @param array $booking Booking data
+     * @return int|null Invoice ID
+     */
+    private function createBookingInvoice($bookingId, $booking) {
+        try {
+            if (!$this->invoiceModel) {
+                error_log("createBookingInvoice: Invoice model not loaded");
+                return null;
+            }
+            
+            // Find or create customer entity
+            $customerId = null;
+            if ($this->entityModel) {
+                // Try to find existing customer by email
+                $customer = $this->entityModel->getByEmail($booking['customer_email']);
+                
+                if (!$customer) {
+                    // Create new customer entity
+                    $customerId = $this->entityModel->create([
+                        'entity_code' => 'CUST-' . date('YmdHis'),
+                        'entity_type' => 'customer',
+                        'company_name' => $booking['customer_name'],
+                        'contact_name' => $booking['customer_name'],
+                        'email' => $booking['customer_email'],
+                        'phone' => $booking['customer_phone'] ?? '',
+                        'status' => 'active',
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                } else {
+                    $customerId = $customer['id'];
+                }
+            }
+            
+            // Calculate amounts
+            $subtotal = floatval($booking['subtotal'] ?? $booking['total_amount'] ?? 0);
+            $taxAmount = floatval($booking['tax_amount'] ?? 0);
+            $totalAmount = floatval($booking['total_amount'] ?? ($subtotal + $taxAmount));
+            $discountAmount = floatval($booking['discount_amount'] ?? 0);
+            
+            // Create invoice
+            $invoiceData = [
+                'invoice_number' => $this->invoiceModel->getNextInvoiceNumber(),
+                'customer_id' => $customerId,
+                'invoice_date' => date('Y-m-d'),
+                'due_date' => date('Y-m-d', strtotime('+7 days')),
+                'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+                'status' => 'draft',
+                'notes' => 'Booking #' . ($booking['booking_number'] ?? $bookingId),
+                'reference_type' => 'booking',
+                'reference_id' => $bookingId,
+                'created_by' => $booking['created_by'] ?? null
+            ];
+            
+            $invoiceId = $this->invoiceModel->create($invoiceData);
+            
+            if ($invoiceId) {
+                // Add invoice line item for the booking
+                try {
+                    $this->invoiceModel->addItem($invoiceId, [
+                        'description' => 'Space Booking: ' . ($booking['facility_name'] ?? 'Facility'),
+                        'quantity' => 1,
+                        'unit_price' => $subtotal,
+                        'amount' => $subtotal
+                    ]);
+                    
+                    // Update booking with invoice reference
+                    $this->bookingModel->update($bookingId, [
+                        'invoice_id' => $invoiceId
+                    ]);
+                    
+                    error_log("createBookingInvoice: Created invoice #$invoiceId for booking #$bookingId");
+                } catch (Exception $e) {
+                    error_log("createBookingInvoice: Error adding line items: " . $e->getMessage());
+                }
+                
+                return $invoiceId;
+            }
+            
+            return null;
+        } catch (Exception $e) {
+            error_log("createBookingInvoice: Error - " . $e->getMessage());
             return null;
         }
     }

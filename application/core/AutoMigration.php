@@ -276,6 +276,25 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring payment_gateways table: " . $e->getMessage());
         }
+        
+        // Ensure booking-related tables exist
+        try {
+            $this->ensureBookingResourcesTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring booking_resources table: " . $e->getMessage());
+        }
+        
+        try {
+            $this->ensureBookingSlotsTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring booking_slots table: " . $e->getMessage());
+        }
+        
+        try {
+            $this->ensureBookingPaymentsTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring booking_payments table: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -1766,6 +1785,112 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring payment_gateways table: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure booking_resources table exists
+     */
+    private function ensureBookingResourcesTable() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_resources'");
+            if ($stmt->rowCount() == 0) {
+                $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_resources` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `booking_id` INT(11) NOT NULL,
+                    `resource_id` INT(11) NULL,
+                    `resource_type` VARCHAR(50) DEFAULT 'facility',
+                    `start_time` TIME NULL,
+                    `end_time` TIME NULL,
+                    `quantity` INT(11) DEFAULT 1,
+                    `rate` DECIMAL(15,2) DEFAULT 0.00,
+                    `rate_type` VARCHAR(20) DEFAULT 'hourly',
+                    `amount` DECIMAL(15,2) DEFAULT 0.00,
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_booking_id` (`booking_id`),
+                    KEY `idx_resource_id` (`resource_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created booking_resources table");
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring booking_resources table: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure booking_slots table exists
+     */
+    private function ensureBookingSlotsTable() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_slots'");
+            if ($stmt->rowCount() == 0) {
+                $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_slots` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `booking_id` INT(11) NOT NULL,
+                    `facility_id` INT(11) NULL,
+                    `slot_date` DATE NOT NULL,
+                    `slot_start_time` TIME NULL,
+                    `slot_end_time` TIME NULL,
+                    `status` VARCHAR(20) DEFAULT 'booked',
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_booking_id` (`booking_id`),
+                    KEY `idx_facility_id` (`facility_id`),
+                    KEY `idx_slot_date` (`slot_date`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created booking_slots table");
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring booking_slots table: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure booking_payments table exists
+     */
+    private function ensureBookingPaymentsTable() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_payments'");
+            if ($stmt->rowCount() == 0) {
+                $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_payments` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `booking_id` INT(11) NOT NULL,
+                    `payment_number` VARCHAR(50) NULL,
+                    `payment_date` DATE NOT NULL,
+                    `payment_type` VARCHAR(50) DEFAULT 'full',
+                    `payment_method` VARCHAR(50) DEFAULT 'cash',
+                    `amount` DECIMAL(15,2) NOT NULL,
+                    `currency` VARCHAR(10) DEFAULT 'NGN',
+                    `status` VARCHAR(20) DEFAULT 'pending',
+                    `gateway_transaction_id` VARCHAR(255) NULL,
+                    `reference` VARCHAR(255) NULL,
+                    `notes` TEXT NULL,
+                    `created_by` INT(11) NULL,
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_booking_id` (`booking_id`),
+                    KEY `idx_payment_date` (`payment_date`),
+                    KEY `idx_status` (`status`),
+                    KEY `idx_gateway_transaction_id` (`gateway_transaction_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created booking_payments table");
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring booking_payments table: " . $e->getMessage());
             return false;
         }
     }
