@@ -72,12 +72,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     <div class="d-grid gap-2">
                         <?php if (!empty($booking_id)): ?>
-                            <a href="<?= base_url('bookings/view/' . $booking_id) ?>" class="btn btn-primary">
+                            <?php 
+                            // For guests, show link to booking wizard confirmation instead of dashboard bookings
+                            $viewUrl = isset($_SESSION['user_id']) 
+                                ? base_url('bookings/view/' . $booking_id)
+                                : base_url('booking-wizard/confirmation/' . $booking_id);
+                            ?>
+                            <a href="<?= $viewUrl ?>" class="btn btn-primary">
                                 <i class="bi bi-eye"></i> View Booking
                             </a>
                         <?php endif; ?>
-                        <a href="<?= base_url('dashboard') ?>" class="btn btn-outline-secondary">
-                            <i class="bi bi-house"></i> Go to Dashboard
+                        <a href="<?= base_url() ?>" class="btn btn-outline-dark">
+                            <i class="bi bi-house"></i> Back to Home
                         </a>
                     </div>
 
