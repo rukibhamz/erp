@@ -1615,38 +1615,69 @@ class AutoMigration {
         try {
             // Check if table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}payment_transactions'");
-            if ($stmt->rowCount() > 0) {
-                return true; // Table already exists
+            $tableExists = $stmt->rowCount() > 0;
+            
+            if (!$tableExists) {
+                // Create payment_transactions table
+                $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}payment_transactions` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `transaction_ref` VARCHAR(100) NOT NULL,
+                    `payment_type` VARCHAR(50) NOT NULL COMMENT 'booking_payment, invoice_payment, etc.',
+                    `reference_id` INT(11) NOT NULL COMMENT 'ID of the related record (booking_id, invoice_id, etc.)',
+                    `gateway_code` VARCHAR(50) NOT NULL COMMENT 'paystack, flutterwave, etc.',
+                    `amount` DECIMAL(15,2) NOT NULL,
+                    `currency` VARCHAR(10) DEFAULT 'NGN',
+                    `status` ENUM('pending','success','failed','cancelled') DEFAULT 'pending',
+                    `customer_email` VARCHAR(255) NULL,
+                    `customer_name` VARCHAR(255) NULL,
+                    `description` TEXT NULL,
+                    `gateway_transaction_id` VARCHAR(255) NULL COMMENT 'Transaction ID from the gateway',
+                    `gateway_response` TEXT NULL COMMENT 'JSON response from gateway',
+                    `paid_at` DATETIME NULL,
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `transaction_ref_unique` (`transaction_ref`),
+                    KEY `idx_payment_type` (`payment_type`),
+                    KEY `idx_reference_id` (`reference_id`),
+                    KEY `idx_status` (`status`),
+                    KEY `idx_gateway_code` (`gateway_code`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created payment_transactions table");
+            } else {
+                // Table exists - check for missing columns and add them
+                $columnsToAdd = [
+                    'description' => "TEXT NULL AFTER `customer_name`",
+                    'gateway_transaction_id' => "VARCHAR(255) NULL AFTER `description`",
+                    'gateway_response' => "TEXT NULL AFTER `gateway_transaction_id`",
+                    'paid_at' => "DATETIME NULL AFTER `gateway_response`",
+                    'customer_email' => "VARCHAR(255) NULL AFTER `status`",
+                    'customer_name' => "VARCHAR(255) NULL AFTER `customer_email`",
+                    'gateway_code' => "VARCHAR(50) NOT NULL DEFAULT 'paystack' AFTER `reference_id`",
+                    'currency' => "VARCHAR(10) DEFAULT 'NGN' AFTER `amount`"
+                ];
+                
+                foreach ($columnsToAdd as $colName => $colDef) {
+                    $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}payment_transactions` LIKE '{$colName}'");
+                    if ($stmt->rowCount() == 0) {
+                        try {
+                            $this->pdo->exec("ALTER TABLE `{$this->prefix}payment_transactions` ADD COLUMN `{$colName}` {$colDef}");
+                            error_log("AutoMigration: Added {$colName} column to payment_transactions table");
+                        } catch (Exception $e) {
+                            // Try without AFTER clause
+                            try {
+                                $defWithoutAfter = preg_replace('/ AFTER `[^`]+`/', '', $colDef);
+                                $this->pdo->exec("ALTER TABLE `{$this->prefix}payment_transactions` ADD COLUMN `{$colName}` {$defWithoutAfter}");
+                                error_log("AutoMigration: Added {$colName} column (without position) to payment_transactions table");
+                            } catch (Exception $e2) {
+                                error_log("AutoMigration: Could not add {$colName} to payment_transactions: " . $e2->getMessage());
+                            }
+                        }
+                    }
+                }
             }
-            
-            // Create payment_transactions table
-            $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}payment_transactions` (
-                `id` INT(11) NOT NULL AUTO_INCREMENT,
-                `transaction_ref` VARCHAR(100) NOT NULL,
-                `payment_type` VARCHAR(50) NOT NULL COMMENT 'booking_payment, invoice_payment, etc.',
-                `reference_id` INT(11) NOT NULL COMMENT 'ID of the related record (booking_id, invoice_id, etc.)',
-                `gateway_code` VARCHAR(50) NOT NULL COMMENT 'paystack, flutterwave, etc.',
-                `amount` DECIMAL(15,2) NOT NULL,
-                `currency` VARCHAR(10) DEFAULT 'NGN',
-                `status` ENUM('pending','success','failed','cancelled') DEFAULT 'pending',
-                `customer_email` VARCHAR(255) NULL,
-                `customer_name` VARCHAR(255) NULL,
-                `description` TEXT NULL,
-                `gateway_transaction_id` VARCHAR(255) NULL COMMENT 'Transaction ID from the gateway',
-                `gateway_response` TEXT NULL COMMENT 'JSON response from gateway',
-                `paid_at` DATETIME NULL,
-                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`),
-                UNIQUE KEY `transaction_ref_unique` (`transaction_ref`),
-                KEY `idx_payment_type` (`payment_type`),
-                KEY `idx_reference_id` (`reference_id`),
-                KEY `idx_status` (`status`),
-                KEY `idx_gateway_code` (`gateway_code`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-            
-            $this->pdo->exec($sql);
-            error_log("AutoMigration: Created payment_transactions table");
             
             return true;
         } catch (Exception $e) {
