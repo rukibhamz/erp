@@ -629,14 +629,19 @@ class Booking_wizard extends Base_Controller {
      * Finalize booking
      */
     public function finalize() {
+        error_log("=== FINALIZE START === Payment Method: " . ($_POST['payment_method'] ?? 'none') . " Gateway: " . ($_POST['gateway_code'] ?? 'none'));
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            error_log("FINALIZE: Not POST request, redirecting to step1");
             $this->setFlashMessage('danger', 'Invalid request.');
             redirect('booking-wizard/step1');
         }
         
         $bookingData = $_SESSION['booking_data'] ?? [];
+        error_log("FINALIZE: Session data present: " . (empty($bookingData) ? 'NO' : 'YES'));
         
         if (empty($bookingData['resource_id']) || empty($bookingData['customer_email'])) {
+            error_log("FINALIZE: Missing data - resource_id: " . ($bookingData['resource_id'] ?? 'null') . " email: " . ($bookingData['customer_email'] ?? 'null'));
             $this->setFlashMessage('danger', 'Please complete all steps.');
             redirect('booking-wizard/step1');
         }
@@ -644,6 +649,7 @@ class Booking_wizard extends Base_Controller {
         try {
             $pdo = $this->db->getConnection();
             $pdo->beginTransaction();
+            error_log("FINALIZE: Transaction started");
             
             // SECURITY: Recalculate all prices to prevent TOCTOU (Time-of-Check to Time-of-Use) attacks
             // Never trust calculated values from session - recalculate from raw inputs
@@ -855,20 +861,25 @@ class Booking_wizard extends Base_Controller {
                 $initialPayment = 0; // Pay later
             }
             
+            error_log("FINALIZE: Payment Method: $paymentMethod, Initial Payment: $initialPayment");
+            
             // Process online payment via gateway
             if ($paymentMethod === 'gateway' && $initialPayment > 0) {
                 $gatewayCode = sanitize_input($_POST['gateway_code'] ?? 'paystack');
+                error_log("FINALIZE: Using gateway: $gatewayCode");
                 
                 // Initialize payment gateway
                 $gatewayPath = BASEPATH . 'libraries/Payment_gateway.php';
                 if (!file_exists($gatewayPath)) {
                     $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
                 }
+                error_log("FINALIZE: Gateway path: $gatewayPath, exists: " . (file_exists($gatewayPath) ? 'YES' : 'NO'));
                 
                 if (file_exists($gatewayPath)) {
                     require_once $gatewayPath;
                     
                     $gateway = $this->gatewayModel->getByCode($gatewayCode);
+                    error_log("FINALIZE: Gateway from DB: " . ($gateway ? json_encode(['name' => $gateway['gateway_name'] ?? '', 'active' => $gateway['is_active'] ?? 0]) : 'NULL'));
                     
                     if ($gateway && $gateway['is_active']) {
                         $gatewayConfig = [
@@ -879,6 +890,7 @@ class Booking_wizard extends Base_Controller {
                             'callback_url' => base_url('payment/callback'),
                             'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
                         ];
+                        error_log("FINALIZE: Callback URL: " . base_url('payment/callback'));
                         
                         $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
                         

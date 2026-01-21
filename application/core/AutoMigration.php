@@ -269,6 +269,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring payment_transactions table: " . $e->getMessage());
         }
+        
+        // ALWAYS ensure payment_gateways table exists with Paystack as default
+        try {
+            $this->ensurePaymentGatewaysTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring payment_gateways table: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -1682,6 +1689,83 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring payment_transactions table: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure payment_gateways table exists with Paystack as default
+     */
+    private function ensurePaymentGatewaysTable() {
+        try {
+            // Check if table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}payment_gateways'");
+            $tableExists = $stmt->rowCount() > 0;
+            
+            if (!$tableExists) {
+                // Create payment_gateways table
+                $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}payment_gateways` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `gateway_code` VARCHAR(50) NOT NULL,
+                    `gateway_name` VARCHAR(100) NOT NULL,
+                    `description` TEXT NULL,
+                    `public_key` VARCHAR(255) NULL,
+                    `private_key` VARCHAR(255) NULL,
+                    `secret_key` VARCHAR(255) NULL,
+                    `test_public_key` VARCHAR(255) NULL,
+                    `test_secret_key` VARCHAR(255) NULL,
+                    `test_mode` TINYINT(1) DEFAULT 1,
+                    `is_active` TINYINT(1) DEFAULT 1,
+                    `is_default` TINYINT(1) DEFAULT 0,
+                    `display_order` INT(11) DEFAULT 0,
+                    `supported_currencies` TEXT NULL COMMENT 'JSON array of currency codes',
+                    `additional_config` TEXT NULL COMMENT 'JSON for gateway-specific config',
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `gateway_code_unique` (`gateway_code`),
+                    KEY `idx_is_active` (`is_active`),
+                    KEY `idx_is_default` (`is_default`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created payment_gateways table");
+                
+                // Seed Paystack as default gateway
+                $insertSql = "INSERT INTO `{$this->prefix}payment_gateways` 
+                    (`gateway_code`, `gateway_name`, `description`, `public_key`, `private_key`, `secret_key`, 
+                     `test_public_key`, `test_secret_key`, `test_mode`, `is_active`, `is_default`, `display_order`, 
+                     `supported_currencies`) 
+                    VALUES 
+                    ('paystack', 'Paystack', 'Accept payments via Paystack - Cards, Bank Transfer, USSD', 
+                     '', '', '', '', '', 1, 1, 1, 1, 
+                     '[\"NGN\", \"GHS\", \"ZAR\", \"USD\"]')";
+                
+                $this->pdo->exec($insertSql);
+                error_log("AutoMigration: Seeded Paystack as default payment gateway");
+            } else {
+                // Table exists - ensure Paystack gateway exists
+                $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM `{$this->prefix}payment_gateways` WHERE gateway_code = ?");
+                $stmt->execute(['paystack']);
+                $count = $stmt->fetchColumn();
+                
+                if ($count == 0) {
+                    // Insert Paystack
+                    $insertSql = "INSERT INTO `{$this->prefix}payment_gateways` 
+                        (`gateway_code`, `gateway_name`, `description`, `test_mode`, `is_active`, `is_default`, 
+                         `display_order`, `supported_currencies`) 
+                        VALUES 
+                        ('paystack', 'Paystack', 'Accept payments via Paystack', 1, 1, 1, 1, 
+                         '[\"NGN\", \"GHS\", \"ZAR\", \"USD\"]')";
+                    
+                    $this->pdo->exec($insertSql);
+                    error_log("AutoMigration: Added Paystack gateway to existing table");
+                }
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring payment_gateways table: " . $e->getMessage());
             return false;
         }
     }

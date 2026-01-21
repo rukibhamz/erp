@@ -157,15 +157,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="mb-3">
                                 <label class="form-label">Payment Method</label>
                                 <select class="form-select" id="payment_method" name="payment_method">
-                                    <option value="cash">Cash (Pay on Site)</option>
-                                    <option value="bank">Bank Transfer</option>
                                     <?php if (!empty($gateways)): ?>
-                                        <?php foreach ($gateways as $gateway): ?>
-                                            <option value="gateway" data-gateway-code="<?= $gateway['gateway_code'] ?>">
+                                        <?php foreach ($gateways as $index => $gateway): ?>
+                                            <option value="gateway" data-gateway-code="<?= $gateway['gateway_code'] ?>" <?= $index === 0 ? 'selected' : '' ?>>
                                                 Pay Online - <?= htmlspecialchars($gateway['gateway_name']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
+                                    <option value="cash">Cash (Pay on Site)</option>
+                                    <option value="bank">Bank Transfer</option>
                                 </select>
                             </div>
 
