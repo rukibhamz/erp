@@ -375,6 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
             options += '<option value="4">4 Hours</option>';
             options += '<option value="5">5 Hours</option>';
             options += '<option value="6">6 Hours</option>';
+            options += '<option value="7">7 Hours</option>';
             options += '<option value="8">8 Hours</option>';
         } else if (type === 'daily') {
             durationContainer.style.display = 'block';
