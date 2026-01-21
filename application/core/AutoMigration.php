@@ -309,6 +309,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error applying manager permissions: " . $e->getMessage());
         }
+        
+        // Apply best-practice accountant permissions
+        try {
+            $this->applyAccountantBestPracticePermissions();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error applying accountant permissions: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2024,6 +2031,96 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR applying manager permissions: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Apply best-practice permissions for accountant role
+     * Accountants need full access to all financial modules
+     */
+    private function applyAccountantBestPracticePermissions() {
+        try {
+            // Check if required tables exist
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}role_permissions'");
+            if ($stmt->rowCount() == 0) {
+                return false;
+            }
+            
+            // Get accountant role ID
+            $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
+            $stmt->execute(['accountant']);
+            $accountant = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$accountant) {
+                return false;
+            }
+            
+            $accountantId = $accountant['id'];
+            
+            // Accountant should have full access to:
+            // - All accounting modules (accounts, cash, receivables, payables, ledger, estimates)
+            // - Tax module (for tax reporting and compliance)
+            // - Reports (for financial reporting)
+            // - Dashboard read
+            // - NO delete on any module (audit trail protection)
+            // - NO access to: settings, users, inventory, properties, bookings, pos, utilities
+            
+            // First, remove all existing permissions for clean slate
+            $this->pdo->prepare("DELETE FROM `{$this->prefix}role_permissions` WHERE role_id = ?")->execute([$accountantId]);
+            
+            // Add accounting module permissions (read, write, create, update - no delete)
+            $accountingModules = ['accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates'];
+            foreach ($accountingModules as $module) {
+                $addPermsSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
+                               SELECT ?, p.id, NOW()
+                               FROM `{$this->prefix}permissions` p
+                               WHERE p.module = ?
+                               AND p.permission IN ('read', 'write', 'create', 'update')";
+                $this->pdo->prepare($addPermsSql)->execute([$accountantId, $module]);
+            }
+            
+            // Add tax module permissions (accountants handle tax reporting)
+            $addTaxSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
+                         SELECT ?, p.id, NOW()
+                         FROM `{$this->prefix}permissions` p
+                         WHERE p.module = 'tax'
+                         AND p.permission IN ('read', 'write', 'create', 'update')";
+            $this->pdo->prepare($addTaxSql)->execute([$accountantId]);
+            
+            // Add reports read permission
+            $addReportsSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
+                             SELECT ?, p.id, NOW()
+                             FROM `{$this->prefix}permissions` p
+                             WHERE p.module = 'reports' AND p.permission = 'read'";
+            $this->pdo->prepare($addReportsSql)->execute([$accountantId]);
+            
+            // Add dashboard read permission
+            $addDashboardSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
+                               SELECT ?, p.id, NOW()
+                               FROM `{$this->prefix}permissions` p
+                               WHERE p.module = 'dashboard' AND p.permission = 'read'";
+            $this->pdo->prepare($addDashboardSql)->execute([$accountantId]);
+            
+            // Add notifications read permission
+            $addNotifSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
+                           SELECT ?, p.id, NOW()
+                           FROM `{$this->prefix}permissions` p
+                           WHERE p.module = 'notifications' AND p.permission = 'read'";
+            $this->pdo->prepare($addNotifSql)->execute([$accountantId]);
+            
+            // Ledger should be read-only (entries are system-generated)
+            $removeLedgerWriteSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
+                                    INNER JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                                    WHERE rp.role_id = ?
+                                    AND p.module = 'ledger'
+                                    AND p.permission IN ('write', 'create', 'update', 'delete')";
+            $this->pdo->prepare($removeLedgerWriteSql)->execute([$accountantId]);
+            
+            error_log("AutoMigration: Applied best-practice permissions for accountant role");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR applying accountant permissions: " . $e->getMessage());
             return false;
         }
     }
