@@ -142,5 +142,98 @@ class Settings extends Base_Controller {
         
         redirect('settings/payment-gateways');
     }
+    
+    /**
+     * Roles management page - Admin/SuperAdmin only
+     */
+    public function roles() {
+        // Restrict to admin and super_admin only
+        if (!in_array($this->session['role'], ['admin', 'super_admin'])) {
+            $this->setFlashMessage('danger', 'Access denied. Admin privileges required.');
+            redirect('settings');
+            return;
+        }
+        
+        $roleModel = $this->loadModel('Role_model');
+        $permissionModel = $this->loadModel('Permission_model');
+        
+        try {
+            $roles = $roleModel->getAllWithPermissionCount();
+            $totalPermissions = count($permissionModel->getAll());
+        } catch (Exception $e) {
+            $roles = [];
+            $totalPermissions = 0;
+            error_log('Settings roles error: ' . $e->getMessage());
+        }
+        
+        $data = [
+            'page_title' => 'Roles & Permissions',
+            'roles' => $roles,
+            'total_permissions' => $totalPermissions,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('settings/roles', $data);
+    }
+    
+    /**
+     * Edit role permissions - Admin/SuperAdmin only
+     */
+    public function editRole($id) {
+        // Restrict to admin and super_admin only
+        if (!in_array($this->session['role'], ['admin', 'super_admin'])) {
+            $this->setFlashMessage('danger', 'Access denied. Admin privileges required.');
+            redirect('settings');
+            return;
+        }
+        
+        $roleModel = $this->loadModel('Role_model');
+        $permissionModel = $this->loadModel('Permission_model');
+        
+        // Handle form submission
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            
+            $selectedPermissions = $_POST['permissions'] ?? [];
+            
+            try {
+                $roleModel->updatePermissions($id, $selectedPermissions);
+                $this->activityModel->log($this->session['user_id'], 'update', 'Settings', 
+                    'Updated permissions for role ID: ' . $id);
+                $this->setFlashMessage('success', 'Role permissions updated successfully.');
+                redirect('settings/roles');
+                return;
+            } catch (Exception $e) {
+                $this->setFlashMessage('danger', 'Failed to update permissions: ' . $e->getMessage());
+            }
+        }
+        
+        try {
+            $role = $roleModel->getById($id);
+            if (!$role) {
+                $this->setFlashMessage('danger', 'Role not found.');
+                redirect('settings/roles');
+                return;
+            }
+            
+            $permissions = $permissionModel->getAllByModule();
+            $rolePermissions = $roleModel->getPermissionIds($id);
+        } catch (Exception $e) {
+            $role = null;
+            $permissions = [];
+            $rolePermissions = [];
+            error_log('Settings editRole error: ' . $e->getMessage());
+        }
+        
+        $data = [
+            'page_title' => 'Edit Role: ' . ($role['role_name'] ?? 'Unknown'),
+            'role' => $role,
+            'permissions' => $permissions,
+            'role_permissions' => $rolePermissions,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('settings/edit_role', $data);
+    }
 }
 

@@ -295,6 +295,20 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring booking_payments table: " . $e->getMessage());
         }
+        
+        // Ensure customer role exists for guest bookings
+        try {
+            $this->ensureCustomerRole();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring customer role: " . $e->getMessage());
+        }
+        
+        // Apply best-practice manager permissions
+        try {
+            $this->applyManagerBestPracticePermissions();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error applying manager permissions: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -1891,6 +1905,125 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring booking_payments table: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure customer role exists for guest bookings
+     */
+    private function ensureCustomerRole() {
+        try {
+            // Check if roles table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}roles'");
+            if ($stmt->rowCount() == 0) {
+                error_log("AutoMigration: Roles table does not exist, skipping customer role creation");
+                return false;
+            }
+            
+            // Check if customer role already exists
+            $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
+            $stmt->execute(['customer']);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$existing) {
+                // Create customer role
+                $sql = "INSERT INTO `{$this->prefix}roles` 
+                        (`role_name`, `role_code`, `description`, `is_system`, `is_active`, `created_at`) 
+                        VALUES (?, ?, ?, ?, ?, NOW())";
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute([
+                    'Customer',
+                    'customer',
+                    'Customer role for guest bookings - limited to viewing own bookings',
+                    1,
+                    1
+                ]);
+                
+                $roleId = $this->pdo->lastInsertId();
+                
+                // Assign minimal permissions: dashboard read, bookings read
+                $permSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
+                           SELECT ?, p.id, NOW() 
+                           FROM `{$this->prefix}permissions` p
+                           WHERE (p.module = 'dashboard' AND p.permission = 'read')
+                              OR (p.module = 'bookings' AND p.permission = 'read')";
+                $this->pdo->prepare($permSql)->execute([$roleId]);
+                
+                error_log("AutoMigration: Created customer role with ID: $roleId");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring customer role: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Apply best-practice permissions for manager role
+     * Based on separation of duties - managers handle operations, not system config
+     */
+    private function applyManagerBestPracticePermissions() {
+        try {
+            // Check if required tables exist
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}role_permissions'");
+            if ($stmt->rowCount() == 0) {
+                return false;
+            }
+            
+            // Get manager role ID
+            $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
+            $stmt->execute(['manager']);
+            $manager = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$manager) {
+                return false;
+            }
+            
+            $managerId = $manager['id'];
+            
+            // Remove delete permissions for financial modules (audit trail protection)
+            $removeDeleteSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
+                               INNER JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                               WHERE rp.role_id = ?
+                               AND p.module IN ('accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates', 'pos', 'properties', 'inventory', 'utilities')
+                               AND p.permission = 'delete'";
+            $this->pdo->prepare($removeDeleteSql)->execute([$managerId]);
+            
+            // Remove settings access (admin only)
+            $removeSettingsSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
+                                 INNER JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                                 WHERE rp.role_id = ?
+                                 AND p.module = 'settings'";
+            $this->pdo->prepare($removeSettingsSql)->execute([$managerId]);
+            
+            // Remove users access (admin only)
+            $removeUsersSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
+                              INNER JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                              WHERE rp.role_id = ?
+                              AND p.module = 'users'";
+            $this->pdo->prepare($removeUsersSql)->execute([$managerId]);
+            
+            // Add reports read permission
+            $addReportsSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
+                             SELECT ?, p.id, NOW()
+                             FROM `{$this->prefix}permissions` p
+                             WHERE p.module = 'reports' AND p.permission = 'read'";
+            $this->pdo->prepare($addReportsSql)->execute([$managerId]);
+            
+            // Ensure ledger is read-only (ledger entries are generated, not created manually)
+            $removeLedgerWriteSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
+                                    INNER JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
+                                    WHERE rp.role_id = ?
+                                    AND p.module = 'ledger'
+                                    AND p.permission IN ('write', 'create', 'update', 'delete')";
+            $this->pdo->prepare($removeLedgerWriteSql)->execute([$managerId]);
+            
+            error_log("AutoMigration: Applied best-practice permissions for manager role");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR applying manager permissions: " . $e->getMessage());
             return false;
         }
     }
