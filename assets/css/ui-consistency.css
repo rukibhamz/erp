@@ -490,3 +490,33 @@
         display: none !important;
     }
 }
+
+/* ============================================
+   BUTTON OUTLINE FIX - Ensure visible text
+   ============================================ */
+.btn-outline-secondary {
+    color: #6c757d !important;
+    border-color: #6c757d !important;
+    background-color: transparent;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    color: #ffffff !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+}
+
+/* Fix for btn-outline-light visibility on light backgrounds */
+.btn-outline-light {
+    color: #212529 !important;
+    border-color: #dee2e6 !important;
+    background-color: transparent;
+}
+
+.btn-outline-light:hover,
+.btn-outline-light:focus {
+    color: #212529 !important;
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+}

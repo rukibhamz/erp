@@ -87,7 +87,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <input type="url" name="webhook_url" class="form-control" 
                                            value="<?= htmlspecialchars($gateway['webhook_url'] ?: base_url('payment/webhook?gateway=' . $gateway['gateway_code'])) ?>"
                                            placeholder="<?= base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('<?= base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>')">
+                                    <button class="btn btn-outline-dark" type="button" onclick="copyToClipboard('<?= base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>')">
                                         <i class="bi bi-clipboard"></i> Copy
                                     </button>
                                 </div>
