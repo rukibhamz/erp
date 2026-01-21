@@ -19,6 +19,7 @@ class Booking_wizard extends Base_Controller {
     private $locationModel;
     private $spaceModel;
     private $userModel;
+    private $paymentTransactionModel;
 
     public function __construct() {
         parent::__construct();
@@ -40,6 +41,7 @@ class Booking_wizard extends Base_Controller {
         $this->locationModel = $this->loadModel('Location_model');
         $this->spaceModel = $this->loadModel('Space_model');
         $this->userModel = $this->loadModel('User_model');
+        $this->paymentTransactionModel = $this->loadModel('Payment_transaction_model');
     }
     
     public function index() {
@@ -886,13 +888,33 @@ class Booking_wizard extends Base_Controller {
                             'phone' => $bookingData['customer_phone'] ?? ''
                         ];
                         
+                        // Generate unique transaction reference
+                        $transactionRef = 'BKG-' . $bookingNumber . '-' . time();
+                        
                         $metadata = [
-                            'transaction_ref' => 'BKG-' . $bookingNumber . '-' . time(),
+                            'transaction_ref' => $transactionRef,
                             'payment_type' => 'booking_payment',
                             'reference_id' => $bookingId,
                             'booking_id' => $bookingId,
                             'description' => 'Booking payment for ' . $bookingNumber
                         ];
+                        
+                        // Create payment transaction record BEFORE calling gateway
+                        // This ensures the callback can find and verify the transaction
+                        $transactionData = [
+                            'transaction_ref' => $transactionRef,
+                            'payment_type' => 'booking_payment',
+                            'reference_id' => $bookingId,
+                            'gateway_code' => $gatewayCode,
+                            'amount' => $initialPayment,
+                            'currency' => 'NGN',
+                            'status' => 'pending',
+                            'customer_email' => $bookingData['customer_email'],
+                            'customer_name' => $bookingData['customer_name'] ?? '',
+                            'description' => 'Booking payment for ' . $bookingNumber,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ];
+                        $this->paymentTransactionModel->create($transactionData);
                         
                         $paymentResult = $paymentGateway->initialize(
                             $initialPayment,

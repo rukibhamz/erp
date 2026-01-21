@@ -262,6 +262,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring bookings table columns: " . $e->getMessage());
         }
+        
+        // ALWAYS ensure payment_transactions table exists for payment gateway integration
+        try {
+            $this->ensurePaymentTransactionsTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring payment_transactions table: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -1597,6 +1604,53 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring bookings table columns: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure payment_transactions table exists for payment gateway integration
+     */
+    private function ensurePaymentTransactionsTable() {
+        try {
+            // Check if table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}payment_transactions'");
+            if ($stmt->rowCount() > 0) {
+                return true; // Table already exists
+            }
+            
+            // Create payment_transactions table
+            $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}payment_transactions` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `transaction_ref` VARCHAR(100) NOT NULL,
+                `payment_type` VARCHAR(50) NOT NULL COMMENT 'booking_payment, invoice_payment, etc.',
+                `reference_id` INT(11) NOT NULL COMMENT 'ID of the related record (booking_id, invoice_id, etc.)',
+                `gateway_code` VARCHAR(50) NOT NULL COMMENT 'paystack, flutterwave, etc.',
+                `amount` DECIMAL(15,2) NOT NULL,
+                `currency` VARCHAR(10) DEFAULT 'NGN',
+                `status` ENUM('pending','success','failed','cancelled') DEFAULT 'pending',
+                `customer_email` VARCHAR(255) NULL,
+                `customer_name` VARCHAR(255) NULL,
+                `description` TEXT NULL,
+                `gateway_transaction_id` VARCHAR(255) NULL COMMENT 'Transaction ID from the gateway',
+                `gateway_response` TEXT NULL COMMENT 'JSON response from gateway',
+                `paid_at` DATETIME NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `transaction_ref_unique` (`transaction_ref`),
+                KEY `idx_payment_type` (`payment_type`),
+                KEY `idx_reference_id` (`reference_id`),
+                KEY `idx_status` (`status`),
+                KEY `idx_gateway_code` (`gateway_code`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+            
+            $this->pdo->exec($sql);
+            error_log("AutoMigration: Created payment_transactions table");
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring payment_transactions table: " . $e->getMessage());
             return false;
         }
     }
