@@ -18,6 +18,7 @@ class Booking_wizard extends Base_Controller {
     private $gatewayModel;
     private $locationModel;
     private $spaceModel;
+    private $userModel;
 
     public function __construct() {
         parent::__construct();
@@ -38,6 +39,7 @@ class Booking_wizard extends Base_Controller {
         $this->gatewayModel = $this->loadModel('Payment_gateway_model');
         $this->locationModel = $this->loadModel('Location_model');
         $this->spaceModel = $this->loadModel('Space_model');
+        $this->userModel = $this->loadModel('User_model');
     }
     
     public function index() {
@@ -715,6 +717,16 @@ class Booking_wizard extends Base_Controller {
             $duration = $endDateTime->diff($startDateTime);
             $durationHours = ($duration->days * 24) + $duration->h + ($duration->i / 60);
             
+            // Handle guest user creation if needed
+            $createdById = null;
+            if ($this->userModel && !empty($bookingData['customer_email'])) {
+                $createdById = $this->createGuestUser(
+                    $bookingData['customer_email'],
+                    $bookingData['customer_name'] ?? '',
+                    $bookingData['customer_phone'] ?? ''
+                );
+            }
+
             // Create booking with all fields (AutoMigration ensures columns exist)
             $bookingRecord = [
                 'booking_number' => $bookingNumber,
@@ -747,7 +759,7 @@ class Booking_wizard extends Base_Controller {
                 'is_recurring' => $isRecurring ? 1 : 0,
                 'recurring_pattern' => $recurringPattern,
                 'recurring_end_date' => $recurringEndDate,
-                'created_by' => null
+                'created_by' => $createdById
             ];
             
             $bookingId = $this->bookingModel->create($bookingRecord);
@@ -905,6 +917,7 @@ class Booking_wizard extends Base_Controller {
                         }
                     }
                 }
+
             } elseif ($paymentMethod === 'cash' || $paymentMethod === 'bank') {
                 // Record offline payment intention - no immediate payment
                 // Booking is created with unpaid status
@@ -977,6 +990,70 @@ class Booking_wizard extends Base_Controller {
             return $duration->h + ($duration->i / 60);
         } catch (Exception $e) {
             return 0;
+        }
+    }
+
+
+    /**
+     * Helper to create or find a user for guest bookings
+     * 
+     * @param string $email
+     * @param string $name
+     * @param string $phone
+     * @return int|null User ID
+     */
+    private function createGuestUser($email, $name, $phone) {
+        try {
+            // Check if user exists
+            $user = $this->userModel->getByEmail($email);
+            if ($user) {
+                return $user['id'];
+            }
+            
+            // Create new user
+            $password = bin2hex(random_bytes(8)); // Random 16-char password
+            
+            // Get customer role - Default to 'customer'
+            $roleCode = 'customer';
+            
+            $userData = [
+                'username' => $email,
+                'email' => $email,
+                'password' => $password,
+                'first_name' => $name,
+                'last_name' => '',
+                'phone' => $phone,
+                'role' => $roleCode,
+                'is_active' => 1
+            ];
+            
+            // Handle name splitting
+            $parts = explode(' ', $name, 2);
+            if (count($parts) > 1) {
+                $userData['first_name'] = $parts[0];
+                $userData['last_name'] = $parts[1];
+            }
+            
+            $userId = $this->userModel->create($userData);
+            
+            if ($userId) {
+                // Send welcome email with reset link
+                $token = $this->userModel->generatePasswordResetToken($userId);
+                
+                // Using the email helper function
+                require_once BASEPATH . '../application/helpers/email_helper.php';
+                
+                // For now, use password reset email as it prompts to set password
+                send_password_reset_email($email, $token, $name);
+                
+                error_log("Created guest user for booking: $email (ID: $userId)");
+                return $userId;
+            }
+            
+            return null;
+        } catch (Exception $e) {
+            error_log("Error creating guest user: " . $e->getMessage());
+            return null;
         }
     }
 }
