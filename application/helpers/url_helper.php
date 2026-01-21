@@ -73,15 +73,48 @@ function site_url($path = '') {
 
 function redirect($url) {
     // Prevent open redirect vulnerability
-    // Only allow absolute URLs if they match our base URL
+    // Only allow absolute URLs if they match our base URL OR trusted payment gateways
     if (preg_match('/^https?:\/\//', $url)) {
-        // Check if URL is from same domain (prevent open redirect)
+        // Trusted payment gateway domains
+        $trustedDomains = [
+            'paystack.com',
+            'checkout.paystack.com',
+            'flutterwave.com',
+            'checkout.flutterwave.com',
+            'flw-prd-api.com',
+            'monnify.com',
+            'sandbox.monnify.com',
+            'stripe.com',
+            'checkout.stripe.com',
+            'paypal.com',
+            'sandbox.paypal.com'
+        ];
+        
+        // Check if URL is from same domain or trusted domain
         $baseUrl = base_url();
         $baseHost = parse_url($baseUrl, PHP_URL_HOST);
         $redirectHost = parse_url($url, PHP_URL_HOST);
         
-        // Only allow redirects to same host
-        if ($redirectHost !== $baseHost && $redirectHost !== null) {
+        $isTrusted = false;
+        
+        // Check if redirect host matches base host
+        if ($redirectHost === $baseHost) {
+            $isTrusted = true;
+        }
+        
+        // Check if redirect host is a trusted payment gateway
+        if (!$isTrusted && $redirectHost !== null) {
+            foreach ($trustedDomains as $trusted) {
+                if ($redirectHost === $trusted || str_ends_with($redirectHost, '.' . $trusted)) {
+                    $isTrusted = true;
+                    error_log("Allowing redirect to trusted payment gateway: $url");
+                    break;
+                }
+            }
+        }
+        
+        // Block untrusted external redirects
+        if (!$isTrusted && $redirectHost !== null && $redirectHost !== $baseHost) {
             error_log('Open redirect attempt blocked: ' . $url);
             $url = base_url('dashboard'); // Fallback to dashboard
         }
