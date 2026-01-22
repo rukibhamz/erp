@@ -76,7 +76,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Booking Date <span class="text-danger">*</span></label>
-                            <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability()">
+                            <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= isset($old_input['booking_date']) ? $old_input['booking_date'] : '' ?>" onchange="calculatePrice(); checkAvailability()">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -95,13 +95,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                            <input type="time" name="start_time" id="start_time" class="form-control" required onchange="calculatePrice(); checkAvailability()">
+                            <input type="time" name="start_time" id="start_time" class="form-control" required value="<?= isset($old_input['start_time']) ? $old_input['start_time'] : '' ?>" onchange="calculatePrice(); checkAvailability()">
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">End Time <span class="text-danger">*</span></label>
-                            <input type="time" name="end_time" id="end_time" class="form-control" required onchange="calculatePrice(); checkAvailability()">
+                            <input type="time" name="end_time" id="end_time" class="form-control" required value="<?= isset($old_input['end_time']) ? $old_input['end_time'] : '' ?>" onchange="calculatePrice(); checkAvailability()">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -131,13 +131,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Customer Name <span class="text-danger">*</span></label>
-                            <input type="text" name="customer_name" class="form-control" required>
+                            <input type="text" name="customer_name" class="form-control" required value="<?= isset($old_input['customer_name']) ? htmlspecialchars($old_input['customer_name']) : '' ?>">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" name="customer_email" class="form-control">
+                            <input type="email" name="customer_email" class="form-control" value="<?= isset($old_input['customer_email']) ? htmlspecialchars($old_input['customer_email']) : '' ?>">
                         </div>
                     </div>
                 </div>
@@ -146,7 +146,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Phone <span class="text-danger">*</span></label>
-                            <input type="text" name="customer_phone" class="form-control" required>
+                            <input type="text" name="customer_phone" class="form-control" required value="<?= isset($old_input['customer_phone']) ? htmlspecialchars($old_input['customer_phone']) : '' ?>">
                         </div>
                     </div>
                     <div class="col-md-6">

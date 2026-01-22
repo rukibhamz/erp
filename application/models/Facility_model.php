@@ -929,5 +929,34 @@ class Facility_model extends Base_Model {
             return false;
         }
     }
+    public function getConflictingBooking($facilityId, $bookingDate, $startTime, $endTime, $excludeBookingId = null, $endDate = null) {
+        try {
+            $checkEndDate = $endDate ?? $bookingDate;
+            
+            $sql = "SELECT b.*, u.username 
+                    FROM `" . $this->db->getPrefix() . "bookings` b
+                    LEFT JOIN `" . $this->db->getPrefix() . "users` u ON b.created_by = u.id
+                    WHERE b.facility_id = ? 
+                    AND b.status NOT IN ('cancelled', 'refunded', 'no_show')
+                    AND (
+                        (b.booking_date = ? AND b.start_time < ? AND b.end_time > ?)
+                        OR (b.booking_date = ? AND b.start_time < ? AND b.end_time > ?)
+                        OR (b.booking_date BETWEEN ? AND ? AND b.booking_date != ? AND b.booking_date != ?)
+                    )
+                    LIMIT 1";
+            
+            $params = [
+                $facilityId,
+                $bookingDate, $endTime, $startTime,
+                $checkEndDate, $endTime, $startTime,
+                $bookingDate, $checkEndDate, $bookingDate, $checkEndDate
+            ];
+            
+            return $this->db->fetchOne($sql, $params);
+        } catch (Exception $e) {
+            error_log('Facility_model getConflictingBooking error: ' . $e->getMessage());
+            return null;
+        }
+    }
 }
 

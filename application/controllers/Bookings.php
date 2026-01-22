@@ -269,7 +269,24 @@ class Bookings extends Base_Controller {
 
             // Check availability
             if (!$this->facilityModel->checkAvailability($facilityId, $bookingDate, $startTime, $endTime)) {
-                $this->setFlashMessage('danger', 'The selected time slot is not available. Please choose another time.');
+                // Get conflict details
+                $conflict = $this->facilityModel->getConflictingBooking($facilityId, $bookingDate, $startTime, $endTime);
+                $msg = 'The selected time slot is not available.';
+                
+                if ($conflict) {
+                     $msg .= ' Conflict with Booking #' . ($conflict['booking_number'] ?? $conflict['id']);
+                     if (!empty($conflict['customer_name'])) {
+                         $msg .= ' (' . $conflict['customer_name'] . ')';
+                     }
+                }
+                
+                $this->setFlashMessage('danger', $msg);
+                
+                // Persist input for repopulation
+                if (isset($this->session)) {
+                    $this->session->set_flashdata('_old_input', $_POST);
+                }
+                
                 redirect('bookings/create');
             }
 
@@ -441,7 +458,8 @@ class Bookings extends Base_Controller {
             'page_title' => 'Create Booking',
             'locations' => $locations,
             'spaces_by_location' => $spacesByLocation,
-            'flash' => $this->getFlashMessage()
+            'flash' => $this->getFlashMessage(),
+            'old_input' => $this->session->flashdata('_old_input') ?? []
         ];
 
         $this->loadView('bookings/create', $data);
