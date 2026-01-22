@@ -352,3 +352,95 @@ if (!function_exists('send_password_reset_email')) {
     }
 }
 
+/**
+ * Send welcome email to guest user after booking
+ * SECURITY: Sends a welcome email with account activation link
+ * 
+ * @param string $email User email address
+ * @param string $resetToken Password reset token for account activation
+ * @param string $userName User's name
+ * @param array $bookingDetails Optional booking details to include
+ * @return bool True if email sent successfully
+ */
+if (!function_exists('send_guest_welcome_email')) {
+    function send_guest_welcome_email($email, $resetToken, $userName = null, $bookingDetails = []) {
+        try {
+            $activationLink = base_url('auth/resetPassword?token=' . urlencode($resetToken));
+            $loginLink = base_url('customer-portal/login');
+            $bookingNumber = $bookingDetails['booking_number'] ?? '';
+            
+            $subject = 'Welcome! Your Account Has Been Created - Business ERP';
+            
+            // Create HTML email template
+            $message = "
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 10px 5px; }
+        .button-success { background-color: #28a745; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        .info-box { background-color: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0; }
+        .booking-box { background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>Welcome to Business ERP!</h2>
+        </div>
+        <div class='content'>
+            <p>Hello" . ($userName ? " {$userName}" : "") . ",</p>
+            <p>Thank you for making a booking with us! An account has been automatically created for you so you can manage your bookings online.</p>
+            " . ($bookingNumber ? "
+            <div class='booking-box'>
+                <strong>Your Booking Reference:</strong><br>
+                <span style='font-size: 1.2em; font-weight: bold;'>{$bookingNumber}</span>
+            </div>
+            " : "") . "
+            <div class='info-box'>
+                <strong>Set Up Your Password</strong><br>
+                <p>To access your account and view your bookings, please set up a password:</p>
+            </div>
+            <p style='text-align: center;'>
+                <a href='{$activationLink}' class='button button-success'>Set Up My Password</a>
+            </p>
+            <p>After setting your password, you can log in anytime to:</p>
+            <ul>
+                <li>View and manage your bookings</li>
+                <li>Make new bookings</li>
+                <li>View payment history</li>
+                <li>Update your profile</li>
+            </ul>
+            <p>Or copy and paste this link into your browser:</p>
+            <p style='word-break: break-all;'>{$activationLink}</p>
+        </div>
+        <div class='footer'>
+            <p>If you did not make a booking with us, please contact our support team.</p>
+            <p>&copy; " . date('Y') . " Business ERP System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+            
+            // Send email
+            $result = send_email($email, $subject, $message);
+            
+            if ($result) {
+                error_log("Guest welcome email sent successfully to: {$email}");
+            } else {
+                error_log("Failed to send guest welcome email to: {$email}");
+            }
+            
+            return $result;
+        } catch (Exception $e) {
+            error_log("Guest welcome email error: " . $e->getMessage());
+            return false;
+        }
+    }
+}

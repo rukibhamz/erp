@@ -311,7 +311,56 @@ class Customer_portal extends Base_Controller {
     }
     
     /**
-     * View Booking Details
+     * View Booking Details (Public - No login required)
+     * This is used from the booking confirmation page
+     */
+    public function booking($id) {
+        try {
+            if (empty($id)) {
+                $this->setFlashMessage('danger', 'Booking ID is required.');
+                redirect('booking-wizard');
+                return;
+            }
+            
+            $booking = $this->bookingModel->getWithFacility($id);
+            
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found. Please check your booking number.');
+                redirect('booking-wizard');
+                return;
+            }
+            
+            // Get payments and addons
+            $payments = [];
+            $addons = [];
+            try {
+                $payments = $this->bookingPaymentModel->getByBooking($id);
+            } catch (Exception $e) {}
+            
+            try {
+                $addons = $this->bookingModel->getAddons($id);
+            } catch (Exception $e) {}
+            
+        } catch (Exception $e) {
+            error_log("Customer portal booking view error: " . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading booking.');
+            redirect('booking-wizard');
+            return;
+        }
+        
+        $data = [
+            'page_title' => 'Booking Details - ' . ($booking['booking_number'] ?? ''),
+            'booking' => $booking,
+            'payments' => $payments,
+            'addons' => $addons,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('customer_portal/view_booking', $data);
+    }
+    
+    /**
+     * View Booking Details (Requires Login)
      */
     public function viewBooking($id) {
         $this->requireCustomerAuth();
