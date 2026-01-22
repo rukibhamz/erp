@@ -88,7 +88,7 @@ class AutoMigration {
             try {
                 // Check for tax_types table
                 $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}tax_types'");
-                $taxTypesExists = ($stmt && $stmt->rowCount() > 0);
+                $taxTypesExists = ($stmt && count($stmt->fetchAll()) > 0);
                 
                 // Check for module labels
                 $entitiesLabelExists = false;
@@ -98,24 +98,24 @@ class AutoMigration {
                 try {
                     $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'entities'");
                     if ($stmt) {
-                        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                        $entitiesLabelExists = ($result['cnt'] ?? 0) > 0;
+                        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $entitiesLabelExists = ($result[0]['cnt'] ?? 0) > 0;
                     }
                 } catch (Exception $e) {}
                 
                 try {
                     $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'locations'");
                     if ($stmt) {
-                        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                        $locationsLabelExists = ($result['cnt'] ?? 0) > 0;
+                        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $locationsLabelExists = ($result[0]['cnt'] ?? 0) > 0;
                     }
                 } catch (Exception $e) {}
                 
                 try {
                     $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'staff_management'");
                     if ($stmt) {
-                        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                        $staffManagementLabelExists = ($result['cnt'] ?? 0) > 0;
+                        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $staffManagementLabelExists = ($result[0]['cnt'] ?? 0) > 0;
                     }
                 } catch (Exception $e) {}
                 
@@ -141,7 +141,7 @@ class AutoMigration {
         // ALWAYS check and create properties table if missing
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $this->createPropertiesTable();
             }
         } catch (Exception $e) {
@@ -151,7 +151,7 @@ class AutoMigration {
         // ALWAYS check and create space_bookings table if missing
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $this->createSpaceBookingsTable();
             }
         } catch (Exception $e) {
@@ -161,7 +161,7 @@ class AutoMigration {
         // ALWAYS check and create utilities tables if missing
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}meters'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $this->createUtilitiesTables();
             }
         } catch (Exception $e) {
@@ -171,7 +171,7 @@ class AutoMigration {
         // ALWAYS check and create tax tables if missing
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}vat_returns'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $this->createTaxTables();
             }
         } catch (Exception $e) {
@@ -563,7 +563,7 @@ class AutoMigration {
             
             // Verify table was created
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
-            if ($stmt && $stmt->rowCount() > 0) {
+            if ($stmt && count($stmt->fetchAll()) > 0) {
                 error_log("AutoMigration: Space_bookings table created/verified successfully");
                 return true;
             } else {
@@ -625,7 +625,7 @@ class AutoMigration {
             
             // Verify table was created
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}properties'");
-            if ($stmt && $stmt->rowCount() > 0) {
+            if ($stmt && count($stmt->fetchAll()) > 0) {
                 error_log("AutoMigration: Properties table created/verified successfully");
                 return true;
             } else {
@@ -725,7 +725,7 @@ class AutoMigration {
         try {
             // Check if modules table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}modules'");
-            $modulesTableExists = ($stmt && $stmt->rowCount() > 0);
+            $modulesTableExists = ($stmt && count($stmt->fetchAll()) > 0);
 
             // Load modules migration function
             $migrationFile = __DIR__ . '/../../install/migrations_modules.php';
@@ -762,8 +762,8 @@ class AutoMigration {
             try {
                 $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}module_labels` WHERE module_code = 'staff_management'");
                 if ($stmt) {
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $staffManagementLabelExists = ($result['cnt'] ?? 0) > 0;
+                    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $staffManagementLabelExists = ($result[0]['cnt'] ?? 0) > 0;
                 } else {
                     $staffManagementLabelExists = false;
                 }
@@ -789,8 +789,8 @@ class AutoMigration {
             try {
                 $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}modules` WHERE module_key = 'staff_management'");
                 if ($stmt) {
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    $staffManagementExists = ($result['cnt'] ?? 0) > 0;
+                    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $staffManagementExists = ($result[0]['cnt'] ?? 0) > 0;
                 } else {
                     $staffManagementExists = false;
                 }
@@ -828,14 +828,14 @@ class AutoMigration {
         try {
             // Check if employees table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}employees'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 // Table doesn't exist yet, skip
                 return true;
             }
             
             // Check and add hire_date column
             $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}employees` LIKE 'hire_date'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $this->pdo->exec("ALTER TABLE `{$this->prefix}employees` 
                     ADD COLUMN `hire_date` DATE NULL AFTER `employment_type`");
                 error_log("AutoMigration: Added hire_date column to employees table");
@@ -843,7 +843,7 @@ class AutoMigration {
             
             // Check and add salary_structure column
             $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}employees` LIKE 'salary_structure'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $this->pdo->exec("ALTER TABLE `{$this->prefix}employees` 
                     ADD COLUMN `salary_structure` TEXT NULL AFTER `status`");
                 error_log("AutoMigration: Added salary_structure column to employees table");
@@ -862,7 +862,7 @@ class AutoMigration {
         try {
             // Check if cash_accounts table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}cash_accounts'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 // Table doesn't exist yet, skip
                 return true;
             }
@@ -871,8 +871,8 @@ class AutoMigration {
             $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}cash_accounts`");
             $count = 0;
             if ($stmt) {
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                $count = $result['cnt'] ?? 0;
+                $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $count = $result[0]['cnt'] ?? 0;
             }
             
             if ($count == 0) {
@@ -927,7 +927,7 @@ class AutoMigration {
         try {
             // Check if accounts table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 // Table doesn't exist yet, skip
                 return true;
             }
@@ -1198,7 +1198,7 @@ class AutoMigration {
                 $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = ?");
                 $stmt->execute([$account['account_code']]);
                 
-                if ($stmt->rowCount() == 0) {
+                if (count($stmt->fetchAll()) == 0) {
                     // Insert account
                     $stmt = $this->pdo->prepare("
                         INSERT INTO `{$this->prefix}accounts` 
@@ -1349,7 +1349,7 @@ class AutoMigration {
         try {
             // Check if items table exists first
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}items'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 // Items table doesn't exist yet, skip
                 return true;
             }
@@ -1418,7 +1418,8 @@ class AutoMigration {
             
             // Check if PAYE brackets exist
             $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}tax_brackets` WHERE tax_type_code = 'PAYE'");
-            $result = ($stmt) ? $stmt->fetch(PDO::FETCH_ASSOC) : ['cnt' => 0];
+            $result = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [['cnt' => 0]];
+            $count = $result[0]['cnt'] ?? 0;
             
             if (($result['cnt'] ?? 0) == 0) {
                 // Insert Nigeria PAYE brackets
@@ -1485,9 +1486,9 @@ class AutoMigration {
             
             // Check if default terminal exists
             $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}pos_terminals`");
-            $result = ($stmt) ? $stmt->fetch(PDO::FETCH_ASSOC) : ['cnt' => 0];
+            $result = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [['cnt' => 0]];
             
-            if (($result['cnt'] ?? 0) == 0) {
+            if (($result[0]['cnt'] ?? 0) == 0) {
                 // Insert default terminal
                 $this->pdo->exec("INSERT INTO `{$this->prefix}pos_terminals` 
                     (terminal_code, terminal_name, terminal_type, status, created_at)
@@ -1497,9 +1498,9 @@ class AutoMigration {
             
             // Check if payment methods exist
             $stmt = $this->pdo->query("SELECT COUNT(*) as cnt FROM `{$this->prefix}pos_payment_methods`");
-            $result = ($stmt) ? $stmt->fetch(PDO::FETCH_ASSOC) : ['cnt' => 0];
+            $result = ($stmt) ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [['cnt' => 0]];
             
-            if (($result['cnt'] ?? 0) == 0) {
+            if (($result[0]['cnt'] ?? 0) == 0) {
                 // Insert default payment methods
                 $this->pdo->exec("INSERT INTO `{$this->prefix}pos_payment_methods` 
                     (code, name, type, is_active, sort_order, created_at) VALUES
@@ -1567,7 +1568,7 @@ class AutoMigration {
         try {
             // Check if is_sellable column exists
             $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}items` LIKE 'is_sellable'");
-            $columnExists = ($stmt && $stmt->rowCount() > 0);
+            $columnExists = ($stmt && count($stmt->fetchAll()) > 0);
             
             if (!$columnExists) {
                 error_log("AutoMigration: Adding is_sellable column to items table");
@@ -1617,7 +1618,7 @@ class AutoMigration {
         try {
             // Check if bookings table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}bookings'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 // Table doesn't exist yet, skip
                 return true;
             }
@@ -1651,7 +1652,7 @@ class AutoMigration {
             
             foreach ($columns as $columnName => $columnDef) {
                 $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}bookings` LIKE '{$columnName}'");
-                if ($stmt && $stmt->rowCount() == 0) {
+                if ($stmt && count($stmt->fetchAll()) == 0) {
                     try {
                         $this->pdo->exec("ALTER TABLE `{$this->prefix}bookings` ADD COLUMN `{$columnName}` {$columnDef}");
                         error_log("AutoMigration: Added {$columnName} column to bookings table");
@@ -1690,7 +1691,7 @@ class AutoMigration {
         try {
             // Check if table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}payment_transactions'");
-            $tableExists = ($stmt && $stmt->rowCount() > 0);
+            $tableExists = ($stmt && count($stmt->fetchAll()) > 0);
             
             if (!$tableExists) {
                 // Create payment_transactions table
@@ -1736,7 +1737,7 @@ class AutoMigration {
                 
                 foreach ($columnsToAdd as $colName => $colDef) {
                     $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}payment_transactions` LIKE '{$colName}'");
-                    if ($stmt && $stmt->rowCount() == 0) {
+                    if ($stmt && count($stmt->fetchAll()) == 0) {
                         try {
                             $this->pdo->exec("ALTER TABLE `{$this->prefix}payment_transactions` ADD COLUMN `{$colName}` {$colDef}");
                             error_log("AutoMigration: Added {$colName} column to payment_transactions table");
@@ -1770,7 +1771,7 @@ class AutoMigration {
         try {
             // Check if table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}transactions'");
-            if (!$stmt || $stmt->rowCount() == 0) {
+            if (!$stmt || count($stmt->fetchAll()) == 0) {
                 return false; // Table doesn't exist yet, likely to be created by migration
             }
             
@@ -1782,7 +1783,7 @@ class AutoMigration {
             
             foreach ($columnsToAdd as $colName => $colDef) {
                 $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}transactions` LIKE '{$colName}'");
-                if ($stmt && $stmt->rowCount() == 0) {
+                if ($stmt && count($stmt->fetchAll()) == 0) {
                     try {
                         $this->pdo->exec("ALTER TABLE `{$this->prefix}transactions` ADD COLUMN `{$colName}` {$colDef}");
                         error_log("AutoMigration: Added {$colName} column to transactions table");
@@ -1813,7 +1814,7 @@ class AutoMigration {
         try {
             // Check if table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}payment_gateways'");
-            $tableExists = ($stmt && $stmt->rowCount() > 0);
+            $tableExists = ($stmt && count($stmt->fetchAll()) > 0);
             
             if (!$tableExists) {
                 // Create payment_gateways table
@@ -1891,7 +1892,7 @@ class AutoMigration {
     private function ensureBookingResourcesTable() {
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_resources'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_resources` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT,
                     `booking_id` INT(11) NOT NULL,
@@ -1925,7 +1926,7 @@ class AutoMigration {
     private function ensureBookingSlotsTable() {
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_slots'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_slots` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT,
                     `booking_id` INT(11) NOT NULL,
@@ -1957,7 +1958,7 @@ class AutoMigration {
     private function ensureBookingPaymentsTable() {
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_payments'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_payments` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT,
                     `booking_id` INT(11) NOT NULL,
@@ -1998,7 +1999,7 @@ class AutoMigration {
         try {
             // Check if roles table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}roles'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 error_log("AutoMigration: Roles table does not exist, skipping customer role creation");
                 return false;
             }
@@ -2050,14 +2051,15 @@ class AutoMigration {
         try {
             // Check if required tables exist
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}role_permissions'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 return false;
             }
             
             // Get manager role ID
             $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
             if ($stmt && $stmt->execute(['manager'])) {
-                $manager = $stmt->fetch(PDO::FETCH_ASSOC);
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $manager = $results[0] ?? false;
             } else {
                 return false;
             }
@@ -2126,14 +2128,15 @@ class AutoMigration {
         try {
             // Check if required tables exist
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}role_permissions'");
-            if ($stmt && $stmt->rowCount() == 0) {
+            if ($stmt && count($stmt->fetchAll()) == 0) {
                 return false;
             }
             
             // Get accountant role ID
             $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
             if ($stmt && $stmt->execute(['accountant'])) {
-                $accountant = $stmt->fetch(PDO::FETCH_ASSOC);
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $accountant = $results[0] ?? false;
             } else {
                 return false;
             }
