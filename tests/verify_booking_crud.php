@@ -86,7 +86,6 @@ try {
     $createData = [
         'booking_number' => $bookingNumber,
         'created_by' => $customerId,
-        'space_id' => $spaceId,
         'facility_id' => $facilityId,
         'customer_email' => $customerData['email'],
         'customer_name' => 'Test User',
