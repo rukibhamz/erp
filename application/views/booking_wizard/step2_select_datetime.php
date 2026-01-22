@@ -246,6 +246,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let recurringPattern = '';
     let recurringEndDate = '';
     
+    // Today's date for comparing slot dates
+    const todayDate = new Date().toISOString().split('T')[0];
+    
     // Cache for slots data
     let currentSlotsData = [];
 
@@ -815,7 +818,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 data-end="${endDbStr}"
                                 data-date="${slot.date}"
                                 style="min-height: 60px;">
-                            <small class="d-block text-muted">${slot.date === selectedDate ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
+                            <small class="d-block text-muted">${slot.date === todayDate ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
                             <span class="fw-bold">${slot.display.split('-')[0]} - ${endDisplay}</span>
                             <div class="small text-success">${selectedDuration} Hour${selectedDuration > 1 ? 's' : ''}</div>
                         </button>
@@ -847,7 +850,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                      data-date="${slot.date}"
                                      data-duration="1"
                                      style="min-height: 60px;">
-                                 <small class="d-block text-muted">${slot.date === selectedDate ? 'Available' : new Date(slot.date).toLocaleDateString()}</small>
+                                 <small class="d-block text-muted">${slot.date === todayDate ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
                                  <span class="fw-bold">${slot.display.split('-')[0]} - ${endDisplay}</span>
                                  <div class="small text-info">1 Hour</div>
                              </button>

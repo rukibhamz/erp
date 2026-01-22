@@ -493,30 +493,78 @@
 
 /* ============================================
    BUTTON OUTLINE FIX - Ensure visible text
+   Critical: Override Bootstrap & theme defaults
    ============================================ */
-.btn-outline-secondary {
-    color: #6c757d !important;
+
+/* Primary fix for btn-outline-secondary - visible on all backgrounds */
+.btn-outline-secondary,
+.btn.btn-outline-secondary,
+button.btn-outline-secondary,
+a.btn-outline-secondary,
+.card .btn-outline-secondary,
+.card-header .btn-outline-secondary,
+.modal .btn-outline-secondary,
+.d-flex .btn-outline-secondary,
+.d-grid .btn-outline-secondary,
+[data-theme="light"] .btn-outline-secondary,
+[data-theme="dark"] .btn-outline-secondary {
+    color: #5c636a !important;
     border-color: #6c757d !important;
-    background-color: transparent;
+    background-color: transparent !important;
 }
 
 .btn-outline-secondary:hover,
-.btn-outline-secondary:focus {
+.btn-outline-secondary:focus,
+.btn-outline-secondary:active,
+.btn.btn-outline-secondary:hover,
+.btn.btn-outline-secondary:focus,
+button.btn-outline-secondary:hover,
+a.btn-outline-secondary:hover {
     color: #ffffff !important;
-    background-color: #6c757d !important;
+    background-color: #5c636a !important;
+    border-color: #565e64 !important;
+}
+
+/* Small variant */
+.btn-sm.btn-outline-secondary,
+.btn-outline-secondary.btn-sm {
+    color: #5c636a !important;
     border-color: #6c757d !important;
 }
 
+.btn-sm.btn-outline-secondary:hover,
+.btn-outline-secondary.btn-sm:hover {
+    color: #ffffff !important;
+    background-color: #5c636a !important;
+}
+
 /* Fix for btn-outline-light visibility on light backgrounds */
-.btn-outline-light {
+.btn-outline-light,
+.btn.btn-outline-light {
     color: #212529 !important;
     border-color: #dee2e6 !important;
-    background-color: transparent;
+    background-color: transparent !important;
 }
 
 .btn-outline-light:hover,
-.btn-outline-light:focus {
+.btn-outline-light:focus,
+.btn.btn-outline-light:hover {
     color: #212529 !important;
     background-color: #f8f9fa !important;
     border-color: #dee2e6 !important;
+}
+
+/* Fix for btn-outline-dark if needed */
+.btn-outline-dark,
+.btn.btn-outline-dark {
+    color: #212529 !important;
+    border-color: #212529 !important;
+    background-color: transparent !important;
+}
+
+.btn-outline-dark:hover,
+.btn-outline-dark:focus {
+    color: #ffffff !important;
+    background-color: #212529 !important;
+    border-color: #212529 !important;
 }
