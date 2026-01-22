@@ -388,8 +388,11 @@ document.addEventListener('DOMContentLoaded', function() {
             options += '<option value="12">12 Hours</option>';
             options += '<option value="24">Full Day (24 Hours)</option>';
         } else if (type === 'multi_day' || type === 'weekly') {
-            // Multi-day and weekly bookings - allow selecting hours per day
+            // Multi-day and weekly bookings - allow selecting hours per day (1 hour upward)
             durationContainer.style.display = 'block';
+            options += '<option value="1">1 Hour/day</option>';
+            options += '<option value="2">2 Hours/day</option>';
+            options += '<option value="3">3 Hours/day</option>';
             options += '<option value="4">4 Hours/day</option>';
             options += '<option value="6">6 Hours/day</option>';
             options += '<option value="8">8 Hours/day (Full Business Day)</option>';
@@ -504,6 +507,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Skip loading time slots for full-day bookings
         if (selectedDuration === 24 || selectedBookingType === 'full_day') {
             handleFullDayBooking();
+            return;
+        }
+        
+        // Skip loading time slots for multi-day and weekly bookings - use special handler
+        if (selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
+            handleMultiDayBooking();
             return;
         }
         
