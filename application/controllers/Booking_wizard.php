@@ -20,6 +20,8 @@ class Booking_wizard extends Base_Controller {
     private $spaceModel;
     private $userModel;
     private $paymentTransactionModel;
+    private $invoiceModel;
+    private $entityModel;
 
     public function __construct() {
         parent::__construct();
