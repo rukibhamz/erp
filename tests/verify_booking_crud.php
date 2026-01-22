@@ -73,7 +73,7 @@ try {
         'email' => 'test_' . uniqid() . '@example.com',
         'role' => 'customer',
         'status' => 'active',
-        'password_hash' => 'dummy'
+        'password' => '$2y$10$dummyhashforverificationpurposesonly'
     ];
     $customerId = $db->insert('users', $customerData);
     assert_true($customerId > 0, "Created Customer ID: $customerId");
