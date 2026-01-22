@@ -2050,14 +2050,17 @@ class AutoMigration {
         try {
             // Check if required tables exist
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}role_permissions'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 return false;
             }
             
             // Get manager role ID
             $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
-            $stmt->execute(['manager']);
-            $manager = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($stmt && $stmt->execute(['manager'])) {
+                $manager = $stmt->fetch(PDO::FETCH_ASSOC);
+            } else {
+                return false;
+            }
             
             if (!$manager) {
                 return false;
@@ -2071,28 +2074,32 @@ class AutoMigration {
                                WHERE rp.role_id = ?
                                AND p.module IN ('accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates', 'pos', 'properties', 'inventory', 'utilities')
                                AND p.permission = 'delete'";
-            $this->pdo->prepare($removeDeleteSql)->execute([$managerId]);
+            $stmt = $this->pdo->prepare($removeDeleteSql);
+            if ($stmt) $stmt->execute([$managerId]);
             
             // Remove settings access (admin only)
             $removeSettingsSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
                                  INNER JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
                                  WHERE rp.role_id = ?
                                  AND p.module = 'settings'";
-            $this->pdo->prepare($removeSettingsSql)->execute([$managerId]);
+            $stmt = $this->pdo->prepare($removeSettingsSql);
+            if ($stmt) $stmt->execute([$managerId]);
             
             // Remove users access (admin only)
             $removeUsersSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
                               INNER JOIN `{$this->prefix}permissions` p ON rp.permission_id = p.id
                               WHERE rp.role_id = ?
                               AND p.module = 'users'";
-            $this->pdo->prepare($removeUsersSql)->execute([$managerId]);
+            $stmt = $this->pdo->prepare($removeUsersSql);
+            if ($stmt) $stmt->execute([$managerId]);
             
             // Add reports read permission
             $addReportsSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
                              SELECT ?, p.id, NOW()
                              FROM `{$this->prefix}permissions` p
                              WHERE p.module = 'reports' AND p.permission = 'read'";
-            $this->pdo->prepare($addReportsSql)->execute([$managerId]);
+            $stmt = $this->pdo->prepare($addReportsSql);
+            if ($stmt) $stmt->execute([$managerId]);
             
             // Ensure ledger is read-only (ledger entries are generated, not created manually)
             $removeLedgerWriteSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
@@ -2100,7 +2107,8 @@ class AutoMigration {
                                     WHERE rp.role_id = ?
                                     AND p.module = 'ledger'
                                     AND p.permission IN ('write', 'create', 'update', 'delete')";
-            $this->pdo->prepare($removeLedgerWriteSql)->execute([$managerId]);
+            $stmt = $this->pdo->prepare($removeLedgerWriteSql);
+            if ($stmt) $stmt->execute([$managerId]);
             
             error_log("AutoMigration: Applied best-practice permissions for manager role");
             return true;
@@ -2118,14 +2126,17 @@ class AutoMigration {
         try {
             // Check if required tables exist
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}role_permissions'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 return false;
             }
             
             // Get accountant role ID
             $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
-            $stmt->execute(['accountant']);
-            $accountant = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($stmt && $stmt->execute(['accountant'])) {
+                $accountant = $stmt->fetch(PDO::FETCH_ASSOC);
+            } else {
+                return false;
+            }
             
             if (!$accountant) {
                 return false;
@@ -2142,7 +2153,8 @@ class AutoMigration {
             // - NO access to: settings, users, inventory, properties, bookings, pos, utilities
             
             // First, remove all existing permissions for clean slate
-            $this->pdo->prepare("DELETE FROM `{$this->prefix}role_permissions` WHERE role_id = ?")->execute([$accountantId]);
+            $stmt = $this->pdo->prepare("DELETE FROM `{$this->prefix}role_permissions` WHERE role_id = ?");
+            if ($stmt) $stmt->execute([$accountantId]);
             
             // Add accounting module permissions (read, write, create, update - no delete)
             $accountingModules = ['accounting', 'accounts', 'cash', 'receivables', 'payables', 'ledger', 'estimates'];
@@ -2152,7 +2164,8 @@ class AutoMigration {
                                FROM `{$this->prefix}permissions` p
                                WHERE p.module = ?
                                AND p.permission IN ('read', 'write', 'create', 'update')";
-                $this->pdo->prepare($addPermsSql)->execute([$accountantId, $module]);
+                $stmt = $this->pdo->prepare($addPermsSql);
+                if ($stmt) $stmt->execute([$accountantId, $module]);
             }
             
             // Add tax module permissions (accountants handle tax reporting)
@@ -2161,28 +2174,32 @@ class AutoMigration {
                          FROM `{$this->prefix}permissions` p
                          WHERE p.module = 'tax'
                          AND p.permission IN ('read', 'write', 'create', 'update')";
-            $this->pdo->prepare($addTaxSql)->execute([$accountantId]);
+            $stmt = $this->pdo->prepare($addTaxSql);
+            if ($stmt) $stmt->execute([$accountantId]);
             
             // Add reports read permission
             $addReportsSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
                              SELECT ?, p.id, NOW()
                              FROM `{$this->prefix}permissions` p
                              WHERE p.module = 'reports' AND p.permission = 'read'";
-            $this->pdo->prepare($addReportsSql)->execute([$accountantId]);
+            $stmt = $this->pdo->prepare($addReportsSql);
+            if ($stmt) $stmt->execute([$accountantId]);
             
             // Add dashboard read permission
             $addDashboardSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
                                SELECT ?, p.id, NOW()
                                FROM `{$this->prefix}permissions` p
                                WHERE p.module = 'dashboard' AND p.permission = 'read'";
-            $this->pdo->prepare($addDashboardSql)->execute([$accountantId]);
+            $stmt = $this->pdo->prepare($addDashboardSql);
+            if ($stmt) $stmt->execute([$accountantId]);
             
             // Add notifications read permission
             $addNotifSql = "INSERT IGNORE INTO `{$this->prefix}role_permissions` (`role_id`, `permission_id`, `created_at`)
                            SELECT ?, p.id, NOW()
                            FROM `{$this->prefix}permissions` p
                            WHERE p.module = 'notifications' AND p.permission = 'read'";
-            $this->pdo->prepare($addNotifSql)->execute([$accountantId]);
+            $stmt = $this->pdo->prepare($addNotifSql);
+            if ($stmt) $stmt->execute([$accountantId]);
             
             // Ledger should be read-only (entries are system-generated)
             $removeLedgerWriteSql = "DELETE rp FROM `{$this->prefix}role_permissions` rp
@@ -2190,7 +2207,8 @@ class AutoMigration {
                                     WHERE rp.role_id = ?
                                     AND p.module = 'ledger'
                                     AND p.permission IN ('write', 'create', 'update', 'delete')";
-            $this->pdo->prepare($removeLedgerWriteSql)->execute([$accountantId]);
+            $stmt = $this->pdo->prepare($removeLedgerWriteSql);
+            if ($stmt) $stmt->execute([$accountantId]);
             
             error_log("AutoMigration: Applied best-practice permissions for accountant role");
             return true;
