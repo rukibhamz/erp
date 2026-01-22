@@ -645,6 +645,24 @@ class Router {
                 error_log("Router: Settings payment-gateways route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
                 return;
             }
+            
+            // Handle settings/roles routes
+            if ($method === 'roles') {
+                $this->controller = 'Settings';
+                $this->method = 'roles';
+                $this->params = [];
+                error_log("Router: Settings roles route matched -> Controller: {$this->controller}, Method: {$this->method}");
+                return;
+            }
+            
+            // Handle settings/edit-role/ID routes
+            if ($method === 'edit-role' && isset($urlParts[2])) {
+                $this->controller = 'Settings';
+                $this->method = 'editRole';
+                $this->params = [intval($urlParts[2])];
+                error_log("Router: Settings edit-role route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+                return;
+            }
         }
         
         // Special handling for payment routes
