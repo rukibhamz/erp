@@ -1669,7 +1669,7 @@ class AutoMigration {
         try {
             // Check if table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}payment_transactions'");
-            $tableExists = $stmt->rowCount() > 0;
+            $tableExists = ($stmt && $stmt->rowCount() > 0);
             
             if (!$tableExists) {
                 // Create payment_transactions table
@@ -1749,7 +1749,7 @@ class AutoMigration {
         try {
             // Check if table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}transactions'");
-            if ($stmt->rowCount() == 0) {
+            if (!$stmt || $stmt->rowCount() == 0) {
                 return false; // Table doesn't exist yet, likely to be created by migration
             }
             
@@ -1761,7 +1761,7 @@ class AutoMigration {
             
             foreach ($columnsToAdd as $colName => $colDef) {
                 $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}transactions` LIKE '{$colName}'");
-                if ($stmt->rowCount() == 0) {
+                if ($stmt && $stmt->rowCount() == 0) {
                     try {
                         $this->pdo->exec("ALTER TABLE `{$this->prefix}transactions` ADD COLUMN `{$colName}` {$colDef}");
                         error_log("AutoMigration: Added {$colName} column to transactions table");
@@ -1868,7 +1868,7 @@ class AutoMigration {
     private function ensureBookingResourcesTable() {
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_resources'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_resources` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT,
                     `booking_id` INT(11) NOT NULL,
@@ -1902,7 +1902,7 @@ class AutoMigration {
     private function ensureBookingSlotsTable() {
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_slots'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_slots` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT,
                     `booking_id` INT(11) NOT NULL,
@@ -1934,7 +1934,7 @@ class AutoMigration {
     private function ensureBookingPaymentsTable() {
         try {
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_payments'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_payments` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT,
                     `booking_id` INT(11) NOT NULL,
@@ -1975,7 +1975,7 @@ class AutoMigration {
         try {
             // Check if roles table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}roles'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 error_log("AutoMigration: Roles table does not exist, skipping customer role creation");
                 return false;
             }
