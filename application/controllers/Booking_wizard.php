@@ -1135,14 +1135,22 @@ class Booking_wizard extends Base_Controller {
             $userId = $this->userModel->create($userData);
             
             if ($userId) {
-                // Send welcome email with account activation link
-                $token = $this->userModel->generatePasswordResetToken($userId);
-                
-                // Using the email helper function
-                require_once BASEPATH . '../application/helpers/email_helper.php';
-                
-                // Send guest welcome email (friendlier than password reset)
-                send_guest_welcome_email($email, $token, $name);
+                try {
+                    // Send welcome email with account activation link
+                    $token = $this->userModel->generatePasswordResetToken($userId);
+                    
+                    // Using the email helper function
+                    if (file_exists(BASEPATH . '../application/helpers/email_helper.php')) {
+                        require_once BASEPATH . '../application/helpers/email_helper.php';
+                        
+                        // Send guest welcome email (friendlier than password reset)
+                        if (function_exists('send_guest_welcome_email')) {
+                            send_guest_welcome_email($email, $token, $name);
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Guest user created but email failed: " . $e->getMessage());
+                }
                 
                 error_log("Created guest user for booking: $email (ID: $userId)");
                 return $userId;

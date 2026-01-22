@@ -173,13 +173,39 @@ class Notification_model extends Base_Model {
      */
     private function queueEmail($data) {
         try {
+            $status = 'pending';
+            $sentAt = null;
+            
+            // Try explicit immediate send if helper handles it
+            if (function_exists('send_email')) {
+                // Use HTML body if available, otherwise plain body
+                $message = $data['body_html'] ?? $data['body'];
+                if (send_email($data['to_email'], $data['subject'], $message, null, null, true)) {
+                    $status = 'sent';
+                    $sentAt = date('Y-m-d H:i:s');
+                }
+            } else {
+                // Helper might not be loaded yet, try loading it
+                if (file_exists(BASEPATH . '../application/helpers/email_helper.php')) {
+                    include_once BASEPATH . '../application/helpers/email_helper.php';
+                    if (function_exists('send_email')) {
+                        $message = $data['body_html'] ?? $data['body'];
+                        if (send_email($data['to_email'], $data['subject'], $message, null, null, true)) {
+                            $status = 'sent';
+                            $sentAt = date('Y-m-d H:i:s');
+                        }
+                    }
+                }
+            }
+
             return $this->db->insert('email_queue', [
                 'to_email' => $data['to_email'],
                 'to_name' => $data['to_name'] ?? null,
                 'subject' => $data['subject'],
                 'body' => $data['body'],
                 'body_html' => $data['body_html'] ?? null,
-                'status' => 'pending',
+                'status' => $status,
+                'sent_at' => $sentAt,
                 'created_at' => date('Y-m-d H:i:s')
             ]);
         } catch (Exception $e) {

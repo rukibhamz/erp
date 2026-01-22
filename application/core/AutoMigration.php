@@ -1628,6 +1628,7 @@ class AutoMigration {
             // List of columns to ensure exist with their definitions
             $columns = [
                 'customer_address' => "VARCHAR(500) NULL AFTER `customer_phone`",
+                'invoice_id' => "INT(11) NULL AFTER `customer_address`",
                 'duration_hours' => "DECIMAL(10,2) DEFAULT 0 AFTER `end_time`",
                 'number_of_guests' => "INT(11) DEFAULT 0 AFTER `duration_hours`",
                 'booking_type' => "ENUM('hourly','half_day','full_day','daily','multi_day','weekly') DEFAULT 'hourly' AFTER `number_of_guests`",

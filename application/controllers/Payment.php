@@ -429,6 +429,10 @@ class Payment extends Base_Controller {
             $this->cashAccountModel = $this->loadModel('Cash_account_model');
             $this->accountModel = $this->loadModel('Account_model');
             
+            // NEW: Load Invoice and Notification models
+            $this->invoiceModel = $this->loadModel('Invoice_model');
+            $this->notificationModel = $this->loadModel('Notification_model');
+            
             error_log("processPaymentSuccess: Processing payment type: " . $transaction['payment_type'] . " for ref: " . $transaction['reference_id']);
             
             if ($transaction['payment_type'] === 'booking_payment') {
@@ -464,14 +468,48 @@ class Payment extends Base_Controller {
                     ];
                     
                     // Update payment status based on balance
+                    $isFullPayment = false;
                     if ($newBalance <= 0) {
                         $updateData['payment_status'] = 'paid';
+                        $updateData['status'] = 'confirmed'; // Auto-confirm on full payment
+                        $isFullPayment = true;
                     } elseif ($newPaidAmount > 0) {
                         $updateData['payment_status'] = 'partial';
                     }
                     
                     $this->bookingModel->update($booking['id'], $updateData);
                     error_log("processPaymentSuccess: Updated booking - paid: $newPaidAmount, balance: $newBalance");
+                    
+                    // UPDATE INVOICE STATUS
+                    if ($this->invoiceModel) {
+                        $invoiceId = $booking['invoice_id'] ?? null;
+                        
+                        // If no invoice_id in booking, try to find by reference
+                        if (!$invoiceId) {
+                            $sql = "SELECT id FROM invoices WHERE reference_type = 'booking' AND reference_id = ?";
+                            $query = $this->db->query($sql, [$booking['id']]); // Use direct query if invoiceModel doesn't have search
+                            if ($query && $query->num_rows() > 0) {
+                                $inv = $query->row_array();
+                                $invoiceId = $inv['id'];
+                            }
+                        }
+                        
+                        if ($invoiceId) {
+                            $invoiceUpdate = [
+                                'status' => ($newBalance <= 0) ? 'paid' : 'partial',
+                                'amount_paid' => $newPaidAmount
+                            ];
+                            $this->invoiceModel->update($invoiceId, $invoiceUpdate);
+                            error_log("processPaymentSuccess: Updated linked invoice #$invoiceId");
+                        }
+                    }
+
+                    // SEND NOTIFICATION (EMAIL)
+                    if ($this->notificationModel) {
+                        // Send booking confirmation email
+                        $this->notificationModel->sendBookingConfirmation($booking['id'], $booking);
+                        error_log("processPaymentSuccess: Sent booking confirmation email");
+                    }
                     
                     // Create accounting entries - double-entry for payment received
                     try {
@@ -490,7 +528,6 @@ class Payment extends Base_Controller {
                                     'status' => 'posted',
                                     'created_by' => null
                                 ]);
-                                error_log("processPaymentSuccess: Created accounting entry for cash account");
                                 
                                 // Try to credit revenue account if exists
                                 if ($this->accountModel) {
@@ -512,7 +549,6 @@ class Payment extends Base_Controller {
                                                 'status' => 'posted',
                                                 'created_by' => null
                                             ]);
-                                            error_log("processPaymentSuccess: Created accounting entry for revenue account");
                                         }
                                     } catch (Exception $e) {
                                         error_log('Revenue account entry error: ' . $e->getMessage());
