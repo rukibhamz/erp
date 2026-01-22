@@ -473,22 +473,51 @@ class Payment extends Base_Controller {
                     $this->bookingModel->update($booking['id'], $updateData);
                     error_log("processPaymentSuccess: Updated booking - paid: $newPaidAmount, balance: $newBalance");
                     
-                    // Create accounting entry - credit to cash/bank account
+                    // Create accounting entries - double-entry for payment received
                     try {
-                        if ($this->cashAccountModel) {
+                        if ($this->cashAccountModel && $this->transactionModel) {
                             $defaultCashAccount = $this->cashAccountModel->getDefault();
-                            if ($defaultCashAccount && $this->transactionModel) {
+                            if ($defaultCashAccount) {
+                                // Debit cash account (cash increases)
                                 $this->transactionModel->create([
                                     'account_id' => $defaultCashAccount['id'],
-                                    'transaction_type' => 'credit',
-                                    'amount' => $transaction['amount'],
-                                    'description' => 'Online payment for booking: ' . ($booking['booking_number'] ?? $booking['id']),
+                                    'debit' => $transaction['amount'],
+                                    'credit' => 0,
+                                    'description' => 'Online payment received for booking: ' . ($booking['booking_number'] ?? $booking['id']),
                                     'reference_type' => 'booking_payment',
                                     'reference_id' => $paymentId,
                                     'transaction_date' => date('Y-m-d'),
+                                    'status' => 'posted',
                                     'created_by' => null
                                 ]);
                                 error_log("processPaymentSuccess: Created accounting entry for cash account");
+                                
+                                // Try to credit revenue account if exists
+                                if ($this->accountModel) {
+                                    try {
+                                        // Find revenue account for booking income
+                                        $revenueAccount = $this->accountModel->getByCode('4100'); // Sales Revenue
+                                        if (!$revenueAccount) {
+                                            $revenueAccount = $this->accountModel->getByCode('4000'); // Revenue
+                                        }
+                                        if ($revenueAccount) {
+                                            $this->transactionModel->create([
+                                                'account_id' => $revenueAccount['id'],
+                                                'debit' => 0,
+                                                'credit' => $transaction['amount'],
+                                                'description' => 'Booking revenue: ' . ($booking['booking_number'] ?? $booking['id']),
+                                                'reference_type' => 'booking_payment',
+                                                'reference_id' => $paymentId,
+                                                'transaction_date' => date('Y-m-d'),
+                                                'status' => 'posted',
+                                                'created_by' => null
+                                            ]);
+                                            error_log("processPaymentSuccess: Created accounting entry for revenue account");
+                                        }
+                                    } catch (Exception $e) {
+                                        error_log('Revenue account entry error: ' . $e->getMessage());
+                                    }
+                                }
                             }
                         }
                     } catch (Exception $e) {

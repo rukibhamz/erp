@@ -270,6 +270,13 @@ class AutoMigration {
             error_log("AutoMigration: Error ensuring payment_transactions table: " . $e->getMessage());
         }
         
+        // ALWAYS ensure transactions table has accounting columns
+        try {
+            $this->ensureTransactionsTableColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring transactions table columns: " . $e->getMessage());
+        }
+        
         // ALWAYS ensure payment_gateways table exists with Paystack as default
         try {
             $this->ensurePaymentGatewaysTable();
@@ -1725,10 +1732,55 @@ class AutoMigration {
                     }
                 }
             }
+    
+
             
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring payment_transactions table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure transactions table has debit/credit columns for accounting
+     */
+    private function ensureTransactionsTableColumns() {
+        try {
+            // Check if table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}transactions'");
+            if ($stmt->rowCount() == 0) {
+                return false; // Table doesn't exist yet, likely to be created by migration
+            }
+            
+            $columnsToAdd = [
+                'debit' => "DECIMAL(15,2) DEFAULT 0 AFTER `account_id`",
+                'credit' => "DECIMAL(15,2) DEFAULT 0 AFTER `debit`",
+                'status' => "VARCHAR(20) DEFAULT 'posted' AFTER `transaction_date`"
+            ];
+            
+            foreach ($columnsToAdd as $colName => $colDef) {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}transactions` LIKE '{$colName}'");
+                if ($stmt->rowCount() == 0) {
+                    try {
+                        $this->pdo->exec("ALTER TABLE `{$this->prefix}transactions` ADD COLUMN `{$colName}` {$colDef}");
+                        error_log("AutoMigration: Added {$colName} column to transactions table");
+                    } catch (Exception $e) {
+                        // Try without AFTER clause if that fails
+                        try {
+                            $defWithoutAfter = preg_replace('/ AFTER `[^`]+`/', '', $colDef);
+                            $this->pdo->exec("ALTER TABLE `{$this->prefix}transactions` ADD COLUMN `{$colName}` {$defWithoutAfter}");
+                            error_log("AutoMigration: Added {$colName} column (without position) to transactions table");
+                        } catch (Exception $e2) {
+                            error_log("AutoMigration: Could not add {$colName} to transactions: " . $e2->getMessage());
+                        }
+                    }
+                }
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring transactions table columns: " . $e->getMessage());
             return false;
         }
     }
