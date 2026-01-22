@@ -219,3 +219,81 @@ function validateFileUpload($file, $allowedTypes = [
     
     return ['valid' => true];
 }
+
+/**
+ * Set HTTP security headers
+ * 
+ * SECURITY: Sets essential security headers to prevent common attacks:
+ * - X-Content-Type-Options: Prevents MIME-type sniffing
+ * - X-Frame-Options: Prevents clickjacking
+ * - X-XSS-Protection: Enables browser XSS filter
+ * - Referrer-Policy: Controls referrer information
+ * - Content-Security-Policy: Restricts resource loading
+ * 
+ * @param bool $strictCsp Use strict CSP (may break some inline scripts)
+ * @return void
+ */
+function set_security_headers($strictCsp = false) {
+    // Prevent MIME type sniffing
+    header('X-Content-Type-Options: nosniff');
+    
+    // Prevent clickjacking - deny embedding in iframes
+    header('X-Frame-Options: DENY');
+    
+    // Enable browser XSS filter
+    header('X-XSS-Protection: 1; mode=block');
+    
+    // Control referrer information
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    
+    // Permissions Policy (formerly Feature-Policy)
+    header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+    
+    // Content Security Policy
+    if ($strictCsp) {
+        // Strict CSP - may break some functionality
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://js.paystack.co; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' https://api.paystack.co; frame-ancestors 'none';");
+    } else {
+        // Relaxed CSP - allows inline scripts/styles for compatibility
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://js.paystack.co; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; connect-src 'self' https://api.paystack.co; frame-ancestors 'none';");
+    }
+}
+
+/**
+ * Configure secure session settings
+ * 
+ * SECURITY: Sets session cookie parameters for maximum security:
+ * - HttpOnly: Prevents JavaScript access to session cookie
+ * - Secure: Only send cookie over HTTPS
+ * - SameSite: Prevents CSRF attacks via cross-origin requests
+ * 
+ * Call this BEFORE session_start()
+ * 
+ * @param bool $isHttps Whether the site uses HTTPS (auto-detect if null)
+ * @return void
+ */
+function configure_secure_session($isHttps = null) {
+    // Auto-detect HTTPS if not specified
+    if ($isHttps === null) {
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+                   || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+                   || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    }
+    
+    // Set secure session cookie parameters
+    session_set_cookie_params([
+        'lifetime' => 0,           // Session cookie (expires on browser close)
+        'path' => '/',             // Available site-wide
+        'domain' => '',            // Current domain only
+        'secure' => $isHttps,      // HTTPS only (when available)
+        'httponly' => true,        // No JavaScript access
+        'samesite' => 'Lax'        // Prevent CSRF (Lax allows top-level navigation)
+    ]);
+    
+    // Additional session security
+    if (function_exists('ini_set')) {
+        ini_set('session.use_strict_mode', 1);      // Reject uninitialized session IDs
+        ini_set('session.use_only_cookies', 1);     // Only use cookies for sessions
+        ini_set('session.cookie_httponly', 1);      // Redundant but ensures HttpOnly
+    }
+}

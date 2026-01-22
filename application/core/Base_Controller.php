@@ -35,6 +35,12 @@ class Base_Controller {
         // Load permission helper
         require_once BASEPATH . '../application/helpers/permission_helper.php';
         
+        // Load security helper (for security headers and session config)
+        require_once BASEPATH . '../application/helpers/security_helper.php';
+        
+        // Set security headers on all responses
+        set_security_headers();
+        
         // Load module helper
         require_once BASEPATH . '../application/helpers/module_helper.php';
         
