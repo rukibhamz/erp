@@ -394,7 +394,9 @@ document.addEventListener('DOMContentLoaded', function() {
             options += '<option value="2">2 Hours/day</option>';
             options += '<option value="3">3 Hours/day</option>';
             options += '<option value="4">4 Hours/day</option>';
+            options += '<option value="5">5 Hours/day</option>';
             options += '<option value="6">6 Hours/day</option>';
+            options += '<option value="7">7 Hours/day</option>';
             options += '<option value="8">8 Hours/day (Full Business Day)</option>';
             options += '<option value="12">12 Hours/day</option>';
             options += '<option value="24">Full Day (24 Hours/day)</option>';
@@ -679,36 +681,60 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get selected hours per day from duration
         const hoursPerDay = selectedDuration || 8;
         
-        // Show multi-day booking options
+        // Show multi-day booking options with dynamic time slots based on hours/day
+        // Generate time slot options based on selected hours
+        let timeSlotOptions = '';
+        const operatingStart = 8; // 8 AM
+        const operatingEnd = 22; // 10 PM
+        
+        if (hoursPerDay === 24) {
+            // Full day - single option
+            timeSlotOptions = `
+                <div class="col-12">
+                    <button type="button" class="btn btn-info w-100 multi-day-time-btn active" data-start="00:00" data-end="23:59">
+                        <strong>Full Day Access (24 Hours)</strong><br>
+                        <small>12:00 AM - 11:59 PM</small>
+                    </button>
+                </div>
+            `;
+        } else {
+            // Generate time slots based on hours per day
+            for (let startHour = operatingStart; startHour + hoursPerDay <= operatingEnd; startHour++) {
+                const endHour = startHour + hoursPerDay;
+                const startTime = `${String(startHour).padStart(2, '0')}:00`;
+                const endTime = `${String(endHour).padStart(2, '0')}:00`;
+                
+                // Format for display
+                const startDisplay = startHour > 12 ? `${startHour - 12} PM` : (startHour === 12 ? '12 PM' : `${startHour} AM`);
+                const endDisplay = endHour > 12 ? `${endHour - 12} PM` : (endHour === 12 ? '12 PM' : `${endHour} AM`);
+                
+                const isActive = startHour === 8 ? 'active' : ''; // Default to 8 AM start
+                const btnClass = startHour === 8 ? 'btn-info' : 'btn-outline-info';
+                
+                timeSlotOptions += `
+                    <div class="col-md-4 col-lg-3 mb-2">
+                        <button type="button" class="btn ${btnClass} w-100 multi-day-time-btn ${isActive}" 
+                                data-start="${startTime}" data-end="${endTime}">
+                            <strong>${startDisplay} - ${endDisplay}</strong><br>
+                            <small>${hoursPerDay} hour${hoursPerDay > 1 ? 's' : ''}/day</small>
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
         timeSlotsContainer.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-success mb-3">
                     <i class="bi bi-calendar-range"></i> <strong>Multi-Day Booking Summary</strong><br>
                     <strong>${dayCount} days</strong> from ${startDateObj.toLocaleDateString()} to ${endDateObj.toLocaleDateString()}<br>
-                    <strong>${hoursPerDay} hours</strong> per day
+                    <strong>${hoursPerDay} hour${hoursPerDay > 1 ? 's' : ''}</strong> per day
                 </div>
                 <div class="card mb-3">
                     <div class="card-body">
-                        <h6>Select Daily Operating Hours:</h6>
+                        <h6>Select Daily Time Slot:</h6>
                         <div class="row g-2">
-                            <div class="col-md-4">
-                                <button type="button" class="btn btn-outline-info w-100 multi-day-time-btn active" data-start="08:00" data-end="17:00">
-                                    <strong>Business Hours</strong><br>
-                                    <small>8 AM - 5 PM</small>
-                                </button>
-                            </div>
-                            <div class="col-md-4">
-                                <button type="button" class="btn btn-outline-info w-100 multi-day-time-btn" data-start="09:00" data-end="18:00">
-                                    <strong>Standard Hours</strong><br>
-                                    <small>9 AM - 6 PM</small>
-                                </button>
-                            </div>
-                            <div class="col-md-4">
-                                <button type="button" class="btn btn-outline-info w-100 multi-day-time-btn" data-start="00:00" data-end="23:59">
-                                    <strong>24 Hours</strong><br>
-                                    <small>Full Day Access</small>
-                                </button>
-                            </div>
+                            ${timeSlotOptions}
                         </div>
                     </div>
                 </div>
