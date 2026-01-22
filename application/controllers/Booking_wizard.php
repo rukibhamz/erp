@@ -943,12 +943,18 @@ class Booking_wizard extends Base_Controller {
                         ];
                         $this->paymentTransactionModel->create($transactionData);
                         
-                        $paymentResult = $paymentGateway->initialize(
-                            $initialPayment,
-                            'NGN',
-                            $customer,
-                            $metadata
-                        );
+                        // Wrap gateway call to prevent transaction rollback on API failure
+                        try {
+                            $paymentResult = $paymentGateway->initialize(
+                                $initialPayment,
+                                'NGN',
+                                $customer,
+                                $metadata
+                            );
+                        } catch (Exception $gwEx) {
+                            error_log("Booking_wizard: Gateway initialization exception: " . $gwEx->getMessage());
+                            $paymentResult = ['success' => false, 'message' => $gwEx->getMessage()];
+                        }
                         
                         if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
                             // Commit transaction and redirect to payment gateway

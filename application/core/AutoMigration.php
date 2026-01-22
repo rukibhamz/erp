@@ -1212,7 +1212,7 @@ class AutoMigration {
         try {
             // Check if accounts table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 return true; // Table doesn't exist yet
             }
             
@@ -1596,7 +1596,7 @@ class AutoMigration {
         try {
             // Check if bookings table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}bookings'");
-            if ($stmt->rowCount() == 0) {
+            if ($stmt && $stmt->rowCount() == 0) {
                 // Table doesn't exist yet, skip
                 return true;
             }
@@ -1630,7 +1630,7 @@ class AutoMigration {
             
             foreach ($columns as $columnName => $columnDef) {
                 $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}bookings` LIKE '{$columnName}'");
-                if ($stmt->rowCount() == 0) {
+                if ($stmt && $stmt->rowCount() == 0) {
                     try {
                         $this->pdo->exec("ALTER TABLE `{$this->prefix}bookings` ADD COLUMN `{$columnName}` {$columnDef}");
                         error_log("AutoMigration: Added {$columnName} column to bookings table");
@@ -1715,7 +1715,7 @@ class AutoMigration {
                 
                 foreach ($columnsToAdd as $colName => $colDef) {
                     $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}payment_transactions` LIKE '{$colName}'");
-                    if ($stmt->rowCount() == 0) {
+                    if ($stmt && $stmt->rowCount() == 0) {
                         try {
                             $this->pdo->exec("ALTER TABLE `{$this->prefix}payment_transactions` ADD COLUMN `{$colName}` {$colDef}");
                             error_log("AutoMigration: Added {$colName} column to payment_transactions table");
@@ -1792,7 +1792,7 @@ class AutoMigration {
         try {
             // Check if table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}payment_gateways'");
-            $tableExists = $stmt->rowCount() > 0;
+            $tableExists = ($stmt && $stmt->rowCount() > 0);
             
             if (!$tableExists) {
                 // Create payment_gateways table
@@ -1838,8 +1838,10 @@ class AutoMigration {
             } else {
                 // Table exists - ensure Paystack gateway exists
                 $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM `{$this->prefix}payment_gateways` WHERE gateway_code = ?");
-                $stmt->execute(['paystack']);
-                $count = $stmt->fetchColumn();
+                $count = 0;
+                if ($stmt && $stmt->execute(['paystack'])) {
+                    $count = $stmt->fetchColumn();
+                }
                 
                 if ($count == 0) {
                     // Insert Paystack
