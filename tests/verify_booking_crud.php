@@ -85,9 +85,11 @@ try {
     $bookingNumber = 'BKG-TEST-' . time();
     $createData = [
         'booking_number' => $bookingNumber,
-        'customer_id' => $customerId,
+        'created_by' => $customerId,
         'space_id' => $spaceId,
-        'resource_id' => $facilityId, // Maps to resource_id in bookings table usually
+        'facility_id' => $facilityId,
+        'customer_email' => $customerData['email'],
+        'customer_name' => 'Test User',
         'booking_date' => date('Y-m-d', strtotime('+5 days')),
         'start_time' => '10:00:00',
         'end_time' => '12:00:00',
@@ -108,7 +110,7 @@ try {
     assert_true(!empty($fetched), "Fetched booking data successfully");
     assert_true($fetched['booking_number'] === $bookingNumber, "Booking number matches");
     assert_true($fetched['status'] === 'pending', "Status is pending");
-    assert_true($fetched['customer_id'] == $customerId, "Customer ID matches");
+    assert_true($fetched['created_by'] == $customerId, "Created By ID matches");
     
     // 4. UPDATE BOOKING
     echo "\n > Testing UPDATE operation...\n";

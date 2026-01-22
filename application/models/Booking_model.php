@@ -151,14 +151,12 @@ class Booking_model extends Base_Model {
                     AND (
                         (booking_date = ? AND start_time < ? AND end_time > ?)
                         OR (booking_date = ? AND start_time < ? AND end_time > ?)
-                        OR (booking_date BETWEEN ? AND ?)
                     )";
             
             $params = [
                 $facilityId,
                 $bufferStart->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s'),
-                $bufferEnd->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s'),
-                $bufferStart->format('Y-m-d'), $bufferEnd->format('Y-m-d')
+                $bufferEnd->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s')
             ];
             
             if ($excludeBookingId) {
