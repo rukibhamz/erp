@@ -136,6 +136,31 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </div>
     <?php endif; ?>
+
+    <!-- Roles & Permissions (Admin Only) -->
+    <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-box bg-danger text-white me-3">
+                        <i class="bi bi-shield-lock-fill" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title mb-0">Roles & Permissions</h5>
+                        <p class="text-muted small mb-0">Access Control</p>
+                    </div>
+                </div>
+                <p class="card-text text-muted small">
+                    Manage user roles and permissions. Control what each role can access in the system.
+                </p>
+                <a href="<?= base_url('settings/roles') ?>" class="btn btn-primary w-100">
+                    <i class="bi bi-arrow-right"></i> Manage Roles
+                </a>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
 
 <style>
