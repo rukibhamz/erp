@@ -633,9 +633,16 @@ class Booking_wizard extends Base_Controller {
      * Finalize booking
      */
     public function finalize() {
+        $logFile = FCPATH . 'debug_log.txt';
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents($logFile, "[$timestamp] FINALIZE START\n", FILE_APPEND);
+        file_put_contents($logFile, "[$timestamp] POST: " . print_r($_POST, true) . "\n", FILE_APPEND);
+        file_put_contents($logFile, "[$timestamp] SESSION: " . print_r($_SESSION['booking_data'] ?? [], true) . "\n", FILE_APPEND);
+        
         error_log("=== FINALIZE START === Payment Method: " . ($_POST['payment_method'] ?? 'none') . " Gateway: " . ($_POST['gateway_code'] ?? 'none'));
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            file_put_contents($logFile, "[$timestamp] ERROR: Not POST request\n", FILE_APPEND);
             error_log("FINALIZE: Not POST request, redirecting to step1");
             $this->setFlashMessage('danger', 'Invalid request.');
             redirect('booking-wizard/step1');
@@ -645,6 +652,7 @@ class Booking_wizard extends Base_Controller {
         error_log("FINALIZE: Session data present: " . (empty($bookingData) ? 'NO' : 'YES'));
         
         if (empty($bookingData['resource_id']) || empty($bookingData['customer_email'])) {
+            file_put_contents($logFile, "[$timestamp] ERROR: Missing session data\n", FILE_APPEND);
             error_log("FINALIZE: Missing data - resource_id: " . ($bookingData['resource_id'] ?? 'null') . " email: " . ($bookingData['customer_email'] ?? 'null'));
             $this->setFlashMessage('danger', 'Please complete all steps.');
             redirect('booking-wizard/step1');
@@ -774,10 +782,22 @@ class Booking_wizard extends Base_Controller {
                 'created_by' => $createdById
             ];
             
-            $bookingId = $this->bookingModel->create($bookingRecord);
-            if (!$bookingId) {
-                throw new Exception('Failed to create booking');
+            // Log the record before insert
+            file_put_contents($logFile, "[$timestamp] INSERTING BOOKING: " . print_r($bookingRecord, true) . "\n", FILE_APPEND);
+            
+            if (empty($bookingRecord['booking_number'])) {
+                 file_put_contents($logFile, "[$timestamp] ERROR: Empty booking number\n", FILE_APPEND);
+                 throw new Exception('System failed to generate booking number');
             }
+
+            $bookingId = $this->bookingModel->create($bookingRecord);
+            
+            if (!$bookingId) {
+                file_put_contents($logFile, "[$timestamp] ERROR: Model create returned false\n", FILE_APPEND);
+                throw new Exception('Failed to create booking - Database Insert Failed');
+            }
+            
+            file_put_contents($logFile, "[$timestamp] SUCCESS: Created Booking ID: $bookingId\n", FILE_APPEND);
             
             // Create booking resources (optional - may fail if table doesn't exist)
             try {
@@ -999,6 +1019,11 @@ class Booking_wizard extends Base_Controller {
                 }
             }
             error_log('Booking_wizard finalize error: ' . $e->getMessage());
+            
+            $logFile = FCPATH . 'debug_log.txt';
+            $timestamp = date('Y-m-d H:i:s');
+            file_put_contents($logFile, "[$timestamp] EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+            
             $this->setFlashMessage('danger', 'Failed to create booking: ' . $e->getMessage());
             redirect('booking-wizard/step5');
         }
