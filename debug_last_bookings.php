@@ -71,6 +71,7 @@ function dumpTable($pdo, $tableName) {
 // Check probable tables
 dumpTable($pdo, 'erp_space_bookings');
 dumpTable($pdo, 'erp_bookings');
+dumpTable($pdo, 'erp_invoices'); // Check invoices too
 
 // Check MAX ID
 echo "<h3>Check IDs</h3>";

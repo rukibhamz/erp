@@ -241,10 +241,10 @@ class Facility_model extends Base_Model {
                  JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                  LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` f ON s.facility_id = f.id
                  LEFT JOIN `" . $this->db->getPrefix() . "bookable_config` bc ON s.id = bc.space_id
-                 WHERE (s.facility_id = ? OR f.id = ?)
+                 WHERE (s.facility_id = ? OR f.id = ? OR s.id = ?)
                  AND s.is_bookable = 1
                  AND s.operational_status = 'active'",
-                [$id, $id]
+                [$id, $id, $id]
             );
             
             if ($space) {
