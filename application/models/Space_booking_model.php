@@ -149,7 +149,7 @@ class Space_booking_model extends Base_Model {
                         p.property_name as location_name
                  FROM `" . $this->db->getPrefix() . $this->table . "` sb
                  LEFT JOIN `" . $this->db->getPrefix() . "tenants` t ON sb.tenant_id = t.id
-                 JOIN `" . $this->db->getPrefix() . "spaces` s ON sb.space_id = s.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON sb.space_id = s.id
                  LEFT JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                  ORDER BY sb.booking_date DESC, sb.start_time DESC"
             );
