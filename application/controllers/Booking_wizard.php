@@ -633,17 +633,13 @@ class Booking_wizard extends Base_Controller {
      * Finalize booking
      */
     public function finalize() {
-        $logFile = ROOTPATH . 'debug_log.txt';
+        $logFile = ROOTPATH . 'debug_wizard_log.txt';
         $timestamp = date('Y-m-d H:i:s');
         file_put_contents($logFile, "[$timestamp] FINALIZE START\n", FILE_APPEND);
-        file_put_contents($logFile, "[$timestamp] POST: " . print_r($_POST, true) . "\n", FILE_APPEND);
-        file_put_contents($logFile, "[$timestamp] SESSION: " . print_r($_SESSION['booking_data'] ?? [], true) . "\n", FILE_APPEND);
-        
-        error_log("=== FINALIZE START === Payment Method: " . ($_POST['payment_method'] ?? 'none') . " Gateway: " . ($_POST['gateway_code'] ?? 'none'));
+        file_put_contents($logFile, "[$timestamp] DATA: " . print_r($_SESSION['booking_data'] ?? [], true) . "\n", FILE_APPEND);
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             file_put_contents($logFile, "[$timestamp] ERROR: Not POST request\n", FILE_APPEND);
-            error_log("FINALIZE: Not POST request, redirecting to step1");
             $this->setFlashMessage('danger', 'Invalid request.');
             redirect('booking-wizard/step1');
         }
@@ -793,7 +789,7 @@ class Booking_wizard extends Base_Controller {
             $bookingId = $this->bookingModel->create($bookingRecord);
             
             if (!$bookingId) {
-                file_put_contents($logFile, "[$timestamp] ERROR: Model create returned false\n", FILE_APPEND);
+                file_put_contents($logFile, "[$timestamp] ERROR: Model create returned false (Insert Failed)\n", FILE_APPEND);
                 throw new Exception('Failed to create booking - Database Insert Failed');
             }
             
@@ -1001,6 +997,7 @@ class Booking_wizard extends Base_Controller {
             // Only commit if transaction is still active
             if ($pdo->inTransaction()) {
                 $pdo->commit();
+                file_put_contents($logFile, "[$timestamp] TRANSACTION COMMITTED\n", FILE_APPEND);
             }
             
             // Clear booking data from session
@@ -1013,6 +1010,7 @@ class Booking_wizard extends Base_Controller {
             if (isset($pdo) && $pdo->inTransaction()) {
                 try {
                     $pdo->rollBack();
+                    file_put_contents($logFile, "[$timestamp] TRANSACTION ROLLED BACK\n", FILE_APPEND);
                 } catch (Exception $rollbackException) {
                     // Transaction might already be finished
                     error_log('Rollback note: ' . $rollbackException->getMessage());
@@ -1020,7 +1018,7 @@ class Booking_wizard extends Base_Controller {
             }
             error_log('Booking_wizard finalize error: ' . $e->getMessage());
             
-            $logFile = ROOTPATH . 'debug_log.txt';
+            $logFile = ROOTPATH . 'debug_wizard_log.txt';
             $timestamp = date('Y-m-d H:i:s');
             file_put_contents($logFile, "[$timestamp] EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
             
