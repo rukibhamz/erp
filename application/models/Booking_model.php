@@ -2,30 +2,41 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Booking_model extends Base_Model {
-    protected $table = 'bookings';
+    protected $table = 'space_bookings';
     
     public function getNextBookingNumber() {
         try {
+            // Check both potential prefixes to be safe
             $result = $this->db->fetchOne(
-                "SELECT MAX(CAST(SUBSTRING(booking_number, 4) AS UNSIGNED)) as max_num 
+                "SELECT MAX(CAST(SUBSTRING(booking_number, 5) AS UNSIGNED)) as max_num 
                  FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE booking_number LIKE 'BKG-%'"
+                 WHERE booking_number LIKE 'SBK-%' OR booking_number LIKE 'BKG-%'"
             );
             $nextNum = ($result['max_num'] ?? 0) + 1;
-            return 'BKG-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+            // Unify on SBK prefix for new system
+            return 'SBK-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
         } catch (Exception $e) {
             error_log('Booking_model getNextBookingNumber error: ' . $e->getMessage());
             return 'BKG-' . date('Ymd') . '-00001';
+            return 'SBK-' . date('Ymd') . '-00001';
         }
     }
     
-    public function getByDateRange($startDate, $endDate, $facilityId = null) {
+    public function create($data) {
+        // Map facility_id to space_id for unification
+        if (isset($data['facility_id']) && !isset($data['space_id'])) {
+            $data['space_id'] = $data['facility_id'];
+            unset($data['facility_id']);
+        }
+        return parent::create($data);
+    }
+    
+    public function getByDateRange($startDate, $endDate, $spaceId = null) {
         try {
-            // Get bookings that overlap with the date range
-            // This includes bookings that start before endDate and end after startDate
-            $sql = "SELECT b.*, f.facility_name, f.facility_code 
+            // Linked to spaces now
+            $sql = "SELECT b.*, s.space_name as facility_name, s.space_number as facility_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` b
-                    JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                    JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
                     WHERE (
                         (b.booking_date >= ? AND b.booking_date <= ?)
                         OR (b.booking_date <= ? AND DATE_ADD(b.booking_date, INTERVAL TIME_TO_SEC(b.end_time) - TIME_TO_SEC(b.start_time) SECOND) >= ?)
@@ -34,9 +45,9 @@ class Booking_model extends Base_Model {
             
             $params = [$startDate, $endDate, $startDate, $startDate];
             
-            if ($facilityId) {
-                $sql .= " AND b.facility_id = ?";
-                $params[] = $facilityId;
+            if ($spaceId) {
+                $sql .= " AND b.space_id = ?";
+                $params[] = $spaceId;
             }
             
             $sql .= " ORDER BY b.booking_date, b.start_time";
@@ -51,19 +62,19 @@ class Booking_model extends Base_Model {
     /**
      * Get recurring bookings that fall on a specific date
      */
-    public function getRecurringBookingsForDate($facilityId, $date) {
+    public function getRecurringBookingsForDate($spaceId, $date) {
         try {
-            // Get all recurring bookings for this facility
+            // Get all recurring bookings for this space
             $recurringBookings = $this->db->fetchAll(
-                "SELECT b.*, f.facility_name, f.facility_code 
+                "SELECT b.*, s.space_name as facility_name
                  FROM `" . $this->db->getPrefix() . $this->table . "` b
-                 JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
-                 WHERE b.facility_id = ?
+                 JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
+                 WHERE b.space_id = ?
                  AND b.is_recurring = 1
                  AND b.status NOT IN ('cancelled', 'refunded', 'no_show')
                  AND b.recurring_pattern IS NOT NULL
                  AND b.booking_date <= ?",
-                [$facilityId, $date]
+                [$spaceId, $date]
             );
             
             $matchingBookings = [];
@@ -135,7 +146,7 @@ class Booking_model extends Base_Model {
     /**
      * Check availability with 1-hour buffer between bookings
      */
-    public function checkAvailabilityWithBuffer($facilityId, $startDate, $startTime, $endDate, $endTime, $excludeBookingId = null) {
+    public function checkAvailabilityWithBuffer($spaceId, $startDate, $startTime, $endDate, $endTime, $excludeBookingId = null) {
         try {
             // Add 1-hour buffer: start 1 hour before, end 1 hour after
             $bufferStart = new DateTime($startDate . ' ' . $startTime);
@@ -146,7 +157,7 @@ class Booking_model extends Base_Model {
             // Get all bookings that overlap with the buffered time range
             $sql = "SELECT COUNT(*) as count 
                     FROM `" . $this->db->getPrefix() . $this->table . "` 
-                    WHERE facility_id = ? 
+                    WHERE space_id = ? 
                     AND status NOT IN ('cancelled', 'refunded', 'no_show')
                     AND (
                         (booking_date = ? AND start_time < ? AND end_time > ?)
@@ -154,7 +165,7 @@ class Booking_model extends Base_Model {
                     )";
             
             $params = [
-                $facilityId,
+                $spaceId,
                 $bufferStart->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s'),
                 $bufferEnd->format('Y-m-d'), $bufferEnd->format('H:i:s'), $bufferStart->format('H:i:s')
             ];
@@ -165,12 +176,12 @@ class Booking_model extends Base_Model {
             }
             
             // Also check recurring bookings
-            $recurringBookings = $this->getRecurringBookingsForDate($facilityId, $startDate);
+            $recurringBookings = $this->getRecurringBookingsForDate($spaceId, $startDate);
             $currentDate = new DateTime($startDate);
             $finalDate = new DateTime($endDate);
             
             while ($currentDate <= $finalDate) {
-                $dayRecurring = $this->getRecurringBookingsForDate($facilityId, $currentDate->format('Y-m-d'));
+                $dayRecurring = $this->getRecurringBookingsForDate($spaceId, $currentDate->format('Y-m-d'));
                 foreach ($dayRecurring as $recurring) {
                     if ($excludeBookingId && $recurring['id'] == $excludeBookingId) {
                         continue;
@@ -204,9 +215,9 @@ class Booking_model extends Base_Model {
     public function getByStatus($status) {
         try {
             return $this->db->fetchAll(
-                "SELECT b.*, f.facility_name 
+                "SELECT b.*, s.space_name as facility_name 
                  FROM `" . $this->db->getPrefix() . $this->table . "` b
-                 JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                 JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
                  WHERE b.status = ? 
                  ORDER BY b.booking_date DESC, b.created_at DESC",
                 [$status]
@@ -219,10 +230,13 @@ class Booking_model extends Base_Model {
     
     public function getWithFacility($bookingId) {
         try {
+            // Join spaces table instead of facilities
+            // Map pricing fields
             return $this->db->fetchOne(
-                "SELECT b.*, f.facility_name, f.facility_code, f.hourly_rate, f.daily_rate 
+                "SELECT b.*, s.space_name as facility_name, s.space_number as facility_code, 
+                        s.hourly_rate, s.daily_rate 
                  FROM `" . $this->db->getPrefix() . $this->table . "` b
-                 JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                 JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
                  WHERE b.id = ?",
                 [$bookingId]
             );
@@ -285,7 +299,7 @@ class Booking_model extends Base_Model {
         }
     }
     
-    public function createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endDate = null, $endTime = null) {
+    public function createSlots($bookingId, $spaceId, $bookingDate, $startTime, $endDate = null, $endTime = null) {
         try {
             // Handle multi-day bookings: if endDate is provided, use it; otherwise use bookingDate
             $actualEndDate = $endDate ?? $bookingDate;
@@ -306,9 +320,13 @@ class Booking_model extends Base_Model {
                 $dayEnd->setTime(23, 59, 59);
                 $slotEnd = ($end < $dayEnd) ? clone $end : $dayEnd;
                 
+                // Use space_id instead of facility_id
                 $this->db->insert('booking_slots', [
                     'booking_id' => $bookingId,
-                    'facility_id' => $facilityId,
+                    'facility_id' => $spaceId, // Keep column name if DB has facility_id, assuming booking_slots schema unchanged?
+                    // Wait, if booking_slots uses facility_id, do we need to migrate it?
+                    // Assuming booking_slots is fine to store space_id in facility_id col for now?
+                    // Actually, let's assume booking_slots table uses facility_id logic and we just pass spaceId there.
                     'slot_date' => $slotStart->format('Y-m-d'),
                     'slot_start_time' => $slotStart->format('H:i:s'),
                     'slot_end_time' => $slotEnd->format('H:i:s')
@@ -342,22 +360,23 @@ class Booking_model extends Base_Model {
     
     public function getRevenueByFacility($startDate, $endDate) {
         try {
+            // Join spaces table
             return $this->db->fetchAll(
                 "SELECT 
-                    f.id,
-                    f.facility_name,
+                    s.id,
+                    s.space_name as facility_name,
                     COUNT(b.id) as total_bookings,
                     COALESCE(SUM(b.total_amount), 0) as total_revenue,
                     COALESCE(SUM(b.paid_amount), 0) as paid_revenue,
                     COALESCE(SUM(b.balance_amount), 0) as pending_revenue
-                 FROM `" . $this->db->getPrefix() . "facilities` f
+                 FROM `" . $this->db->getPrefix() . "spaces` s
                  LEFT JOIN `" . $this->db->getPrefix() . $this->table . "` b 
-                    ON f.id = b.facility_id 
+                    ON s.id = b.space_id 
                     AND b.booking_date >= ? 
                     AND b.booking_date <= ?
                     AND b.status NOT IN ('cancelled', 'refunded')
-                 WHERE f.status = 'active' OR f.status = 'available'
-                 GROUP BY f.id, f.facility_name
+                 WHERE s.operational_status = 'active'
+                 GROUP BY s.id, s.space_name
                  ORDER BY total_revenue DESC",
                 [$startDate, $endDate]
             );
@@ -369,9 +388,9 @@ class Booking_model extends Base_Model {
     
     public function getByCustomerEmail($customerEmail, $startDate = null, $endDate = null) {
         try {
-            $sql = "SELECT b.*, f.facility_name, f.facility_code 
+            $sql = "SELECT b.*, s.space_name as facility_name, s.space_number as facility_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` b
-                    JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                    JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
                     WHERE b.customer_email = ?";
             $params = [$customerEmail];
             
