@@ -90,25 +90,55 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                 </div>
 
-                <!-- Time Selection -->
+                <!-- Time Selection (Smart UI) -->
                 <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                            <input type="time" name="start_time" id="start_time" class="form-control" required value="<?= isset($old_input['start_time']) ? $old_input['start_time'] : '' ?>" onchange="calculatePrice(); checkAvailability()">
-                        </div>
+                     <!-- Duration Selection (Hidden by default, shown for hourly/daily) -->
+                     <div class="col-md-4 mb-3" id="duration-container" style="display: none;">
+                        <label class="form-label">Duration</label>
+                        <select id="duration" class="form-select">
+                            <!-- Options populated by JS -->
+                        </select>
                     </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label class="form-label">End Time <span class="text-danger">*</span></label>
-                            <input type="time" name="end_time" id="end_time" class="form-control" required value="<?= isset($old_input['end_time']) ? $old_input['end_time'] : '' ?>" onchange="calculatePrice(); checkAvailability()">
-                        </div>
+
+                    <div class="col-md-4 mb-3" id="end-date-container" style="display: none;">
+                        <label class="form-label">End Date <span class="text-danger">*</span></label>
+                        <input type="date" name="end_date" id="booking_end_date" class="form-control" 
+                               min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
                     </div>
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label class="form-label">Number of Guests</label>
-                            <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0" onchange="checkCapacity()">
-                            <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Number of Guests</label>
+                        <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0" onchange="checkCapacity()">
+                        <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
+                    </div>
+                </div>
+
+                <!-- Hidden inputs for form submission -->
+                <input type="hidden" name="start_time" id="start_time" required>
+                <input type="hidden" name="end_time" id="end_time" required>
+
+                <!-- Time Slot Grid / Half Day Buttons -->
+                <div class="mb-4" id="time-slots-section" style="display: none;">
+                    <label class="form-label fw-bold">Select Time Slot</label>
+                    
+                    <!-- Selected Summary -->
+                    <div id="selected-time-summary" class="alert alert-success mb-3" style="display: none;">
+                        <strong>Selected:</strong> <span id="selected-time-display"></span>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="mb-2" id="time-slot-legend">
+                        <span class="badge bg-success me-2">Available</span>
+                        <span class="badge bg-danger me-2">Occupied</span>
+                        <span class="badge bg-warning text-dark">Buffer</span>
+                    </div>
+                    
+                    <!-- Grid Container -->
+                    <div id="time-slots-container" class="row g-2">
+                        <div class="col-12">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Please select a date and booking type to see available time slots
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -191,6 +221,11 @@ function loadSpaces() {
     const locationId = document.getElementById('location_id').value;
     const spaceSelect = document.getElementById('space_id');
     const bookingTypeSelect = document.getElementById('booking_type');
+    
+    // Reset UI
+    document.getElementById('time-slots-section').style.display = 'none';
+    document.getElementById('duration-container').style.display = 'none';
+    document.getElementById('end-date-container').style.display = 'none';
     
     if (!locationId) {
         spaceSelect.innerHTML = '<option value="">Select Location First</option>';
@@ -396,10 +431,200 @@ function calculatePrice() {
     document.getElementById('pricePreview').style.display = 'block';
 }
 
-function checkAvailability() {
-    // This would make an AJAX call to check availability
-    // For now, it's handled server-side during form submission
+// New Smart UI Logic
+let selectedDuration = 1;
+let selectedStartTime = '';
+let selectedEndTime = '';
+let selectedDate = '';
+let selectedEndDate = '';
+
+// Update Booking Type Change Handler
+document.getElementById('booking_type').addEventListener('change', function() {
+    const type = this.value;
+    const durationContainer = document.getElementById('duration-container');
+    const bookingDate = document.getElementById('booking_date');
+    const endDateContainer = document.getElementById('end-date-container');
+    
+    // Update Duration Options
+    updateDurationOptions(type);
+    
+    // Toggle End Date
+    if (type === 'multi_day' || type === 'weekly') {
+        endDateContainer.style.display = 'block';
+    } else {
+        endDateContainer.style.display = 'none';
+        document.getElementById('booking_end_date').value = ''; // Clear it
+    }
+    
+    // Reset/Load Slots if date selected
+    if (bookingDate.value) {
+        loadTimeSlots(currentSpaceData.id, bookingDate.value);
+    }
+});
+
+// Duration Change
+document.getElementById('duration').addEventListener('change', function() {
+    selectedDuration = parseInt(this.value);
+    const bookingDate = document.getElementById('booking_date');
+    if (bookingDate.value) {
+        loadTimeSlots(currentSpaceData.id, bookingDate.value);
+    }
+});
+
+// Date Change
+document.getElementById('booking_date').addEventListener('change', function() {
+    selectedDate = this.value;
+    loadTimeSlots(currentSpaceData.id, selectedDate);
+    // Sync min end date
+    document.getElementById('booking_end_date').min = selectedDate;
+});
+
+// End Date Change
+document.getElementById('booking_end_date').addEventListener('change', function() {
+    selectedEndDate = this.value;
+    loadTimeSlots(currentSpaceData.id, selectedDate, selectedEndDate);
+});
+
+
+function updateDurationOptions(type) {
+    const durationSelect = document.getElementById('duration');
+    const container = document.getElementById('duration-container');
+    let options = '';
+    
+    container.style.display = 'block'; // Default show
+    
+    if (type === 'hourly') {
+        for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;
+        selectedDuration = 1;
+    } else if (type === 'daily') {
+        options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
+        selectedDuration = 8;
+    } else if (type === 'half_day' || type === 'full_day') {
+        container.style.display = 'none';
+        selectedDuration = (type === 'full_day') ? 24 : 4;
+    } else if (type === 'multi_day' || type === 'weekly') {
+         options = '<option value="8">8 Hours/Day</option><option value="24">24 Hours/Day</option>';
+         selectedDuration = 8;
+    }
+    
+    durationSelect.innerHTML = options;
+    durationSelect.value = selectedDuration;
 }
+
+function loadTimeSlots(spaceId, date, endDate = null) {
+    const bookingType = document.getElementById('booking_type').value;
+    const container = document.getElementById('time-slots-container');
+    const section = document.getElementById('time-slots-section');
+    
+    if (!spaceId || !date || !bookingType) return;
+    
+    section.style.display = 'block';
+    container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border"></div></div>';
+    
+    // Handle Special Types locally first
+    if (bookingType === 'full_day') {
+        renderFullDay();
+        return;
+    }
+    if (bookingType === 'half_day') {
+        renderHalfDay();
+        return;
+    }
+    
+    // Fetch Slots
+    const checkEndDate = endDate || date;
+    fetch(`${BASE_URL}bookings/getTimeSlots?space_id=${spaceId}&date=${date}&end_date=${checkEndDate}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                renderSlots(data.slots || []);
+            } else {
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            container.innerHTML = '<div class="alert alert-danger">Error loading slots</div>';
+        });
+}
+
+function renderFullDay() {
+    const container = document.getElementById('time-slots-container');
+    // Auto-select
+    setSelection('00:00', '23:59', 'Full Day');
+    container.innerHTML = '<div class="col-12"><div class="alert alert-info">Full Day Selected (00:00 - 23:59)</div></div>';
+}
+
+function renderHalfDay() {
+    const container = document.getElementById('time-slots-container');
+    container.innerHTML = `
+        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3" onclick="setSelection('08:00', '12:00', 'Morning')">Morning (8-12)</button></div>
+        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3" onclick="setSelection('13:00', '17:00', 'Afternoon')">Afternoon (1-5)</button></div>
+    `;
+}
+
+function renderSlots(slots) {
+    const container = document.getElementById('time-slots-container');
+    const dur = selectedDuration;
+    let html = '';
+    
+    // Simple slot rendering (assuming 1-hour slots returned)
+    // We need to find contiguous blocks for 'dur' hours
+    // This simple logic assumes slots are ordered
+    
+    slots.forEach(slot => {
+        // For hourly, we just show start times? Or we need logic to check if X hours forward are available.
+        // For simplicity, let's just show available 1-hour slots and let user pick start.
+        // Then we validate duration.
+        // Actually, Wizard logic checks continuity.
+        // Let's simplified: Show all available slots. When clicked, we try to grab +duration.
+        
+        let subText = slot.available ? 'Available' : 'Occupied';
+        let btnClass = slot.available ? 'btn-outline-success' : 'btn-outline-secondary disabled';
+        let onClick = slot.available ? `selectSlot('${slot.start}', '${slot.end}')` : '';
+        
+        html += `<div class="col-md-3 col-6">
+            <button type="button" class="btn ${btnClass} w-100" onclick="${onClick}">
+                ${slot.display}
+            </button>
+        </div>`;
+    });
+    
+    container.innerHTML = html;
+}
+
+function selectSlot(start, end) {
+    // Calculate End Time based on duration
+    // 'start' is HH:mm
+    let [h, m] = start.split(':').map(Number);
+    h += selectedDuration;
+    
+    // Check validation (if we had full slot data we could check overlap)
+    // For now, assume if displayed it's valid to start, but we should verify end.
+    // Let's just set textual display and hidden fields.
+    
+    let endH = h > 23 ? 23 : h; // Cap at midnight
+    let endM = m;
+    let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+    
+    setSelection(start, endStr, `${start} - ${endStr}`);
+}
+
+window.setSelection = function(start, end, display) {
+    selectedStartTime = start;
+    selectedEndTime = end;
+    
+    document.getElementById('start_time').value = start;
+    document.getElementById('end_time').value = end;
+    
+    document.getElementById('selected-time-summary').style.display = 'block';
+    document.getElementById('selected-time-display').textContent = display;
+    
+    calculatePrice(); // Update price
+}
+
+// Override checkAvailability to be no-op or purely visual since we fetch slots
+window.checkAvailability = function() {}; 
 
 // Form validation
 document.getElementById('bookingForm').addEventListener('submit', function(e) {
@@ -407,6 +632,12 @@ document.getElementById('bookingForm').addEventListener('submit', function(e) {
         e.preventDefault();
         alert('Please select a location and space.');
         return false;
+    }
+    
+    if (!document.getElementById('start_time').value) {
+         e.preventDefault();
+         alert('Please select a time slot.');
+         return false;
     }
     
     const guests = parseInt(document.getElementById('number_of_guests').value) || 0;

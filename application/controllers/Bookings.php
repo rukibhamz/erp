@@ -182,45 +182,68 @@ class Bookings extends Base_Controller {
      * AJAX endpoint to get availability for a specific date
      */
     public function getAvailabilityForDate() {
+        // ... (keep existing implementation or deprecate it, leaving as is for backward compat)
+        $this->getTimeSlots();
+    }
+
+    /**
+     * Get available and occupied time slots for a date (Smart UI)
+     */
+    public function getTimeSlots() {
         $this->requirePermission('bookings', 'read');
         
+        // Prevent partial output
+        while (ob_get_level()) { ob_end_clean(); }
         header('Content-Type: application/json');
         
+        $spaceId = intval($_GET['space_id'] ?? 0);
         $facilityId = intval($_GET['facility_id'] ?? 0);
-        $date = sanitize_input($_GET['date'] ?? date('Y-m-d'));
+        $rawDate = $_GET['date'] ?? '';
+        $rawEndDate = $_GET['end_date'] ?? $rawDate;
         
-        if (!$facilityId) {
-            echo json_encode(['success' => false, 'error' => 'Facility ID required']);
-            exit;
-        }
+        // Helper to normalize date
+        $normalizeDate = function($d) {
+            if (empty($d)) return '';
+            $dt = DateTime::createFromFormat('d/m/Y', $d);
+            if ($dt && $dt->format('d/m/Y') === $d) return $dt->format('Y-m-d');
+            $dt = DateTime::createFromFormat('Y-m-d', $d);
+            if ($dt && $dt->format('Y-m-d') === $d) return $dt->format('Y-m-d');
+            return date('Y-m-d', strtotime($d));
+        };
+
+        $date = $normalizeDate(sanitize_input($rawDate));
+        $endDate = $normalizeDate(sanitize_input($rawEndDate));
+        
+        if (empty($endDate)) $endDate = $date;
         
         try {
-            // Use centralized logic
-            $slotsData = $this->facilityModel->getAvailableTimeSlots($facilityId, $date);
-            
-            $availability = [];
-            // Combine and sort
-            $allSlots = array_merge($slotsData['slots'], $slotsData['occupied']);
-            usort($allSlots, function($a, $b) {
-                return strcmp($a['start'], $b['start']);
-            });
-
-            foreach ($allSlots as $slot) {
-                $availability[] = [
-                    'start_time' => $slot['start'],
-                    'end_time' => $slot['end'],
-                    'label' => $slot['display'],
-                    'available' => $slot['available']
-                ];
+            // If space_id provided, look it up
+            if ($spaceId) {
+                $space = $this->spaceModel->getWithProperty($spaceId);
+                if ($space) {
+                    $facilityId = $space['facility_id'];
+                    if (!$facilityId && $space['is_bookable']) {
+                        $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
+                    }
+                }
             }
             
-            echo json_encode(['success' => true, 'slots' => $availability]);
+            if (!$facilityId) {
+                 echo json_encode(['success' => false, 'message' => 'Facility/Space not found']);
+                 exit;
+            }
+
+            // Use centralized logic
+            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $endDate);
+            echo json_encode($result);
+            
         } catch (Exception $e) {
-            error_log('getAvailabilityForDate error: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            error_log('Bookings getTimeSlots error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
         exit;
     }
+
 
     public function create() {
         $this->requirePermission('bookings', 'create');
