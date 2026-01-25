@@ -633,7 +633,7 @@ class Booking_wizard extends Base_Controller {
      * Finalize booking
      */
     public function finalize() {
-        $logFile = FCPATH . 'debug_log.txt';
+        $logFile = ROOTPATH . 'debug_log.txt';
         $timestamp = date('Y-m-d H:i:s');
         file_put_contents($logFile, "[$timestamp] FINALIZE START\n", FILE_APPEND);
         file_put_contents($logFile, "[$timestamp] POST: " . print_r($_POST, true) . "\n", FILE_APPEND);
@@ -1020,7 +1020,7 @@ class Booking_wizard extends Base_Controller {
             }
             error_log('Booking_wizard finalize error: ' . $e->getMessage());
             
-            $logFile = FCPATH . 'debug_log.txt';
+            $logFile = ROOTPATH . 'debug_log.txt';
             $timestamp = date('Y-m-d H:i:s');
             file_put_contents($logFile, "[$timestamp] EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
             

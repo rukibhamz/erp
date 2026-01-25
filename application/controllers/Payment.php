@@ -37,7 +37,7 @@ class Payment extends Base_Controller {
             exit;
         }
 
-        $logFile = FCPATH . 'debug_log.txt';
+        $logFile = ROOTPATH . 'debug_log.txt';
         $timestamp = date('Y-m-d H:i:s');
         file_put_contents($logFile, "[$timestamp] PAYMENT INIT: " . print_r($_POST, true) . "\n", FILE_APPEND);
         
@@ -136,7 +136,7 @@ class Payment extends Base_Controller {
         $transactionRef = $_GET['reference'] ?? $_GET['tx_ref'] ?? $_GET['trxref'] ?? '';
         $gatewayCode = $_GET['gateway'] ?? 'paystack';
         
-        $logFile = FCPATH . 'debug_log.txt';
+        $logFile = ROOTPATH . 'debug_log.txt';
         $timestamp = date('Y-m-d H:i:s');
         file_put_contents($logFile, "[$timestamp] PAYMENT CALLBACK: Ref=$transactionRef Gateway=$gatewayCode\n", FILE_APPEND);
         
@@ -202,7 +202,7 @@ class Payment extends Base_Controller {
         $gatewayCode = $_GET['gateway'] ?? 
                       ($_SERVER['HTTP_X_GATEWAY'] ?? 'paystack');
         
-        $logFile = FCPATH . 'debug_log.txt';
+        $logFile = ROOTPATH . 'debug_log.txt';
         $timestamp = date('Y-m-d H:i:s');
         file_put_contents($logFile, "[$timestamp] WEBHOOK RECEIVED: Gateway=$gatewayCode\n", FILE_APPEND);
         
