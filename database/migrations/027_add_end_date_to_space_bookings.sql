@@ -1,5 +1,5 @@
 SET @dbname = DATABASE();
-SET @tablename = 'space_bookings';
+SET @tablename = 'erp_space_bookings';
 SET @columnname = 'end_date';
 SET @preparedStatement = (SELECT IF(
   (
