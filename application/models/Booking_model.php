@@ -17,7 +17,6 @@ class Booking_model extends Base_Model {
             return 'SBK-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
         } catch (Exception $e) {
             error_log('Booking_model getNextBookingNumber error: ' . $e->getMessage());
-            return 'BKG-' . date('Ymd') . '-00001';
             return 'SBK-' . date('Ymd') . '-00001';
         }
     }
