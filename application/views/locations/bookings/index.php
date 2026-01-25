@@ -35,12 +35,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </nav>
 </div>
 
-<?php if ($flash): ?>
-    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
-        <?= htmlspecialchars($flash['message']) ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
 <?php endif; ?>
+
+<!-- DEBUG DATA -->
+<div class="alert alert-info">
+    <h4>Debug Data</h4>
+    <pre><?= print_r($bookings, true) ?></pre>
+</div>
+<!-- END DEBUG -->
 
 <!-- Filters -->
 <div class="card shadow-sm mb-4">
