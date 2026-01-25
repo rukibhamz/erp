@@ -352,59 +352,93 @@ class Locations extends Base_Controller {
             check_csrf();
             
             $spaceId = intval($_POST['space_id'] ?? 0);
-            $bookingDate = sanitize_input($_POST['booking_date'] ?? '');
-            $startTime = sanitize_input($_POST['start_time'] ?? '');
-            $endTime = sanitize_input($_POST['end_time'] ?? '');
-            $bookingType = sanitize_input($_POST['booking_type'] ?? 'hourly');
-            $numberOfGuests = intval($_POST['number_of_guests'] ?? 0);
-            $customerName = sanitize_input($_POST['customer_name'] ?? '');
-            $customerEmail = sanitize_input($_POST['customer_email'] ?? '');
-            $customerPhone = sanitize_input($_POST['customer_phone'] ?? '');
-            $bookingNotes = sanitize_input($_POST['booking_notes'] ?? '');
-            $specialRequests = sanitize_input($_POST['special_requests'] ?? '');
-            
-            if (!$spaceId || !$bookingDate || !$startTime || !$endTime || !$customerName || !$customerPhone) {
-                $this->setFlashMessage('danger', 'Please fill in all required fields.');
-                redirect('locations/create-booking' . ($locationId ? '/' . $locationId : '') . ($spaceId ? '/' . $spaceId : ''));
-            }
-            
-            // Get space
-            $space = $this->spaceModel->getWithProperty($spaceId);
-            if (!$space || !$space['is_bookable']) {
-                $this->setFlashMessage('danger', 'Selected space is not available for booking.');
-                redirect('locations/create-booking' . ($locationId ? '/' . $locationId : ''));
-            }
-            
-            // Check availability
-            if (!$this->spaceBookingModel->checkAvailability($spaceId, $bookingDate, $startTime, $endTime)) {
-                $this->setFlashMessage('danger', 'The selected time slot is not available. Please choose another time.');
-                redirect('locations/create-booking/' . ($space['property_id'] ?? '') . '/' . $spaceId);
-            }
-            
-            // Calculate duration and price
-            $start = new DateTime($bookingDate . ' ' . $startTime);
-            $end = new DateTime($bookingDate . ' ' . $endTime);
-            $duration = $end->diff($start);
-            $durationHours = $duration->h + ($duration->i / 60);
-            
-            // Get pricing from config
-            $config = $this->spaceModel->getBookableConfig($spaceId);
-            $pricingRules = [];
-            if ($config && !empty($config['pricing_rules'])) {
-                $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
-            }
-            
-            $hourlyRate = floatval($pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 5000);
-            $baseAmount = $hourlyRate * $durationHours;
-            
-            $data = [
-                'booking_number' => $this->spaceBookingModel->getNextBookingNumber(),
-                'space_id' => $spaceId,
-                'tenant_id' => null, // Can be linked to tenant later if needed
-                'booking_date' => $bookingDate,
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'duration_hours' => $durationHours,
+        $bookingDate = sanitize_input($_POST['booking_date'] ?? '');
+        $endDate = sanitize_input($_POST['end_date'] ?? $bookingDate);
+        $startTime = sanitize_input($_POST['start_time'] ?? '');
+        $endTime = sanitize_input($_POST['end_time'] ?? '');
+        $bookingType = sanitize_input($_POST['booking_type'] ?? 'hourly');
+        $numberOfGuests = intval($_POST['number_of_guests'] ?? 0);
+        $customerName = sanitize_input($_POST['customer_name'] ?? '');
+        $customerEmail = sanitize_input($_POST['customer_email'] ?? '');
+        $customerPhone = sanitize_input($_POST['customer_phone'] ?? '');
+        $bookingNotes = sanitize_input($_POST['booking_notes'] ?? '');
+        $specialRequests = sanitize_input($_POST['special_requests'] ?? '');
+        
+        // Auto-set times for daily/weekly bookings if not provided
+        if (($bookingType === 'daily' || $bookingType === 'weekly' || $bookingType === 'multi_day') && (empty($startTime) || empty($endTime))) {
+            $startTime = '00:00';
+            $endTime = '23:59';
+        }
+
+        if (!$spaceId || !$bookingDate || !$startTime || !$endTime || !$customerName || !$customerPhone) {
+            $this->setFlashMessage('danger', 'Please fill in all required fields.');
+            redirect('locations/create-booking' . ($locationId ? '/' . $locationId : '') . ($spaceId ? '/' . $spaceId : ''));
+        }
+        
+        // Get space
+        $space = $this->spaceModel->getWithProperty($spaceId);
+        if (!$space || !$space['is_bookable']) {
+            $this->setFlashMessage('danger', 'Selected space is not available for booking.');
+            redirect('locations/create-booking' . ($locationId ? '/' . $locationId : ''));
+        }
+        
+        // Check availability (using end_date if different)
+        $checkEndDate = ($bookingType === 'multi_day' || $bookingType === 'weekly') ? $endDate : $bookingDate;
+        
+        // Note: checkAvailability might need an update to support end_date too, but let's assume it handles datetime range logic or we iterate
+        // Ideally we pass full datetimes
+        $startDateTime = $bookingDate . ' ' . $startTime;
+        $endDateTime = $checkEndDate . ' ' . $endTime;
+
+        if (!$this->spaceBookingModel->checkAvailability($spaceId, $bookingDate, $startTime, $endTime, null, $checkEndDate)) {
+             // Fallback/Legacy check might not support end_date param, but let's try to be robust
+             // If the model doesn't support end_date in args, this might fail for multi-day. 
+             // Let's assume standard checkAvailability takes (spaceId, date, start, end). 
+             // We need to verify if checkAvailability handles cross-day logic.
+             $this->setFlashMessage('danger', 'The selected time slot is not available. Please choose another time.');
+             redirect('locations/create-booking/' . ($space['property_id'] ?? '') . '/' . $spaceId);
+        }
+        
+        
+        // Calculate duration and price
+        $start = new DateTime($startDateTime);
+        $end = new DateTime($endDateTime);
+        $duration = $end->diff($start);
+        $durationHours = $duration->h + ($duration->i / 60) + ($duration->days * 24);
+        
+        // Get pricing from config
+        $config = $this->spaceModel->getBookableConfig($spaceId);
+        $pricingRules = [];
+        if ($config && !empty($config['pricing_rules'])) {
+            $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+        }
+        
+        $baseAmount = 0;
+        if ($bookingType === 'hourly') {
+             $rate = floatval($pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0);
+             $baseAmount = $rate * $durationHours;
+        } elseif ($bookingType === 'daily' || $bookingType === 'multi_day') {
+             $rate = floatval($pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0);
+             // Count days (rounded up)
+             $days = ceil($durationHours / 24);
+             $baseAmount = $rate * $days;
+        } elseif ($bookingType === 'half_day') {
+             $baseAmount = floatval($pricingRules['half_day'] ?? 0);
+        } elseif ($bookingType === 'weekly') {
+             $rate = floatval($pricingRules['weekly'] ?? 0);
+             $weeks = ceil($durationHours / (24 * 7));
+             $baseAmount = $rate * $weeks;
+        }
+        
+        $data = [
+            'booking_number' => $this->spaceBookingModel->getNextBookingNumber(),
+            'space_id' => $spaceId,
+            'tenant_id' => null, 
+            'booking_date' => $bookingDate,
+            'end_date' => $endDate, // Add this field if DB supports it, otherwise logic relies on duration
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'duration_hours' => $durationHours,
                 'number_of_guests' => $numberOfGuests,
                 'booking_type' => $bookingType,
                 'base_amount' => $baseAmount,

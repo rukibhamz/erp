@@ -23,20 +23,27 @@ class Space_booking_model extends Base_Model {
      * Check if a time slot is available for booking
      * Returns true if available, false if conflicting booking exists
      */
-    public function checkAvailability($spaceId, $bookingDate, $startTime, $endTime, $excludeBookingId = null) {
+    public function checkAvailability($spaceId, $bookingDate, $startTime, $endTime, $excludeBookingId = null, $checkEndDate = null) {
         try {
+            $endDate = $checkEndDate ?? $bookingDate;
+            
+            // Normalize dates/times for comparison
+            $startDateTime = $bookingDate . ' ' . $startTime;
+            $endDateTime = $endDate . ' ' . $endTime;
+            
+            // SQL to check for ANY overlap
+            // Overlap logic: (StartA < EndB) AND (EndA > StartB)
             $sql = "SELECT COUNT(*) as count 
                     FROM `" . $this->db->getPrefix() . $this->table . "` 
                     WHERE space_id = ? 
-                    AND booking_date = ? 
                     AND status NOT IN ('cancelled')
                     AND (
-                        (start_time < ? AND end_time > ?) OR
-                        (start_time < ? AND end_time > ?) OR
-                        (start_time >= ? AND end_time <= ?)
+                        CONCAT(booking_date, ' ', start_time) < ? 
+                        AND 
+                        CONCAT(COALESCE(end_date, booking_date), ' ', end_time) > ?
                     )";
             
-            $params = [$spaceId, $bookingDate, $endTime, $startTime, $startTime, $endTime, $startTime, $endTime];
+            $params = [$spaceId, $endDateTime, $startDateTime];
             
             if ($excludeBookingId) {
                 $sql .= " AND id != ?";
