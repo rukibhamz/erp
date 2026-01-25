@@ -36,6 +36,10 @@ class Payment extends Base_Controller {
             echo json_encode(['success' => false, 'message' => 'Invalid request']);
             exit;
         }
+
+        $logFile = FCPATH . 'debug_log.txt';
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents($logFile, "[$timestamp] PAYMENT INIT: " . print_r($_POST, true) . "\n", FILE_APPEND);
         
         try {
             $gatewayCode = sanitize_input($_POST['gateway_code'] ?? '');
@@ -132,7 +136,12 @@ class Payment extends Base_Controller {
         $transactionRef = $_GET['reference'] ?? $_GET['tx_ref'] ?? $_GET['trxref'] ?? '';
         $gatewayCode = $_GET['gateway'] ?? 'paystack';
         
+        $logFile = FCPATH . 'debug_log.txt';
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents($logFile, "[$timestamp] PAYMENT CALLBACK: Ref=$transactionRef Gateway=$gatewayCode\n", FILE_APPEND);
+        
         if (!$transactionRef) {
+            file_put_contents($logFile, "[$timestamp] ERROR: Invalid reference\n", FILE_APPEND);
             $this->setFlashMessage('danger', 'Invalid payment reference.');
             redirect('payment/confirmation?status=failed');
             return;
@@ -192,6 +201,10 @@ class Payment extends Base_Controller {
         // Get gateway from header or request
         $gatewayCode = $_GET['gateway'] ?? 
                       ($_SERVER['HTTP_X_GATEWAY'] ?? 'paystack');
+        
+        $logFile = FCPATH . 'debug_log.txt';
+        $timestamp = date('Y-m-d H:i:s');
+        file_put_contents($logFile, "[$timestamp] WEBHOOK RECEIVED: Gateway=$gatewayCode\n", FILE_APPEND);
         
         try {
             $gateway = $this->gatewayModel->getByCode($gatewayCode);
