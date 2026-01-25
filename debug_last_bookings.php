@@ -68,14 +68,28 @@ function dumpTable($pdo, $tableName) {
     echo "<hr>";
 }
 
-// Check probable tables
+echo "<h3>Active DB Connection</h3>";
+echo "Host: " . $dbConfig['hostname'] . "<br>";
+echo "Database: " . $dbConfig['database'] . "<br>";
+echo "Prefix: " . $dbConfig['dbprefix'] . "<br><hr>";
+
+// Check all probable tables (prefixed and unprefixed)
 dumpTable($pdo, 'erp_space_bookings');
+dumpTable($pdo, 'space_bookings');
 dumpTable($pdo, 'erp_bookings');
-dumpTable($pdo, 'erp_invoices'); // Check invoices too
+dumpTable($pdo, 'bookings');
+dumpTable($pdo, 'erp_invoices');
+dumpTable($pdo, 'invoices');
+dumpTable($pdo, 'erp_customers');
 
 // Check MAX ID
 echo "<h3>Check IDs</h3>";
 try {
     $stmt = $pdo->query("SELECT MAX(id) FROM erp_space_bookings");
     echo "Max ID in erp_space_bookings: " . ($stmt->fetchColumn() ?: '0') . "<br>";
-} catch(Exception $e) { echo "Error checking max ID: " . $e->getMessage(); }
+} catch(Exception $e) { echo "Error checking max ID (erp_space_bookings): " . $e->getMessage() . "<br>"; }
+
+try {
+    $stmt = $pdo->query("SELECT MAX(id) FROM space_bookings");
+    echo "Max ID in space_bookings: " . ($stmt->fetchColumn() ?: '0') . "<br>";
+} catch(Exception $e) { echo "Error checking max ID (space_bookings): " . $e->getMessage() . "<br>"; }
