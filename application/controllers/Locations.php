@@ -614,6 +614,61 @@ class Locations extends Base_Controller {
     /**
      * AJAX endpoint to get availability for a specific date (for Locations calendar)
      */
+    public function getTimeSlots() {
+        $this->requirePermission('locations', 'read');
+        
+        // Prevent partial output
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json');
+        
+        $spaceId = intval($_GET['space_id'] ?? 0);
+        $rawDate = $_GET['date'] ?? '';
+        $rawEndDate = $_GET['end_date'] ?? $rawDate;
+        
+        // Helper to normalize date
+        $normalizeDate = function($d) {
+            if (empty($d)) return '';
+            $dt = DateTime::createFromFormat('d/m/Y', $d);
+            if ($dt && $dt->format('d/m/Y') === $d) return $dt->format('Y-m-d');
+            $dt = DateTime::createFromFormat('Y-m-d', $d);
+            if ($dt && $dt->format('Y-m-d') === $d) return $dt->format('Y-m-d');
+            return date('Y-m-d', strtotime($d));
+        };
+
+        $date = $normalizeDate(sanitize_input($rawDate));
+        $endDate = $normalizeDate(sanitize_input($rawEndDate));
+        
+        if (empty($endDate)) $endDate = $date;
+        
+        try {
+            $space = $this->spaceModel->getById($spaceId);
+            
+            if (!$space) {
+                 echo json_encode(['success' => false, 'message' => 'Space not found']);
+                 exit;
+            }
+            
+            $facilityId = $space['facility_id'];
+            if (!$facilityId && $space['is_bookable']) {
+                $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
+            }
+            
+            if (!$facilityId) {
+                 echo json_encode(['success' => false, 'message' => 'Facility/Space not configured']);
+                 exit;
+            }
+
+            // Use centralized logic
+            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $endDate);
+            echo json_encode($result);
+            
+        } catch (Exception $e) {
+            error_log('Locations getTimeSlots error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     public function getAvailabilityForDate() {
         $this->requirePermission('locations', 'read');
         

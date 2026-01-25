@@ -112,65 +112,69 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
 
                     <!-- Booking Type and Date -->
-                    <div class="row mb-4">
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label">Booking Type <span class="text-danger">*</span></label>
-                                <select name="booking_type" id="booking_type" class="form-select" required onchange="updateDurationOptions(this.value); calculatePrice()" <?= (!$selected_space) ? 'disabled' : '' ?>>
-                                    <option value="">Select Space First</option>
-                                </select>
-                            </div>
+                <!-- Booking Type and Date -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Booking Type <span class="text-danger">*</span></label>
+                            <select name="booking_type" id="booking_type" class="form-select" required onchange="updateDurationOptions(this.value); calculatePrice()" <?= (!$selected_space) ? 'disabled' : '' ?>>
+                                <option value="">Select Space First</option>
+                            </select>
                         </div>
-                        <div class="col-md-3" id="duration-container" style="display: none;">
-                            <div class="mb-3">
-                                <label class="form-label">Duration <span class="text-danger">*</span></label>
-                                <select name="duration" id="duration" class="form-select" onchange="calculatePrice(); checkAvailability();">
-                                    <!-- Populated by JS -->
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label class="form-label">Booking Date <span class="text-danger">*</span></label>
-                                <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots(); loadCalendar();">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="form-label">Number of Guests</label>
-                                <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0" onchange="checkCapacity()">
-                                <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
-                            </div>
-                        </div>
+                    </div>
+                    <!-- Duration Selection (Hidden by default, shown for hourly/daily) -->
+                    <div class="col-md-3 mb-3" id="duration-container" style="display: none;">
+                        <label class="form-label">Duration</label>
+                        <select id="duration" class="form-select">
+                            <!-- Options populated by JS -->
+                        </select>
                     </div>
 
-                    <!-- Time Selection -->
-                    <div class="row mb-4" id="time-selection-section">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Start Time <span class="text-danger">*</span></label>
-                                <?php if ($from_spaces_module && $selected_space && $space_config): ?>
-                                    <select name="start_time" id="start_time" class="form-select" required onchange="updateEndTimeOptions(); calculatePrice(); checkAvailability()">
-                                        <option value="">Select Start Time</option>
-                                    </select>
-                                <?php else: ?>
-                                    <input type="time" name="start_time" id="start_time" class="form-control" required onchange="calculatePrice(); checkAvailability()" step="900">
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">End Time <span class="text-danger">*</span></label>
-                                <?php if ($from_spaces_module && $selected_space && $space_config): ?>
-                                    <select name="end_time" id="end_time" class="form-select" required onchange="calculatePrice(); checkAvailability()">
-                                        <option value="">Select End Time</option>
-                                    </select>
-                                <?php else: ?>
-                                    <input type="time" name="end_time" id="end_time" class="form-control" required onchange="calculatePrice(); checkAvailability()" step="900">
-                                <?php endif; ?>
-                            </div>
+                    <div class="col-md-3 mb-3" id="end-date-container" style="display: none;">
+                        <label class="form-label">End Date <span class="text-danger">*</span></label>
+                        <input type="date" name="end_date" id="booking_end_date" class="form-control" 
+                               min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                    </div>
+
+                    <div class="col-md-3">
+                         <div class="mb-3">
+                            <label class="form-label">Booking Date <span class="text-danger">*</span></label>
+                            <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" onchange="calculatePrice(); checkAvailability(); loadTimeSlots(); loadCalendar();">
                         </div>
                     </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Number of Guests</label>
+                            <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0" onchange="checkCapacity()">
+                            <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden inputs for form submission -->
+                <input type="hidden" name="start_time" id="start_time" required>
+                <input type="hidden" name="end_time" id="end_time" required>
+
+                <!-- Time Slot Grid / Half Day Buttons -->
+                <div class="mb-4" id="time-slots-section" style="display: none;">
+                    <label class="form-label fw-bold">Select Time Slot</label>
+                    <div id="selected-time-summary" class="alert alert-success mb-3" style="display: none;">
+                        <strong>Selected:</strong> <span id="selected-time-display"></span>
+                    </div>
+
+                    <div class="mb-2" id="time-slot-legend">
+                        <span class="badge bg-success me-2">Available</span>
+                        <span class="badge bg-danger me-2">Occupied</span>
+                        <span class="badge bg-warning text-dark">Buffer</span>
+                    </div>
+                    
+                    <div id="time-slots-container" class="row g-2"></div>
+                </div>
+
+
 
                     <!-- Availability Status -->
                     <div id="availabilityStatus" class="alert mb-4" style="display: none;">
@@ -462,9 +466,6 @@ function loadSpaceDetails() {
     // Generate time slots if using dropdowns and date is selected
     const startTimeSelect = document.getElementById('start_time');
     const bookingDateEl = document.getElementById('booking_date');
-    if (startTimeSelect && startTimeSelect.tagName === 'SELECT' && bookingDateEl && bookingDateEl.value) {
-        generateTimeSlots(bookingDateEl.value);
-    }
     
     calculatePrice();
 }
@@ -647,290 +648,155 @@ function calculatePrice() {
     }
 }
 
-function checkAvailability() {
-    const spaceIdEl = document.getElementById('space_id');
-    const bookingDateEl = document.getElementById('booking_date');
-    const startTimeEl = document.getElementById('start_time');
-    const endTimeEl = document.getElementById('end_time');
-    
-    if (!spaceIdEl || !bookingDateEl) {
-        if (document.getElementById('availabilityStatus')) {
-            document.getElementById('availabilityStatus').style.display = 'none';
-        }
-        return;
-    }
-    
-    const spaceId = spaceIdEl.value;
-    const bookingDate = bookingDateEl.value;
-    
-    if (!spaceId || !bookingDate) {
-        if (document.getElementById('availabilityStatus')) {
-            document.getElementById('availabilityStatus').style.display = 'none';
-        }
-        return;
-    }
-    
-    // If times are selected, check specific slot
-    if (startTimeEl && endTimeEl) {
-        const startTime = startTimeEl.value;
-        const endTime = endTimeEl.value;
-        
-        if (startTime && endTime) {
-            const formData = new FormData();
-            formData.append('space_id', spaceId);
-            formData.append('booking_date', bookingDate);
-            formData.append('start_time', startTime);
-            formData.append('end_time', endTime);
-            
-            fetch(BASE_URL + 'locations/check-booking-availability', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                const statusDiv = document.getElementById('availabilityStatus');
-                const messageSpan = document.getElementById('availabilityMessage');
-                
-                if (!statusDiv || !messageSpan) return;
+// New Smart UI Logic
+let selectedDuration = 1;
 
-                let icon = statusDiv.querySelector('i');
-                if (!icon) {
-                    icon = document.createElement('i');
-                    statusDiv.insertBefore(icon, messageSpan);
-                }
-                
-                if (data.available) {
-                    statusDiv.className = 'alert alert-success mb-4';
-                    icon.className = 'bi bi-check-circle-fill me-2';
-                    messageSpan.textContent = 'Time slot is available';
-                    statusDiv.style.display = 'block';
-                } else {
-                    statusDiv.className = 'alert alert-danger mb-4';
-                    icon.className = 'bi bi-x-circle-fill me-2';
-                    messageSpan.textContent = 'Time slot is not available. Please choose another time.';
-                    statusDiv.style.display = 'block';
-                }
-            })
-            .catch(error => {
-                console.error('Availability Check Error:', error);
-                const statusDiv = document.getElementById('availabilityStatus');
-                const messageSpan = document.getElementById('availabilityMessage');
-                if (statusDiv && messageSpan) {
-                    statusDiv.className = 'alert alert-warning mb-4';
-                    messageSpan.textContent = 'Could not verify availability. Please try again.';
-                    statusDiv.style.display = 'block';
-                }
-            });
-        }
+// Override updateDurationOptions to support Smart UI
+function updateDurationOptions(type) {
+    const durationSelect = document.getElementById('duration');
+    const container = document.getElementById('duration-container');
+    const endDateContainer = document.getElementById('end-date-container');
+    let options = '';
+    
+    container.style.display = 'block'; // Default show
+    
+    if (type === 'hourly') {
+        for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;
+        selectedDuration = 1;
+        if(endDateContainer) endDateContainer.style.display = 'none';
+    } else if (type === 'daily') {
+        options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
+        selectedDuration = 8;
+        if(endDateContainer) endDateContainer.style.display = 'none';
+    } else if (type === 'half_day' || type === 'full_day') {
+        container.style.display = 'none';
+        selectedDuration = (type === 'full_day') ? 24 : 4;
+        if(endDateContainer) endDateContainer.style.display = 'none';
+    } else if (type === 'multi_day' || type === 'weekly') {
+         options = '<option value="8">8 Hours/Day</option><option value="24">24 Hours/Day</option>';
+         selectedDuration = 8;
+         if(endDateContainer) endDateContainer.style.display = 'block';
     }
+    
+    durationSelect.innerHTML = options;
+    durationSelect.value = selectedDuration;
+    
+    // Refresh slots
+    loadTimeSlots();
 }
 
+// Override loadTimeSlots to use new Locations logic
 function loadTimeSlots() {
     const spaceId = document.getElementById('space_id').value;
     const bookingDate = document.getElementById('booking_date').value;
+    const endDateEl = document.getElementById('booking_end_date');
+    const endDate = endDateEl ? endDateEl.value : null;
+    const bookingType = document.getElementById('booking_type').value;
     
-    if (!spaceId || !bookingDate) {
-        document.getElementById('timeSlotsPreview').style.display = 'none';
+    const container = document.getElementById('time-slots-container');
+    const section = document.getElementById('time-slots-section');
+    
+    if (!spaceId || !bookingDate || !bookingType) {
+        section.style.display = 'none';
         return;
     }
     
-    // Fetch available time slots for the selected date
-    fetch(BASE_URL + 'booking-wizard/get-time-slots?space_id=' + spaceId + '&date=' + bookingDate)
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        })
+    section.style.display = 'block';
+    container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border"></div></div>';
+    
+    // Handle Special Types locally first
+    if (bookingType === 'full_day') {
+        renderFullDay();
+        return;
+    }
+    if (bookingType === 'half_day') {
+        renderHalfDay();
+        return;
+    }
+    
+    const checkEndDate = endDate || bookingDate;
+    
+    // Fetch Slots from Locations Controller
+    fetch(BASE_URL + 'locations/getTimeSlots?space_id=' + spaceId + '&date=' + bookingDate + '&end_date=' + checkEndDate)
+        .then(r => r.json())
         .then(data => {
-            if (data.success && data.slots) {
-                const container = document.getElementById('timeSlotsList');
-                container.innerHTML = '';
-                
-                const availableSlots = data.slots.filter(slot => slot.available);
-                if (availableSlots.length > 0) {
-                    availableSlots.slice(0, 8).forEach(slot => {
-                        const btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'btn btn-sm btn-outline-primary';
-                        btn.textContent = slot.display || (slot.start + ' - ' + slot.end);
-                        btn.onclick = function() {
-                            document.getElementById('start_time').value = slot.start;
-                            const endTime = new Date(bookingDate + 'T' + slot.end);
-                            if (endTime < new Date(bookingDate + 'T' + slot.start)) {
-                                endTime.setDate(endTime.getDate() + 1);
-                            }
-                            document.getElementById('end_time').value = endTime.toTimeString().slice(0, 5);
-                            calculatePrice();
-                            checkAvailability();
-                        };
-                        container.appendChild(btn);
-                    });
-                    document.getElementById('timeSlotsPreview').style.display = 'block';
-                } else {
-                    document.getElementById('timeSlotsPreview').style.display = 'none';
-                }
+            if (data.success) {
+                renderSlots(data.slots || []);
             } else {
-                document.getElementById('timeSlotsPreview').style.display = 'none';
-                console.error('Slots error:', data.message || 'Unknown error');
+                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
             }
         })
-        .catch(error => {
-            console.error('Error loading time slots:', error);
-            document.getElementById('timeSlotsPreview').style.display = 'none';
+        .catch(e => {
+             console.error(e);
+             container.innerHTML = '<div class="alert alert-danger">Error loading slots</div>';
         });
 }
 
-// Generate time slots based on operating hours
-function generateTimeSlots(bookingDate) {
-    if (!currentSpaceData || !currentSpaceData.operating_hours) {
-        return;
-    }
-    
-    const startTimeSelect = document.getElementById('start_time');
-    const endTimeSelect = document.getElementById('end_time');
-    
-    if (!startTimeSelect || startTimeSelect.tagName !== 'SELECT' || !endTimeSelect || endTimeSelect.tagName !== 'SELECT') {
-        return; // Not using dropdowns
-    }
-    
-    // Check if date is in days_available
-    const date = new Date(bookingDate);
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    
-    if (!currentSpaceData.days_available.includes(dayOfWeek)) {
-        startTimeSelect.innerHTML = '<option value="">Not available on this day</option>';
-        endTimeSelect.innerHTML = '<option value="">Not available on this day</option>';
-        startTimeSelect.disabled = true;
-        endTimeSelect.disabled = true;
-        return;
-    }
-    
-    startTimeSelect.disabled = false;
-    endTimeSelect.disabled = false;
-    
-    const operatingStart = currentSpaceData.operating_hours.start || '08:00';
-    const operatingEnd = currentSpaceData.operating_hours.end || '22:00';
-    
-    // Parse operating hours
-    const [startHour, startMin] = operatingStart.split(':').map(Number);
-    const [endHour, endMin] = operatingEnd.split(':').map(Number);
-    
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-    
-    // Generate time slots: primarily on the hour, with special cases for 30 and 45 minutes
-    const timeSlots = [];
-    for (let minutes = startMinutes; minutes < endMinutes; minutes += 60) {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-        timeSlots.push(timeStr);
-    }
-    
-    // Add special 30 and 45 minute slots if they fall within operating hours
-    // Add 30-minute slot after first hour if it's not already on the hour
-    if (startMin !== 0 && startMin !== 30 && startMin !== 45) {
-        const first30Min = startMinutes + (60 - startMin) + 30;
-        if (first30Min < endMinutes) {
-            const hours = Math.floor(first30Min / 60);
-            const mins = first30Min % 60;
-            const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-            if (!timeSlots.includes(timeStr)) {
-                timeSlots.push(timeStr);
-            }
-        }
-    }
-    
-    // Add 45-minute slot after first hour if it's not already on the hour or 30
-    if (startMin !== 0 && startMin !== 30 && startMin !== 45) {
-        const first45Min = startMinutes + (60 - startMin) + 45;
-        if (first45Min < endMinutes) {
-            const hours = Math.floor(first45Min / 60);
-            const mins = first45Min % 60;
-            const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-            if (!timeSlots.includes(timeStr)) {
-                timeSlots.push(timeStr);
-            }
-        }
-    }
-    
-    // Sort time slots
-    timeSlots.sort();
-    
-    // Populate start time dropdown
-    startTimeSelect.innerHTML = '<option value="">Select Start Time</option>';
-    timeSlots.forEach(time => {
-        const option = document.createElement('option');
-        option.value = time;
-        option.textContent = time;
-        startTimeSelect.appendChild(option);
-    });
-    
-    // Initially populate end time with same slots
-    updateEndTimeOptions();
+function renderFullDay() {
+    const container = document.getElementById('time-slots-container');
+    setSelection('00:00', '23:59', 'Full Day');
+    container.innerHTML = '<div class="col-12"><div class="alert alert-info">Full Day Selected (00:00 - 23:59)</div></div>';
 }
 
-function updateEndTimeOptions() {
-    const startTimeSelect = document.getElementById('start_time');
-    const endTimeSelect = document.getElementById('end_time');
-    const selectedStartTime = startTimeSelect.value;
+function renderHalfDay() {
+    const container = document.getElementById('time-slots-container');
+    container.innerHTML = `
+        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3" onclick="setSelection('08:00', '12:00', 'Morning')">Morning (8-12)</button></div>
+        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3" onclick="setSelection('13:00', '17:00', 'Afternoon')">Afternoon (1-5)</button></div>
+    `;
+}
+
+function renderSlots(slots) {
+    const container = document.getElementById('time-slots-container');
+    let html = '';
     
-    if (!selectedStartTime || !currentSpaceData || !currentSpaceData.operating_hours) {
-        endTimeSelect.innerHTML = '<option value="">Select Start Time First</option>';
-        return;
-    }
-    
-    const operatingEnd = currentSpaceData.operating_hours.end || '22:00';
-    const [endHour, endMin] = operatingEnd.split(':').map(Number);
-    const endMinutes = endHour * 60 + endMin;
-    
-    // Parse selected start time
-    const [startHour, startMin] = selectedStartTime.split(':').map(Number);
-    const startMinutes = startHour * 60 + startMin;
-    
-    // Generate end time options (must be after start time)
-    const endTimeSlots = [];
-    for (let minutes = startMinutes + 60; minutes <= endMinutes; minutes += 60) {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-        endTimeSlots.push(timeStr);
-    }
-    
-    // Add 30 and 45 minute options if they make sense
-    const first30Min = startMinutes + 90; // 1 hour 30 minutes
-    if (first30Min <= endMinutes) {
-        const hours = Math.floor(first30Min / 60);
-        const mins = first30Min % 60;
-        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-        if (!endTimeSlots.includes(timeStr)) {
-            endTimeSlots.push(timeStr);
-        }
-    }
-    
-    const first45Min = startMinutes + 105; // 1 hour 45 minutes
-    if (first45Min <= endMinutes) {
-        const hours = Math.floor(first45Min / 60);
-        const mins = first45Min % 60;
-        const timeStr = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
-        if (!endTimeSlots.includes(timeStr)) {
-            endTimeSlots.push(timeStr);
-        }
-    }
-    
-    // Sort end time slots
-    endTimeSlots.sort();
-    
-    // Populate end time dropdown
-    endTimeSelect.innerHTML = '<option value="">Select End Time</option>';
-    endTimeSlots.forEach(time => {
-        const option = document.createElement('option');
-        option.value = time;
-        option.textContent = time;
-        endTimeSelect.appendChild(option);
+    slots.forEach(slot => {
+        let btnClass = slot.available ? 'btn-outline-success' : 'btn-outline-secondary disabled';
+        let onClick = slot.available ? `selectSlot('${slot.start}', '${slot.end}')` : '';
+        
+        html += `<div class="col-md-3 col-6">
+            <button type="button" class="btn ${btnClass} w-100" onclick="${onClick}">
+                ${slot.display}
+            </button>
+        </div>`;
     });
+    
+    container.innerHTML = html;
+}
+
+function selectSlot(start, end) {
+    // Calculate End Time based on duration
+    let [h, m] = start.split(':').map(Number);
+    h += selectedDuration;
+    let endH = h > 23 ? 23 : h; 
+    let endM = m;
+    let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+    
+    setSelection(start, endStr, `${start} - ${endStr}`);
+}
+
+function setSelection(start, end, display) {
+    document.getElementById('start_time').value = start;
+    document.getElementById('end_time').value = end;
+    
+    document.getElementById('selected-time-summary').style.display = 'block';
+    document.getElementById('selected-time-display').textContent = display;
+    
+    calculatePrice();
+}
+
+// Override checkAvailability to be no-op or purely visual
+window.checkAvailability = function() {}; 
+
+// Duration Change
+document.getElementById('duration').addEventListener('change', function() {
+    selectedDuration = parseInt(this.value);
+    loadTimeSlots();
+});
+
+// End date listener
+if(document.getElementById('booking_end_date')) {
+    document.getElementById('booking_end_date').addEventListener('change', loadTimeSlots);
 }
 
 // Initialize if location or space is pre-selected
@@ -950,10 +816,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             <?php if (!empty($_GET['date'])): ?>
             document.getElementById('booking_date').value = '<?= $_GET['date'] ?>';
-            const bookingDate = '<?= $_GET['date'] ?>';
-            if (currentSpaceData && currentSpaceData.operating_hours) {
-                generateTimeSlots(bookingDate);
-            }
             loadTimeSlots();
             <?php endif; ?>
         }
