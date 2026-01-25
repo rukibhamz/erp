@@ -318,6 +318,7 @@ class Locations extends Base_Controller {
             } else {
                 // Get all bookings
                 $bookings = $this->spaceBookingModel->getAllWithDetails();
+                error_log("Locations::bookings DEBUG: Fetched " . count($bookings) . " bookings from Model. First item: " . print_r($bookings[0] ?? 'none', true));
             }
             
             // Filter by status if needed
