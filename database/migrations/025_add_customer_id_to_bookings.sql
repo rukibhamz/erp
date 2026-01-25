@@ -1,12 +1,17 @@
 -- ============================================================================
--- FIX: ADD CUSTOMER_ID TO BOOKINGS
+-- FIX: ADD CUSTOMER_ID TO BOOKINGS (WITH COLLATION FIX)
 -- ============================================================================
--- The bookings table was missing customer_id link
+-- 1. Fixes collation mismatch (general_ci vs unicode_ci)
+-- 2. Adds customer_id link
 -- ============================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 1. Add customer_id column if it doesn't exist
+-- 1. Standardize Collation for erp_bookings to match erp_customers
+-- This prevents "Illegal mix of collations" errors during joins
+ALTER TABLE `erp_bookings` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 2. Add customer_id column if it doesn't exist
 SET @dbname = DATABASE();
 SET @tablename = "erp_bookings";
 SET @columnname = "customer_id";
@@ -27,7 +32,7 @@ PREPARE alterIfNotExists FROM @preparedStatement;
 EXECUTE alterIfNotExists;
 DEALLOCATE PREPARE alterIfNotExists;
 
--- 2. Add index for customer_id
+-- 3. Add index for customer_id
 SET @indexname = "idx_customer_id";
 SET @preparedStatement = (SELECT IF(
   (
@@ -45,7 +50,8 @@ PREPARE createIndexIfNotExists FROM @preparedStatement;
 EXECUTE createIndexIfNotExists;
 DEALLOCATE PREPARE createIndexIfNotExists;
 
--- 3. Attempt to link existing bookings to customers table by email
+-- 4. Attempt to link existing bookings to customers table by email
+-- Now safe due to collation fix
 UPDATE `erp_bookings` b
 JOIN `erp_customers` c ON b.customer_email = c.email
 SET b.customer_id = c.id
