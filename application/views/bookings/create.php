@@ -3,6 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
 <div class="container-fluid">
+    <div class="alert alert-warning">DEBUG MODE ACTIVE</div>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Create Booking</h1>
         <a href="<?= base_url('bookings') ?>" class="btn btn-primary">
@@ -512,7 +513,10 @@ function updateDurationOptions(type) {
 }
 
 function loadTimeSlots(spaceId, date, endDate = null) {
-    const bookingType = document.getElementById('booking_type').value;
+    const bookingTypeElement = document.getElementById('booking_type');
+    const bookingType = bookingTypeElement ? bookingTypeElement.value : null;
+    console.log('DEBUG: loadTimeSlots called', { spacerId: spaceId, date, bookingType });
+    
     const container = document.getElementById('time-slots-container');
     const section = document.getElementById('time-slots-section');
     
