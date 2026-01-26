@@ -1249,21 +1249,28 @@ class Booking_wizard extends Base_Controller {
             $totalAmount = floatval($booking['total_amount'] ?? ($subtotal + $taxAmount));
             $discountAmount = floatval($booking['discount_amount'] ?? 0);
             
-            // Create invoice
+            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating invoice: subtotal=$subtotal, total=$totalAmount\n", FILE_APPEND);
+            
+            // Create invoice - using columns that exist in erp_invoices table
             $invoiceData = [
                 'invoice_number' => $this->invoiceModel->getNextInvoiceNumber(),
                 'customer_id' => $customerId,
                 'invoice_date' => date('Y-m-d'),
                 'due_date' => date('Y-m-d', strtotime('+7 days')),
+                'reference' => 'BKG-' . $bookingId, // Use 'reference' not 'reference_type/reference_id'
                 'subtotal' => $subtotal,
-                'discount_amount' => $discountAmount,
+                'tax_rate' => 0,
                 'tax_amount' => $taxAmount,
+                'discount_amount' => $discountAmount,
                 'total_amount' => $totalAmount,
-                'status' => 'draft',
+                'paid_amount' => 0,
+                'balance_amount' => $totalAmount,
+                'currency' => $booking['currency'] ?? 'NGN',
+                'terms' => '',
                 'notes' => 'Booking #' . ($booking['booking_number'] ?? $bookingId),
-                'reference_type' => 'booking',
-                'reference_id' => $bookingId,
-                'created_by' => $booking['created_by'] ?? null
+                'status' => 'draft',
+                'created_by' => $booking['created_by'] ?? null,
+                'created_at' => date('Y-m-d H:i:s')
             ];
             
             $invoiceId = $this->invoiceModel->create($invoiceData);
