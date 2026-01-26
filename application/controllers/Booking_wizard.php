@@ -1193,8 +1193,12 @@ class Booking_wizard extends Base_Controller {
      * @return int|null Invoice ID
      */
     private function createBookingInvoice($bookingId, $booking) {
+        $logFile = 'debug_invoice.txt';
+        file_put_contents($logFile, date('Y-m-d H:i:s') . " - START createBookingInvoice for Booking $bookingId\n", FILE_APPEND);
+        
         try {
             if (!$this->invoiceModel) {
+                file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Invoice model not loaded\n", FILE_APPEND);
                 error_log("createBookingInvoice: Invoice model not loaded");
                 return null;
             }
@@ -1227,7 +1231,14 @@ class Booking_wizard extends Base_Controller {
                     ]);
                 } else {
                     $customerId = $existingCustomer['id'];
+                    file_put_contents($logFile, date('Y-m-d H:i:s') . " - Found existing Customer ID: $customerId\n", FILE_APPEND);
                 }
+            } else {
+                file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: CustomerModel not loaded\n", FILE_APPEND);
+            }
+            
+            if (!$customerId) {
+                file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Failed to obtain Customer ID\n", FILE_APPEND);
             }
             
             // Calculate amounts
