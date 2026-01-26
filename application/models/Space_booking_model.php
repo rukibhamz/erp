@@ -139,9 +139,9 @@ class Space_booking_model extends Base_Model {
      * Get bookings with tenant and space info for display
      */
     public function getAllWithDetails() {
+        $logFile = 'debug_model_error.txt';
         try {
-            return $this->db->fetchAll(
-                "SELECT sb.*, 
+            $sql = "SELECT sb.*, 
                         COALESCE(t.business_name, t.contact_person, sb.customer_name) as tenant_name,
                         COALESCE(t.email, sb.customer_email) as email,
                         COALESCE(t.phone, sb.customer_phone) as phone,
@@ -151,10 +151,18 @@ class Space_booking_model extends Base_Model {
                  LEFT JOIN `" . $this->db->getPrefix() . "tenants` t ON sb.tenant_id = t.id
                  LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON sb.space_id = s.id
                  LEFT JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
-                 ORDER BY sb.booking_date DESC, sb.start_time DESC"
-            );
+                 ORDER BY sb.booking_date DESC, sb.start_time DESC";
+            
+            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Running Query: " . $sql . "\n", FILE_APPEND);
+            
+            $result = $this->db->fetchAll($sql);
+            
+            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Result Count: " . count($result) . "\n", FILE_APPEND);
+            
+            return $result;
         } catch (Exception $e) {
             error_log('Space_booking_model getAllWithDetails error: ' . $e->getMessage());
+            file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
             return [];
         }
     }
