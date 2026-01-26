@@ -16,4 +16,9 @@ class Customer_type_model extends Base_Model {
             [$code]
         );
     }
+    
+    public function getAllActive() {
+        // Alias for getActive() - used by Receivables controller
+        return $this->getActive();
+    }
 }
