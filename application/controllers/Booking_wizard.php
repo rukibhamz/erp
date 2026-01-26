@@ -976,16 +976,22 @@ class Booking_wizard extends Base_Controller {
                         
                         if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
                             // Commit transaction and redirect to payment gateway
+                            file_put_contents($logFile, "[$timestamp] GATEWAY SUCCESS - About to commit before redirect\n", FILE_APPEND);
                             if ($pdo->inTransaction()) {
                                 $pdo->commit();
+                                file_put_contents($logFile, "[$timestamp] TRANSACTION COMMITTED before Paystack redirect\n", FILE_APPEND);
+                            } else {
+                                file_put_contents($logFile, "[$timestamp] WARNING: No transaction active before redirect!\n", FILE_APPEND);
                             }
                             unset($_SESSION['booking_data']);
                             
                             // Redirect to Paystack
+                            file_put_contents($logFile, "[$timestamp] Redirecting to: " . $paymentResult['authorization_url'] . "\n", FILE_APPEND);
                             redirect($paymentResult['authorization_url']);
                             exit;
                         } else {
                             // Gateway initialization failed, continue with offline booking
+                            file_put_contents($logFile, "[$timestamp] GATEWAY FAILED - continuing with offline booking\n", FILE_APPEND);
                             error_log('Gateway initialization failed: ' . json_encode($paymentResult));
                         }
                     }
