@@ -204,7 +204,11 @@ class Customer_portal extends Base_Controller {
                 }
                 
                 $this->setFlashMessage('success', 'Welcome back!');
-                redirect('customer-portal/dashboard');
+                
+                // Redirect to previous page or dashboard
+                $redirectUrl = $this->session['customer_redirect_url'] ?? 'customer-portal/dashboard';
+                unset($this->session['customer_redirect_url']);
+                redirect($redirectUrl);
             } else {
                 $this->setFlashMessage('danger', $result['message']);
                 redirect('customer-portal/login');
@@ -444,6 +448,9 @@ class Customer_portal extends Base_Controller {
      */
     private function requireCustomerAuth() {
         if (!isset($this->session['customer_user_id'])) {
+            // Store current URL for redirect after login
+            $this->session['customer_redirect_url'] = current_url();
+            
             $this->setFlashMessage('warning', 'Please login to access this page.');
             redirect('customer-portal/login');
         }
