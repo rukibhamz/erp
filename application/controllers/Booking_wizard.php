@@ -797,6 +797,16 @@ class Booking_wizard extends Base_Controller {
             
             file_put_contents($logFile, "[$timestamp] SUCCESS: Created Booking ID: $bookingId\n", FILE_APPEND);
             
+            // CRITICAL FIX: Commit the booking IMMEDIATELY to prevent rollback
+            // from optional operations (resources, addons, slots, invoice) that might fail
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+                file_put_contents($logFile, "[$timestamp] BOOKING COMMITTED: ID $bookingId now persisted\n", FILE_APPEND);
+            }
+            
+            // All subsequent operations are optional and run OUTSIDE the transaction
+            // They use their own implicit autocommit
+            
             // Create booking resources (optional - may fail if table doesn't exist)
             try {
                 if ($this->bookingResourceModel) {
@@ -873,19 +883,15 @@ class Booking_wizard extends Base_Controller {
             try {
                 $bookingForInvoice = $bookingRecord;
                 $bookingForInvoice['booking_number'] = $bookingNumber;
-                $bookingForInvoice['facility_name'] = $space['space_name'] ?? $space['name'] ?? 'Space';
+                $bookingForInvoice['facility_name'] = $resource['space_name'] ?? $resource['name'] ?? 'Space';
                 $this->createBookingInvoice($bookingId, $bookingForInvoice);
             } catch (Exception $e) {
                 error_log('Booking wizard: Failed to create invoice - ' . $e->getMessage());
                 // Continue anyway - invoice creation is optional
             }
             
-            // CRITICAL: Commit the transaction IMMEDIATELY after booking + invoice creation
-            // This ensures the booking persists even if payment gateway fails
-            if ($pdo->inTransaction()) {
-                $pdo->commit();
-                file_put_contents($logFile, "[$timestamp] EARLY COMMIT: Booking $bookingId saved to database\n", FILE_APPEND);
-            }
+            // NOTE: Transaction was already committed immediately after booking creation
+            // All operations above (resources, addons, slots, invoice) run with autocommit
             
             // Calculate initial payment based on payment plan
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? '');
