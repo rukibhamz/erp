@@ -22,6 +22,7 @@ class Booking_wizard extends Base_Controller {
     private $paymentTransactionModel;
     private $invoiceModel;
     private $entityModel;
+    private $customerModel;
 
     public function __construct() {
         parent::__construct();
@@ -46,6 +47,7 @@ class Booking_wizard extends Base_Controller {
         $this->paymentTransactionModel = $this->loadModel('Payment_transaction_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->entityModel = $this->loadModel('Entity_model');
+        $this->customerModel = $this->loadModel('Customer_model');
     }
     
     public function index() {
