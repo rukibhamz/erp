@@ -411,5 +411,51 @@ class Booking_model extends Base_Model {
             return [];
         }
     }
+    
+    /**
+     * Get resources associated with a booking
+     */
+    public function getResources($bookingId) {
+        try {
+            $sql = "SELECT br.*, s.space_name, s.space_number 
+                    FROM `" . $this->db->getPrefix() . "booking_resources` br
+                    LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON br.resource_id = s.id
+                    WHERE br.booking_id = ?";
+            return $this->db->fetchAll($sql, [$bookingId]);
+        } catch (Exception $e) {
+            error_log('Booking_model getResources error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get addons associated with a booking
+     */
+    public function getAddons($bookingId) {
+        try {
+            $sql = "SELECT ba.*, a.addon_name, a.addon_description 
+                    FROM `" . $this->db->getPrefix() . "booking_addons` ba
+                    LEFT JOIN `" . $this->db->getPrefix() . "addons` a ON ba.addon_id = a.id
+                    WHERE ba.booking_id = ?";
+            return $this->db->fetchAll($sql, [$bookingId]);
+        } catch (Exception $e) {
+            error_log('Booking_model getAddons error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Get payment schedule for a booking
+     */
+    public function getPaymentSchedule($bookingId) {
+        try {
+            $sql = "SELECT * FROM `" . $this->db->getPrefix() . "payment_schedules` 
+                    WHERE booking_id = ? ORDER BY due_date ASC";
+            return $this->db->fetchAll($sql, [$bookingId]);
+        } catch (Exception $e) {
+            error_log('Booking_model getPaymentSchedule error: ' . $e->getMessage());
+            return [];
+        }
+    }
 }
 

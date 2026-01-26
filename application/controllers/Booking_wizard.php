@@ -1224,35 +1224,41 @@ class Booking_wizard extends Base_Controller {
                 return null;
             }
             
+            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Invoice model OK, proceeding to customer lookup\n", FILE_APPEND);
+            
             // Find or create customer
             $customerId = null;
             if ($this->customerModel) {
-                // Try to find existing customer by email (not natively supported by standard getByCode, so use getBy)
-                // Assuming Base_Model has getBy method.
-                // However, user usually wants to match by email.
-                // We'll trust the customer exists if we just created a guest user, OR we search.
-                
-                // Note: Customer table might use different fields than User.
-                // Let's check if we can query by email.
-                $existingCustomer = $this->db->fetchOne("SELECT * FROM `" . $this->db->getPrefix() . "customers` WHERE email = ?", [$booking['customer_email']]);
-                
-                if (!$existingCustomer) {
-                    // Create new customer
-                    $customerCode = $this->customerModel->getNextCustomerCode();
-                    $customerId = $this->customerModel->create([
-                        'customer_code' => $customerCode,
-                        'customer_type_id' => null, // Default
-                        'company_name' => $booking['customer_name'],
-                        'contact_name' => $booking['customer_name'],
-                        'email' => $booking['customer_email'],
-                        'phone' => $booking['customer_phone'] ?? '',
-                        'address' => $booking['customer_address'] ?? '',
-                        'status' => 'active',
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                } else {
-                    $customerId = $existingCustomer['id'];
-                    file_put_contents($logFile, date('Y-m-d H:i:s') . " - Found existing Customer ID: $customerId\n", FILE_APPEND);
+                try {
+                    file_put_contents($logFile, date('Y-m-d H:i:s') . " - Looking up customer by email: " . ($booking['customer_email'] ?? 'NULL') . "\n", FILE_APPEND);
+                    
+                    $existingCustomer = $this->db->fetchOne(
+                        "SELECT * FROM `" . $this->db->getPrefix() . "customers` WHERE email = ?", 
+                        [$booking['customer_email']]
+                    );
+                    
+                    if (!$existingCustomer) {
+                        file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating new customer\n", FILE_APPEND);
+                        $customerCode = $this->customerModel->getNextCustomerCode();
+                        $customerId = $this->customerModel->create([
+                            'customer_code' => $customerCode,
+                            'customer_type_id' => null,
+                            'company_name' => $booking['customer_name'],
+                            'contact_name' => $booking['customer_name'],
+                            'email' => $booking['customer_email'],
+                            'phone' => $booking['customer_phone'] ?? '',
+                            'address' => $booking['customer_address'] ?? '',
+                            'status' => 'active',
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                        file_put_contents($logFile, date('Y-m-d H:i:s') . " - Created new Customer ID: $customerId\n", FILE_APPEND);
+                    } else {
+                        $customerId = $existingCustomer['id'];
+                        file_put_contents($logFile, date('Y-m-d H:i:s') . " - Found existing Customer ID: $customerId\n", FILE_APPEND);
+                    }
+                } catch (Exception $e) {
+                    file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR in customer lookup/creation: " . $e->getMessage() . "\n", FILE_APPEND);
+                    error_log("createBookingInvoice customer error: " . $e->getMessage());
                 }
             } else {
                 file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: CustomerModel not loaded\n", FILE_APPEND);
