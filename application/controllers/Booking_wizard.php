@@ -777,7 +777,8 @@ class Booking_wizard extends Base_Controller {
                 'is_recurring' => $isRecurring ? 1 : 0,
                 'recurring_pattern' => $recurringPattern,
                 'recurring_end_date' => $recurringEndDate,
-                'created_by' => $createdById
+                'created_by' => $createdById,
+                'created_at' => date('Y-m-d H:i:s')
             ];
             
             // Log the record before insert
@@ -1149,8 +1150,11 @@ class Booking_wizard extends Base_Controller {
             // Check if user exists
             $user = $this->userModel->getByEmail($email);
             if ($user) {
+                file_put_contents('debug_wizard_log.txt', date('Y-m-d H:i:s') . " - User already exists: $email (ID: " . $user['id'] . ")\n", FILE_APPEND);
                 return $user['id'];
             }
+            
+            file_put_contents('debug_wizard_log.txt', date('Y-m-d H:i:s') . " - Creating new guest user: $email\n", FILE_APPEND);
             
             // Create new user
             $password = bin2hex(random_bytes(8)); // Random 16-char password
@@ -1197,6 +1201,7 @@ class Booking_wizard extends Base_Controller {
                 }
                 
                 error_log("Created guest user for booking: $email (ID: $userId)");
+                file_put_contents('debug_wizard_log.txt', date('Y-m-d H:i:s') . " - Created guest user ID: $userId\n", FILE_APPEND);
                 return $userId;
             }
             
@@ -1237,6 +1242,16 @@ class Booking_wizard extends Base_Controller {
                         [$booking['customer_email']]
                     );
                     
+                    // DEBUG: Log table columns to identify schema mismatch
+                    try {
+                        $schemaTest = $this->db->fetchOne("SELECT * FROM `" . $this->db->getPrefix() . "customers` LIMIT 1");
+                        if ($schemaTest) {
+                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - DEBUG SCHEMA: Columns: " . implode(', ', array_keys($schemaTest)) . "\n", FILE_APPEND);
+                        } else {
+                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - DEBUG SCHEMA: Table empty, cannot verify columns\n", FILE_APPEND);
+                        }
+                    } catch (Exception $e) { /* Ignore */ }
+                    
                     if (!$existingCustomer) {
                         file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating new customer\n", FILE_APPEND);
                         $customerCode = $this->customerModel->getNextCustomerCode();
@@ -1244,7 +1259,9 @@ class Booking_wizard extends Base_Controller {
                             'customer_code' => $customerCode,
                             'customer_type_id' => null,
                             'company_name' => $booking['customer_name'],
-                            'contact_person' => $booking['customer_name'],
+                            'customer_type_id' => null,
+                            'company_name' => $booking['customer_name'],
+                            'contact_name' => $booking['customer_name'],
                             'email' => $booking['customer_email'],
                             'phone' => $booking['customer_phone'] ?? '',
                             'address' => $booking['customer_address'] ?? '',

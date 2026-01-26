@@ -1,25 +1,47 @@
 <?php
-require_once 'application/config/database.php';
+// DB Config
+$host = 'localhost';
+$db   = 'erps';
+$user = 'root';
+$pass = '';
+$charset = 'utf8mb4';
+$prefix = 'erp_';
 
-// Minimally mock the DB/loading
-$db_config = $db['default'];
-
-$dsn = 'mysql:host='.$db_config['hostname'].';dbname='.$db_config['database'].';charset='.$db_config['char_set'];
-$username = $db_config['username'];
-$password = $db_config['password'];
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
 
 try {
-    $pdo = new PDO($dsn, $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = new PDO($dsn, $user, $pass, $options);
+    echo "Connected successfully to database '$db'\n\n";
     
-    $stmt = $pdo->query("DESCRIBE " . $db_config['dbprefix'] . "bookings");
-    $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "Columns in bookings table:\n";
+    // Check erp_customers columns
+    echo "COLUMNS IN {$prefix}customers:\n";
+    $stmt = $pdo->query("DESCRIBE {$prefix}customers");
+    $columns = $stmt->fetchAll();
     foreach ($columns as $col) {
         echo $col['Field'] . " (" . $col['Type'] . ")\n";
     }
     
-} catch (PDOException $e) {
+    echo "\n-----------------------------------\n";
+    
+    // Check erp_users for the customer email
+    $email = 'omaruconsults@gmail.com';
+    echo "CHECKING USER: $email\n";
+    $stmt = $pdo->prepare("SELECT * FROM {$prefix}users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+    
+    if ($user) {
+        echo "User FOUND: ID " . $user['id'] . "\n";
+    } else {
+        echo "User NOT FOUND.\n";
+    }
+    
+} catch (\PDOException $e) {
     echo "Connection failed: " . $e->getMessage();
 }
+?>
