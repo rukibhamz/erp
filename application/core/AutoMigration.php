@@ -1196,6 +1196,10 @@ class AutoMigration {
             foreach ($accounts as $account) {
                 // Check if account exists
                 $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = ?");
+                if ($stmt === false) {
+                    error_log("AutoMigration: Failed to prepare SELECT for accounts table - table might not exist or have different schema");
+                    return; // Exit early, table not ready
+                }
                 $stmt->execute([$account['account_code']]);
                 
                 if (count($stmt->fetchAll()) == 0) {
@@ -1205,6 +1209,10 @@ class AutoMigration {
                         (account_code, account_name, account_type, account_category, description, is_system_account, created_at, status)
                         VALUES (?, ?, ?, ?, ?, ?, NOW(), 'active')
                     ");
+                    if ($stmt === false) {
+                        error_log("AutoMigration: Failed to prepare INSERT for accounts table - missing columns? Skipping COA install.");
+                        return; // Exit early, table schema not ready
+                    }
                     $stmt->execute([
                         $account['account_code'],
                         $account['account_name'],
