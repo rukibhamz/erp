@@ -156,9 +156,13 @@ function check_csrf($allowGet = false) {
         die('Invalid CSRF token. Please refresh the page and try again.');
     }
     
-    // Regenerate token after successful validation (token rotation for security)
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    $_SESSION['csrf_token_time'] = time();
+    // Token is valid - do NOT regenerate immediately
+    // Per-request token rotation breaks:
+    // 1. Multiple tabs open with forms
+    // 2. AJAX requests that use tokens embedded at page load
+    // 3. Back button usage
+    // Instead, we use session-based tokens that expire with the session
+    // Token will be regenerated when session expires or on login/logout
     
     return true;
 }
