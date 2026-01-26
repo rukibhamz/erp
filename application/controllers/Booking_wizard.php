@@ -1244,7 +1244,7 @@ class Booking_wizard extends Base_Controller {
                             'customer_code' => $customerCode,
                             'customer_type_id' => null,
                             'company_name' => $booking['customer_name'],
-                            'contact_name' => $booking['customer_name'],
+                            'contact_person' => $booking['customer_name'],
                             'email' => $booking['customer_email'],
                             'phone' => $booking['customer_phone'] ?? '',
                             'address' => $booking['customer_address'] ?? '',
