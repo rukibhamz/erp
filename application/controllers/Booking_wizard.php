@@ -880,6 +880,13 @@ class Booking_wizard extends Base_Controller {
                 // Continue anyway - invoice creation is optional
             }
             
+            // CRITICAL: Commit the transaction IMMEDIATELY after booking + invoice creation
+            // This ensures the booking persists even if payment gateway fails
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+                file_put_contents($logFile, "[$timestamp] EARLY COMMIT: Booking $bookingId saved to database\n", FILE_APPEND);
+            }
+            
             // Calculate initial payment based on payment plan
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? '');
             $paymentPlan = sanitize_input($_POST['payment_plan'] ?? 'full');
