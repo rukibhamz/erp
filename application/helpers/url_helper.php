@@ -15,11 +15,37 @@ function base_url($path = '') {
         $baseUrl = '';
     }
     
+    // Helper function to detect HTTPS (works behind proxies like cPanel, Cloudflare, etc.)
+    $isHttps = function() {
+        // Direct HTTPS
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+        // Behind proxy - check forwarded proto
+        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            return true;
+        }
+        // Cloudflare
+        if (!empty($_SERVER['HTTP_CF_VISITOR'])) {
+            $visitor = json_decode($_SERVER['HTTP_CF_VISITOR'], true);
+            if (isset($visitor['scheme']) && $visitor['scheme'] === 'https') {
+                return true;
+            }
+        }
+        // Standard port check
+        if (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443) {
+            return true;
+        }
+        // X-Forwarded-SSL header
+        if (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+            return true;
+        }
+        return false;
+    };
+    
     // If base_url is empty or not set, auto-detect it
     if (empty($baseUrl)) {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || 
-                    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) 
-                    ? 'https://' : 'http://';
+        $protocol = $isHttps() ? 'https://' : 'http://';
         
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         
@@ -43,7 +69,7 @@ function base_url($path = '') {
         
         // If it's a relative path, make it absolute
         if (!preg_match('/^https?:\/\//', $baseUrl)) {
-            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+            $protocol = $isHttps() ? 'https://' : 'http://';
             $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
             
             // Add leading slash if not present
@@ -52,6 +78,11 @@ function base_url($path = '') {
             }
             
             $baseUrl = $protocol . $host . $baseUrl;
+        } else {
+            // Config has full URL - force HTTPS if we detect HTTPS connection
+            if ($isHttps() && strpos($baseUrl, 'http://') === 0) {
+                $baseUrl = 'https://' . substr($baseUrl, 7);
+            }
         }
         
         // Ensure trailing slash
