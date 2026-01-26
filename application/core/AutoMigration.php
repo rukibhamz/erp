@@ -157,6 +157,26 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error checking space_bookings table: " . $e->getMessage());
         }
+        
+        // ALWAYS check and create rate_limits table if missing (for security rate limiting)
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}rate_limits'");
+            if ($stmt && count($stmt->fetchAll()) == 0) {
+                $this->pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `{$this->prefix}rate_limits` (
+                        `id` INT AUTO_INCREMENT PRIMARY KEY,
+                        `identifier` VARCHAR(255) NOT NULL,
+                        `ip_address` VARCHAR(45),
+                        `created_at` DATETIME NOT NULL,
+                        INDEX `idx_identifier` (`identifier`),
+                        INDEX `idx_created_at` (`created_at`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                ");
+                error_log("AutoMigration: Created rate_limits table");
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error creating rate_limits table: " . $e->getMessage());
+        }
 
         // ALWAYS check and create utilities tables if missing
         try {
