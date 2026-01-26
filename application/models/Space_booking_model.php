@@ -65,7 +65,7 @@ class Space_booking_model extends Base_Model {
         try {
             return $this->db->fetchAll(
                 "SELECT sb.*, 
-                        t.tenant_code, t.business_name, t.contact_person, t.email, t.phone,
+                        t.tenant_code, t.tenant_name, t.email, t.phone,
                         s.space_name, s.space_number
                  FROM `" . $this->db->getPrefix() . $this->table . "` sb
                  JOIN `" . $this->db->getPrefix() . "tenants` t ON sb.tenant_id = t.id
@@ -119,7 +119,7 @@ class Space_booking_model extends Base_Model {
     public function getAvailabilityCalendar($spaceId, $startDate, $endDate) {
         try {
             return $this->db->fetchAll(
-                "SELECT sb.*, t.business_name, t.contact_person
+                "SELECT sb.*, t.tenant_name as business_name, t.tenant_name as contact_person
                  FROM `" . $this->db->getPrefix() . $this->table . "` sb
                  LEFT JOIN `" . $this->db->getPrefix() . "tenants` t ON sb.tenant_id = t.id
                  WHERE sb.space_id = ? 
@@ -142,7 +142,7 @@ class Space_booking_model extends Base_Model {
         $logFile = 'debug_model_error.txt';
         try {
             $sql = "SELECT sb.*, 
-                        COALESCE(t.business_name, t.contact_person, sb.customer_name) as tenant_name,
+                        COALESCE(t.tenant_name, sb.customer_name) as tenant_name,
                         COALESCE(t.email, sb.customer_email) as email,
                         COALESCE(t.phone, sb.customer_phone) as phone,
                         s.space_name, s.space_number,
