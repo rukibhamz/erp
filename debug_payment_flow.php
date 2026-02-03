@@ -22,12 +22,27 @@ $transactionRef = $argv[1] ?? $_GET['ref'] ?? null;
 
 // Database connection
 try {
-    $configFile = ROOTPATH . 'config/config.installed.php';
-    if (!file_exists($configFile)) {
-        $configFile = ROOTPATH . 'config/config.php';
+    // Try multiple config file locations
+    $configPaths = [
+        ROOTPATH . 'application/config/config.installed.php',
+        ROOTPATH . 'application/config/config.php',
+        ROOTPATH . 'config/config.installed.php',
+        ROOTPATH . 'config/config.php',
+        APPPATH . 'config/config.installed.php',
+        APPPATH . 'config/config.php'
+    ];
+    
+    $configFile = null;
+    foreach ($configPaths as $path) {
+        if (file_exists($path)) {
+            $configFile = $path;
+            echo "✓ Found config at: $path\n";
+            break;
+        }
     }
-    if (!file_exists($configFile)) {
-        throw new Exception("Config file not found. Tried: config/config.installed.php and config/config.php");
+    
+    if (!$configFile) {
+        throw new Exception("Config file not found. Tried:\n  - " . implode("\n  - ", $configPaths));
     }
     
     $config = require $configFile;
