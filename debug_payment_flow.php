@@ -46,10 +46,21 @@ try {
     }
     
     $config = require $configFile;
-    $dbConfig = $config['database'];
     
-    $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']};charset=utf8mb4";
-    $pdo = new PDO($dsn, $dbConfig['username'], $dbConfig['password']);
+    // Handle different config structures: 'db' or 'database' key
+    $dbConfig = $config['db'] ?? $config['database'] ?? null;
+    if (!$dbConfig) {
+        throw new Exception("Database config not found. Config keys: " . implode(', ', array_keys($config)));
+    }
+    
+    // Handle different key names
+    $host = $dbConfig['hostname'] ?? $dbConfig['host'] ?? 'localhost';
+    $dbName = $dbConfig['database'] ?? $dbConfig['dbname'] ?? '';
+    $username = $dbConfig['username'] ?? $dbConfig['user'] ?? '';
+    $password = $dbConfig['password'] ?? '';
+    
+    $dsn = "mysql:host={$host};dbname={$dbName};charset=utf8mb4";
+    $pdo = new PDO($dsn, $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     echo "✓ Database connection: OK\n\n";
@@ -58,7 +69,7 @@ try {
     exit(1);
 }
 
-$prefix = $dbConfig['table_prefix'] ?? 'erp_';
+$prefix = $dbConfig['dbprefix'] ?? $dbConfig['table_prefix'] ?? 'erp_';
 
 // Step 1: Check table structure
 echo "STEP 1: CHECKING TABLE STRUCTURE\n";
