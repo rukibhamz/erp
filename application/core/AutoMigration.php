@@ -329,6 +329,13 @@ class AutoMigration {
             error_log("AutoMigration: Error ensuring booking_payments table: " . $e->getMessage());
         }
         
+        // ALWAYS ensure space_bookings has payment verification columns
+        try {
+            $this->ensureSpaceBookingsTableColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring space_bookings columns: " . $e->getMessage());
+        }
+        
         // Ensure customer role exists for guest bookings
         try {
             $this->ensureCustomerRole();
@@ -1709,6 +1716,73 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring bookings table columns: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Ensure space_bookings table has all required columns for payment verification
+     * Adds payment_verified_at and other columns needed for idempotency and tracking
+     */
+    private function ensureSpaceBookingsTableColumns() {
+        try {
+            // Check if space_bookings table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}space_bookings'");
+            if ($stmt && count($stmt->fetchAll()) == 0) {
+                // Table doesn't exist yet, skip
+                return true;
+            }
+            
+            $columnsAdded = 0;
+            
+            // Columns needed for payment verification and tracking
+            $columns = [
+                'payment_verified_at' => "DATETIME NULL COMMENT 'When payment was verified from gateway'",
+                'customer_id' => "INT(11) NULL",
+                'customer_name' => "VARCHAR(255) NULL",
+                'customer_email' => "VARCHAR(255) NULL",
+                'customer_phone' => "VARCHAR(50) NULL",
+                'customer_address' => "TEXT NULL",
+                'invoice_id' => "INT(11) NULL",
+                'reference' => "VARCHAR(100) NULL COMMENT 'Payment reference for linking'",
+                'subtotal' => "DECIMAL(15,2) DEFAULT 0",
+                'security_deposit' => "DECIMAL(15,2) DEFAULT 0",
+                'payment_plan' => "VARCHAR(20) DEFAULT 'full'",
+                'promo_code' => "VARCHAR(50) NULL",
+                'booking_source' => "VARCHAR(20) DEFAULT 'online'",
+                'is_recurring' => "TINYINT(1) DEFAULT 0",
+                'recurring_pattern' => "VARCHAR(20) NULL",
+                'recurring_end_date' => "DATE NULL",
+                'started_at' => "DATETIME NULL"
+            ];
+            
+            foreach ($columns as $columnName => $columnDef) {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}space_bookings` LIKE '{$columnName}'");
+                if ($stmt && count($stmt->fetchAll()) == 0) {
+                    try {
+                        $this->pdo->exec("ALTER TABLE `{$this->prefix}space_bookings` ADD COLUMN `{$columnName}` {$columnDef}");
+                        error_log("AutoMigration: Added {$columnName} column to space_bookings table");
+                        $columnsAdded++;
+                    } catch (Exception $e) {
+                        error_log("AutoMigration: Could not add {$columnName} to space_bookings: " . $e->getMessage());
+                    }
+                }
+            }
+            
+            // Add index for payment verification lookups
+            try {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}space_bookings` ADD INDEX IF NOT EXISTS `idx_payment_verified` (`payment_verified_at`)");
+            } catch (Exception $e) {
+                // Index might already exist
+            }
+            
+            if ($columnsAdded > 0) {
+                error_log("AutoMigration: Added {$columnsAdded} columns to space_bookings table for payment verification");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring space_bookings table columns: " . $e->getMessage());
             return false;
         }
     }

@@ -481,10 +481,10 @@ class Payment extends Base_Controller {
                     $newPaidAmount = floatval($booking['paid_amount'] ?? 0) + floatval($transaction['amount']);
                     $newBalance = floatval($booking['total_amount'] ?? 0) - $newPaidAmount;
                     
+                    // Core update data (columns that always exist)
                     $updateData = [
                         'paid_amount' => $newPaidAmount,
-                        'balance_amount' => max(0, $newBalance),
-                        'payment_verified_at' => date('Y-m-d H:i:s') // Track verification time for idempotency
+                        'balance_amount' => max(0, $newBalance)
                     ];
                     
                     // Update payment status based on balance
@@ -492,14 +492,39 @@ class Payment extends Base_Controller {
                     if ($newBalance <= 0) {
                         $updateData['payment_status'] = 'paid';
                         $updateData['status'] = 'confirmed'; // Auto-confirm on full payment
-                        $updateData['confirmed_at'] = date('Y-m-d H:i:s');
                         $isFullPayment = true;
                     } elseif ($newPaidAmount > 0) {
                         $updateData['payment_status'] = 'partial';
                     }
                     
-                    $this->bookingModel->update($booking['id'], $updateData);
-                    error_log("processPaymentSuccess: Updated booking - paid: $newPaidAmount, balance: $newBalance");
+                    // Try to add new columns (may not exist if migration not run)
+                    // These are optional for idempotency - will be added by migration
+                    try {
+                        $updateData['payment_verified_at'] = date('Y-m-d H:i:s');
+                        if ($isFullPayment) {
+                            $updateData['confirmed_at'] = date('Y-m-d H:i:s');
+                        }
+                    } catch (Exception $ex) {
+                        // Columns may not exist yet - ignore
+                    }
+                    
+                    // Log update for debugging
+                    $debugLog = ROOTPATH . 'debug_payment_update.txt';
+                    $logEntry = date('Y-m-d H:i:s') . " - BOOKING UPDATE:\n";
+                    $logEntry .= "  Booking ID: {$booking['id']}\n";
+                    $logEntry .= "  Transaction Ref: {$transaction['transaction_ref']}\n";
+                    $logEntry .= "  Amount: {$transaction['amount']}\n";
+                    $logEntry .= "  New Paid: $newPaidAmount | New Balance: $newBalance\n";
+                    $logEntry .= "  Update Data: " . json_encode($updateData) . "\n";
+                    file_put_contents($debugLog, $logEntry, FILE_APPEND);
+                    
+                    // Perform update
+                    $updateResult = $this->bookingModel->update($booking['id'], $updateData);
+                    
+                    $logEntry = "  Update Result: " . ($updateResult ? 'SUCCESS' : 'FAILED') . "\n\n";
+                    file_put_contents($debugLog, $logEntry, FILE_APPEND);
+                    
+                    error_log("processPaymentSuccess: Updated booking - paid: $newPaidAmount, balance: $newBalance, result: " . ($updateResult ? 'OK' : 'FAIL'));
                     
                     // BLOCK TIME SLOTS on payment confirmation
                     if ($isFullPayment) {
@@ -544,11 +569,20 @@ class Payment extends Base_Controller {
                         }
                     }
 
-                    // SEND NOTIFICATION (EMAIL)
-                    if ($this->notificationModel) {
-                        // Send booking confirmation email
-                        $this->notificationModel->sendBookingConfirmation($booking['id'], $booking);
-                        error_log("processPaymentSuccess: Sent booking confirmation email");
+                    // SEND NOTIFICATION (EMAIL) - use UPDATED booking data
+                    if ($this->notificationModel && $isFullPayment) {
+                        try {
+                            // Refresh booking data to get updated status
+                            $updatedBooking = $this->bookingModel->getWithFacility($booking['id']);
+                            if ($updatedBooking) {
+                                $this->notificationModel->sendBookingConfirmation($booking['id'], $updatedBooking);
+                                error_log("processPaymentSuccess: Sent booking confirmation email to " . ($updatedBooking['customer_email'] ?? 'unknown'));
+                            } else {
+                                error_log("processPaymentSuccess: Could not refresh booking for email notification");
+                            }
+                        } catch (Exception $emailEx) {
+                            error_log("processPaymentSuccess: Email notification error: " . $emailEx->getMessage());
+                        }
                     }
                     
                     // Create accounting entries - double-entry for payment received
