@@ -1755,7 +1755,8 @@ class AutoMigration {
                 'is_recurring' => "TINYINT(1) DEFAULT 0",
                 'recurring_pattern' => "VARCHAR(20) NULL",
                 'recurring_end_date' => "DATE NULL",
-                'started_at' => "DATETIME NULL"
+                'started_at' => "DATETIME NULL",
+                'facility_id' => "INT(11) NULL COMMENT 'Links to facilities table'"
             ];
             
             foreach ($columns as $columnName => $columnDef) {

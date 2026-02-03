@@ -229,16 +229,38 @@ class Booking_model extends Base_Model {
     
     public function getWithFacility($bookingId) {
         try {
-            // Join spaces table instead of facilities
-            // Map pricing fields
-            return $this->db->fetchOne(
-                "SELECT b.*, s.space_name as facility_name, s.space_number as facility_code, 
-                        s.hourly_rate, s.daily_rate 
-                 FROM `" . $this->db->getPrefix() . $this->table . "` b
-                 JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
+            $prefix = $this->db->getPrefix();
+            
+            // First try joining with facilities table using facility_id
+            $result = $this->db->fetchOne(
+                "SELECT b.*, f.facility_name as facility_name, f.facility_code as facility_code, 
+                        f.hourly_rate, f.daily_rate, f.half_day_rate
+                 FROM `{$prefix}{$this->table}` b
+                 LEFT JOIN `{$prefix}facilities` f ON b.facility_id = f.id
                  WHERE b.id = ?",
                 [$bookingId]
             );
+            
+            // If facility_name is populated, return the result
+            if ($result && !empty($result['facility_name'])) {
+                return $result;
+            }
+            
+            // Fallback: try joining with spaces table using space_id or facility_id
+            $result = $this->db->fetchOne(
+                "SELECT b.*, 
+                        COALESCE(s.space_name, s2.space_name) as facility_name, 
+                        COALESCE(s.space_number, s2.space_number) as facility_code, 
+                        COALESCE(s.hourly_rate, s2.hourly_rate) as hourly_rate, 
+                        COALESCE(s.daily_rate, s2.daily_rate) as daily_rate
+                 FROM `{$prefix}{$this->table}` b
+                 LEFT JOIN `{$prefix}spaces` s ON b.space_id = s.id
+                 LEFT JOIN `{$prefix}spaces` s2 ON b.facility_id = s2.id
+                 WHERE b.id = ?",
+                [$bookingId]
+            );
+            
+            return $result;
         } catch (Exception $e) {
             error_log('Booking_model getWithFacility error: ' . $e->getMessage());
             return false;

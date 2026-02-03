@@ -777,6 +777,7 @@ class Booking_wizard extends Base_Controller {
             // Create booking with all fields (AutoMigration ensures columns exist)
             $bookingRecord = [
                 'booking_number' => $bookingNumber,
+                'space_id' => $bookingData['resource_id'],  // For backwards compatibility with older schema
                 'facility_id' => $bookingData['resource_id'],
                 'customer_name' => sanitize_input($bookingData['customer_name'] ?? ''),
                 'customer_email' => sanitize_input($bookingData['customer_email'] ?? ''),
