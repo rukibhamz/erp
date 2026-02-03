@@ -717,7 +717,36 @@ class Booking_wizard extends Base_Controller {
             // Calculate final totals
             $subtotal = $baseAmount + $addonsTotal;
             $securityDeposit = floatval($resource['security_deposit'] ?? 0);
-            $finalTotal = $subtotal - $discountAmount + $securityDeposit;
+            
+            // Calculate tax (VAT) if applicable
+            $taxAmount = 0;
+            $taxRate = 0;
+            try {
+                $taxModel = $this->loadModel('Tax_model');
+                if ($taxModel) {
+                    // Try to get VAT tax or any active sales tax
+                    $vatTax = $taxModel->getByCode('VAT');
+                    if (!$vatTax) {
+                        // Try to get any active tax
+                        $activeTaxes = $taxModel->getActive();
+                        if (!empty($activeTaxes)) {
+                            $vatTax = $activeTaxes[0]; // Use first active tax
+                        }
+                    }
+                    
+                    if ($vatTax) {
+                        $taxCalculation = $taxModel->calculateTax($subtotal - $discountAmount, $vatTax['id']);
+                        $taxAmount = $taxCalculation['tax_amount'] ?? 0;
+                        $taxRate = floatval($vatTax['rate'] ?? 0);
+                        error_log("Booking tax calculation: Base=" . ($subtotal - $discountAmount) . ", Tax={$taxAmount}, Rate={$taxRate}%");
+                    }
+                }
+            } catch (Exception $taxEx) {
+                error_log("Booking_wizard: Tax calculation error - " . $taxEx->getMessage());
+                $taxAmount = 0;
+            }
+            
+            $finalTotal = $subtotal - $discountAmount + $taxAmount + $securityDeposit;
             
             // Create booking
             $bookingNumber = $this->bookingModel->getNextBookingNumber();
@@ -761,6 +790,8 @@ class Booking_wizard extends Base_Controller {
                 'booking_type' => $bookingData['booking_type'] ?? 'hourly',
                 'base_amount' => $baseAmount,
                 'subtotal' => $subtotal,
+                'tax_rate' => $taxRate,
+                'tax_amount' => $taxAmount,
                 'discount_amount' => $discountAmount,
                 'security_deposit' => $securityDeposit,
                 'total_amount' => $finalTotal,
@@ -1374,7 +1405,7 @@ class Booking_wizard extends Base_Controller {
                             }
                             
                             if ($arAccount && $revenueAccount) {
-                                // Debit Accounts Receivable (customer owes us)
+                                // Debit Accounts Receivable (customer owes us the TOTAL)
                                 $transactionModel->create([
                                     'account_id' => $arAccount['id'],
                                     'debit' => $totalAmount,
@@ -1387,11 +1418,12 @@ class Booking_wizard extends Base_Controller {
                                     'created_by' => $booking['created_by'] ?? null
                                 ]);
                                 
-                                // Credit Revenue (we earned revenue)
+                                // Credit Revenue (net amount: subtotal - discount)
+                                $netRevenue = $subtotal - $discountAmount;
                                 $transactionModel->create([
                                     'account_id' => $revenueAccount['id'],
                                     'debit' => 0,
-                                    'credit' => $totalAmount,
+                                    'credit' => $netRevenue,
                                     'description' => 'Booking Revenue: ' . ($booking['booking_number'] ?? 'Booking #' . $bookingId),
                                     'reference_type' => 'invoice',
                                     'reference_id' => $invoiceId,
@@ -1400,7 +1432,38 @@ class Booking_wizard extends Base_Controller {
                                     'created_by' => $booking['created_by'] ?? null
                                 ]);
                                 
-                                error_log("createBookingInvoice: Created AR journal entries for invoice #$invoiceId");
+                                // Credit VAT Liability if there is tax
+                                if ($taxAmount > 0) {
+                                    $vatAccount = $accountModel->getByCode('2300'); // VAT Payable
+                                    if (!$vatAccount) {
+                                        // Try to find any VAT/Tax liability account
+                                        $liabilityAccounts = $accountModel->getByType('Liability');
+                                        foreach ($liabilityAccounts as $acc) {
+                                            if (stripos($acc['account_name'], 'vat') !== false || 
+                                                stripos($acc['account_name'], 'tax') !== false) {
+                                                $vatAccount = $acc;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if ($vatAccount) {
+                                        $transactionModel->create([
+                                            'account_id' => $vatAccount['id'],
+                                            'debit' => 0,
+                                            'credit' => $taxAmount,
+                                            'description' => 'VAT Liability - Booking: ' . ($booking['booking_number'] ?? 'Booking #' . $bookingId),
+                                            'reference_type' => 'invoice',
+                                            'reference_id' => $invoiceId,
+                                            'transaction_date' => date('Y-m-d'),
+                                            'status' => 'posted',
+                                            'created_by' => $booking['created_by'] ?? null
+                                        ]);
+                                        error_log("createBookingInvoice: Created VAT liability entry for $taxAmount");
+                                    }
+                                }
+                                
+                                error_log("createBookingInvoice: Created AR journal entries for invoice #$invoiceId (AR DR: $totalAmount, Revenue CR: $netRevenue, VAT CR: $taxAmount)");
                             } else {
                                 error_log("createBookingInvoice: Could not find AR or Revenue accounts for journal entries");
                             }

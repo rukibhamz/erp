@@ -1746,6 +1746,8 @@ class AutoMigration {
                 'invoice_id' => "INT(11) NULL",
                 'reference' => "VARCHAR(100) NULL COMMENT 'Payment reference for linking'",
                 'subtotal' => "DECIMAL(15,2) DEFAULT 0",
+                'tax_rate' => "DECIMAL(5,2) DEFAULT 0 COMMENT 'Tax rate percentage applied'",
+                'tax_amount' => "DECIMAL(15,2) DEFAULT 0 COMMENT 'Calculated tax amount'",
                 'security_deposit' => "DECIMAL(15,2) DEFAULT 0",
                 'payment_plan' => "VARCHAR(20) DEFAULT 'full'",
                 'promo_code' => "VARCHAR(50) NULL",
