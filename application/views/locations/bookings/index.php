@@ -42,13 +42,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<!-- DEBUG DATA -->
-<div class="alert alert-info">
-    <h4>Debug Data</h4>
-    <pre><?= print_r($bookings, true) ?></pre>
-</div>
-<!-- END DEBUG -->
-
 <!-- Filters -->
 <div class="card shadow-sm mb-4">
     <div class="card-body">
