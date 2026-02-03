@@ -176,26 +176,33 @@ class Notification_model extends Base_Model {
             $status = 'pending';
             $sentAt = null;
             
-            // Try explicit immediate send if helper handles it
+            // Ensure email helper is loaded
+            if (!function_exists('send_email')) {
+                $helperPaths = [
+                    APPPATH . 'helpers/email_helper.php',
+                    BASEPATH . '../application/helpers/email_helper.php'
+                ];
+                
+                foreach ($helperPaths as $path) {
+                    if (file_exists($path)) {
+                        include_once $path;
+                        break;
+                    }
+                }
+            }
+            
+            // Try to send email immediately
             if (function_exists('send_email')) {
-                // Use HTML body if available, otherwise plain body
                 $message = $data['body_html'] ?? $data['body'];
                 if (send_email($data['to_email'], $data['subject'], $message, null, null, true)) {
                     $status = 'sent';
                     $sentAt = date('Y-m-d H:i:s');
+                    error_log("queueEmail: Email sent successfully to " . $data['to_email']);
+                } else {
+                    error_log("queueEmail: send_email returned false for " . $data['to_email']);
                 }
             } else {
-                // Helper might not be loaded yet, try loading it
-                if (file_exists(BASEPATH . '../application/helpers/email_helper.php')) {
-                    include_once BASEPATH . '../application/helpers/email_helper.php';
-                    if (function_exists('send_email')) {
-                        $message = $data['body_html'] ?? $data['body'];
-                        if (send_email($data['to_email'], $data['subject'], $message, null, null, true)) {
-                            $status = 'sent';
-                            $sentAt = date('Y-m-d H:i:s');
-                        }
-                    }
-                }
+                error_log("queueEmail: send_email function not available after loading helper");
             }
 
             return $this->db->insert('email_queue', [

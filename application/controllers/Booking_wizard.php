@@ -1237,38 +1237,32 @@ class Booking_wizard extends Base_Controller {
                 try {
                     file_put_contents($logFile, date('Y-m-d H:i:s') . " - Looking up customer by email: " . ($booking['customer_email'] ?? 'NULL') . "\n", FILE_APPEND);
                     
-                    $existingCustomer = $this->db->fetchOne(
-                        "SELECT * FROM `" . $this->db->getPrefix() . "customers` WHERE email = ?", 
-                        [$booking['customer_email']]
-                    );
-                    
-                    // DEBUG: Log table columns to identify schema mismatch
-                    try {
-                        $schemaTest = $this->db->fetchOne("SELECT * FROM `" . $this->db->getPrefix() . "customers` LIMIT 1");
-                        if ($schemaTest) {
-                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - DEBUG SCHEMA: Columns: " . implode(', ', array_keys($schemaTest)) . "\n", FILE_APPEND);
-                        } else {
-                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - DEBUG SCHEMA: Table empty, cannot verify columns\n", FILE_APPEND);
-                        }
-                    } catch (Exception $e) { /* Ignore */ }
+                    // Use Customer_model getByEmail method
+                    $existingCustomer = $this->customerModel->getByEmail($booking['customer_email']);
                     
                     if (!$existingCustomer) {
                         file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating new customer\n", FILE_APPEND);
                         $customerCode = $this->customerModel->getNextCustomerCode();
+                        
+                        // Create customer with proper fields (no duplicates)
                         $customerId = $this->customerModel->create([
                             'customer_code' => $customerCode,
                             'customer_type_id' => null,
-                            'company_name' => $booking['customer_name'],
-                            'customer_type_id' => null,
-                            'company_name' => $booking['customer_name'],
-                            'contact_name' => $booking['customer_name'],
+                            'company_name' => $booking['customer_name'] ?? 'Guest Customer',
+                            'contact_name' => $booking['customer_name'] ?? 'Guest',
                             'email' => $booking['customer_email'],
                             'phone' => $booking['customer_phone'] ?? '',
                             'address' => $booking['customer_address'] ?? '',
                             'status' => 'active',
                             'created_at' => date('Y-m-d H:i:s')
                         ]);
-                        file_put_contents($logFile, date('Y-m-d H:i:s') . " - Created new Customer ID: $customerId\n", FILE_APPEND);
+                        
+                        if ($customerId) {
+                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Created new Customer ID: $customerId\n", FILE_APPEND);
+                        } else {
+                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Customer create returned false\n", FILE_APPEND);
+                            error_log("createBookingInvoice: Customer creation returned false");
+                        }
                     } else {
                         $customerId = $existingCustomer['id'];
                         file_put_contents($logFile, date('Y-m-d H:i:s') . " - Found existing Customer ID: $customerId\n", FILE_APPEND);

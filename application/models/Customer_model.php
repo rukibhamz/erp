@@ -95,5 +95,26 @@ class Customer_model extends Base_Model {
             return false;
         }
     }
+    
+    /**
+     * Get customer by email address
+     * @param string $email Customer email
+     * @return array|false Customer data or false if not found
+     */
+    public function getByEmail($email) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT c.*, ct.name as customer_type_name, ct.discount_percentage 
+                 FROM `" . $this->db->getPrefix() . "customers` c
+                 LEFT JOIN `" . $this->db->getPrefix() . "customer_types` ct ON c.customer_type_id = ct.id
+                 WHERE c.email = ?",
+                [$email]
+            );
+        } catch (Exception $e) {
+            error_log('Customer_model getByEmail error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
+
 

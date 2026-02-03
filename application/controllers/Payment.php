@@ -453,6 +453,12 @@ class Payment extends Base_Controller {
                 if ($booking) {
                     error_log("processPaymentSuccess: Found booking #" . ($booking['booking_number'] ?? $booking['id']));
                     
+                    // IDEMPOTENCY CHECK: Skip if already processed
+                    if ($booking['status'] === 'confirmed' && !empty($booking['payment_verified_at'])) {
+                        error_log("processPaymentSuccess: Booking already confirmed and verified - skipping (idempotency check)");
+                        return;
+                    }
+                    
                     // Create booking payment record
                     $paymentData = [
                         'booking_id' => $booking['id'],
@@ -477,7 +483,8 @@ class Payment extends Base_Controller {
                     
                     $updateData = [
                         'paid_amount' => $newPaidAmount,
-                        'balance_amount' => max(0, $newBalance)
+                        'balance_amount' => max(0, $newBalance),
+                        'payment_verified_at' => date('Y-m-d H:i:s') // Track verification time for idempotency
                     ];
                     
                     // Update payment status based on balance
@@ -485,6 +492,7 @@ class Payment extends Base_Controller {
                     if ($newBalance <= 0) {
                         $updateData['payment_status'] = 'paid';
                         $updateData['status'] = 'confirmed'; // Auto-confirm on full payment
+                        $updateData['confirmed_at'] = date('Y-m-d H:i:s');
                         $isFullPayment = true;
                     } elseif ($newPaidAmount > 0) {
                         $updateData['payment_status'] = 'partial';
@@ -492,6 +500,25 @@ class Payment extends Base_Controller {
                     
                     $this->bookingModel->update($booking['id'], $updateData);
                     error_log("processPaymentSuccess: Updated booking - paid: $newPaidAmount, balance: $newBalance");
+                    
+                    // BLOCK TIME SLOTS on payment confirmation
+                    if ($isFullPayment) {
+                        try {
+                            // Create time slots if not already done
+                            $this->bookingModel->createSlots(
+                                $booking['id'],
+                                $booking['space_id'] ?? $booking['facility_id'],
+                                $booking['booking_date'],
+                                $booking['start_time'],
+                                $booking['booking_date'], // endDate
+                                $booking['end_time']
+                            );
+                            error_log("processPaymentSuccess: Time slots created/confirmed for booking #" . $booking['id']);
+                        } catch (Exception $e) {
+                            error_log("processPaymentSuccess: Error creating time slots: " . $e->getMessage());
+                            // Don't fail the payment processing - slots are optional
+                        }
+                    }
                     
                     // UPDATE INVOICE STATUS
                     if ($this->invoiceModel) {

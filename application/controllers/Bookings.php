@@ -1478,5 +1478,88 @@ class Bookings extends Base_Controller {
             error_log('Bookings reverseBookingRevenue error: ' . $e->getMessage());
         }
     }
+    
+    /**
+     * Expire pending bookings that haven't been paid within timeout period
+     * Can be called via cron: php index.php bookings/expirePendingBookings
+     * Or via web: /bookings/expirePendingBookings (admin only)
+     */
+    public function expirePendingBookings() {
+        // For web access, require admin permission
+        if (php_sapi_name() !== 'cli') {
+            $this->requirePermission('bookings', 'update');
+        }
+        
+        try {
+            $timeoutMinutes = 30; // Configurable: time after which pending bookings expire
+            
+            // Find pending bookings older than timeout
+            $cutoffTime = date('Y-m-d H:i:s', strtotime("-{$timeoutMinutes} minutes"));
+            
+            $pendingBookings = $this->db->fetchAll(
+                "SELECT id, booking_number, created_at, customer_email 
+                 FROM `" . $this->db->getPrefix() . "bookings` 
+                 WHERE status = 'pending' 
+                 AND payment_status IN ('unpaid', 'pending') 
+                 AND created_at < ?",
+                [$cutoffTime]
+            );
+            
+            $expiredCount = 0;
+            
+            foreach ($pendingBookings as $booking) {
+                try {
+                    // Update booking status to expired
+                    $this->bookingModel->update($booking['id'], [
+                        'status' => 'expired',
+                        'cancelled_at' => date('Y-m-d H:i:s'),
+                        'cancellation_reason' => 'Payment timeout - booking expired after ' . $timeoutMinutes . ' minutes'
+                    ]);
+                    
+                    // Delete any associated booking slots (free up time slots)
+                    $this->db->query(
+                        "DELETE FROM `" . $this->db->getPrefix() . "booking_slots` WHERE booking_id = ?",
+                        [$booking['id']]
+                    );
+                    
+                    $expiredCount++;
+                    error_log("expirePendingBookings: Expired booking #{$booking['booking_number']} (ID: {$booking['id']})");
+                    
+                } catch (Exception $e) {
+                    error_log("expirePendingBookings: Error expiring booking {$booking['id']}: " . $e->getMessage());
+                }
+            }
+            
+            $message = "Expired {$expiredCount} pending bookings older than {$timeoutMinutes} minutes.";
+            error_log("expirePendingBookings: " . $message);
+            
+            // Return JSON for API/cron calls, or redirect for web
+            if (php_sapi_name() === 'cli' || !empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => $message,
+                    'expired_count' => $expiredCount
+                ]);
+                exit;
+            } else {
+                $this->setFlashMessage('success', $message);
+                redirect('bookings');
+            }
+            
+        } catch (Exception $e) {
+            error_log('expirePendingBookings error: ' . $e->getMessage());
+            
+            if (php_sapi_name() === 'cli' || !empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                header('Content-Type: application/json');
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            } else {
+                $this->setFlashMessage('danger', 'Failed to expire pending bookings: ' . $e->getMessage());
+                redirect('bookings');
+            }
+        }
+    }
 }
 
