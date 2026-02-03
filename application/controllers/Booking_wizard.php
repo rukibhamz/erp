@@ -1343,6 +1343,73 @@ class Booking_wizard extends Base_Controller {
                     ]);
                     
                     error_log("createBookingInvoice: Created invoice #$invoiceId for booking #$bookingId");
+                    
+                    // CREATE ACCOUNTING ENTRIES - Accounts Receivable
+                    try {
+                        $accountModel = $this->loadModel('Account_model');
+                        $transactionModel = $this->loadModel('Transaction_model');
+                        
+                        if ($accountModel && $transactionModel) {
+                            // Get Accounts Receivable account (typically 1200)
+                            $arAccount = $accountModel->getByCode('1200');
+                            if (!$arAccount) {
+                                // Try to find any AR account
+                                $assetAccounts = $accountModel->getByType('Asset');
+                                foreach ($assetAccounts as $acc) {
+                                    if (stripos($acc['account_name'], 'receivable') !== false) {
+                                        $arAccount = $acc;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Get Revenue account (typically 4000 or 4100)
+                            $revenueAccount = $accountModel->getByCode('4100'); // Booking Revenue
+                            if (!$revenueAccount) {
+                                $revenueAccount = $accountModel->getByCode('4000'); // Sales Revenue
+                            }
+                            if (!$revenueAccount) {
+                                $revenueAccounts = $accountModel->getByType('Revenue');
+                                $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
+                            }
+                            
+                            if ($arAccount && $revenueAccount) {
+                                // Debit Accounts Receivable (customer owes us)
+                                $transactionModel->create([
+                                    'account_id' => $arAccount['id'],
+                                    'debit' => $totalAmount,
+                                    'credit' => 0,
+                                    'description' => 'Booking Receivable: ' . ($booking['booking_number'] ?? 'Booking #' . $bookingId),
+                                    'reference_type' => 'invoice',
+                                    'reference_id' => $invoiceId,
+                                    'transaction_date' => date('Y-m-d'),
+                                    'status' => 'posted',
+                                    'created_by' => $booking['created_by'] ?? null
+                                ]);
+                                
+                                // Credit Revenue (we earned revenue)
+                                $transactionModel->create([
+                                    'account_id' => $revenueAccount['id'],
+                                    'debit' => 0,
+                                    'credit' => $totalAmount,
+                                    'description' => 'Booking Revenue: ' . ($booking['booking_number'] ?? 'Booking #' . $bookingId),
+                                    'reference_type' => 'invoice',
+                                    'reference_id' => $invoiceId,
+                                    'transaction_date' => date('Y-m-d'),
+                                    'status' => 'posted',
+                                    'created_by' => $booking['created_by'] ?? null
+                                ]);
+                                
+                                error_log("createBookingInvoice: Created AR journal entries for invoice #$invoiceId");
+                            } else {
+                                error_log("createBookingInvoice: Could not find AR or Revenue accounts for journal entries");
+                            }
+                        }
+                    } catch (Exception $acctEx) {
+                        error_log("createBookingInvoice: Accounting entry error - " . $acctEx->getMessage());
+                        // Don't fail invoice creation if accounting fails
+                    }
+                    
                 } catch (Exception $e) {
                     error_log("createBookingInvoice: Error adding line items: " . $e->getMessage());
                 }

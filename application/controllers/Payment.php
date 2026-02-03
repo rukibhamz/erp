@@ -567,11 +567,39 @@ class Payment extends Base_Controller {
                         
                         // If no invoice_id in booking, try to find by reference
                         if (!$invoiceId) {
-                            $sql = "SELECT id FROM invoices WHERE reference_type = 'booking' AND reference_id = ?";
-                            $query = $this->db->query($sql, [$booking['id']]); // Use direct query if invoiceModel doesn't have search
+                            // Try multiple lookup methods since invoice creation format may vary
+                            $prefix = $this->db->getPrefix();
+                            
+                            // Method 1: Look for 'BKG-{booking_id}' in reference field
+                            $sql = "SELECT id FROM {$prefix}invoices WHERE reference = ? LIMIT 1";
+                            $query = $this->db->query($sql, ['BKG-' . $booking['id']]);
                             if ($query && $query->num_rows() > 0) {
                                 $inv = $query->row_array();
                                 $invoiceId = $inv['id'];
+                            }
+                            
+                            // Method 2: Look in notes for booking number
+                            if (!$invoiceId && !empty($booking['booking_number'])) {
+                                $sql = "SELECT id FROM {$prefix}invoices WHERE notes LIKE ? LIMIT 1";
+                                $query = $this->db->query($sql, ['%' . $booking['booking_number'] . '%']);
+                                if ($query && $query->num_rows() > 0) {
+                                    $inv = $query->row_array();
+                                    $invoiceId = $inv['id'];
+                                }
+                            }
+                            
+                            // Method 3: Try reference_type/reference_id if columns exist
+                            if (!$invoiceId) {
+                                try {
+                                    $sql = "SELECT id FROM {$prefix}invoices WHERE reference_type = 'booking' AND reference_id = ? LIMIT 1";
+                                    $query = $this->db->query($sql, [$booking['id']]);
+                                    if ($query && $query->num_rows() > 0) {
+                                        $inv = $query->row_array();
+                                        $invoiceId = $inv['id'];
+                                    }
+                                } catch (Exception $e) {
+                                    // Columns don't exist, ignore
+                                }
                             }
                         }
                         
@@ -602,6 +630,8 @@ class Payment extends Base_Controller {
                     }
                     
                     // Create accounting entries - double-entry for payment received
+                    // Proper flow: Debit Cash, Credit Accounts Receivable (clearing the receivable)
+                    // Note: Revenue was already credited when invoice was created
                     try {
                         if ($this->cashAccountModel && $this->transactionModel) {
                             $defaultCashAccount = $this->cashAccountModel->getDefault();
@@ -619,29 +649,54 @@ class Payment extends Base_Controller {
                                     'created_by' => null
                                 ]);
                                 
-                                // Try to credit revenue account if exists
+                                // Credit Accounts Receivable (clearing the customer's debt)
                                 if ($this->accountModel) {
                                     try {
-                                        // Find revenue account for booking income
-                                        $revenueAccount = $this->accountModel->getByCode('4100'); // Sales Revenue
-                                        if (!$revenueAccount) {
-                                            $revenueAccount = $this->accountModel->getByCode('4000'); // Revenue
+                                        // Find Accounts Receivable account (typically 1200)
+                                        $arAccount = $this->accountModel->getByCode('1200');
+                                        if (!$arAccount) {
+                                            // Try to find any AR account
+                                            $assetAccounts = $this->accountModel->getByType('Asset');
+                                            foreach ($assetAccounts as $acc) {
+                                                if (stripos($acc['account_name'], 'receivable') !== false) {
+                                                    $arAccount = $acc;
+                                                    break;
+                                                }
+                                            }
                                         }
-                                        if ($revenueAccount) {
+                                        
+                                        if ($arAccount) {
                                             $this->transactionModel->create([
-                                                'account_id' => $revenueAccount['id'],
+                                                'account_id' => $arAccount['id'],
                                                 'debit' => 0,
                                                 'credit' => $transaction['amount'],
-                                                'description' => 'Booking revenue: ' . ($booking['booking_number'] ?? $booking['id']),
+                                                'description' => 'Payment received - booking: ' . ($booking['booking_number'] ?? $booking['id']),
                                                 'reference_type' => 'booking_payment',
                                                 'reference_id' => $paymentId,
                                                 'transaction_date' => date('Y-m-d'),
                                                 'status' => 'posted',
                                                 'created_by' => null
                                             ]);
+                                            error_log("processPaymentSuccess: Created accounting entries - Cash DR, AR CR");
+                                        } else {
+                                            // Fallback: Credit Revenue if no AR account (simpler single-entry)
+                                            $revenueAccount = $this->accountModel->getByCode('4100') ?? $this->accountModel->getByCode('4000');
+                                            if ($revenueAccount) {
+                                                $this->transactionModel->create([
+                                                    'account_id' => $revenueAccount['id'],
+                                                    'debit' => 0,
+                                                    'credit' => $transaction['amount'],
+                                                    'description' => 'Booking revenue: ' . ($booking['booking_number'] ?? $booking['id']),
+                                                    'reference_type' => 'booking_payment',
+                                                    'reference_id' => $paymentId,
+                                                    'transaction_date' => date('Y-m-d'),
+                                                    'status' => 'posted',
+                                                    'created_by' => null
+                                                ]);
+                                            }
                                         }
                                     } catch (Exception $e) {
-                                        error_log('Revenue account entry error: ' . $e->getMessage());
+                                        error_log('AR/Revenue account entry error: ' . $e->getMessage());
                                     }
                                 }
                             }
