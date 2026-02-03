@@ -6,30 +6,40 @@
  * 1. Bookings with facility_id but no space_id (adds space_id)
  * 2. Syncs facility_id and space_id for consistency
  * 
- * Run this from the server's root directory
+ * Access this from your browser: http://localhost/erp/fix_booking_display.php
  */
+
+// Set content type for browser
+header('Content-Type: text/html; charset=utf-8');
+echo "<html><head><title>Fix Booking Display</title><style>body{font-family:monospace;background:#1a1a2e;color:#e0e0e0;padding:20px;} pre{background:#16213e;padding:15px;border-radius:5px;overflow-x:auto;} h2{color:#00d4ff;} .success{color:#00ff88;} .error{color:#ff4444;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #333;padding:8px;text-align:left;}</style></head><body>";
+echo "<h1>🔧 Fix Booking Display Issues</h1><pre>";
 
 define('BASEPATH', __DIR__ . '/application/');
 define('APPPATH', BASEPATH);
 
-// Load config
+// Load config - the file returns an array
 $configFile = BASEPATH . 'config/config.installed.php';
 if (!file_exists($configFile)) {
     $configFile = BASEPATH . 'config/config.php';
 }
 
 if (file_exists($configFile)) {
-    require_once $configFile;
+    $config = include($configFile);
 } else {
     die("Could not find config file\n");
 }
 
+if (!is_array($config) || !isset($config['db'])) {
+    die("Config file did not return expected array format\n");
+}
+
 // Get database credentials
-$hostname = $config['db']['hostname'] ?? $config['database']['host'] ?? 'localhost';
-$username = $config['db']['username'] ?? $config['database']['username'] ?? 'root';
-$password = $config['db']['password'] ?? $config['database']['password'] ?? '';
-$database = $config['db']['database'] ?? $config['database']['database'] ?? 'erp';
-$prefix = $config['db']['dbprefix'] ?? $config['database']['table_prefix'] ?? 'erp_';
+$dbConfig = $config['db'];
+$hostname = $dbConfig['hostname'] ?? $dbConfig['host'] ?? 'localhost';
+$username = $dbConfig['username'] ?? 'root';
+$password = $dbConfig['password'] ?? '';
+$database = $dbConfig['database'] ?? 'erp';
+$prefix = $dbConfig['dbprefix'] ?? $dbConfig['table_prefix'] ?? 'erp_';
 
 try {
     $pdo = new PDO("mysql:host=$hostname;dbname=$database;charset=utf8mb4", $username, $password);
@@ -155,3 +165,5 @@ foreach ($transactions as $t) {
 }
 
 echo "\n=== Done! ===\n";
+echo "</pre></body></html>";
+
