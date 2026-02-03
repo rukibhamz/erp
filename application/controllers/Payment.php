@@ -421,6 +421,22 @@ class Payment extends Base_Controller {
                     $verification
                 );
                 
+                // Send payment failed email notification
+                try {
+                    if ($transaction['payment_type'] === 'booking_payment') {
+                        $notificationModel = $this->loadModel('Notification_model');
+                        $bookingModel = $this->loadModel('Booking_model');
+                        $booking = $bookingModel->getById($transaction['reference_id']);
+                        if ($booking && $notificationModel && !empty($booking['customer_email'])) {
+                            $retryUrl = base_url('booking-wizard/retry-payment/' . $booking['id']);
+                            $notificationModel->sendPaymentFailedEmail($booking, $retryUrl);
+                            error_log("Payment: Sent payment failed email to " . $booking['customer_email']);
+                        }
+                    }
+                } catch (Exception $emailEx) {
+                    error_log("Payment: Error sending failed payment email: " . $emailEx->getMessage());
+                }
+                
                 throw new Exception($verification['message'] ?? 'Payment verification failed');
             }
             

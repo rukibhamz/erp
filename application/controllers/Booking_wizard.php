@@ -997,6 +997,22 @@ class Booking_wizard extends Base_Controller {
                             } else {
                                 file_put_contents($logFile, "[$timestamp] WARNING: No transaction active before redirect!\n", FILE_APPEND);
                             }
+                            
+                            // SEND PENDING EMAIL with payment link before redirect
+                            try {
+                                $notificationModel = $this->loadModel('Notification_model');
+                                if ($notificationModel) {
+                                    $emailBooking = $bookingRecord;
+                                    $emailBooking['id'] = $bookingId;
+                                    $emailBooking['facility_name'] = $resource['space_name'] ?? $resource['name'] ?? 'Reserved Space';
+                                    $notificationModel->sendBookingPendingEmail($emailBooking, $paymentResult['authorization_url']);
+                                    file_put_contents($logFile, "[$timestamp] PENDING EMAIL SENT to: " . $bookingData['customer_email'] . "\n", FILE_APPEND);
+                                }
+                            } catch (Exception $emailEx) {
+                                error_log("Booking_wizard: Failed to send pending email - " . $emailEx->getMessage());
+                                // Continue anyway - email is not critical for booking flow
+                            }
+                            
                             unset($_SESSION['booking_data']);
                             
                             // Redirect to Paystack
