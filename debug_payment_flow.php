@@ -7,8 +7,10 @@
  * Or via browser: http://localhost/erp/debug_payment_flow.php?ref=YOUR_REF
  */
 
-// Bootstrap the application
-require_once __DIR__ . '/system/init.php';
+// Define constants manually (no init.php required)
+define('ROOTPATH', __DIR__ . '/');
+define('BASEPATH', __DIR__ . '/system/');
+define('APPPATH', __DIR__ . '/application/');
 
 echo "<pre style='font-family: monospace; background: #1a1a2e; color: #16ff16; padding: 20px;'>\n";
 echo "===========================================\n";
@@ -20,7 +22,15 @@ $transactionRef = $argv[1] ?? $_GET['ref'] ?? null;
 
 // Database connection
 try {
-    $config = require ROOTPATH . 'config/config.installed.php';
+    $configFile = ROOTPATH . 'config/config.installed.php';
+    if (!file_exists($configFile)) {
+        $configFile = ROOTPATH . 'config/config.php';
+    }
+    if (!file_exists($configFile)) {
+        throw new Exception("Config file not found. Tried: config/config.installed.php and config/config.php");
+    }
+    
+    $config = require $configFile;
     $dbConfig = $config['database'];
     
     $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['database']};charset=utf8mb4";
