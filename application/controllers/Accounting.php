@@ -131,19 +131,31 @@ class Accounting extends Base_Controller {
     }
     
     private function getRecentTransactions($limit = 10) {
-        try {
-            return $this->db->fetchAll(
-                "SELECT t.*, a.account_code, a.account_name
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE t.status = 'posted'
-                 ORDER BY t.transaction_date DESC, t.id DESC
-                 LIMIT " . intval($limit)
-            );
-        } catch (Exception $e) {
-            return [];
-        }
+    try {
+        // Get transactions with account details and booking/invoice references
+        $prefix = $this->db->getPrefix();
+        
+        return $this->db->fetchAll(
+            "SELECT t.*, 
+                    a.account_code, 
+                    a.account_name,
+                    b.booking_number,
+                    i.invoice_number,
+                    c.company_name as customer_name
+             FROM `{$prefix}transactions` t
+             JOIN `{$prefix}accounts` a ON t.account_id = a.id
+             LEFT JOIN `{$prefix}space_bookings` b ON t.reference_type = 'booking_payment' AND t.reference_id = b.id
+             LEFT JOIN `{$prefix}invoices` i ON t.reference_type = 'invoice' AND t.reference_id = i.id
+             LEFT JOIN `{$prefix}customers` c ON i.customer_id = c.id
+             WHERE t.status = 'posted'
+             ORDER BY t.transaction_date DESC, t.id DESC
+             LIMIT " . intval($limit)
+        );
+    } catch (Exception $e) {
+        error_log('getRecentTransactions error: ' . $e->getMessage());
+        return [];
     }
+}
     
     private function getOverdueInvoices($limit = 5) {
         try {

@@ -604,12 +604,47 @@ class Payment extends Base_Controller {
                         }
                         
                         if ($invoiceId) {
-                            $invoiceUpdate = [
-                                'status' => ($newBalance <= 0) ? 'paid' : 'partial',
-                                'amount_paid' => $newPaidAmount
-                            ];
-                            $this->invoiceModel->update($invoiceId, $invoiceUpdate);
-                            error_log("processPaymentSuccess: Updated linked invoice #$invoiceId");
+                            // Get current invoice data
+                            $invoice = $this->invoiceModel->getById($invoiceId);
+                            if ($invoice) {
+                                $invoicePaidAmount = floatval($invoice['paid_amount'] ?? 0) + floatval($transaction['amount']);
+                                $invoiceBalance = floatval($invoice['total_amount'] ?? 0) - $invoicePaidAmount;
+                                
+                                $invoiceUpdate = [
+                                    'status' => ($invoiceBalance <= 0) ? 'paid' : 'partially_paid',
+                                    'paid_amount' => $invoicePaidAmount,
+                                    'balance_amount' => max(0, $invoiceBalance),
+                                    'payment_date' => date('Y-m-d'),
+                                    'updated_at' => date('Y-m-d H:i:s')
+                                ];
+                                $this->invoiceModel->update($invoiceId, $invoiceUpdate);
+                                error_log("processPaymentSuccess: Updated linked invoice #$invoiceId - paid: $invoicePaidAmount, balance: $invoiceBalance");
+                                
+                                // Update customer balance
+                                if ($invoice['customer_id']) {
+                                    try {
+                                        $customerModel = $this->loadModel('Customer_model');
+                                        if ($customerModel) {
+                                            // Calculate total outstanding for this customer
+                                            $outstandingResult = $this->db->fetchOne(
+                                                "SELECT COALESCE(SUM(balance_amount), 0) as total_balance 
+                                                 FROM `" . $this->db->getPrefix() . "invoices` 
+                                                 WHERE customer_id = ? 
+                                                 AND status IN ('sent', 'partially_paid', 'overdue', 'draft')",
+                                                [$invoice['customer_id']]
+                                            );
+                                            $customerBalance = $outstandingResult ? floatval($outstandingResult['total_balance']) : 0;
+                                            $customerModel->update($invoice['customer_id'], [
+                                                'current_balance' => $customerBalance,
+                                                'updated_at' => date('Y-m-d H:i:s')
+                                            ]);
+                                            error_log("processPaymentSuccess: Updated customer #" . $invoice['customer_id'] . " balance to: $customerBalance");
+                                        }
+                                    } catch (Exception $custEx) {
+                                        error_log("processPaymentSuccess: Customer balance update error: " . $custEx->getMessage());
+                                    }
+                                }
+                            }
                         }
                     }
 

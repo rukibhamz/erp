@@ -1261,98 +1261,262 @@ class Booking_wizard extends Base_Controller {
     }
     
     /**
-     * Create invoice for a booking
+     * Get existing customer or create new one
+     * Integrates with accounting module - prevents duplicate customers
+     * @param array $booking Booking data
+     * @return int|null Customer ID
+     */
+    private function getOrCreateCustomer($booking) {
+        $logFile = 'logs/customer_creation.log';
+        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - START getOrCreateCustomer for email: " . ($booking['customer_email'] ?? 'N/A') . "\n", FILE_APPEND);
+        
+        if (!$this->customerModel) {
+            @file_put_contents($logFile, "Customer model not loaded\n", FILE_APPEND);
+            return null;
+        }
+        
+        try {
+            // ✅ STEP 1: Check if customer already exists by email
+            $existingCustomer = $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . "customers` 
+                 WHERE email = ? 
+                 AND status = 'active'",
+                [$booking['customer_email']]
+            );
+            
+            if ($existingCustomer) {
+                // Customer exists - just return the ID
+                @file_put_contents($logFile, "Found existing customer ID: " . $existingCustomer['id'] . "\n", FILE_APPEND);
+                
+                // Update customer info if it has changed
+                $updateData = [];
+                if (($existingCustomer['phone'] ?? '') != ($booking['customer_phone'] ?? '') && !empty($booking['customer_phone'])) {
+                    $updateData['phone'] = $booking['customer_phone'];
+                }
+                if (($existingCustomer['address'] ?? '') != ($booking['customer_address'] ?? '') && !empty($booking['customer_address'])) {
+                    $updateData['address'] = $booking['customer_address'];
+                }
+                
+                if (!empty($updateData)) {
+                    $this->customerModel->update($existingCustomer['id'], $updateData);
+                    @file_put_contents($logFile, "Updated customer info\n", FILE_APPEND);
+                }
+                
+                return $existingCustomer['id'];
+            }
+            
+            // ✅ STEP 2: Customer doesn't exist - create new one
+            @file_put_contents($logFile, "Creating new customer\n", FILE_APPEND);
+            
+            // Generate unique customer code
+            $customerCode = $this->customerModel->getNextCustomerCode();
+            
+            // Get default customer type if available
+            $customerTypeId = null;
+            try {
+                $defaultType = $this->db->fetchOne(
+                    "SELECT id FROM `" . $this->db->getPrefix() . "customer_types` 
+                     WHERE is_default = 1 OR name = 'Individual' 
+                     LIMIT 1"
+                );
+                if ($defaultType) {
+                    $customerTypeId = $defaultType['id'];
+                }
+            } catch (Exception $e) {
+                // Customer types table might not exist
+            }
+            
+            // Create customer record
+            $customerData = [
+                'customer_code' => $customerCode,
+                'customer_type_id' => $customerTypeId,
+                'company_name' => $booking['customer_name'] ?? 'Guest Customer',
+                'contact_name' => $booking['customer_name'] ?? 'Guest',
+                'email' => $booking['customer_email'],
+                'phone' => $booking['customer_phone'] ?? '',
+                'address' => $booking['customer_address'] ?? '',
+                'payment_terms' => 'Immediate',
+                'credit_limit' => 0,
+                'current_balance' => 0,
+                'status' => 'active',
+                'notes' => 'Customer created from booking system',
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => $booking['created_by'] ?? null
+            ];
+            
+            $customerId = $this->customerModel->create($customerData);
+            
+            if ($customerId) {
+                @file_put_contents($logFile, "Created new customer ID: $customerId with code: $customerCode\n", FILE_APPEND);
+                
+                // ✅ STEP 3: Create customer ledger entry in accounting
+                $this->createCustomerLedgerAccount($customerId, $booking['customer_name'] ?? 'Guest');
+                
+                return $customerId;
+            }
+            
+            return null;
+            
+        } catch (Exception $e) {
+            @file_put_contents($logFile, "ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+            error_log("getOrCreateCustomer error: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Create ledger account for customer in accounting system
+     */
+    private function createCustomerLedgerAccount($customerId, $customerName) {
+        try {
+            if (!$this->accountModel) {
+                return;
+            }
+            
+            // Get the parent Accounts Receivable account
+            $arParentAccount = $this->accountModel->getByCode('1200');
+            
+            if (!$arParentAccount) {
+                $arAccounts = $this->accountModel->getByType('Assets');
+                if (is_array($arAccounts)) {
+                    foreach ($arAccounts as $acc) {
+                        if (stripos($acc['account_name'] ?? '', 'receivable') !== false) {
+                            $arParentAccount = $acc;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if ($arParentAccount) {
+                // Create sub-ledger for this customer
+                $accountCode = '1200-' . str_pad($customerId, 4, '0', STR_PAD_LEFT);
+                
+                // Check if account already exists
+                $existingAccount = $this->accountModel->getByCode($accountCode);
+                
+                if (!$existingAccount) {
+                    $this->accountModel->create([
+                        'account_code' => $accountCode,
+                        'account_name' => 'AR - ' . $customerName,
+                        'account_type' => 'Assets',
+                        'account_subtype' => 'Current Assets',
+                        'parent_account_id' => $arParentAccount['id'],
+                        'normal_balance' => 'debit',
+                        'is_active' => 1,
+                        'is_system_account' => 0,
+                        'description' => 'Accounts Receivable for customer #' . $customerId,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                    
+                    error_log("Created AR ledger account: $accountCode for customer: $customerName");
+                }
+            }
+            
+        } catch (Exception $e) {
+            error_log("createCustomerLedgerAccount error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Update customer's current balance in accounting
+     */
+    private function updateCustomerBalance($customerId) {
+        try {
+            if (!$this->customerModel) {
+                return;
+            }
+            
+            // Calculate total outstanding invoices
+            $result = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(balance_amount), 0) as total_balance 
+                 FROM `" . $this->db->getPrefix() . "invoices` 
+                 WHERE customer_id = ? 
+                 AND status IN ('sent', 'partially_paid', 'overdue', 'draft')",
+                [$customerId]
+            );
+            
+            $totalBalance = $result ? floatval($result['total_balance']) : 0;
+            
+            // Update customer record
+            $this->customerModel->update($customerId, [
+                'current_balance' => $totalBalance,
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            error_log("Updated customer #$customerId balance to: $totalBalance");
+            
+        } catch (Exception $e) {
+            error_log("updateCustomerBalance error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Create invoice for a booking - Full accounting integration
      * @param int $bookingId
      * @param array $booking Booking data
      * @return int|null Invoice ID
      */
     private function createBookingInvoice($bookingId, $booking) {
-        $logFile = 'debug_invoice.txt';
-        file_put_contents($logFile, date('Y-m-d H:i:s') . " - START createBookingInvoice for Booking $bookingId\n", FILE_APPEND);
+        $logFile = 'logs/invoice_creation.log';
+        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - START createBookingInvoice for Booking $bookingId\n", FILE_APPEND);
         
         try {
             if (!$this->invoiceModel) {
-                file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Invoice model not loaded\n", FILE_APPEND);
+                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Invoice model not loaded\n", FILE_APPEND);
                 error_log("createBookingInvoice: Invoice model not loaded");
                 return null;
             }
             
-            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Invoice model OK, proceeding to customer lookup\n", FILE_APPEND);
-            
-            // Find or create customer
-            $customerId = null;
-            if ($this->customerModel) {
-                try {
-                    file_put_contents($logFile, date('Y-m-d H:i:s') . " - Looking up customer by email: " . ($booking['customer_email'] ?? 'NULL') . "\n", FILE_APPEND);
-                    
-                    // Use Customer_model getByEmail method
-                    $existingCustomer = $this->customerModel->getByEmail($booking['customer_email']);
-                    
-                    if (!$existingCustomer) {
-                        file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating new customer\n", FILE_APPEND);
-                        $customerCode = $this->customerModel->getNextCustomerCode();
-                        
-                        // Create customer with proper fields (no duplicates)
-                        $customerId = $this->customerModel->create([
-                            'customer_code' => $customerCode,
-                            'customer_type_id' => null,
-                            'company_name' => $booking['customer_name'] ?? 'Guest Customer',
-                            'contact_name' => $booking['customer_name'] ?? 'Guest',
-                            'email' => $booking['customer_email'],
-                            'phone' => $booking['customer_phone'] ?? '',
-                            'address' => $booking['customer_address'] ?? '',
-                            'status' => 'active',
-                            'created_at' => date('Y-m-d H:i:s')
-                        ]);
-                        
-                        if ($customerId) {
-                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Created new Customer ID: $customerId\n", FILE_APPEND);
-                        } else {
-                            file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Customer create returned false\n", FILE_APPEND);
-                            error_log("createBookingInvoice: Customer creation returned false");
-                        }
-                    } else {
-                        $customerId = $existingCustomer['id'];
-                        file_put_contents($logFile, date('Y-m-d H:i:s') . " - Found existing Customer ID: $customerId\n", FILE_APPEND);
-                    }
-                } catch (Exception $e) {
-                    file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR in customer lookup/creation: " . $e->getMessage() . "\n", FILE_APPEND);
-                    error_log("createBookingInvoice customer error: " . $e->getMessage());
-                }
-            } else {
-                file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: CustomerModel not loaded\n", FILE_APPEND);
-            }
+            // ✅ STEP 1: Get or create customer (prevents duplicates)
+            $customerId = $this->getOrCreateCustomer($booking);
             
             if (!$customerId) {
-                file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Failed to obtain Customer ID\n", FILE_APPEND);
+                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Failed to obtain Customer ID\n", FILE_APPEND);
+            }
+            
+            // ✅ STEP 2: Check if invoice already exists for this booking
+            $existingInvoice = $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . "invoices` 
+                 WHERE reference = ?",
+                ['BKG-' . $bookingId]
+            );
+            
+            if ($existingInvoice) {
+                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Invoice already exists ID: " . $existingInvoice['id'] . "\n", FILE_APPEND);
+                return $existingInvoice['id'];
             }
             
             // Calculate amounts
             $subtotal = floatval($booking['subtotal'] ?? $booking['total_amount'] ?? 0);
+            $taxRate = floatval($booking['tax_rate'] ?? 0);
             $taxAmount = floatval($booking['tax_amount'] ?? 0);
             $totalAmount = floatval($booking['total_amount'] ?? ($subtotal + $taxAmount));
             $discountAmount = floatval($booking['discount_amount'] ?? 0);
+            $paidAmount = floatval($booking['paid_amount'] ?? 0);
             
-            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating invoice: subtotal=$subtotal, total=$totalAmount\n", FILE_APPEND);
+            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating invoice: subtotal=$subtotal, tax=$taxAmount, total=$totalAmount\n", FILE_APPEND);
             
-            // Create invoice - using columns that exist in erp_invoices table
+            // ✅ STEP 3: Create invoice
             $invoiceData = [
                 'invoice_number' => $this->invoiceModel->getNextInvoiceNumber(),
                 'customer_id' => $customerId,
                 'invoice_date' => date('Y-m-d'),
-                'due_date' => date('Y-m-d', strtotime('+7 days')),
-                'reference' => 'BKG-' . $bookingId, // Use 'reference' not 'reference_type/reference_id'
+                'due_date' => date('Y-m-d'), // Immediate for bookings
+                'reference' => 'BKG-' . $bookingId,
                 'subtotal' => $subtotal,
-                'tax_rate' => 0,
+                'tax_rate' => $taxRate,
                 'tax_amount' => $taxAmount,
                 'discount_amount' => $discountAmount,
                 'total_amount' => $totalAmount,
-                'paid_amount' => 0,
-                'balance_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
+                'balance_amount' => $totalAmount - $paidAmount,
                 'currency' => $booking['currency'] ?? 'NGN',
-                'terms' => '',
-                'notes' => 'Booking #' . ($booking['booking_number'] ?? $bookingId),
-                'status' => 'draft',
+                'status' => $paidAmount >= $totalAmount ? 'paid' : ($paidAmount > 0 ? 'partially_paid' : 'sent'),
+                'payment_date' => $paidAmount > 0 ? date('Y-m-d') : null,
+                'payment_method' => 'Online Payment',
+                'notes' => 'Booking #' . ($booking['booking_number'] ?? $bookingId) . ' - Space Booking',
+                'terms' => 'Payment due immediately',
                 'created_by' => $booking['created_by'] ?? null,
                 'created_at' => date('Y-m-d H:i:s')
             ];
@@ -1360,131 +1524,292 @@ class Booking_wizard extends Base_Controller {
             $invoiceId = $this->invoiceModel->create($invoiceData);
             
             if ($invoiceId) {
-                // Add invoice line item for the booking
+                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Created invoice ID: $invoiceId\n", FILE_APPEND);
+                
+                // ✅ STEP 4: Add invoice line items
                 try {
                     $this->invoiceModel->addItem($invoiceId, [
-                        'description' => 'Space Booking: ' . ($booking['facility_name'] ?? 'Facility'),
+                        'description' => 'Space Booking - ' . ($booking['facility_name'] ?? 'Facility'),
                         'quantity' => 1,
                         'unit_price' => $subtotal,
-                        'amount' => $subtotal
+                        'amount' => $subtotal,
+                        'tax_rate' => $taxRate,
+                        'tax_amount' => $taxAmount
                     ]);
-                    
-                    // Update booking with invoice reference
-                    $this->bookingModel->update($bookingId, [
-                        'invoice_id' => $invoiceId
-                    ]);
-                    
-                    error_log("createBookingInvoice: Created invoice #$invoiceId for booking #$bookingId");
-                    
-                    // CREATE ACCOUNTING ENTRIES - Accounts Receivable
-                    try {
-                        $accountModel = $this->loadModel('Account_model');
-                        $transactionModel = $this->loadModel('Transaction_model');
-                        
-                        if ($accountModel && $transactionModel) {
-                            // Get Accounts Receivable account (typically 1200)
-                            $arAccount = $accountModel->getByCode('1200');
-                            if (!$arAccount) {
-                                // Try to find any AR account
-                                $assetAccounts = $accountModel->getByType('Asset');
-                                foreach ($assetAccounts as $acc) {
-                                    if (stripos($acc['account_name'], 'receivable') !== false) {
-                                        $arAccount = $acc;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            // Get Revenue account (typically 4000 or 4100)
-                            $revenueAccount = $accountModel->getByCode('4100'); // Booking Revenue
-                            if (!$revenueAccount) {
-                                $revenueAccount = $accountModel->getByCode('4000'); // Sales Revenue
-                            }
-                            if (!$revenueAccount) {
-                                $revenueAccounts = $accountModel->getByType('Revenue');
-                                $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
-                            }
-                            
-                            if ($arAccount && $revenueAccount) {
-                                // Debit Accounts Receivable (customer owes us the TOTAL)
-                                $transactionModel->create([
-                                    'account_id' => $arAccount['id'],
-                                    'debit' => $totalAmount,
-                                    'credit' => 0,
-                                    'description' => 'Booking Receivable: ' . ($booking['booking_number'] ?? 'Booking #' . $bookingId),
-                                    'reference_type' => 'invoice',
-                                    'reference_id' => $invoiceId,
-                                    'transaction_date' => date('Y-m-d'),
-                                    'status' => 'posted',
-                                    'created_by' => $booking['created_by'] ?? null
-                                ]);
-                                
-                                // Credit Revenue (net amount: subtotal - discount)
-                                $netRevenue = $subtotal - $discountAmount;
-                                $transactionModel->create([
-                                    'account_id' => $revenueAccount['id'],
-                                    'debit' => 0,
-                                    'credit' => $netRevenue,
-                                    'description' => 'Booking Revenue: ' . ($booking['booking_number'] ?? 'Booking #' . $bookingId),
-                                    'reference_type' => 'invoice',
-                                    'reference_id' => $invoiceId,
-                                    'transaction_date' => date('Y-m-d'),
-                                    'status' => 'posted',
-                                    'created_by' => $booking['created_by'] ?? null
-                                ]);
-                                
-                                // Credit VAT Liability if there is tax
-                                if ($taxAmount > 0) {
-                                    $vatAccount = $accountModel->getByCode('2300'); // VAT Payable
-                                    if (!$vatAccount) {
-                                        // Try to find any VAT/Tax liability account
-                                        $liabilityAccounts = $accountModel->getByType('Liability');
-                                        foreach ($liabilityAccounts as $acc) {
-                                            if (stripos($acc['account_name'], 'vat') !== false || 
-                                                stripos($acc['account_name'], 'tax') !== false) {
-                                                $vatAccount = $acc;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    
-                                    if ($vatAccount) {
-                                        $transactionModel->create([
-                                            'account_id' => $vatAccount['id'],
-                                            'debit' => 0,
-                                            'credit' => $taxAmount,
-                                            'description' => 'VAT Liability - Booking: ' . ($booking['booking_number'] ?? 'Booking #' . $bookingId),
-                                            'reference_type' => 'invoice',
-                                            'reference_id' => $invoiceId,
-                                            'transaction_date' => date('Y-m-d'),
-                                            'status' => 'posted',
-                                            'created_by' => $booking['created_by'] ?? null
-                                        ]);
-                                        error_log("createBookingInvoice: Created VAT liability entry for $taxAmount");
-                                    }
-                                }
-                                
-                                error_log("createBookingInvoice: Created AR journal entries for invoice #$invoiceId (AR DR: $totalAmount, Revenue CR: $netRevenue, VAT CR: $taxAmount)");
-                            } else {
-                                error_log("createBookingInvoice: Could not find AR or Revenue accounts for journal entries");
-                            }
-                        }
-                    } catch (Exception $acctEx) {
-                        error_log("createBookingInvoice: Accounting entry error - " . $acctEx->getMessage());
-                        // Don't fail invoice creation if accounting fails
-                    }
-                    
                 } catch (Exception $e) {
-                    error_log("createBookingInvoice: Error adding line items: " . $e->getMessage());
+                    error_log("createBookingInvoice: Error adding line item: " . $e->getMessage());
                 }
+                
+                // ✅ STEP 5: Link invoice to booking
+                $this->bookingModel->update($bookingId, [
+                    'invoice_id' => $invoiceId
+                ]);
+                
+                // ✅ STEP 6: Update customer balance
+                if ($customerId) {
+                    $this->updateCustomerBalance($customerId);
+                }
+                
+                // ✅ STEP 7: Create accounting entries for the invoice
+                $this->recordInvoiceInAccounting($invoiceId, $bookingId, $customerId, $booking);
+                
+                error_log("createBookingInvoice: Created invoice #$invoiceId for booking #$bookingId");
                 
                 return $invoiceId;
             }
             
             return null;
         } catch (Exception $e) {
+            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
             error_log("createBookingInvoice: Error - " . $e->getMessage());
             return null;
+        }
+    }
+    
+    /**
+     * Record invoice creation in accounting transactions
+     * Creates: DR Accounts Receivable, CR Revenue, CR VAT (if applicable)
+     */
+    private function recordInvoiceInAccounting($invoiceId, $bookingId, $customerId, $booking) {
+        try {
+            if (!$this->accountModel || !$this->transactionModel) {
+                error_log("recordInvoiceInAccounting: Account or Transaction model not loaded");
+                return;
+            }
+            
+            $subtotal = floatval($booking['subtotal'] ?? $booking['total_amount'] ?? 0);
+            $taxAmount = floatval($booking['tax_amount'] ?? 0);
+            $totalAmount = floatval($booking['total_amount'] ?? ($subtotal + $taxAmount));
+            $discountAmount = floatval($booking['discount_amount'] ?? 0);
+            $netRevenue = $subtotal - $discountAmount;
+            
+            // Get customer-specific AR account or parent AR account
+            $arAccount = null;
+            if ($customerId) {
+                $arAccount = $this->accountModel->getByCode('1200-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+            }
+            if (!$arAccount) {
+                $arAccount = $this->accountModel->getByCode('1200');
+            }
+            if (!$arAccount) {
+                $assetAccounts = $this->accountModel->getByType('Assets');
+                if (is_array($assetAccounts)) {
+                    foreach ($assetAccounts as $acc) {
+                        if (stripos($acc['account_name'] ?? '', 'receivable') !== false) {
+                            $arAccount = $acc;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Get Revenue account
+            $revenueAccount = $this->accountModel->getByCode('4100');
+            if (!$revenueAccount) {
+                $revenueAccount = $this->accountModel->getByCode('4000');
+            }
+            if (!$revenueAccount) {
+                $revenueAccounts = $this->accountModel->getByType('Revenue');
+                $revenueAccount = is_array($revenueAccounts) && !empty($revenueAccounts) ? $revenueAccounts[0] : null;
+            }
+            
+            if (!$arAccount || !$revenueAccount) {
+                error_log("recordInvoiceInAccounting: Missing AR or Revenue accounts");
+                return;
+            }
+            
+            $bookingRef = $booking['booking_number'] ?? 'Booking #' . $bookingId;
+            
+            // ✅ Debit Accounts Receivable (customer owes us the TOTAL)
+            $this->transactionModel->create([
+                'account_id' => $arAccount['id'],
+                'transaction_date' => date('Y-m-d'),
+                'debit' => $totalAmount,
+                'credit' => 0,
+                'description' => 'Invoice - ' . $bookingRef,
+                'reference_type' => 'invoice',
+                'reference_id' => $invoiceId,
+                'status' => 'posted',
+                'created_by' => $booking['created_by'] ?? null,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // ✅ Credit Revenue (net amount: subtotal - discount)
+            $this->transactionModel->create([
+                'account_id' => $revenueAccount['id'],
+                'transaction_date' => date('Y-m-d'),
+                'debit' => 0,
+                'credit' => $netRevenue,
+                'description' => 'Booking Revenue - ' . $bookingRef,
+                'reference_type' => 'invoice',
+                'reference_id' => $invoiceId,
+                'status' => 'posted',
+                'created_by' => $booking['created_by'] ?? null,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // ✅ Credit VAT Liability if there is tax
+            if ($taxAmount > 0) {
+                $vatAccount = $this->accountModel->getByCode('2300');
+                if (!$vatAccount) {
+                    $liabilityAccounts = $this->accountModel->getByType('Liabilities');
+                    if (is_array($liabilityAccounts)) {
+                        foreach ($liabilityAccounts as $acc) {
+                            if (stripos($acc['account_name'] ?? '', 'vat') !== false || 
+                                stripos($acc['account_name'] ?? '', 'tax') !== false) {
+                                $vatAccount = $acc;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                if ($vatAccount) {
+                    $this->transactionModel->create([
+                        'account_id' => $vatAccount['id'],
+                        'transaction_date' => date('Y-m-d'),
+                        'debit' => 0,
+                        'credit' => $taxAmount,
+                        'description' => 'VAT Liability - ' . $bookingRef,
+                        'reference_type' => 'invoice',
+                        'reference_id' => $invoiceId,
+                        'status' => 'posted',
+                        'created_by' => $booking['created_by'] ?? null,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+            
+            error_log("recordInvoiceInAccounting: Created entries - AR DR: $totalAmount, Revenue CR: $netRevenue, VAT CR: $taxAmount");
+            
+        } catch (Exception $e) {
+            error_log("recordInvoiceInAccounting error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Record payment in accounting module
+     * Creates: DR Cash, CR Accounts Receivable
+     */
+    public function recordPaymentInAccounting($bookingId, $booking, $amount, $reference) {
+        $logFile = 'logs/payment_accounting.log';
+        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Recording payment for booking $bookingId, amount: $amount\n", FILE_APPEND);
+        
+        if (!$this->accountModel || !$this->transactionModel) {
+            @file_put_contents($logFile, "Accounting models not loaded\n", FILE_APPEND);
+            return;
+        }
+        
+        try {
+            // Get customer ID from invoice
+            $invoice = $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . "invoices` WHERE reference = ?",
+                ['BKG-' . $bookingId]
+            );
+            
+            $customerId = $invoice ? $invoice['customer_id'] : null;
+            
+            // Get Cash account (Paystack/Online)
+            $cashAccount = $this->accountModel->getByCode('1010');
+            if (!$cashAccount) {
+                $cashAccount = $this->accountModel->getByCode('1001');
+            }
+            if (!$cashAccount) {
+                $cashAccount = $this->accountModel->getByCode('1000');
+            }
+            
+            // Get customer's AR account or parent AR account
+            $arAccount = null;
+            if ($customerId) {
+                $arAccount = $this->accountModel->getByCode('1200-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+            }
+            if (!$arAccount) {
+                $arAccount = $this->accountModel->getByCode('1200');
+            }
+            
+            if (!$cashAccount || !$arAccount) {
+                @file_put_contents($logFile, "Missing cash or AR accounts\n", FILE_APPEND);
+                error_log("recordPaymentInAccounting: Missing cash or AR accounts");
+                return;
+            }
+            
+            $bookingRef = $booking['booking_number'] ?? 'Booking #' . $bookingId;
+            
+            // ✅ Debit Cash (money received)
+            $this->transactionModel->create([
+                'account_id' => $cashAccount['id'],
+                'transaction_date' => date('Y-m-d'),
+                'debit' => $amount,
+                'credit' => 0,
+                'description' => 'Payment received - ' . $bookingRef . ' (' . $reference . ')',
+                'reference_type' => 'booking_payment',
+                'reference_id' => $bookingId,
+                'status' => 'posted',
+                'created_by' => $booking['created_by'] ?? null,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // ✅ Credit Accounts Receivable (debt cleared)
+            $this->transactionModel->create([
+                'account_id' => $arAccount['id'],
+                'transaction_date' => date('Y-m-d'),
+                'debit' => 0,
+                'credit' => $amount,
+                'description' => 'Payment received - ' . $bookingRef,
+                'reference_type' => 'booking_payment',
+                'reference_id' => $bookingId,
+                'status' => 'posted',
+                'created_by' => $booking['created_by'] ?? null,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            // ✅ Update invoice status to paid
+            if ($invoice) {
+                $newPaidAmount = floatval($invoice['paid_amount']) + $amount;
+                $newBalance = floatval($invoice['total_amount']) - $newPaidAmount;
+                $newStatus = $newBalance <= 0 ? 'paid' : ($newPaidAmount > 0 ? 'partially_paid' : $invoice['status']);
+                
+                $this->invoiceModel->update($invoice['id'], [
+                    'paid_amount' => $newPaidAmount,
+                    'balance_amount' => max(0, $newBalance),
+                    'status' => $newStatus,
+                    'payment_date' => date('Y-m-d'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+            }
+            
+            // ✅ Update cash account balance
+            if ($this->cashAccountModel) {
+                try {
+                    $cashAccountRecord = $this->db->fetchOne(
+                        "SELECT * FROM `" . $this->db->getPrefix() . "cash_accounts` 
+                         WHERE account_name LIKE '%Paystack%' OR account_name LIKE '%Online%' OR account_code = '1010'
+                         LIMIT 1"
+                    );
+                    
+                    if ($cashAccountRecord) {
+                        $newBalance = floatval($cashAccountRecord['current_balance'] ?? 0) + $amount;
+                        $this->cashAccountModel->update($cashAccountRecord['id'], [
+                            'current_balance' => $newBalance,
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ]);
+                    }
+                } catch (Exception $e) {
+                    // Cash account update is optional
+                }
+            }
+            
+            // ✅ Update customer balance
+            if ($customerId) {
+                $this->updateCustomerBalance($customerId);
+            }
+            
+            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Payment recording complete: Cash DR $amount, AR CR $amount\n", FILE_APPEND);
+            error_log("recordPaymentInAccounting: Recorded payment - Cash DR: $amount, AR CR: $amount");
+            
+        } catch (Exception $e) {
+            @file_put_contents($logFile, "ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+            error_log("recordPaymentInAccounting error: " . $e->getMessage());
         }
     }
 }

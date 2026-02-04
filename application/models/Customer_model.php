@@ -18,7 +18,7 @@ class Customer_model extends Base_Model {
         try {
             $result = $this->db->fetchOne(
                 "SELECT SUM(balance_amount) as total FROM `" . $this->db->getPrefix() . "invoices` 
-                 WHERE customer_id = ? AND status IN ('sent', 'partially_paid', 'overdue')",
+                 WHERE customer_id = ? AND status IN ('sent', 'partially_paid', 'overdue', 'draft')",
                 [$customerId]
             );
             return $result ? floatval($result['total'] ?? 0) : 0;
