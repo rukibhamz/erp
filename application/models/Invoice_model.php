@@ -47,14 +47,25 @@ class Invoice_model extends Base_Model {
         $invoice = $this->getById($invoiceId);
         if (!$invoice) return false;
         
-        $paidAmount = floatval($invoice['paid_amount']) + floatval($amount);
-        $balanceAmount = floatval($invoice['total_amount']) - $paidAmount;
+        $totalAmount = floatval($invoice['total_amount']);
+        $currentPaid = floatval($invoice['paid_amount']);
+        $paymentAmount = floatval($amount);
+        
+        // Guard: prevent overpayment
+        if (($currentPaid + $paymentAmount) > $totalAmount) {
+            $paymentAmount = $totalAmount - $currentPaid;
+            if ($paymentAmount <= 0) {
+                error_log("Invoice_model addPayment: Invoice #$invoiceId is already fully paid.");
+                return false;
+            }
+        }
+        
+        $paidAmount = $currentPaid + $paymentAmount;
+        $balanceAmount = $totalAmount - $paidAmount;
         
         $status = 'paid';
         if ($balanceAmount > 0 && $paidAmount > 0) {
             $status = 'partially_paid';
-        } elseif ($balanceAmount <= 0) {
-            $status = 'paid';
         }
         
         return $this->update($invoiceId, [
@@ -80,6 +91,12 @@ class Invoice_model extends Base_Model {
     
     public function addItem($invoiceId, $itemData) {
         try {
+            // Validate: item_description must not be empty
+            if (empty(trim($itemData['item_description'] ?? ''))) {
+                error_log('Invoice_model addItem error: item_description is required.');
+                return false;
+            }
+            
             $sql = "INSERT INTO `" . $this->db->getPrefix() . "invoice_items` 
                     (invoice_id, product_id, item_description, quantity, unit_price, tax_rate, tax_amount, discount_rate, discount_amount, line_total, account_id, created_at) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";

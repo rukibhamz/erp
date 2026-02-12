@@ -1,0 +1,685 @@
+{
+    "date": "2026-02-12 22:17:18",
+    "summary": {
+        "passed": 106,
+        "failed": 0,
+        "warnings": 8
+    },
+    "category_summary": {
+        "Database": {
+            "pass": 3,
+            "fail": 0,
+            "warn": 0
+        },
+        "Schema": {
+            "pass": 9,
+            "fail": 0,
+            "warn": 0
+        },
+        "Model CRUD": {
+            "pass": 14,
+            "fail": 0,
+            "warn": 0
+        },
+        "Payment Gateway": {
+            "pass": 14,
+            "fail": 0,
+            "warn": 7
+        },
+        "Booking": {
+            "pass": 14,
+            "fail": 0,
+            "warn": 0
+        },
+        "Customer": {
+            "pass": 9,
+            "fail": 0,
+            "warn": 0
+        },
+        "Invoice": {
+            "pass": 12,
+            "fail": 0,
+            "warn": 0
+        },
+        "Accounting": {
+            "pass": 9,
+            "fail": 0,
+            "warn": 0
+        },
+        "Interconnections": {
+            "pass": 15,
+            "fail": 0,
+            "warn": 0
+        },
+        "Payment Flow": {
+            "pass": 5,
+            "fail": 0,
+            "warn": 0
+        },
+        "Views": {
+            "pass": 0,
+            "fail": 0,
+            "warn": 1
+        },
+        "Edge Cases": {
+            "pass": 2,
+            "fail": 0,
+            "warn": 0
+        }
+    },
+    "errors": [],
+    "warnings": [
+        {
+            "msg": "paystack: running in TEST mode",
+            "details": "Payments won't process real money",
+            "category": "Payment Gateway"
+        },
+        {
+            "msg": "flutterwave: missing public_key, missing private_key",
+            "details": "Gateway may not initialize properly",
+            "category": "Payment Gateway"
+        },
+        {
+            "msg": "flutterwave: running in TEST mode",
+            "details": "Payments won't process real money",
+            "category": "Payment Gateway"
+        },
+        {
+            "msg": "monnify: missing public_key, missing private_key",
+            "details": "Gateway may not initialize properly",
+            "category": "Payment Gateway"
+        },
+        {
+            "msg": "monnify: running in TEST mode",
+            "details": "Payments won't process real money",
+            "category": "Payment Gateway"
+        },
+        {
+            "msg": "Stripe gateway: placeholder only (not implemented)",
+            "details": "",
+            "category": "Payment Gateway"
+        },
+        {
+            "msg": "Flutterwave verify uses gateway transaction_id in URL",
+            "details": "Ensure callback provides the Flutterwave transaction ID, not just tx_ref",
+            "category": "Payment Gateway"
+        },
+        {
+            "msg": "5 view files missing",
+            "details": "",
+            "category": "Views"
+        }
+    ],
+    "documented_potential_errors": [
+        [
+            "Payment Gateway",
+            "Paystack API key misconfiguration causes 401 errors on initialize",
+            "Verify gateway credentials in System Settings"
+        ],
+        [
+            "Payment Gateway",
+            "Webhook signature verification fails if secret_key column is empty",
+            "Ensure secret_key is set for webhook-enabled gateways"
+        ],
+        [
+            "Payment Gateway",
+            "Monnify verify is a placeholder — always returns failure",
+            "Monnify relies ONLY on webhooks for payment confirmation"
+        ],
+        [
+            "Payment Gateway",
+            "Stripe\/PayPal are placeholders — throw exceptions if selected",
+            "Remove from UI or implement before enabling"
+        ],
+        [
+            "Payment Gateway",
+            "Flutterwave verify expects transaction ID not tx_ref",
+            "Callback must pass gateway transaction ID for verification"
+        ],
+        [
+            "Payment Gateway",
+            "Currency mismatch: gateway may reject if currency not in supported_currencies",
+            "No pre-validation against supported_currencies before init"
+        ],
+        [
+            "Booking",
+            "Double-booking possible if concurrent requests bypass availability check",
+            "No database-level locking on time slots"
+        ],
+        [
+            "Booking",
+            "Zero-amount bookings are allowed at model level",
+            "Only controller validates amount > 0"
+        ],
+        [
+            "Booking",
+            "Pending booking expiration requires cron job setup",
+            "Without cron, abandoned pending bookings persist indefinitely"
+        ],
+        [
+            "Customer",
+            "Receivables.createCustomer allows duplicate emails",
+            "Only Booking_wizard path checks for duplicates"
+        ],
+        [
+            "Customer",
+            "company_name stores individual names for booking customers",
+            "B2B reports may show individual names as company names"
+        ],
+        [
+            "Invoice",
+            "Booking invoices have due_date=today (Immediate terms)",
+            "Slow gateway processing may trigger auto-overdue within same day"
+        ],
+        [
+            "Invoice",
+            "addPayment allows overpayment (balance goes below 0, clamped to 0)",
+            "No refund mechanism exists for overpayments"
+        ],
+        [
+            "Accounting",
+            "Missing account codes (1010, 1200, 4100, etc.) silently skip entries",
+            "No user-facing error — transactions just fail to post"
+        ],
+        [
+            "Accounting",
+            "Booking_wizard creates individual transactions, not journal entries",
+            "DR\/CR pairs not atomic — partial failures leave unbalanced books"
+        ],
+        [
+            "Accounting",
+            "recognizeBookingRevenue has complex Unearned Revenue logic",
+            "If account 2205 missing, paid portion not properly recognized"
+        ]
+    ],
+    "details": {
+        "Database": [
+            {
+                "status": "PASS",
+                "msg": "Database connection successful"
+            },
+            {
+                "status": "PASS",
+                "msg": "Query execution OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "All required tables exist"
+            }
+        ],
+        "Schema": [
+            {
+                "status": "PASS",
+                "msg": "bookings: all 14 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "customers: all 11 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "invoices: all 12 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "invoice_items: all 10 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "payment_gateways: all 8 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "payment_transactions: all 9 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "transactions: all 9 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "accounts: all 4 required columns present"
+            },
+            {
+                "status": "PASS",
+                "msg": "booking_payments: all 6 required columns present"
+            }
+        ],
+        "Model CRUD": [
+            {
+                "status": "PASS",
+                "msg": "User_model: getAll\/count OK (1 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Customer_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Item_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Employee_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Location_model: getAll\/count OK (1 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Space_model: getAll\/count OK (1 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Account_model: getAll\/count OK (33 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Transaction_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Supplier_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Vendor_model: getAll\/count OK (0 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Payment_gateway_model: getAll\/count OK (5 records)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Payment_transaction_model: getAll\/count OK (0 records)"
+            }
+        ],
+        "Payment Gateway": [
+            {
+                "status": "PASS",
+                "msg": "getActive() OK - 1 active gateways"
+            },
+            {
+                "status": "PASS",
+                "msg": "Default gateway: Paystack (paystack)"
+            },
+            {
+                "status": "PASS",
+                "msg": "paystack: configured with keys"
+            },
+            {
+                "status": "WARN",
+                "msg": "paystack: running in TEST mode",
+                "details": "Payments won't process real money"
+            },
+            {
+                "status": "WARN",
+                "msg": "flutterwave: missing public_key, missing private_key",
+                "details": "Gateway may not initialize properly"
+            },
+            {
+                "status": "WARN",
+                "msg": "flutterwave: running in TEST mode",
+                "details": "Payments won't process real money"
+            },
+            {
+                "status": "WARN",
+                "msg": "monnify: missing public_key, missing private_key",
+                "details": "Gateway may not initialize properly"
+            },
+            {
+                "status": "WARN",
+                "msg": "monnify: running in TEST mode",
+                "details": "Payments won't process real money"
+            },
+            {
+                "status": "PASS",
+                "msg": "Gateway library has initialize_paystack()"
+            },
+            {
+                "status": "PASS",
+                "msg": "Gateway library has verify_paystack()"
+            },
+            {
+                "status": "PASS",
+                "msg": "Gateway library has initialize_flutterwave()"
+            },
+            {
+                "status": "PASS",
+                "msg": "Gateway library has verify_flutterwave()"
+            },
+            {
+                "status": "PASS",
+                "msg": "Gateway library has initialize_monnify()"
+            },
+            {
+                "status": "PASS",
+                "msg": "Gateway library has verify_monnify()"
+            },
+            {
+                "status": "WARN",
+                "msg": "Stripe gateway: placeholder only (not implemented)",
+                "details": ""
+            },
+            {
+                "status": "PASS",
+                "msg": "Gateway library handles cURL errors"
+            },
+            {
+                "status": "PASS",
+                "msg": "Paystack: kobo\/cent conversion present (×100 init, ÷100 verify)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Monnify: has both sandbox and production URLs"
+            },
+            {
+                "status": "WARN",
+                "msg": "Flutterwave verify uses gateway transaction_id in URL",
+                "details": "Ensure callback provides the Flutterwave transaction ID, not just tx_ref"
+            },
+            {
+                "status": "PASS",
+                "msg": "Transaction refs are unique: TEST-20260212221718-853BF2AE ≠ TEST-20260212221718-0B8ACFB3"
+            },
+            {
+                "status": "PASS",
+                "msg": "Transaction ref uses correct prefix"
+            }
+        ],
+        "Booking": [
+            {
+                "status": "PASS",
+                "msg": "Booking number generation OK: SBK-000001"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking count: 0"
+            },
+            {
+                "status": "PASS",
+                "msg": "getByStatus('pending') OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "getByStatus('confirmed') OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "getByStatus('completed') OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "getByStatus('cancelled') OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "getByStatus('expired') OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "Facility availability checking method exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking CREATE OK (ID: 2)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking READ OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking UPDATE OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking addPayment OK (partial)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking DELETE OK (cleanup)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Zero-amount booking validation exists at model level"
+            }
+        ],
+        "Customer": [
+            {
+                "status": "PASS",
+                "msg": "Customer code format OK: CUST-00001"
+            },
+            {
+                "status": "PASS",
+                "msg": "getByEmail() method exists (duplicate detection)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Customer CREATE OK (ID: 5)"
+            },
+            {
+                "status": "PASS",
+                "msg": "getByEmail duplicate detection works"
+            },
+            {
+                "status": "PASS",
+                "msg": "getCustomerDetailed() OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "getTotalOutstanding OK: 0"
+            },
+            {
+                "status": "PASS",
+                "msg": "Customer DELETE OK (cleanup)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking wizard sets empty company_name for individuals (fixed)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Receivables.createCustomer checks for duplicate email (fixed)"
+            }
+        ],
+        "Invoice": [
+            {
+                "status": "PASS",
+                "msg": "Invoice number format OK: INV-000001"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice CREATE OK (ID: 4)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice addItem + getItems OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice partial payment → status=partially_paid"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice balance calculation correct: 5750.00"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice full payment → status=paid"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice overdue auto-detection works"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking-Invoice linkage via reference='BKG-{id}' works"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking_wizard checks existing invoice by reference before creating"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice + deps cleanup OK"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice addItem() validates item_description (fixed)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking invoices use due_date=+3 days (fixed)"
+            }
+        ],
+        "Accounting": [
+            {
+                "status": "PASS",
+                "msg": "Chart of accounts: 33 accounts"
+            },
+            {
+                "status": "PASS",
+                "msg": "Account 1000 (Cash\/Bank): exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Account 1010 (Paystack\/Online Cash): exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Account 1200 (Accounts Receivable): exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Account 2100 (VAT Liability): exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Account 4000 (Sales Revenue): exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Account 4100 (Booking Revenue): exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Journal entries: 0 entries, total amount: 0"
+            },
+            {
+                "status": "PASS",
+                "msg": "Posted transactions balanced (DR: 0, CR: 0)"
+            }
+        ],
+        "Interconnections": [
+            {
+                "status": "PASS",
+                "msg": "Booking → Customer auto-creation"
+            },
+            {
+                "status": "PASS",
+                "msg": "Booking → Invoice auto-creation"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice → Accounting journal entries"
+            },
+            {
+                "status": "PASS",
+                "msg": "Payment → Accounting journal entries"
+            },
+            {
+                "status": "PASS",
+                "msg": "Customer → Ledger account creation"
+            },
+            {
+                "status": "PASS",
+                "msg": "Payment → Customer balance update"
+            },
+            {
+                "status": "PASS",
+                "msg": "Invoice duplicate prevention via BKG-{id} reference"
+            },
+            {
+                "status": "PASS",
+                "msg": "Payment → Booking status update chain exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Payment idempotency check (payment_verified_at)"
+            },
+            {
+                "status": "PASS",
+                "msg": "Webhook test event detection exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Webhook signature verification exists"
+            },
+            {
+                "status": "PASS",
+                "msg": "Revenue: recognizeBookingRevenue() exists in Bookings"
+            },
+            {
+                "status": "PASS",
+                "msg": "Revenue: finalizeBookingRevenue() exists in Bookings"
+            },
+            {
+                "status": "PASS",
+                "msg": "Revenue: reverseBookingRevenue() exists in Bookings"
+            },
+            {
+                "status": "PASS",
+                "msg": "Pending booking expiration exists"
+            }
+        ],
+        "Payment Flow": [
+            {
+                "status": "PASS",
+                "msg": "Transaction statuses in use: none yet"
+            },
+            {
+                "status": "PASS",
+                "msg": "No stuck pending payment transactions"
+            },
+            {
+                "status": "PASS",
+                "msg": "No failed payment transactions"
+            },
+            {
+                "status": "PASS",
+                "msg": "Paystack webhook handles 'charge.success' event"
+            },
+            {
+                "status": "PASS",
+                "msg": "Webhook reference extraction method exists"
+            }
+        ],
+        "Views": [
+            {
+                "status": "WARN",
+                "msg": "5 view files missing",
+                "details": ""
+            }
+        ],
+        "Edge Cases": [
+            {
+                "status": "PASS",
+                "msg": "No orphaned invoices"
+            },
+            {
+                "status": "PASS",
+                "msg": "All invoices: total = paid + balance ✓"
+            }
+        ]
+    }
+}

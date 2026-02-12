@@ -293,26 +293,126 @@ class Payment_gateway {
     }
     
     private function verify_monnify($reference) {
-        // Monnify verification would be done via webhook
-        // This is a placeholder
-        return ['success' => false, 'message' => 'Use webhook for Monnify verification'];
+        $apiKey = $this->config['public_key'] ?? '';
+        $secretKey = $this->config['private_key'] ?? '';
+        
+        // Get access token
+        $tokenUrl = $this->config['test_mode'] 
+            ? 'https://sandbox.monnify.com/api/v1/auth/login'
+            : 'https://api.monnify.com/api/v1/auth/login';
+        
+        $ch = curl_init($tokenUrl);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['apiKey' => $apiKey, 'secretKey' => $secretKey]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $tokenResponse = curl_exec($ch);
+        $tokenHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($tokenHttpCode !== 200) {
+            return ['success' => false, 'message' => 'Monnify auth failed (HTTP ' . $tokenHttpCode . ')'];
+        }
+        
+        $tokenData = json_decode($tokenResponse, true);
+        $accessToken = $tokenData['responseBody']['accessToken'] ?? '';
+        
+        if (!$accessToken) {
+            return ['success' => false, 'message' => 'Failed to obtain Monnify access token'];
+        }
+        
+        // Verify transaction
+        $verifyUrl = ($this->config['test_mode'] 
+            ? 'https://sandbox.monnify.com' 
+            : 'https://api.monnify.com') 
+            . '/api/v2/transactions/' . urlencode($reference);
+        
+        $ch = curl_init($verifyUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200) {
+            $result = json_decode($response, true);
+            $body = $result['responseBody'] ?? [];
+            
+            if (($body['paymentStatus'] ?? '') === 'PAID') {
+                return [
+                    'success' => true,
+                    'amount' => $body['amount'] ?? 0,
+                    'currency' => $body['currencyCode'] ?? 'NGN',
+                    'gateway_reference' => $body['transactionReference'] ?? $reference,
+                    'raw_response' => $result
+                ];
+            }
+            
+            return ['success' => false, 'message' => 'Payment status: ' . ($body['paymentStatus'] ?? 'unknown')];
+        }
+        
+        return ['success' => false, 'message' => 'Monnify verification failed (HTTP ' . $httpCode . ')'];
     }
     
     /**
-     * Stripe implementation (placeholder - would need Stripe PHP SDK)
+     * Verify Flutterwave payment by tx_ref (fallback when transaction ID unavailable)
+     */
+    public function verify_flutterwave_by_ref($txRef) {
+        $secretKey = $this->config['private_key'] ?? '';
+        
+        $url = "https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=" . urlencode($txRef);
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $secretKey
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        $result = json_decode($response, true);
+        
+        if (($result['status'] ?? '') === 'success') {
+            $data = $result['data'] ?? [];
+            return [
+                'success' => ($data['status'] ?? '') === 'successful',
+                'amount' => $data['amount'] ?? 0,
+                'currency' => $data['currency'] ?? '',
+                'gateway_reference' => $data['tx_ref'] ?? $txRef,
+                'raw_response' => $result
+            ];
+        }
+        
+        return ['success' => false, 'message' => $result['message'] ?? 'Flutterwave tx_ref verification failed'];
+    }
+    
+    /**
+     * Stripe — returns graceful error (SDK not installed)
      */
     private function initialize_stripe($amount, $currency, $customer, $metadata) {
-        // Stripe implementation would go here
-        // This requires the Stripe PHP SDK
-        throw new Exception('Stripe integration requires Stripe PHP SDK');
+        return [
+            'success' => false,
+            'message' => 'Stripe integration requires the Stripe PHP SDK. Please install it via Composer.'
+        ];
     }
     
     /**
-     * PayPal implementation (placeholder)
+     * PayPal — returns graceful error (not yet implemented)
      */
     private function initialize_paypal($amount, $currency, $customer, $metadata) {
-        // PayPal implementation would go here
-        throw new Exception('PayPal integration not yet implemented');
+        return [
+            'success' => false,
+            'message' => 'PayPal integration is not yet implemented. Please use another payment method.'
+        ];
     }
 }
 

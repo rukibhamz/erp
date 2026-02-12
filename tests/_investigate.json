@@ -1,0 +1,85 @@
+{
+    "booking_tables": [
+        "erp_bookable_config",
+        "erp_bookings",
+        "erp_booking_addons",
+        "erp_booking_payments",
+        "erp_booking_slots"
+    ],
+    "customer_columns": [
+        "id",
+        "customer_type_id",
+        "customer_code",
+        "company_name",
+        "contact_name",
+        "email",
+        "phone",
+        "address",
+        "city",
+        "state",
+        "zip_code",
+        "country",
+        "tax_id",
+        "credit_limit",
+        "payment_terms",
+        "currency",
+        "account_id",
+        "status",
+        "created_at",
+        "updated_at"
+    ],
+    "journal_entries_columns": [
+        "id",
+        "entry_number",
+        "journal_type",
+        "entry_date",
+        "reference",
+        "description",
+        "reference_type",
+        "reference_id",
+        "amount",
+        "status",
+        "recurring",
+        "recurring_frequency",
+        "recurring_next_date",
+        "recurring_end_date",
+        "reversed_entry_id",
+        "approved_by",
+        "approved_at",
+        "posted_by",
+        "posted_at",
+        "created_by",
+        "created_at",
+        "updated_at"
+    ],
+    "invoice_items_columns": [
+        "id",
+        "invoice_id",
+        "item_description",
+        "quantity",
+        "unit_price",
+        "tax_rate",
+        "line_total",
+        "account_id",
+        "created_at"
+    ],
+    "vat_tax_accounts": [
+        {
+            "account_code": "2100",
+            "account_name": "VAT Payable",
+            "account_type": "Liabilities"
+        }
+    ],
+    "booking_model_table": "space_bookings",
+    "invoice_methods": {
+        "addItem": "public function addItem($invoiceId, $itemData) {\r\n        try {\r\n            $sql = \"INSERT INTO `\" . $this->db->getPrefix() . \"invoice_items` \r\n                    (invoice_id, product_id, item_description, quantity, unit_price, tax_rate, tax_amount, discount_rate, discount_amount, line_total, account_id, created_at) \r\n                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())\";\r\n            \r\n            return $this->db->query($sql, [\r\n                $invoiceId,\r\n                $itemData['product_id'] ?? null,\r\n                $itemData['item_description'] ?? '',\r\n                $itemData['quantity'] ?? 0,\r\n                $itemData['unit_price'] ?? 0,\r\n                $itemData['tax_rate'] ?? 0,\r\n                $itemData['tax_amount'] ?? 0,\r\n                $itemData['discount_rate'] ?? 0,\r\n                $itemData['discount_amount'] ?? 0,\r\n                $itemData['line_total'] ?? 0,\r\n                $itemData['account_id'] ?? null\r\n            ]);\r\n        } catch (Exception $e) {\r\n            error_log('Invoice_model addItem error: ' . $e->getMessage());\r\n            return false;\r\n        }\r\n    }",
+        "getItems": "public function getItems($invoiceId) {\r\n        return $this->db->fetchAll(\r\n            \"SELECT * FROM `\" . $this->db->getPrefix() . \"invoice_items` WHERE invoice_id = ? ORDER BY id\",\r\n            [$invoiceId]\r\n        );\r\n    }"
+    },
+    "missing_views": [
+        "booking_wizard\/step1.php",
+        "booking_wizard\/step2.php",
+        "booking_wizard\/step3.php",
+        "booking_wizard\/step4.php",
+        "booking_wizard\/step5.php"
+    ]
+}

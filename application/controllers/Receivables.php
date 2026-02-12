@@ -90,6 +90,19 @@ class Receivables extends Base_Controller {
                 redirect('receivables/customers/create');
             }
             
+            // Prevent duplicate emails
+            if (!empty($data['email'])) {
+                $existing = $this->db->fetchOne(
+                    "SELECT id FROM `" . $this->db->getPrefix() . "customers` WHERE email = ? AND status = 'active'",
+                    [$data['email']]
+                );
+                if ($existing) {
+                    $this->setFlashMessage('danger', 'A customer with this email already exists.');
+                    redirect('receivables/customers/create');
+                    return;
+                }
+            }
+            
             // Validate phone
             if (!empty($data['phone']) && !validate_phone($data['phone'])) {
                 $this->setFlashMessage('danger', 'Invalid phone number. Please enter a valid phone number.');
@@ -420,8 +433,8 @@ class Receivables extends Base_Controller {
                         $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
                     }
                     
-                    // Get VAT Payable account (2300)
-                    $vatAccount = $this->accountModel->getByCode('2300');
+                    // Get VAT Payable account (2100)
+                    $vatAccount = $this->accountModel->getByCode('2100');
                     
                     if ($arAccount && $revenueAccount) {
                         $entries = [
@@ -631,8 +644,8 @@ class Receivables extends Base_Controller {
                             $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
                         }
                         
-                        // Get VAT Payable account (2300)
-                        $vatAccount = $this->accountModel->getByCode('2300');
+                        // Get VAT Payable account (2100)
+                        $vatAccount = $this->accountModel->getByCode('2100');
                         
                         if ($arAccount && $revenueAccount) {
                             $entries = [

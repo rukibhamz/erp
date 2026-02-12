@@ -1330,7 +1330,7 @@ class Booking_wizard extends Base_Controller {
             $customerData = [
                 'customer_code' => $customerCode,
                 'customer_type_id' => $customerTypeId,
-                'company_name' => $booking['customer_name'] ?? 'Guest Customer',
+                'company_name' => '', // Individual customer — no company
                 'contact_name' => $booking['customer_name'] ?? 'Guest',
                 'email' => $booking['customer_email'],
                 'phone' => $booking['customer_phone'] ?? '',
@@ -1502,7 +1502,7 @@ class Booking_wizard extends Base_Controller {
                 'invoice_number' => $this->invoiceModel->getNextInvoiceNumber(),
                 'customer_id' => $customerId,
                 'invoice_date' => date('Y-m-d'),
-                'due_date' => date('Y-m-d'), // Immediate for bookings
+                'due_date' => date('Y-m-d', strtotime('+3 days')), // 3-day grace period for payment
                 'reference' => 'BKG-' . $bookingId,
                 'subtotal' => $subtotal,
                 'tax_rate' => $taxRate,
@@ -1650,7 +1650,7 @@ class Booking_wizard extends Base_Controller {
             
             // ✅ Credit VAT Liability if there is tax
             if ($taxAmount > 0) {
-                $vatAccount = $this->accountModel->getByCode('2300');
+                $vatAccount = $this->accountModel->getByCode('2100');
                 if (!$vatAccount) {
                     $liabilityAccounts = $this->accountModel->getByType('Liabilities');
                     if (is_array($liabilityAccounts)) {

@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Booking_model extends Base_Model {
-    protected $table = 'space_bookings';
+    protected $table = 'bookings';
     
     public function getNextBookingNumber() {
         try {
@@ -22,10 +22,16 @@ class Booking_model extends Base_Model {
     }
     
     public function create($data) {
-        // Map facility_id to space_id for unification
-        if (isset($data['facility_id']) && !isset($data['space_id'])) {
-            $data['space_id'] = $data['facility_id'];
-            unset($data['facility_id']);
+        // Validate: reject zero or negative amount bookings
+        if (isset($data['total_amount']) && floatval($data['total_amount']) <= 0) {
+            error_log('Booking_model create error: total_amount must be greater than 0');
+            return false;
+        }
+        
+        // Map space_id to facility_id if needed (or just keep as is if data matches)
+        if (isset($data['space_id']) && !isset($data['facility_id'])) {
+            $data['facility_id'] = $data['space_id'];
+            unset($data['space_id']);
         }
         return parent::create($data);
     }
@@ -33,9 +39,9 @@ class Booking_model extends Base_Model {
     public function getByDateRange($startDate, $endDate, $spaceId = null) {
         try {
             // Linked to spaces now
-            $sql = "SELECT b.*, s.space_name as facility_name, s.space_number as facility_code 
+            $sql = "SELECT b.*, f.facility_name, f.facility_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` b
-                    JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
+                    JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
                     WHERE (
                         (b.booking_date >= ? AND b.booking_date <= ?)
                         OR (b.booking_date <= ? AND DATE_ADD(b.booking_date, INTERVAL TIME_TO_SEC(b.end_time) - TIME_TO_SEC(b.start_time) SECOND) >= ?)
@@ -45,7 +51,7 @@ class Booking_model extends Base_Model {
             $params = [$startDate, $endDate, $startDate, $startDate];
             
             if ($spaceId) {
-                $sql .= " AND b.space_id = ?";
+                $sql .= " AND b.facility_id = ?";
                 $params[] = $spaceId;
             }
             
