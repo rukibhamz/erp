@@ -19,6 +19,7 @@ class Booking_wizard extends Base_Controller {
     private $locationModel;
     private $spaceModel;
     private $userModel;
+    private $customerPortalUserModel;
     private $paymentTransactionModel;
     private $invoiceModel;
     private $entityModel;
