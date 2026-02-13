@@ -1,5 +1,5 @@
 {
-    "date": "2026-02-13 09:36:04",
+    "date": "2026-02-13 11:29:04",
     "summary": {
         "passed": 121,
         "failed": 0,
@@ -8,7 +8,7 @@
     "errors": [],
     "warnings": [
         {
-            "msg": "Customer_model: Duplicate unique key was accepted (ID: 18)",
+            "msg": "Customer_model: Duplicate unique key was accepted (ID: 27)",
             "details": "Unique field: customer_code",
             "category": "Customer_model"
         }
@@ -26,7 +26,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Account_model: CREATE OK (ID: 7573)",
+            "msg": "Account_model: CREATE OK (ID: 7579)",
             "category": "Account_model"
         },
         {
@@ -66,7 +66,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Customer_model: CREATE OK (ID: 17)",
+            "msg": "Customer_model: CREATE OK (ID: 26)",
             "category": "Customer_model"
         },
         {
@@ -86,7 +86,7 @@
         },
         {
             "status": "WARN",
-            "msg": "Customer_model: Duplicate unique key was accepted (ID: 18)",
+            "msg": "Customer_model: Duplicate unique key was accepted (ID: 27)",
             "detail": "Unique field: customer_code",
             "category": "Customer_model"
         },
@@ -107,7 +107,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Vendor_model: CREATE OK (ID: 7)",
+            "msg": "Vendor_model: CREATE OK (ID: 16)",
             "category": "Vendor_model"
         },
         {
@@ -147,7 +147,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Employee_model: CREATE OK (ID: 5)",
+            "msg": "Employee_model: CREATE OK (ID: 11)",
             "category": "Employee_model"
         },
         {
@@ -187,7 +187,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Journal_entry_model: CREATE OK (ID: 5)",
+            "msg": "Journal_entry_model: CREATE OK (ID: 11)",
             "category": "Journal_entry_model"
         },
         {
@@ -227,7 +227,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Product_model: CREATE OK (ID: 5)",
+            "msg": "Product_model: CREATE OK (ID: 11)",
             "category": "Product_model"
         },
         {
@@ -267,7 +267,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Estimate_model: CREATE OK (ID: 5)",
+            "msg": "Estimate_model: CREATE OK (ID: 11)",
             "category": "Estimate_model"
         },
         {
@@ -307,7 +307,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Financial_year_model: CREATE OK (ID: 3)",
+            "msg": "Financial_year_model: CREATE OK (ID: 6)",
             "category": "Financial_year_model"
         },
         {
@@ -342,7 +342,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Facility_model: CREATE OK (ID: 12)",
+            "msg": "Facility_model: CREATE OK (ID: 21)",
             "category": "Facility_model"
         },
         {
@@ -382,7 +382,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Currency_model: CREATE OK (ID: 5)",
+            "msg": "Currency_model: CREATE OK (ID: 11)",
             "category": "Currency_model"
         },
         {
@@ -422,7 +422,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Module_model: CREATE OK (ID: 5484)",
+            "msg": "Module_model: CREATE OK (ID: 5490)",
             "category": "Module_model"
         },
         {
@@ -462,7 +462,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Notification_model: CREATE OK (ID: 2)",
+            "msg": "Notification_model: CREATE OK (ID: 5)",
             "category": "Notification_model"
         },
         {
@@ -497,7 +497,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Item_model: CREATE OK (ID: 3)",
+            "msg": "Item_model: CREATE OK (ID: 9)",
             "category": "Item_model"
         },
         {
@@ -527,7 +527,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Booking_model: CREATE OK (ID: 6)",
+            "msg": "Booking_model: CREATE OK (ID: 9)",
             "category": "Booking_model"
         },
         {
@@ -552,7 +552,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Invoice_model: CREATE OK (ID: 9)",
+            "msg": "Invoice_model: CREATE OK (ID: 12)",
             "category": "Invoice_model"
         },
         {
@@ -587,7 +587,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Bill_model: CREATE OK (ID: 3)",
+            "msg": "Bill_model: CREATE OK (ID: 6)",
             "category": "Bill_model"
         },
         {
@@ -607,7 +607,7 @@
         },
         {
             "status": "PASS",
-            "msg": "Cash_account_model: CREATE OK (ID: 3)",
+            "msg": "Cash_account_model: CREATE OK (ID: 6)",
             "category": "Cash_account_model"
         },
         {

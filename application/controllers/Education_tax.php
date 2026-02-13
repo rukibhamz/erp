@@ -4,12 +4,26 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Education_tax extends Base_Controller {
     private $taxModel;
     private $activityModel;
+    private $transactionService;
+    private $accountModel;
+    private $cashAccountModel;
     
     public function __construct() {
         parent::__construct();
         $this->requirePermission('education_tax', 'read');
         $this->taxModel = $this->loadModel('Education_tax_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        $this->accountModel = $this->loadModel('Account_model');
+        $this->cashAccountModel = $this->loadModel('Cash_account_model');
+        
+        // Load Transaction Service
+        $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
+        if (file_exists($transactionServicePath)) {
+            require_once $transactionServicePath;
+            $this->transactionService = new Transaction_service();
+        } else {
+            $this->transactionService = null;
+        }
     }
     
     public function index() {
@@ -66,6 +80,59 @@ class Education_tax extends Base_Controller {
                 'created_by' => $this->session['user_id']
             ];
             if ($this->db->insert('education_tax_payments', $data)) {
+                $paymentId = $this->db->lastInsertId();
+                
+                // Create journal entry: Dr Tax Expense, Cr Cash/Bank
+                if ($this->transactionService) {
+                    try {
+                        $taxExpenseAccount = $this->accountModel->getByCode('5300'); // Education Tax Expense
+                        if (!$taxExpenseAccount) {
+                            // Fallback: try generic tax expense
+                            $taxExpenseAccount = $this->accountModel->getByCode('5200');
+                        }
+                        
+                        $defaultCashAccount = $this->cashAccountModel->getDefault();
+                        
+                        if ($taxExpenseAccount && $defaultCashAccount) {
+                            $cashAccountId = $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'];
+                            
+                            $journalData = [
+                                'date' => $data['payment_date'],
+                                'reference_type' => 'education_tax_payment',
+                                'reference_id' => $paymentId,
+                                'description' => 'Education Tax Payment - Year ' . $data['tax_year'] . ' (Ref: ' . $data['payment_reference'] . ')',
+                                'journal_type' => 'payment',
+                                'entries' => [
+                                    [
+                                        'account_id' => $taxExpenseAccount['id'],
+                                        'debit' => $data['amount_paid'],
+                                        'credit' => 0.00,
+                                        'description' => 'Education Tax Expense'
+                                    ],
+                                    [
+                                        'account_id' => $cashAccountId,
+                                        'debit' => 0.00,
+                                        'credit' => $data['amount_paid'],
+                                        'description' => 'Cash Payment'
+                                    ]
+                                ],
+                                'created_by' => $this->session['user_id'],
+                                'auto_post' => true
+                            ];
+                            
+                            $this->transactionService->postJournalEntry($journalData);
+                            
+                            // Update cash account balance
+                            $this->cashAccountModel->updateBalance($defaultCashAccount['id'], $data['amount_paid'], 'withdrawal');
+                        } else {
+                            error_log('Education Tax: Tax expense account (5300) or cash account not found for journal entry');
+                        }
+                    } catch (Exception $e) {
+                        error_log('Education Tax payment journal entry error: ' . $e->getMessage());
+                    }
+                }
+                
+                $this->activityModel->log($this->session['user_id'], 'create', 'Education Tax', 'Recorded tax payment of ' . number_format($data['amount_paid'], 2) . ' for year ' . $data['tax_year']);
                 $this->setFlashMessage('success', 'Payment recorded.');
                 redirect('education_tax/payments');
             }

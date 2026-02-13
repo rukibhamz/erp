@@ -776,25 +776,48 @@ class Bookings extends Base_Controller {
             
             $this->bookingModel->update($bookingId, $updateData);
 
-            // Create cash account transaction if applicable
-            if ($paymentMethod === 'cash' && $this->cashAccountModel) {
+            // Create double-entry accounting entries for ALL payment methods
+            if ($this->cashAccountModel && $this->transactionModel) {
                 try {
                     $defaultCashAccount = $this->cashAccountModel->getDefault();
                     if ($defaultCashAccount) {
+                        // Debit Cash/Bank (asset increases)
                         $this->transactionModel->create([
-                            'account_id' => $defaultCashAccount['id'],
-                            'transaction_type' => 'credit',
-                            'amount' => $amount,
-                            'description' => 'Booking payment: ' . ($booking['booking_number'] ?? $bookingId),
+                            'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
+                            'debit' => $amount,
+                            'credit' => 0,
+                            'description' => ucfirst($paymentMethod) . ' payment for booking: ' . ($booking['booking_number'] ?? $bookingId),
                             'reference_type' => 'booking_payment',
                             'reference_id' => $paymentId,
                             'transaction_date' => date('Y-m-d'),
+                            'status' => 'posted',
                             'created_by' => $this->session['user_id']
                         ]);
+
+                        // Update cash account balance
+                        $this->cashAccountModel->updateBalance($defaultCashAccount['id'], $amount, 'deposit');
+
+                        // Credit Accounts Receivable (liability decreases)
+                        if ($this->accountModel) {
+                            $arAccount = $this->accountModel->getByCode('1200');
+                            if ($arAccount) {
+                                $this->transactionModel->create([
+                                    'account_id' => $arAccount['id'],
+                                    'debit' => 0,
+                                    'credit' => $amount,
+                                    'description' => 'Payment received - booking: ' . ($booking['booking_number'] ?? $bookingId),
+                                    'reference_type' => 'booking_payment',
+                                    'reference_id' => $paymentId,
+                                    'transaction_date' => date('Y-m-d'),
+                                    'status' => 'posted',
+                                    'created_by' => $this->session['user_id']
+                                ]);
+                            }
+                        }
                     }
                 } catch (Exception $e) {
-                    // Log but don't fail - cash transaction is secondary
-                    error_log('Booking payment cash transaction error: ' . $e->getMessage());
+                    // Log but don't fail - accounting is secondary
+                    error_log('Booking payment accounting error: ' . $e->getMessage());
                 }
             }
 

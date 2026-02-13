@@ -743,6 +743,164 @@ class Payment extends Base_Controller {
                 } else {
                     error_log("processPaymentSuccess: Booking not found for ID: " . $transaction['reference_id']);
                 }
+            } elseif ($transaction['payment_type'] === 'invoice_payment') {
+                // ===== INVOICE PAYMENT via gateway =====
+                $invoiceModel = $this->loadModel('Invoice_model');
+                $invoice = $invoiceModel->getById($transaction['reference_id']);
+                
+                if ($invoice) {
+                    error_log("processPaymentSuccess: Processing invoice payment for invoice #" . ($invoice['invoice_number'] ?? $invoice['id']));
+                    
+                    // Update invoice paid amount and balance
+                    $invoicePaidAmount = floatval($invoice['paid_amount'] ?? 0) + floatval($transaction['amount']);
+                    $invoiceBalance = floatval($invoice['total_amount'] ?? 0) - $invoicePaidAmount;
+                    
+                    $invoiceUpdate = [
+                        'status' => ($invoiceBalance <= 0) ? 'paid' : 'partially_paid',
+                        'paid_amount' => $invoicePaidAmount,
+                        'balance_amount' => max(0, $invoiceBalance),
+                        'payment_date' => date('Y-m-d'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                    $invoiceModel->update($transaction['reference_id'], $invoiceUpdate);
+                    
+                    // Update customer balance
+                    if (!empty($invoice['customer_id'])) {
+                        try {
+                            $customerModel = $this->loadModel('Customer_model');
+                            if ($customerModel) {
+                                $outstandingResult = $this->db->fetchOne(
+                                    "SELECT COALESCE(SUM(balance_amount), 0) as total_balance 
+                                     FROM `" . $this->db->getPrefix() . "invoices` 
+                                     WHERE customer_id = ? 
+                                     AND status IN ('sent', 'partially_paid', 'overdue', 'draft')",
+                                    [$invoice['customer_id']]
+                                );
+                                $customerBalance = $outstandingResult ? floatval($outstandingResult['total_balance']) : 0;
+                                $customerModel->update($invoice['customer_id'], [
+                                    'current_balance' => $customerBalance,
+                                    'updated_at' => date('Y-m-d H:i:s')
+                                ]);
+                            }
+                        } catch (Exception $custEx) {
+                            error_log("processPaymentSuccess: Customer balance update error: " . $custEx->getMessage());
+                        }
+                    }
+                    
+                    // Create accounting entries: Dr Cash, Cr Accounts Receivable
+                    try {
+                        if ($this->cashAccountModel && $this->transactionModel) {
+                            $defaultCashAccount = $this->cashAccountModel->getDefault();
+                            $arAccount = $this->accountModel ? $this->accountModel->getByCode('1200') : null;
+                            
+                            if ($defaultCashAccount) {
+                                // Debit Cash
+                                $this->transactionModel->create([
+                                    'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
+                                    'debit' => $transaction['amount'],
+                                    'credit' => 0,
+                                    'description' => 'Gateway payment for Invoice ' . ($invoice['invoice_number'] ?? $invoice['id']),
+                                    'reference_type' => 'invoice_payment',
+                                    'reference_id' => $transaction['reference_id'],
+                                    'transaction_date' => date('Y-m-d'),
+                                    'status' => 'posted',
+                                    'created_by' => null
+                                ]);
+                                
+                                $this->cashAccountModel->updateBalance($defaultCashAccount['id'], $transaction['amount'], 'deposit');
+                                
+                                // Credit AR
+                                if ($arAccount) {
+                                    $this->transactionModel->create([
+                                        'account_id' => $arAccount['id'],
+                                        'debit' => 0,
+                                        'credit' => $transaction['amount'],
+                                        'description' => 'Payment received - Invoice ' . ($invoice['invoice_number'] ?? $invoice['id']),
+                                        'reference_type' => 'invoice_payment',
+                                        'reference_id' => $transaction['reference_id'],
+                                        'transaction_date' => date('Y-m-d'),
+                                        'status' => 'posted',
+                                        'created_by' => null
+                                    ]);
+                                }
+                                error_log("processPaymentSuccess: Created accounting entries for invoice payment");
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log('Invoice payment accounting error: ' . $e->getMessage());
+                    }
+                } else {
+                    error_log("processPaymentSuccess: Invoice not found for ID: " . $transaction['reference_id']);
+                }
+            } elseif ($transaction['payment_type'] === 'rent_payment') {
+                // ===== RENT PAYMENT via gateway =====
+                $rentInvoiceModel = $this->loadModel('Rent_invoice_model');
+                $rentInvoice = $rentInvoiceModel ? $rentInvoiceModel->getById($transaction['reference_id']) : null;
+                
+                if ($rentInvoice) {
+                    error_log("processPaymentSuccess: Processing rent payment for rent invoice #" . ($rentInvoice['invoice_number'] ?? $rentInvoice['id']));
+                    
+                    // Update rent invoice paid amount and balance
+                    $rentPaidAmount = floatval($rentInvoice['paid_amount'] ?? 0) + floatval($transaction['amount']);
+                    $rentBalance = floatval($rentInvoice['total_amount'] ?? $rentInvoice['amount'] ?? 0) - $rentPaidAmount;
+                    
+                    $rentUpdate = [
+                        'status' => ($rentBalance <= 0) ? 'paid' : 'partially_paid',
+                        'paid_amount' => $rentPaidAmount,
+                        'balance_amount' => max(0, $rentBalance),
+                        'payment_date' => date('Y-m-d'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                    $rentInvoiceModel->update($transaction['reference_id'], $rentUpdate);
+                    
+                    // Create accounting entries: Dr Cash, Cr Rent Revenue
+                    try {
+                        if ($this->cashAccountModel && $this->transactionModel) {
+                            $defaultCashAccount = $this->cashAccountModel->getDefault();
+                            $rentRevenueAccount = $this->accountModel ? $this->accountModel->getByCode('4200') : null; // Rent Revenue
+                            if (!$rentRevenueAccount && $this->accountModel) {
+                                $rentRevenueAccount = $this->accountModel->getByCode('4100'); // General service revenue fallback
+                            }
+                            
+                            if ($defaultCashAccount) {
+                                // Debit Cash
+                                $this->transactionModel->create([
+                                    'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
+                                    'debit' => $transaction['amount'],
+                                    'credit' => 0,
+                                    'description' => 'Gateway payment for Rent Invoice ' . ($rentInvoice['invoice_number'] ?? $rentInvoice['id']),
+                                    'reference_type' => 'rent_payment',
+                                    'reference_id' => $transaction['reference_id'],
+                                    'transaction_date' => date('Y-m-d'),
+                                    'status' => 'posted',
+                                    'created_by' => null
+                                ]);
+                                
+                                $this->cashAccountModel->updateBalance($defaultCashAccount['id'], $transaction['amount'], 'deposit');
+                                
+                                // Credit Rent Revenue
+                                if ($rentRevenueAccount) {
+                                    $this->transactionModel->create([
+                                        'account_id' => $rentRevenueAccount['id'],
+                                        'debit' => 0,
+                                        'credit' => $transaction['amount'],
+                                        'description' => 'Rent payment received - Invoice ' . ($rentInvoice['invoice_number'] ?? $rentInvoice['id']),
+                                        'reference_type' => 'rent_payment',
+                                        'reference_id' => $transaction['reference_id'],
+                                        'transaction_date' => date('Y-m-d'),
+                                        'status' => 'posted',
+                                        'created_by' => null
+                                    ]);
+                                }
+                                error_log("processPaymentSuccess: Created accounting entries for rent payment");
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log('Rent payment accounting error: ' . $e->getMessage());
+                    }
+                } else {
+                    error_log("processPaymentSuccess: Rent invoice not found for ID: " . $transaction['reference_id']);
+                }
             }
         } catch (Exception $e) {
             error_log('Process payment success error: ' . $e->getMessage());

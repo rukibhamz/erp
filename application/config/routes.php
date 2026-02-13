@@ -385,6 +385,7 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['customer-portal/profile'] = 'Customer_portal/profile';
         $route['customer-portal/forgot-password'] = 'Customer_portal/forgotPassword';
         $route['customer-portal/reset-password'] = 'Customer_portal/resetPassword';
+        $route['customer-portal/verify/(:any)'] = 'Customer_portal/verify/$1';
         
         // Notifications
         $route['notifications'] = 'Notifications/getNotifications';
