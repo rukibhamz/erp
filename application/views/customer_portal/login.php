@@ -44,6 +44,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </form>
 
                     <div class="text-center">
+                        <a href="<?= base_url('customer-portal/forgot-password') ?>" class="text-decoration-none small">
+                            Forgot your password?
+                        </a>
+                        <br>
                         <a href="<?= base_url('customer-portal/register') ?>" class="text-decoration-none">
                             Don't have an account? Register
                         </a>

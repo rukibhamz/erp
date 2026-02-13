@@ -44,11 +44,19 @@ function runCustomerPortalMigrations($pdo, $prefix = 'erp_') {
                 REFERENCES `{$prefix}customers` (`id`) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        // Add customer_id index to bookings if not exists
+        // Add customer_email index to bookings if not exists
         try {
             $pdo->exec("ALTER TABLE `{$prefix}bookings` ADD INDEX IF NOT EXISTS `customer_email` (`customer_email`)");
         } catch (PDOException $e) {
             // Index may already exist
+        }
+        
+        // Add customer_portal_user_id column to bookings table for linking
+        try {
+            $pdo->exec("ALTER TABLE `{$prefix}bookings` ADD COLUMN IF NOT EXISTS `customer_portal_user_id` int(11) DEFAULT NULL AFTER `customer_email`");
+            $pdo->exec("ALTER TABLE `{$prefix}bookings` ADD INDEX IF NOT EXISTS `customer_portal_user_id` (`customer_portal_user_id`)");
+        } catch (PDOException $e) {
+            // Column/index may already exist
         }
 
         echo "Customer portal tables created successfully.\n";

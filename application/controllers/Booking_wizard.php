@@ -44,6 +44,7 @@ class Booking_wizard extends Base_Controller {
         $this->locationModel = $this->loadModel('Location_model');
         $this->spaceModel = $this->loadModel('Space_model');
         $this->userModel = $this->loadModel('User_model');
+        $this->customerPortalUserModel = $this->loadModel('Customer_portal_user_model');
         $this->paymentTransactionModel = $this->loadModel('Payment_transaction_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->entityModel = $this->loadModel('Entity_model');
@@ -635,22 +636,14 @@ class Booking_wizard extends Base_Controller {
      * Finalize booking
      */
     public function finalize() {
-        $logFile = ROOTPATH . 'debug_wizard_log.txt';
-        $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logFile, "[$timestamp] FINALIZE START\n", FILE_APPEND);
-        file_put_contents($logFile, "[$timestamp] DATA: " . print_r($_SESSION['booking_data'] ?? [], true) . "\n", FILE_APPEND);
-        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            file_put_contents($logFile, "[$timestamp] ERROR: Not POST request\n", FILE_APPEND);
             $this->setFlashMessage('danger', 'Invalid request.');
             redirect('booking-wizard/step1');
         }
         
         $bookingData = $_SESSION['booking_data'] ?? [];
-        error_log("FINALIZE: Session data present: " . (empty($bookingData) ? 'NO' : 'YES'));
         
         if (empty($bookingData['resource_id']) || empty($bookingData['customer_email'])) {
-            file_put_contents($logFile, "[$timestamp] ERROR: Missing session data\n", FILE_APPEND);
             error_log("FINALIZE: Missing data - resource_id: " . ($bookingData['resource_id'] ?? 'null') . " email: " . ($bookingData['customer_email'] ?? 'null'));
             $this->setFlashMessage('danger', 'Please complete all steps.');
             redirect('booking-wizard/step1');
@@ -764,9 +757,9 @@ class Booking_wizard extends Base_Controller {
             $duration = $endDateTime->diff($startDateTime);
             $durationHours = ($duration->days * 24) + $duration->h + ($duration->i / 60);
             
-            // Handle guest user creation if needed
+            // Handle guest user creation if needed (creates in customer_portal_users table)
             $createdById = null;
-            if ($this->userModel && !empty($bookingData['customer_email'])) {
+            if ($this->customerPortalUserModel && !empty($bookingData['customer_email'])) {
                 $createdById = $this->createGuestUser(
                     $bookingData['customer_email'],
                     $bookingData['customer_name'] ?? '',
@@ -1187,6 +1180,7 @@ class Booking_wizard extends Base_Controller {
 
     /**
      * Helper to create or find a user for guest bookings
+     * Creates account in customer_portal_users table for portal access
      * 
      * @param string $email
      * @param string $name
@@ -1195,61 +1189,63 @@ class Booking_wizard extends Base_Controller {
      */
     private function createGuestUser($email, $name, $phone) {
         try {
-            // Check if user exists
-            $user = $this->userModel->getByEmail($email);
+            // Check if customer portal user already exists
+            $user = $this->customerPortalUserModel->getByEmail($email);
             if ($user) {
-                file_put_contents('debug_wizard_log.txt', date('Y-m-d H:i:s') . " - User already exists: $email (ID: " . $user['id'] . ")\n", FILE_APPEND);
+                error_log("Guest user already exists in customer portal: $email (ID: " . $user['id'] . ")");
                 return $user['id'];
             }
             
-            file_put_contents('debug_wizard_log.txt', date('Y-m-d H:i:s') . " - Creating new guest user: $email\n", FILE_APPEND);
-            
-            // Create new user
+            // Create new customer portal user
             $password = bin2hex(random_bytes(8)); // Random 16-char password
             
-            // Get customer role - Default to 'customer'
-            $roleCode = 'customer';
-            
-            $userData = [
-                'username' => $email,
-                'email' => $email,
-                'password' => $password,
-                'first_name' => $name,
-                'last_name' => '',
-                'phone' => $phone,
-                'role' => $roleCode,
-                'is_active' => 1
-            ];
-            
             // Handle name splitting
+            $firstName = $name;
+            $lastName = '';
             $parts = explode(' ', $name, 2);
             if (count($parts) > 1) {
-                $userData['first_name'] = $parts[0];
-                $userData['last_name'] = $parts[1];
+                $firstName = $parts[0];
+                $lastName = $parts[1];
             }
             
-            $userId = $this->userModel->create($userData);
+            $userData = [
+                'email' => $email,
+                'password' => password_hash($password, PASSWORD_BCRYPT),
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'phone' => $phone,
+                'status' => 'active',
+                'email_verified' => 1,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $userId = $this->customerPortalUserModel->create($userData);
             
             if ($userId) {
                 try {
-                    // Send welcome email with account activation link
-                    $token = $this->userModel->generatePasswordResetToken($userId);
+                    // Generate password reset token so user can set their own password
+                    $resetResult = $this->customerPortalUserModel->requestPasswordReset($email);
                     
-                    // Using the email helper function
-                    if (file_exists(BASEPATH . '../application/helpers/email_helper.php')) {
-                        require_once BASEPATH . '../application/helpers/email_helper.php';
+                    if ($resetResult['success']) {
+                        $token = $resetResult['token'];
                         
-                        // Send guest welcome email (friendlier than password reset)
-                        if (function_exists('send_guest_welcome_email')) {
-                            send_guest_welcome_email($email, $token, $name);
+                        // Send guest welcome email with customer portal reset link
+                        if (file_exists(BASEPATH . '../application/helpers/email_helper.php')) {
+                            require_once BASEPATH . '../application/helpers/email_helper.php';
+                            
+                            if (function_exists('send_guest_welcome_email')) {
+                                send_guest_welcome_email($email, $token, $name);
+                            }
                         }
                     }
                 } catch (Exception $e) {
                     error_log("Guest user created but email failed: " . $e->getMessage());
                 }
                 
-                error_log("Created guest user for booking: $email (ID: $userId)");
-                file_put_contents('debug_wizard_log.txt', date('Y-m-d H:i:s') . " - Created guest user ID: $userId\n", FILE_APPEND);
+                // Link existing bookings to this new customer portal user
+                $this->customerPortalUserModel->linkBookingsByEmail($email);
+                
+                error_log("Created guest user in customer portal: $email (ID: $userId)");
                 return $userId;
             }
             

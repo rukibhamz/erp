@@ -122,8 +122,8 @@ class Customer_portal_user_model extends Base_Model {
             // Update bookings with this email to link to customer portal user
             $this->db->update(
                 'bookings',
-                ['customer_id' => null], // Will be set if customer exists
-                "customer_email = ? AND customer_id IS NULL",
+                ['customer_portal_user_id' => $user['id']],
+                "customer_email = ? AND (customer_portal_user_id IS NULL OR customer_portal_user_id = 0)",
                 [$email]
             );
             

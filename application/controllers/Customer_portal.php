@@ -444,6 +444,109 @@ class Customer_portal extends Base_Controller {
     }
     
     /**
+     * Forgot Password page
+     */
+    public function forgotPassword() {
+        if (isset($this->session['customer_user_id'])) {
+            redirect('customer-portal/dashboard');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            
+            $email = sanitize_input($_POST['email'] ?? '');
+            
+            if (empty($email) || !validate_email($email)) {
+                $this->setFlashMessage('danger', 'Please enter a valid email address.');
+                redirect('customer-portal/forgot-password');
+            }
+            
+            $result = $this->customerPortalUserModel->requestPasswordReset($email);
+            
+            if ($result['success']) {
+                // Send reset email with customer portal link
+                try {
+                    if (file_exists(BASEPATH . '../application/helpers/email_helper.php')) {
+                        require_once BASEPATH . '../application/helpers/email_helper.php';
+                        
+                        if (function_exists('send_password_reset_email')) {
+                            $user = $this->customerPortalUserModel->getByEmail($email);
+                            $userName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+                            send_password_reset_email($email, $result['token'], $userName ?: null, 'customer');
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Customer portal password reset email failed: " . $e->getMessage());
+                }
+            }
+            
+            // Always show same message to prevent email enumeration
+            $this->setFlashMessage('success', 'If that email is registered, a password reset link has been sent. Please check your inbox.');
+            redirect('customer-portal/login');
+        }
+        
+        $data = [
+            'page_title' => 'Forgot Password',
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('customer_portal/forgot_password', $data);
+    }
+    
+    /**
+     * Reset Password page (also used for guest account activation)
+     */
+    public function resetPassword() {
+        if (isset($this->session['customer_user_id'])) {
+            redirect('customer-portal/dashboard');
+        }
+        
+        $token = $_GET['token'] ?? $_POST['token'] ?? '';
+        
+        if (empty($token)) {
+            $this->setFlashMessage('danger', 'Invalid or missing reset token.');
+            redirect('customer-portal/login');
+        }
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            
+            $password = $_POST['password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+            
+            // Validate passwords match
+            if ($password !== $confirmPassword) {
+                $this->setFlashMessage('danger', 'Passwords do not match.');
+                redirect('customer-portal/reset-password?token=' . urlencode($token));
+            }
+            
+            // Validate password strength
+            $passwordValidation = validate_password($password);
+            if (!$passwordValidation['valid']) {
+                $this->setFlashMessage('danger', implode(' ', $passwordValidation['errors']));
+                redirect('customer-portal/reset-password?token=' . urlencode($token));
+            }
+            
+            // Reset password
+            if ($this->customerPortalUserModel->resetPassword($token, $password)) {
+                $this->setFlashMessage('success', 'Password set successfully! You can now login.');
+                redirect('customer-portal/login');
+            } else {
+                $this->setFlashMessage('danger', 'Invalid or expired reset link. Please request a new one.');
+                redirect('customer-portal/forgot-password');
+            }
+        }
+        
+        $data = [
+            'page_title' => 'Set Password',
+            'token' => $token,
+            'flash' => $this->getFlashMessage()
+        ];
+        
+        $this->loadView('customer_portal/reset_password', $data);
+    }
+    
+    /**
      * Require customer authentication
      */
     private function requireCustomerAuth() {

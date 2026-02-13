@@ -285,9 +285,14 @@ if (!function_exists('send_email_smtp_socket')) {
  * @return bool True if email sent successfully
  */
 if (!function_exists('send_password_reset_email')) {
-    function send_password_reset_email($email, $resetToken, $userName = null) {
+    function send_password_reset_email($email, $resetToken, $userName = null, $portalType = 'admin') {
         try {
-            $resetLink = base_url('auth/resetPassword?token=' . urlencode($resetToken));
+            // Use customer portal or admin reset link based on portal type
+            if ($portalType === 'customer') {
+                $resetLink = base_url('customer-portal/reset-password?token=' . urlencode($resetToken));
+            } else {
+                $resetLink = base_url('auth/resetPassword?token=' . urlencode($resetToken));
+            }
             $expiryTime = date('M d, Y \a\t g:i A', strtotime('+1 hour'));
             
             $subject = 'Password Reset Request - Business ERP';
@@ -365,7 +370,7 @@ if (!function_exists('send_password_reset_email')) {
 if (!function_exists('send_guest_welcome_email')) {
     function send_guest_welcome_email($email, $resetToken, $userName = null, $bookingDetails = []) {
         try {
-            $activationLink = base_url('auth/resetPassword?token=' . urlencode($resetToken));
+            $activationLink = base_url('customer-portal/reset-password?token=' . urlencode($resetToken));
             $loginLink = base_url('customer-portal/login');
             $bookingNumber = $bookingDetails['booking_number'] ?? '';
             
