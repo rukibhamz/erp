@@ -1,5 +1,5 @@
 {
-    "date": "2026-02-12 22:17:18",
+    "date": "2026-02-13 08:53:36",
     "summary": {
         "passed": 106,
         "failed": 0,
@@ -389,7 +389,7 @@
             },
             {
                 "status": "PASS",
-                "msg": "Transaction refs are unique: TEST-20260212221718-853BF2AE ≠ TEST-20260212221718-0B8ACFB3"
+                "msg": "Transaction refs are unique: TEST-20260213085336-928E61DC ≠ TEST-20260213085336-A09BF7CB"
             },
             {
                 "status": "PASS",
@@ -431,7 +431,7 @@
             },
             {
                 "status": "PASS",
-                "msg": "Booking CREATE OK (ID: 2)"
+                "msg": "Booking CREATE OK (ID: 5)"
             },
             {
                 "status": "PASS",
@@ -465,7 +465,7 @@
             },
             {
                 "status": "PASS",
-                "msg": "Customer CREATE OK (ID: 5)"
+                "msg": "Customer CREATE OK (ID: 15)"
             },
             {
                 "status": "PASS",
@@ -499,7 +499,7 @@
             },
             {
                 "status": "PASS",
-                "msg": "Invoice CREATE OK (ID: 4)"
+                "msg": "Invoice CREATE OK (ID: 8)"
             },
             {
                 "status": "PASS",

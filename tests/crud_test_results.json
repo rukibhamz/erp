@@ -1,0 +1,629 @@
+{
+    "date": "2026-02-13 08:48:28",
+    "summary": {
+        "passed": 121,
+        "failed": 0,
+        "warnings": 1
+    },
+    "errors": [],
+    "warnings": [
+        {
+            "msg": "Customer_model: Duplicate unique key was accepted (ID: 11)",
+            "details": "Unique field: customer_code",
+            "category": "Customer_model"
+        }
+    ],
+    "details": [
+        {
+            "status": "PASS",
+            "msg": "Account_model: Table `accounts` exists",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Account_model: Model instantiated",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Account_model: CREATE OK (ID: 7571)",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Account_model: READ OK (verified account_name)",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Account_model: UPDATE OK (account_name changed)",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Account_model: getAll() returns array (5 records)",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Account_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Account_model: DELETE OK (record removed)",
+            "category": "Account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Customer_model: Table `customers` exists",
+            "category": "Customer_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Customer_model: Model instantiated",
+            "category": "Customer_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Customer_model: CREATE OK (ID: 10)",
+            "category": "Customer_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Customer_model: READ OK (verified company_name)",
+            "category": "Customer_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Customer_model: UPDATE OK (company_name changed)",
+            "category": "Customer_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Customer_model: getAll() returns array (1 records)",
+            "category": "Customer_model"
+        },
+        {
+            "status": "WARN",
+            "msg": "Customer_model: Duplicate unique key was accepted (ID: 11)",
+            "detail": "Unique field: customer_code",
+            "category": "Customer_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Customer_model: DELETE OK (record removed)",
+            "category": "Customer_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: Table `vendors` exists",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: Model instantiated",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: CREATE OK (ID: 4)",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: READ OK (verified company_name)",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: UPDATE OK (company_name changed)",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: getAll() returns array (1 records)",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Vendor_model: DELETE OK (record removed)",
+            "category": "Vendor_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: Table `employees` exists",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: Model instantiated",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: CREATE OK (ID: 3)",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: READ OK (verified first_name)",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: UPDATE OK (first_name changed)",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: getAll() returns array (1 records)",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Employee_model: DELETE OK (record removed)",
+            "category": "Employee_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: Table `journal_entries` exists",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: Model instantiated",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: CREATE OK (ID: 3)",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: READ OK (verified description)",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: UPDATE OK (description changed)",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: getAll() returns array (1 records)",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Journal_entry_model: DELETE OK (record removed)",
+            "category": "Journal_entry_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: Table `products` exists",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: Model instantiated",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: CREATE OK (ID: 3)",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: READ OK (verified product_name)",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: UPDATE OK (product_name changed)",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: getAll() returns array (1 records)",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Product_model: DELETE OK (record removed)",
+            "category": "Product_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: Table `estimates` exists",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: Model instantiated",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: CREATE OK (ID: 3)",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: READ OK (verified status)",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: UPDATE OK (status changed)",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: getAll() returns array (1 records)",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Estimate_model: DELETE OK (record removed)",
+            "category": "Estimate_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Financial_year_model: Table `financial_years` exists",
+            "category": "Financial_year_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Financial_year_model: Model instantiated",
+            "category": "Financial_year_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Financial_year_model: CREATE OK (ID: 2)",
+            "category": "Financial_year_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Financial_year_model: READ OK (verified year_name)",
+            "category": "Financial_year_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Financial_year_model: UPDATE OK (year_name changed)",
+            "category": "Financial_year_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Financial_year_model: getAll() returns array (1 records)",
+            "category": "Financial_year_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Financial_year_model: DELETE OK (record removed)",
+            "category": "Financial_year_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: Table `facilities` exists",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: Model instantiated",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: CREATE OK (ID: 7)",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: READ OK (verified facility_name)",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: UPDATE OK (facility_name changed)",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: getAll() returns array (3 records)",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Facility_model: DELETE OK (record removed)",
+            "category": "Facility_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: Table `currencies` exists",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: Model instantiated",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: CREATE OK (ID: 3)",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: READ OK (verified currency_name)",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: UPDATE OK (currency_name changed)",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: getAll() returns array (1 records)",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Currency_model: DELETE OK (record removed)",
+            "category": "Currency_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: Table `modules` exists",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: Model instantiated",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: CREATE OK (ID: 5482)",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: READ OK (verified display_name)",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: UPDATE OK (display_name changed)",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: getAll() returns array (5 records)",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Module_model: DELETE OK (record removed)",
+            "category": "Module_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Notification_model: Table `notifications` exists",
+            "category": "Notification_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Notification_model: Model instantiated",
+            "category": "Notification_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Notification_model: CREATE OK (ID: 1)",
+            "category": "Notification_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Notification_model: READ OK (verified is_read)",
+            "category": "Notification_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Notification_model: UPDATE OK (is_read changed)",
+            "category": "Notification_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Notification_model: getAll() returns array (1 records)",
+            "category": "Notification_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Notification_model: DELETE OK (record removed)",
+            "category": "Notification_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: Table `items` exists",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: Model instantiated",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: CREATE OK (ID: 1)",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: READ OK (verified item_name)",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: UPDATE OK (item_name changed)",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: getAll() returns array (1 records)",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: Duplicate unique key correctly rejected (exception)",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Item_model: DELETE OK (record removed)",
+            "category": "Item_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Booking_model: CREATE OK (ID: 4)",
+            "category": "Booking_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Booking_model: READ OK",
+            "category": "Booking_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Booking_model: UPDATE OK",
+            "category": "Booking_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Booking_model: Zero-amount booking correctly rejected",
+            "category": "Booking_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Booking_model: DELETE OK",
+            "category": "Booking_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Invoice_model: CREATE OK (ID: 6)",
+            "category": "Invoice_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Invoice_model: READ OK",
+            "category": "Invoice_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Invoice_model: addPayment OK (partial: 2000)",
+            "category": "Invoice_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Invoice_model: Partial payment status correct",
+            "category": "Invoice_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Invoice_model: Overpayment was capped at total",
+            "category": "Invoice_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Invoice_model: Empty item description correctly rejected",
+            "category": "Invoice_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Invoice_model: DELETE OK",
+            "category": "Invoice_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Bill_model: CREATE OK (ID: 2)",
+            "category": "Bill_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Bill_model: READ OK",
+            "category": "Bill_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Bill_model: UPDATE OK",
+            "category": "Bill_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Bill_model: DELETE OK",
+            "category": "Bill_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Cash_account_model: CREATE OK (ID: 2)",
+            "category": "Cash_account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Cash_account_model: READ OK",
+            "category": "Cash_account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Cash_account_model: UPDATE OK",
+            "category": "Cash_account_model"
+        },
+        {
+            "status": "PASS",
+            "msg": "Cash_account_model: DELETE OK",
+            "category": "Cash_account_model"
+        }
+    ]
+}

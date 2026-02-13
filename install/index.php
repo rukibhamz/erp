@@ -381,6 +381,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
                 
+        // Run ALTER TABLE migrations (add columns to existing tables)
+        if (file_exists(__DIR__ . '/migrations_alter.php')) {
+            require_once __DIR__ . '/migrations_alter.php';
+            try {
+                runAlterMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Alter migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run bookable config migrations
+        if (file_exists(__DIR__ . '/migrations_bookable_config.php')) {
+            require_once __DIR__ . '/migrations_bookable_config.php';
+            try {
+                runBookableConfigMigration($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Bookable config migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run facilities rates migrations (adds rate columns)
+        if (file_exists(__DIR__ . '/migrations_facilities_rates.php')) {
+            require_once __DIR__ . '/migrations_facilities_rates.php';
+            try {
+                runFacilitiesRatesMigrations($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("Facilities rates migrations warning: " . $e->getMessage());
+            }
+        }
+        
+        // Run new features migrations (wholesale pricing, education tax)
+        if (file_exists(__DIR__ . '/migrations_new_features.php')) {
+            require_once __DIR__ . '/migrations_new_features.php';
+            try {
+                runNewFeatureMigrations($pdo, $_SESSION['db_prefix']);
+                fixNewFeatureColumns($pdo, $_SESSION['db_prefix']);
+            } catch (Exception $e) {
+                error_log("New features migrations warning: " . $e->getMessage());
+            }
+        }
+                
                 // Create super admin user
                 error_log("Creating super admin user...");
                 if (empty($_SESSION['admin_username']) || empty($_SESSION['admin_email']) || empty($_SESSION['admin_password'])) {

@@ -282,6 +282,12 @@ else {
     // CRUD test with cleanup
     if (tableExists($db, $prefix, 'bookings')) {
         try {
+            // Pre-cleanup: remove leftover test records from previous runs
+            try {
+                $db->query("DELETE FROM `{$prefix}bookings` WHERE booking_number = 'TEST-BK-999999'");
+                $db->query("DELETE FROM `{$prefix}facilities` WHERE facility_code = 'TEST-FAC-99'");
+            } catch (Exception $e) { /* ignore */ }
+            
             // Create test facility first
             $facId = $db->insert('facilities', [
                 'facility_code'=>'TEST-FAC-99','facility_name'=>'Test Facility',
