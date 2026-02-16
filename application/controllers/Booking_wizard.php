@@ -1084,6 +1084,18 @@ class Booking_wizard extends Base_Controller {
                     error_log('Rollback note: ' . $rollbackException->getMessage());
                 }
             }
+            // Self-healing: Check for missing space_id column
+            if (strpos($e->getMessage(), "Unknown column 'space_id'") !== false) {
+                 try {
+                     $this->db->query("ALTER TABLE " . $this->db->dbprefix('bookings') . " ADD COLUMN space_id INT NULL AFTER booking_number");
+                     $this->setFlashMessage('success', 'System update applied. Please click "Confirm Booking" again to proceed.');
+                     redirect('booking-wizard/step5');
+                     return;
+                 } catch (Exception $fixEx) {
+                     error_log("Failed to auto-fix missing column: " . $fixEx->getMessage());
+                 }
+            }
+            
             error_log('Booking_wizard finalize error: ' . $e->getMessage());
             
             $logFile = ROOTPATH . 'debug_wizard_log.txt';
