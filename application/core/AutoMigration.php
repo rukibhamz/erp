@@ -61,8 +61,9 @@ class AutoMigration {
             $this->pdo = new PDO($dsn, $username, $password, $options);
             $this->runPendingMigrations();
             self::$executed = true;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             // Silently fail - don't break application if migration fails
+            // Use Throwable to also catch TypeError/Error (e.g. execute() on false)
             error_log('AutoMigration error: ' . $e->getMessage());
         }
     }
@@ -468,7 +469,7 @@ class AutoMigration {
             error_log("AutoMigration: Successfully executed {$migrationName}");
             return true;
             
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             error_log("AutoMigration error executing {$migrationName}: " . $e->getMessage());
             return false;
         }
@@ -523,8 +524,17 @@ class AutoMigration {
                 "INSERT INTO `{$this->prefix}migrations` (migration, batch) VALUES (?, ?)
                  ON DUPLICATE KEY UPDATE executed_at = CURRENT_TIMESTAMP"
             );
+            if ($stmt === false) {
+                // prepare() returned false - try raw exec as fallback
+                $safeName = addslashes($migrationName);
+                $this->pdo->exec(
+                    "INSERT INTO `{$this->prefix}migrations` (migration, batch) VALUES ('{$safeName}', {$batch})
+                     ON DUPLICATE KEY UPDATE executed_at = CURRENT_TIMESTAMP"
+                );
+                return;
+            }
             $stmt->execute([$migrationName, $batch]);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             error_log("AutoMigration: Failed to record migration: " . $e->getMessage());
         }
     }
