@@ -1087,7 +1087,7 @@ class Booking_wizard extends Base_Controller {
             // Self-healing: Check for missing space_id column
             if (strpos($e->getMessage(), "Unknown column 'space_id'") !== false) {
                  try {
-                     $this->db->query("ALTER TABLE " . $this->db->dbprefix('bookings') . " ADD COLUMN space_id INT NULL AFTER booking_number");
+                     $this->db->query("ALTER TABLE " . $this->db->getPrefix() . "bookings ADD COLUMN space_id INT NULL AFTER booking_number");
                      $this->setFlashMessage('success', 'System update applied. Please click "Confirm Booking" again to proceed.');
                      redirect('booking-wizard/step5');
                      return;
@@ -1833,18 +1833,17 @@ class Booking_wizard extends Base_Controller {
         echo "<h1>Database Fix Tool</h1>";
         try {
             // Check if column exists
-            $result = $this->db->query("SHOW COLUMNS FROM " . $this->db->dbprefix('bookings') . " LIKE 'space_id'")->row();
+            $stmt = $this->db->query("SHOW COLUMNS FROM " . $this->db->getPrefix() . "bookings LIKE 'space_id'");
+            $result = $stmt->fetch(); // Database::query returns PDOStatement/result, fetch() gets row
             
             if ($result) {
                 echo "<p style='color:green'>Column 'space_id' already exists.</p>";
             } else {
                 echo "<p>Adding 'space_id' column...</p>";
-                $sql = "ALTER TABLE " . $this->db->dbprefix('bookings') . " ADD COLUMN space_id INT NULL AFTER booking_number";
-                if ($this->db->query($sql)) {
-                    echo "<p style='color:green'>Column 'space_id' added successfully!</p>";
-                } else {
-                    echo "<p style='color:red'>Failed to add column.</p>";
-                }
+                $sql = "ALTER TABLE " . $this->db->getPrefix() . "bookings ADD COLUMN space_id INT NULL AFTER booking_number";
+                // Database::query returns result, exec via query
+                $this->db->query($sql);
+                echo "<p style='color:green'>Column 'space_id' added successfully!</p>";
             }
         } catch (Exception $e) {
             echo "<p style='color:red'>Error: " . $e->getMessage() . "</p>";
