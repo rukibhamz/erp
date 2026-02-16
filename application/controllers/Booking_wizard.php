@@ -1813,5 +1813,31 @@ class Booking_wizard extends Base_Controller {
             error_log("recordPaymentInAccounting error: " . $e->getMessage());
         }
     }
+
+    /**
+     * TEMPORARY: Fix database schema
+     */
+    public function fix_db() {
+        echo "<h1>Database Fix Tool</h1>";
+        try {
+            // Check if column exists
+            $result = $this->db->query("SHOW COLUMNS FROM " . $this->db->dbprefix('bookings') . " LIKE 'space_id'")->row();
+            
+            if ($result) {
+                echo "<p style='color:green'>Column 'space_id' already exists.</p>";
+            } else {
+                echo "<p>Adding 'space_id' column...</p>";
+                $sql = "ALTER TABLE " . $this->db->dbprefix('bookings') . " ADD COLUMN space_id INT NULL AFTER booking_number";
+                if ($this->db->query($sql)) {
+                    echo "<p style='color:green'>Column 'space_id' added successfully!</p>";
+                } else {
+                    echo "<p style='color:red'>Failed to add column.</p>";
+                }
+            }
+        } catch (Exception $e) {
+            echo "<p style='color:red'>Error: " . $e->getMessage() . "</p>";
+        }
+        echo "<p><a href='" . base_url('booking-wizard') . "'>Return to Booking Wizard</a></p>";
+    }
 }
 
