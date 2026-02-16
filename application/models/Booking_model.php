@@ -38,10 +38,14 @@ class Booking_model extends Base_Model {
     
     public function getByDateRange($startDate, $endDate, $spaceId = null) {
         try {
-            // Linked to spaces now
-            $sql = "SELECT b.*, f.facility_name, f.facility_code 
+            // Updated to use LEFT JOIN and prefer Spaces table but fallback to Facilities
+            // This ensures robustness if one relation is missing
+            $sql = "SELECT b.*, 
+                    COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name, 
+                    COALESCE(s.space_number, f.facility_code) as facility_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` b
-                    JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                    LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
+                    LEFT JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
                     WHERE (
                         (b.booking_date >= ? AND b.booking_date <= ?)
                         OR (b.booking_date <= ? AND DATE_ADD(b.booking_date, INTERVAL TIME_TO_SEC(b.end_time) - TIME_TO_SEC(b.start_time) SECOND) >= ?)
@@ -51,7 +55,8 @@ class Booking_model extends Base_Model {
             $params = [$startDate, $endDate, $startDate, $startDate];
             
             if ($spaceId) {
-                $sql .= " AND b.facility_id = ?";
+                $sql .= " AND (b.space_id = ? OR b.facility_id = ?)";
+                $params[] = $spaceId;
                 $params[] = $spaceId;
             }
             
@@ -220,9 +225,12 @@ class Booking_model extends Base_Model {
     public function getByStatus($status) {
         try {
             return $this->db->fetchAll(
-                "SELECT b.*, s.space_name as facility_name 
+                "SELECT b.*, 
+                 COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name,
+                 COALESCE(s.space_number, f.facility_code) as facility_code
                  FROM `" . $this->db->getPrefix() . $this->table . "` b
-                 JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
+                 LEFT JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
                  WHERE b.status = ? 
                  ORDER BY b.booking_date DESC, b.created_at DESC",
                 [$status]
