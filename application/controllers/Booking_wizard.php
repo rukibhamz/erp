@@ -637,6 +637,10 @@ class Booking_wizard extends Base_Controller {
      * Finalize booking
      */
     public function finalize() {
+        // Define log variables for debugging
+        $logFile = ROOTPATH . 'debug_wizard_log.txt';
+        $timestamp = date('Y-m-d H:i:s');
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->setFlashMessage('danger', 'Invalid request.');
             redirect('booking-wizard/step1');
