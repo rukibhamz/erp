@@ -46,12 +46,16 @@ class Bookings extends Base_Controller {
         
         try {
             if ($status === 'all') {
-                $bookings = $this->bookingModel->getByDateRange(date('Y-m-01'), date('Y-m-t'));
+                // Use the selected date to determine the month range
+                $startDate = date('Y-m-01', strtotime($date));
+                $endDate = date('Y-m-t', strtotime($date));
+                $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
             } else {
                 $bookings = $this->bookingModel->getByStatus($status);
             }
         } catch (Exception $e) {
             $bookings = [];
+            error_log('Bookings index error: ' . $e->getMessage());
         }
 
         $data = [
