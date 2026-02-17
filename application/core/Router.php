@@ -194,15 +194,11 @@ class Router {
             
             // Convert route pattern to regex (case-insensitive for better matching)
             // CRITICAL FIX: Properly escape and convert route patterns
-            // First, replace parameter placeholders with regex groups (before escaping)
-            $regexPattern = $pattern;
-            $regexPattern = str_replace('(:num)', '([0-9]+)', $regexPattern);
-            $regexPattern = str_replace('(:any)', '(.+)', $regexPattern);
-            // Now escape remaining special regex characters (but not the groups we just added)
-            $regexPattern = preg_quote($regexPattern, '#');
-            // Unescape the regex groups we added (they need to remain as groups)
-            $regexPattern = str_replace('\\(\[0-9\]\+\)', '([0-9]+)', $regexPattern);
-            $regexPattern = str_replace('\\(\.\+\)', '(.+)', $regexPattern);
+            // Use a more robust order: escape pattern THEN replace placeholders
+            $regexPattern = preg_quote($pattern, '#');
+            $regexPattern = str_replace('\(:num\)', '([0-9]+)', $regexPattern);
+            $regexPattern = str_replace('\(:any\)', '(.+)', $regexPattern);
+            
             // Unescape forward slashes and hyphens (they're safe in our context)
             $regexPattern = str_replace('\\/', '/', $regexPattern);
             $regexPattern = str_replace('\\-', '-', $regexPattern);
@@ -531,8 +527,8 @@ class Router {
         
         // Check if this looks like a module/controller/method/param pattern
         if (count($urlParts) >= 3) {
-            // Common module prefixes that should be stripped (removed 'locations' since it's handled above)
-            $modulePrefixes = ['inventory', 'utilities', 'accounting', 'tax', 'bookings', 'cash'];
+            // Common module prefixes that should be stripped (removed 'locations' and 'bookings' since they're handle as top-level or handled specifically)
+            $modulePrefixes = ['inventory', 'utilities', 'accounting', 'tax', 'cash'];
             $firstPart = strtolower($urlParts[0]);
             
             // If first part is a known module prefix, treat second part as controller
