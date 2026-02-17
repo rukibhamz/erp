@@ -164,8 +164,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
                 
                 <div class="col-12">
-                    <label for="description" class="form-label">Description</label>
-                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    <label for="description" class="form-label">Short Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="2" placeholder="Brief summary for space listings"></textarea>
+                </div>
+
+                <div class="col-12">
+                    <label for="video_url" class="form-label">Video URL</label>
+                    <input type="url" class="form-control" id="video_url" name="video_url" placeholder="YouTube or Vimeo URL (e.g., https://www.youtube.com/watch?v=...)">
+                    <div class="form-text">Provide a link to a video tour of the space.</div>
+                </div>
+
+                <div class="col-12">
+                    <label for="detailed_description" class="form-label">Detailed Description</label>
+                    <textarea class="form-control" id="detailed_description" name="detailed_description" rows="5" placeholder="Comprehensive information about the space, pictures, and videos coverage"></textarea>
                 </div>
 
                 <div class="col-12">

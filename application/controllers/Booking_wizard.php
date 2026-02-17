@@ -142,6 +142,51 @@ class Booking_wizard extends Base_Controller {
 
         $this->loadView('booking_wizard/step1_select_resource', $data);
     }
+
+    /**
+     * View more information about a space on the front end
+     */
+    public function space_details($spaceId) {
+        $spaceId = intval($spaceId);
+        
+        try {
+            $space = $this->spaceModel->getWithProperty($spaceId);
+            if (!$space || empty($space['is_bookable'])) {
+                $this->setFlashMessage('danger', 'Space not found or not available for public booking.');
+                redirect('booking-wizard/step1');
+            }
+            
+            // Get config for rates and booking types
+            $config = $this->spaceModel->getBookableConfig($spaceId);
+            if ($config) {
+                $space['booking_types'] = json_decode($config['booking_types'], true) ?: ['hourly', 'daily'];
+                $pricingRules = json_decode($config['pricing_rules'] ?? '{}', true) ?: [];
+                $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
+                $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+            } else {
+                $space['booking_types'] = ['hourly', 'daily'];
+            }
+            
+            // Get photos
+            $space['photos'] = $this->spaceModel->getPhotos($spaceId);
+            
+            // Get amenities
+            $space['amenities'] = json_decode($space['amenities'] ?? '[]', true) ?: [];
+            
+        } catch (Exception $e) {
+            error_log('Booking_wizard space_details error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'An error occurred while loading space details.');
+            redirect('booking-wizard/step1');
+        }
+
+        $data = [
+            'page_title' => $space['space_name'] . ' - Space Details',
+            'space' => $space,
+            'flash' => $this->getFlashMessage()
+        ];
+
+        $this->loadView('booking_wizard/space_details', $data);
+    }
     
     /**
      * AJAX endpoint to get spaces for a location

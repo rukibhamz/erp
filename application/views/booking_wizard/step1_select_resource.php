@@ -140,9 +140,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <?php endif; ?>
                                                 </div>
                                                 
-                                                <a href="<?= base_url('booking-wizard/step2/' . $space['id']) ?>" class="btn btn-primary w-100">
-                                                    <i class="bi bi-calendar-check"></i> Select & Continue
-                                                </a>
+                                                <div class="d-grid gap-2">
+                                                    <a href="<?= base_url('booking-wizard/space/details/' . $space['id']) ?>" class="btn btn-outline-primary">
+                                                        <i class="bi bi-info-circle"></i> View More
+                                                    </a>
+                                                    <a href="<?= base_url('booking-wizard/step2/' . $space['id']) ?>" class="btn btn-primary">
+                                                        <i class="bi bi-calendar-check"></i> Select & Continue
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

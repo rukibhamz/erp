@@ -314,7 +314,8 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         // Legacy routes redirect to new wizard
         $route['booking-wizard'] = 'Booking_wizard/step1';
         $route['booking-wizard/step1'] = 'Booking_wizard/step1';
-        $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
+$route['booking-wizard/space/details/(:num)'] = 'Booking_wizard/space_details/$1';
+$route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['booking-wizard/step3/(:num)'] = 'Booking_wizard/step3/$1';
         $route['booking-wizard/step4'] = 'Booking_wizard/step4';
         $route['booking-wizard/step5'] = 'Booking_wizard/step5';

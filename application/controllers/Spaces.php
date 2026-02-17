@@ -83,6 +83,8 @@ class Spaces extends Base_Controller {
                 'operational_mode' => sanitize_input($_POST['operational_mode'] ?? 'vacant'),
                 'is_bookable' => !empty($_POST['is_bookable']) ? 1 : 0,
                 'description' => sanitize_input($_POST['description'] ?? ''),
+                'video_url' => sanitize_input($_POST['video_url'] ?? ''),
+                'detailed_description' => $_POST['detailed_description'] ?? '', // Preserve HTML if any (though usually sanitized later)
                 'notes' => sanitize_input($_POST['notes'] ?? ''),
                 'created_at' => date('Y-m-d H:i:s')
             ];
@@ -183,6 +185,8 @@ class Spaces extends Base_Controller {
                 'operational_mode' => sanitize_input($_POST['operational_mode'] ?? 'vacant'),
                 'is_bookable' => !empty($_POST['is_bookable']) ? 1 : 0,
                 'description' => sanitize_input($_POST['description'] ?? ''),
+                'video_url' => sanitize_input($_POST['video_url'] ?? ''),
+                'detailed_description' => $_POST['detailed_description'] ?? '',
                 'notes' => sanitize_input($_POST['notes'] ?? ''),
                 'updated_at' => date('Y-m-d H:i:s')
             ];

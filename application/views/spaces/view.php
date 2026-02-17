@@ -179,8 +179,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
                     
                     <?php if ($space['description']): ?>
-                        <dt class="col-sm-4">Description:</dt>
+                        <dt class="col-sm-4">Short Description:</dt>
                         <dd class="col-sm-8"><?= nl2br(htmlspecialchars($space['description'])) ?></dd>
+                    <?php endif; ?>
+
+                    <?php if ($space['video_url']): ?>
+                        <dt class="col-sm-4">Video Tour:</dt>
+                        <dd class="col-sm-8">
+                            <a href="<?= htmlspecialchars($space['video_url']) ?>" target="_blank">
+                                <i class="bi bi-play-circle"></i> View Video
+                            </a>
+                        </dd>
+                    <?php endif; ?>
+
+                    <?php if ($space['detailed_description']): ?>
+                        <dt class="col-sm-4">Detailed Description:</dt>
+                        <dd class="col-sm-8"><?= nl2br(htmlspecialchars($space['detailed_description'])) ?></dd>
                     <?php endif; ?>
                 </dl>
                 
