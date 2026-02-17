@@ -104,14 +104,14 @@ class Invoice_model extends Base_Model {
             return $this->db->query($sql, [
                 $invoiceId,
                 $itemData['product_id'] ?? null,
-                $itemData['item_description'] ?? '',
-                $itemData['quantity'] ?? 0,
+                $itemData['item_description'] ?? $itemData['description'] ?? '',
+                $itemData['quantity'] ?? 1,
                 $itemData['unit_price'] ?? 0,
                 $itemData['tax_rate'] ?? 0,
                 $itemData['tax_amount'] ?? 0,
                 $itemData['discount_rate'] ?? 0,
                 $itemData['discount_amount'] ?? 0,
-                $itemData['line_total'] ?? 0,
+                $itemData['line_total'] ?? $itemData['amount'] ?? 0,
                 $itemData['account_id'] ?? null
             ]);
         } catch (Exception $e) {

@@ -601,6 +601,37 @@ class Router {
             return;
         }
         
+        // Special handling for customer-portal routes (MUST be before general parsing)
+        if (count($urlParts) >= 1 && strtolower($urlParts[0]) === 'customer-portal') {
+            // Map customer-portal routes to Customer_portal controller
+            $this->controller = 'Customer_portal';
+            if (isset($urlParts[1]) && !empty($urlParts[1])) {
+                $method = strtolower($urlParts[1]);
+                
+                // Map hyphenated methods to camelCase if needed, or handle directly
+                if ($method === 'forgot-password') {
+                    $this->method = 'forgotPassword';
+                } elseif ($method === 'reset-password') {
+                    $this->method = 'resetPassword';
+                } elseif ($method === 'view-booking') {
+                    $this->method = 'viewBooking';
+                } else {
+                    $this->method = $method;
+                }
+
+                // Handle parameters
+                if (count($urlParts) > 2) {
+                    $this->params = array_slice($urlParts, 2);
+                    $this->params = array_map(function($param) {
+                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+                    }, $this->params);
+                }
+            } else {
+                $this->method = 'index';
+            }
+            return;
+        }
+
         // Special handling for tax/compliance routes (MUST be before general tax parsing)
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'tax' && strtolower($urlParts[1]) === 'compliance') {
             // Handle tax/compliance routes - map to Tax_compliance controller

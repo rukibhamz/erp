@@ -61,12 +61,19 @@ class Account_model extends Base_Model {
     
     public function getByType($type) {
         try {
+            // Normalize type and handle aliases for DB schema compatibility
+            $normalizedType = strtolower($type);
+            if ($normalizedType === 'revenue') $normalizedType = 'income';
+            else if ($normalizedType === 'assets') $normalizedType = 'asset';
+            else if ($normalizedType === 'liabilities') $normalizedType = 'liability';
+            else if ($normalizedType === 'expenses') $normalizedType = 'expense';
+
             // Order by account_number if available, otherwise by account_code
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE account_type = ? AND status = 'active' 
+                 WHERE (account_type = ? OR account_type = ?) AND status = 'active' 
                  ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code",
-                [$type]
+                [$normalizedType, $type]
             );
         } catch (Exception $e) {
             error_log('Account_model getByType error: ' . $e->getMessage());
@@ -112,7 +119,9 @@ class Account_model extends Base_Model {
         
         // For Assets and Expenses: debit increases, credit decreases
         // For Liabilities, Equity, and Revenue: credit increases, debit decreases
-        $increasesWithDebit = in_array($account['account_type'], ['Assets', 'Expenses']);
+        // Normalize type for comparison (lowercase)
+        $normalizedType = strtolower($account['account_type']);
+        $increasesWithDebit = in_array($normalizedType, ['assets', 'expenses', 'asset', 'expense']);
         
         if ($increasesWithDebit) {
             $newBalance = $type === 'debit' ? $currentBalance + $amount : $currentBalance - $amount;
@@ -290,7 +299,21 @@ class Account_model extends Base_Model {
         }
         
         $codeNum = intval($code);
-        $range = self::ACCOUNT_RANGES[$type] ?? null;
+        
+        // Find range with case-insensitive and alias matching
+        $range = null;
+        $searchType = strtolower($type);
+        foreach (self::ACCOUNT_RANGES as $key => $r) {
+            $lowerKey = strtolower($key);
+            if ($lowerKey === $searchType || 
+                ($lowerKey === 'revenue' && $searchType === 'income') ||
+                ($lowerKey === 'income' && $searchType === 'revenue') ||
+                ($lowerKey === 'assets' && $searchType === 'asset') ||
+                ($lowerKey === 'liabilities' && $searchType === 'liability')) {
+                $range = $r;
+                break;
+            }
+        }
         
         if ($range) {
             if ($codeNum < $range['start'] || $codeNum > $range['end']) {

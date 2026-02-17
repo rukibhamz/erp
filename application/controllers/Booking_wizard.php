@@ -1435,11 +1435,14 @@ class Booking_wizard extends Base_Controller {
             $arParentAccount = $this->accountModel->getByCode('1200');
             
             if (!$arParentAccount) {
+                // Try alternate names if 1200 is missing
                 $arAccounts = $this->accountModel->getByType('Assets');
                 if (is_array($arAccounts)) {
                     foreach ($arAccounts as $acc) {
-                        if (stripos($acc['account_name'] ?? '', 'receivable') !== false) {
+                        $name = strtolower($acc['account_name'] ?? '');
+                        if (strpos($name, 'receivable') !== false || strpos($name, 'ar') !== false) {
                             $arParentAccount = $acc;
+                            error_log("Found fallback AR parent account: " . ($acc['account_code'] ?? 'ID: '.$acc['id']));
                             break;
                         }
                     }
@@ -1587,12 +1590,13 @@ class Booking_wizard extends Base_Controller {
                 // ✅ STEP 4: Add invoice line items
                 try {
                     $this->invoiceModel->addItem($invoiceId, [
-                        'description' => 'Space Booking - ' . ($booking['facility_name'] ?? 'Facility'),
+                        'item_description' => 'Space Booking - ' . ($booking['facility_name'] ?? 'Facility'),
                         'quantity' => 1,
                         'unit_price' => $subtotal,
-                        'amount' => $subtotal,
+                        'line_total' => $subtotal,
                         'tax_rate' => $taxRate,
-                        'tax_amount' => $taxAmount
+                        'tax_amount' => $taxAmount,
+                        'account_id' => $revenueAccount['id'] ?? null
                     ]);
                 } catch (Exception $e) {
                     error_log("createBookingInvoice: Error adding line item: " . $e->getMessage());

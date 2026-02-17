@@ -319,6 +319,7 @@ class Customer_portal extends Base_Controller {
      * This is used from the booking confirmation page
      */
     public function booking($id) {
+        $this->requireCustomerAuth();
         try {
             if (empty($id)) {
                 $this->setFlashMessage('danger', 'Booking ID is required.');
