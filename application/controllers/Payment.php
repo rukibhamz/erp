@@ -572,18 +572,16 @@ class Payment extends Base_Controller {
                             
                             // Method 1: Look for 'BKG-{booking_id}' in reference field
                             $sql = "SELECT id FROM {$prefix}invoices WHERE reference = ? LIMIT 1";
-                            $query = $this->db->query($sql, ['BKG-' . $booking['id']]);
-                            if ($query && $query->num_rows() > 0) {
-                                $inv = $query->row_array();
+                            $inv = $this->db->fetchOne($sql, ['BKG-' . $booking['id']]);
+                            if ($inv) {
                                 $invoiceId = $inv['id'];
                             }
                             
                             // Method 2: Look in notes for booking number
                             if (!$invoiceId && !empty($booking['booking_number'])) {
                                 $sql = "SELECT id FROM {$prefix}invoices WHERE notes LIKE ? LIMIT 1";
-                                $query = $this->db->query($sql, ['%' . $booking['booking_number'] . '%']);
-                                if ($query && $query->num_rows() > 0) {
-                                    $inv = $query->row_array();
+                                $inv = $this->db->fetchOne($sql, ['%' . $booking['booking_number'] . '%']);
+                                if ($inv) {
                                     $invoiceId = $inv['id'];
                                 }
                             }
@@ -592,9 +590,8 @@ class Payment extends Base_Controller {
                             if (!$invoiceId) {
                                 try {
                                     $sql = "SELECT id FROM {$prefix}invoices WHERE reference_type = 'booking' AND reference_id = ? LIMIT 1";
-                                    $query = $this->db->query($sql, [$booking['id']]);
-                                    if ($query && $query->num_rows() > 0) {
-                                        $inv = $query->row_array();
+                                    $inv = $this->db->fetchOne($sql, [$booking['id']]);
+                                    if ($inv) {
                                         $invoiceId = $inv['id'];
                                     }
                                 } catch (Exception $e) {
