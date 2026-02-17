@@ -16,8 +16,8 @@ class Bookings extends Base_Controller {
     private $cancellationPolicyModel;
     private $paymentScheduleModel;
     private $bookingModificationModel;
-    private $locationModel;
     private $spaceModel;
+    private $transactionService;
 
     public function __construct() {
         parent::__construct();
@@ -38,6 +38,16 @@ class Bookings extends Base_Controller {
         $this->bookingModificationModel = $this->loadModel('Booking_modification_model');
         $this->locationModel = $this->loadModel('Location_model');
         $this->spaceModel = $this->loadModel('Space_model');
+        
+        // Load Transaction Service
+        $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
+        if (file_exists($transactionServicePath)) {
+            require_once $transactionServicePath;
+            $this->transactionService = new Transaction_service();
+        } else {
+            error_log('Transaction_service.php not found at: ' . $transactionServicePath);
+            $this->transactionService = null;
+        }
     }
 
     public function index() {
