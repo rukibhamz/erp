@@ -578,6 +578,9 @@ class Router {
                     $this->method = 'step5';
                 } elseif ($method === 'get-time-slots') {
                     $this->method = 'getTimeSlots';
+                } elseif ($method === 'space' && isset($urlParts[2]) && $urlParts[2] === 'details' && isset($urlParts[3])) {
+                    $this->method = 'space_details';
+                    $this->params = [intval($urlParts[3])];
                 } elseif ($method === 'getspacesforlocation') {
                     $this->method = 'getSpacesForLocation';
                 } elseif ($method === 'save-step') {
