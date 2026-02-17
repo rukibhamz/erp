@@ -1831,24 +1831,68 @@ class Booking_wizard extends Base_Controller {
      */
     public function fix_db() {
         echo "<h1>Database Fix Tool</h1>";
+        echo "<div style='font-family: monospace; background: #f5f5f5; padding: 20px; border: 1px solid #ccc;'>";
+        
         try {
-            // Check if column exists
-            $stmt = $this->db->query("SHOW COLUMNS FROM " . $this->db->getPrefix() . "bookings LIKE 'space_id'");
-            $result = $stmt->fetch(); // Database::query returns PDOStatement/result, fetch() gets row
+            $table = $this->db->getPrefix() . 'bookings';
             
-            if ($result) {
-                echo "<p style='color:green'>Column 'space_id' already exists.</p>";
-            } else {
-                echo "<p>Adding 'space_id' column...</p>";
-                $sql = "ALTER TABLE " . $this->db->getPrefix() . "bookings ADD COLUMN space_id INT NULL AFTER booking_number";
-                // Database::query returns result, exec via query
-                $this->db->query($sql);
-                echo "<p style='color:green'>Column 'space_id' added successfully!</p>";
+            // Get existing columns
+            $stmt = $this->db->query("SHOW COLUMNS FROM " . $table);
+            $columns = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $columns[] = $row['Field'];
             }
+            
+            echo "<strong>Checking table: $table</strong><br><br>";
+            
+            // Define required columns and their definitions
+            $requiredColumns = [
+                'space_id' => "INT NULL AFTER booking_number",
+                'facility_id' => "INT NULL AFTER space_id",
+                'tax_rate' => "DECIMAL(5,2) DEFAULT 0 AFTER subtotal",
+                'tax_amount' => "DECIMAL(15,2) DEFAULT 0 AFTER tax_rate",
+                'discount_amount' => "DECIMAL(15,2) DEFAULT 0 AFTER tax_amount",
+                'security_deposit' => "DECIMAL(15,2) DEFAULT 0 AFTER discount_amount",
+                'promo_code' => "VARCHAR(50) NULL AFTER payment_plan",
+                'booking_source' => "VARCHAR(50) DEFAULT 'online' AFTER special_requests",
+                'is_recurring' => "TINYINT(1) DEFAULT 0 AFTER booking_source",
+                'recurring_pattern' => "VARCHAR(50) NULL AFTER is_recurring",
+                'recurring_end_date' => "DATE NULL AFTER recurring_pattern",
+                'customer_address' => "TEXT NULL AFTER customer_phone",
+                'duration_hours' => "DECIMAL(5,2) DEFAULT 0 AFTER end_time",
+                'number_of_guests' => "INT DEFAULT 1 AFTER duration_hours"
+            ];
+            
+            $changesMade = false;
+            
+            foreach ($requiredColumns as $col => $def) {
+                if (!in_array($col, $columns)) {
+                    echo "Adding column '<strong>$col</strong>'...";
+                    $sql = "ALTER TABLE $table ADD COLUMN $col $def";
+                    try {
+                        $this->db->query($sql);
+                        echo " <span style='color:green'>Done</span><br>";
+                        $changesMade = true;
+                    } catch (Exception $e) {
+                         echo " <span style='color:red'>Failed: " . $e->getMessage() . "</span><br>";
+                    }
+                } else {
+                    echo "Column '<strong>$col</strong>' exists.<br>";
+                }
+            }
+            
+            if ($changesMade) {
+                echo "<br><h3 style='color:green'>Database updated successfully!</h3>";
+            } else {
+                echo "<br><h3 style='color:blue'>Database is already up to date.</h3>";
+            }
+            
         } catch (Exception $e) {
-            echo "<p style='color:red'>Error: " . $e->getMessage() . "</p>";
+            echo "<br><strong style='color:red'>Fatal Error: " . $e->getMessage() . "</strong>";
         }
-        echo "<p><a href='" . base_url('booking-wizard') . "'>Return to Booking Wizard</a></p>";
+        
+        echo "</div>";
+        echo "<p style='margin-top: 20px;'><a href='" . base_url('booking-wizard') . "' style='padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px;'>Return to Booking Wizard</a></p>";
     }
 }
 
