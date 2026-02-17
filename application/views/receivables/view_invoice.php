@@ -22,6 +22,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <i class="bi bi-envelope"></i> Send Email
                     </a>
                 <?php endif; ?>
+                <?php if (($invoice['balance_amount'] ?? 0) > 0): ?>
+                    <a href="<?= base_url('receivables/invoices/payment/' . $invoice['id']) ?>" class="btn btn-warning">
+                        <i class="bi bi-wallet2"></i> Record Payment
+                    </a>
+                <?php endif; ?>
                 <a href="<?= base_url('receivables/invoices/edit/' . $invoice['id']) ?>" class="btn btn-primary">
                     <i class="bi bi-pencil"></i> Edit
                 </a>

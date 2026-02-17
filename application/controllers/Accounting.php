@@ -81,7 +81,7 @@ class Accounting extends Base_Controller {
         try {
             $result = $this->db->fetchOne(
                 "SELECT SUM(balance_amount) as total FROM `" . $this->db->getPrefix() . "invoices` 
-                 WHERE status IN ('sent', 'partially_paid', 'overdue')"
+                 WHERE status NOT IN ('paid', 'cancelled')"
             );
             return $result ? floatval($result['total'] ?? 0) : 0;
         } catch (Exception $e) {
@@ -163,7 +163,7 @@ class Accounting extends Base_Controller {
                 "SELECT i.*, c.company_name
                  FROM `" . $this->db->getPrefix() . "invoices` i
                  JOIN `" . $this->db->getPrefix() . "customers` c ON i.customer_id = c.id
-                 WHERE i.status IN ('sent', 'partially_paid', 'overdue') 
+                 WHERE i.status NOT IN ('paid', 'cancelled') 
                  AND i.due_date < CURDATE() AND i.balance_amount > 0
                  ORDER BY i.due_date ASC
                  LIMIT " . intval($limit)

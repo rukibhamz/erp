@@ -17,6 +17,7 @@ class Bookings extends Base_Controller {
     private $paymentScheduleModel;
     private $bookingModificationModel;
     private $spaceModel;
+    private $locationModel;
     private $transactionService;
 
     public function __construct() {

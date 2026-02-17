@@ -147,7 +147,9 @@ class Transaction_service {
             return $entryId;
             
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             error_log('Transaction_service postJournalEntry error: ' . $e->getMessage());
             throw $e;
         }

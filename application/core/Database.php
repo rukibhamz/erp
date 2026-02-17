@@ -165,6 +165,10 @@ class Database {
         return $this->connection->rollBack();
     }
     
+    public function inTransaction() {
+        return $this->connection && $this->connection->inTransaction();
+    }
+    
     public function execute($sql, $params = []) {
         return $this->query($sql, $params);
     }
