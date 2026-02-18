@@ -53,7 +53,144 @@ class Booking_wizard extends Base_Controller {
     }
     
     public function index() {
-        redirect('booking_wizard/step1');
+        // Handle payment action for existing bookings from customer portal
+        $bookingId = intval($_GET['booking_id'] ?? 0);
+        $action = $_GET['action'] ?? '';
+        
+        if ($bookingId && $action === 'pay') {
+            $this->makePayment($bookingId);
+            return;
+        }
+        
+        redirect('booking-wizard/step1');
+    }
+
+    /**
+     * Make payment for an existing unpaid booking
+     * Called from customer portal "Make Payment" button
+     */
+    public function makePayment($bookingId) {
+        $bookingId = intval($bookingId);
+        
+        if (!$bookingId) {
+            $this->setFlashMessage('danger', 'Invalid booking.');
+            redirect('booking-wizard/step1');
+            return;
+        }
+        
+        try {
+            // Load the booking
+            $booking = $this->bookingModel->getById($bookingId);
+            
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('booking-wizard/step1');
+                return;
+            }
+            
+            // Check if booking has a balance to pay
+            $balance = floatval($booking['balance_amount'] ?? $booking['total_amount']);
+            if ($balance <= 0) {
+                $this->setFlashMessage('info', 'This booking is already fully paid.');
+                redirect('customer-portal/bookings');
+                return;
+            }
+            
+            // Check booking isn't cancelled
+            if (in_array($booking['status'], ['cancelled', 'refunded'])) {
+                $this->setFlashMessage('danger', 'Cannot make payment for a cancelled booking.');
+                redirect('customer-portal/bookings');
+                return;
+            }
+            
+            // Find active payment gateway (Paystack)
+            $gatewayCode = 'paystack';
+            $gatewayPath = BASEPATH . 'libraries/Payment_gateway.php';
+            
+            if (!file_exists($gatewayPath)) {
+                $this->setFlashMessage('danger', 'Payment gateway not available. Please contact support.');
+                redirect('customer-portal/view-booking/' . $bookingId);
+                return;
+            }
+            
+            require_once $gatewayPath;
+            
+            $gateway = $this->gatewayModel->getByCode($gatewayCode);
+            
+            if (!$gateway || !$gateway['is_active']) {
+                $this->setFlashMessage('danger', 'Online payment is currently unavailable. Please contact support.');
+                redirect('customer-portal/view-booking/' . $bookingId);
+                return;
+            }
+            
+            $gatewayConfig = [
+                'public_key'  => $gateway['public_key'],
+                'private_key' => $gateway['private_key'],
+                'secret_key'  => $gateway['secret_key'] ?? '',
+                'test_mode'   => $gateway['test_mode'],
+                'callback_url' => base_url('payment/callback'),
+                'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
+            ];
+            
+            $paymentGateway = new \Payment_gateway($gatewayCode, $gatewayConfig);
+            
+            $customer = [
+                'email' => $booking['customer_email'],
+                'name'  => $booking['customer_name'] ?? '',
+                'phone' => $booking['customer_phone'] ?? ''
+            ];
+            
+            // Generate unique transaction reference
+            $bookingNumber = $booking['booking_number'] ?? ('BK-' . $bookingId);
+            $transactionRef = 'BKG-' . $bookingNumber . '-' . time();
+            
+            $metadata = [
+                'transaction_ref' => $transactionRef,
+                'payment_type'    => 'booking_payment',
+                'reference_id'    => $bookingId,
+                'booking_id'      => $bookingId,
+                'description'     => 'Payment for booking ' . $bookingNumber
+            ];
+            
+            // Create payment transaction record
+            $transactionData = [
+                'transaction_ref'  => $transactionRef,
+                'payment_type'     => 'booking_payment',
+                'reference_id'     => $bookingId,
+                'gateway_code'     => $gatewayCode,
+                'amount'           => $balance,
+                'currency'         => 'NGN',
+                'status'           => 'pending',
+                'customer_email'   => $booking['customer_email'],
+                'customer_name'    => $booking['customer_name'] ?? '',
+                'description'      => 'Payment for booking ' . $bookingNumber,
+                'created_at'       => date('Y-m-d H:i:s')
+            ];
+            $this->paymentTransactionModel->create($transactionData);
+            
+            // Initialize Paystack
+            $paymentResult = $paymentGateway->initialize(
+                $balance,
+                'NGN',
+                $customer,
+                $metadata
+            );
+            
+            if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
+                error_log("makePayment: Redirecting booking #$bookingId to Paystack");
+                redirect($paymentResult['authorization_url']);
+                exit;
+            } else {
+                error_log('makePayment: Gateway initialization failed: ' . json_encode($paymentResult));
+                $this->setFlashMessage('danger', 'Could not initialize payment. Please try again later.');
+                redirect('customer-portal/view-booking/' . $bookingId);
+            }
+            
+        } catch (Exception $e) {
+            error_log('makePayment error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Payment error: ' . $e->getMessage());
+            redirect('customer-portal/view-booking/' . $bookingId);
+        }
     }
     
     protected function checkAuth() {
