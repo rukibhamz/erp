@@ -111,11 +111,37 @@ class Location_model extends Base_Model {
 
     public function getBookable() {
         try {
-            $locations = $this->db->fetchAll(
-                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE status = 'operational' AND is_bookable = 1
-                 ORDER BY property_name"
-            );
+            // Try 1: Locations explicitly marked as bookable
+            try {
+                $locations = $this->db->fetchAll(
+                    "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                     WHERE status = 'operational' AND is_bookable = 1
+                     ORDER BY property_name"
+                );
+            } catch (Exception $e) {
+                // is_bookable column may not exist
+                $locations = [];
+            }
+            
+            // Try 2: Locations that have bookable spaces under them
+            if (empty($locations)) {
+                $locations = $this->db->fetchAll(
+                    "SELECT DISTINCT p.* FROM `" . $this->db->getPrefix() . $this->table . "` p
+                     INNER JOIN `" . $this->db->getPrefix() . "spaces` s ON s.property_id = p.id
+                     WHERE p.status = 'operational' AND s.is_bookable = 1
+                     ORDER BY p.property_name"
+                );
+            }
+            
+            // Try 3: All operational locations (last resort)
+            if (empty($locations)) {
+                $locations = $this->db->fetchAll(
+                    "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                     WHERE status = 'operational'
+                     ORDER BY property_name"
+                );
+            }
+            
             return array_map([$this, 'mapFieldsForView'], $locations);
         } catch (Exception $e) {
             error_log('Location_model getBookable error: ' . $e->getMessage());
