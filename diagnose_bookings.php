@@ -1,12 +1,15 @@
 <?php
 /**
- * Diagnostic: Check why bookings don't appear in booking module.
+ * Enhanced diagnostic for all three issues:
+ * 1. Bookings not showing
+ * 2. Password reset not working
+ * 3. Transaction column names
  * Run via browser: https://yourdomain.com/diagnose_bookings.php
  */
 header('Content-Type: text/plain; charset=utf-8');
 
 $configFile = __DIR__ . '/application/config/config.installed.php';
-if (!defined('BASEPATH')) define('BASEPATH', true);
+if (!defined('BASEPATH')) define('BASEPATH', __DIR__ . '/application/../');
 $config = require $configFile;
 $db = $config['db'];
 
@@ -15,43 +18,29 @@ try {
     $pdo = new PDO($dsn, $db['username'], $db['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $prefix = $db['dbprefix'] ?? 'erp_';
+    $dbName = $db['database'];
 
-    echo "=== BOOKINGS TABLE ===" . PHP_EOL;
-    
-    // Check if bookings table exists
-    $tables = $pdo->query("SHOW TABLES LIKE '{$prefix}bookings'")->fetchAll();
-    if (empty($tables)) {
-        echo "ERROR: {$prefix}bookings table does NOT exist!" . PHP_EOL;
-        exit;
-    }
-    echo "Table {$prefix}bookings exists." . PHP_EOL . PHP_EOL;
-
-    // Count all bookings
+    // ========== BOOKINGS ==========
+    echo "=== BOOKINGS ===" . PHP_EOL;
     $count = $pdo->query("SELECT COUNT(*) as cnt FROM {$prefix}bookings")->fetch(PDO::FETCH_ASSOC);
-    echo "Total bookings in DB: " . $count['cnt'] . PHP_EOL . PHP_EOL;
+    echo "Total: " . $count['cnt'] . PHP_EOL;
 
-    // Show all bookings
     $bookings = $pdo->query("SELECT id, booking_number, booking_date, start_time, end_time, 
         customer_name, status, payment_status, total_amount, space_id, facility_id, 
         booking_source, created_at 
         FROM {$prefix}bookings ORDER BY id DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
     
-    if (empty($bookings)) {
-        echo "NO BOOKINGS FOUND!" . PHP_EOL;
-    } else {
-        foreach ($bookings as $b) {
-            echo "  #{$b['id']}: {$b['booking_number']} | date={$b['booking_date']} | {$b['start_time']}-{$b['end_time']} | " .
-                 "status={$b['status']} | pay={$b['payment_status']} | total={$b['total_amount']} | " .
-                 "space_id={$b['space_id']} | facility_id={$b['facility_id']} | " .
-                 "source={$b['booking_source']} | created={$b['created_at']}" . PHP_EOL;
-        }
+    foreach ($bookings as $b) {
+        echo "  #{$b['id']}: {$b['booking_number']} | date={$b['booking_date']} | {$b['start_time']}-{$b['end_time']} | " .
+             "status={$b['status']} | pay={$b['payment_status']} | total={$b['total_amount']} | " .
+             "space={$b['space_id']} fac={$b['facility_id']} | src={$b['booking_source']}" . PHP_EOL;
     }
 
-    // Check what the listing query would return for current month
-    echo PHP_EOL . "=== LISTING QUERY (current month) ===" . PHP_EOL;
+    // ========== LISTING QUERY ==========
+    echo PHP_EOL . "=== LISTING QUERY (this month) ===" . PHP_EOL;
     $startDate = date('Y-m-01');
     $endDate = date('Y-m-t');
-    echo "Date range: $startDate to $endDate" . PHP_EOL;
+    echo "Range: $startDate to $endDate" . PHP_EOL;
     
     $listed = $pdo->prepare("SELECT b.id, b.booking_number, b.booking_date, b.status,
         COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name
@@ -66,63 +55,108 @@ try {
         ORDER BY b.booking_date, b.start_time");
     $listed->execute([$startDate, $endDate, $startDate, $startDate]);
     $results = $listed->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "Bookings matching listing query: " . count($results) . PHP_EOL;
+    echo "Results: " . count($results) . PHP_EOL;
     foreach ($results as $r) {
-        echo "  #{$r['id']}: {$r['booking_number']} | date={$r['booking_date']} | status={$r['status']} | facility={$r['facility_name']}" . PHP_EOL;
+        echo "  #{$r['id']}: {$r['booking_number']} | {$r['booking_date']} | {$r['status']} | {$r['facility_name']}" . PHP_EOL;
     }
     
-    // Check spaces and facilities
-    echo PHP_EOL . "=== SPACES ===" . PHP_EOL;
-    $spaces = $pdo->query("SELECT id, space_name, space_number FROM {$prefix}spaces LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-    if (empty($spaces)) {
-        echo "NO SPACES FOUND!" . PHP_EOL;
-    } else {
-        foreach ($spaces as $s) {
-            echo "  #{$s['id']}: {$s['space_name']} ({$s['space_number']})" . PHP_EOL;
-        }
+    // ========== TRANSACTION COLUMNS ==========
+    echo PHP_EOL . "=== TRANSACTION TABLE COLUMNS ===" . PHP_EOL;
+    $cols = $pdo->query("SHOW COLUMNS FROM {$prefix}transactions")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($cols as $col) {
+        echo "  {$col['Field']} ({$col['Type']})" . PHP_EOL;
     }
-    
-    echo PHP_EOL . "=== FACILITIES ===" . PHP_EOL;
-    $facilities = $pdo->query("SELECT id, facility_name, facility_code FROM {$prefix}facilities LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-    if (empty($facilities)) {
-        echo "NO FACILITIES FOUND!" . PHP_EOL;
-    } else {
-        foreach ($facilities as $f) {
-            echo "  #{$f['id']}: {$f['facility_name']} ({$f['facility_code']})" . PHP_EOL;
-        }
-    }
-    
-    // Check customer_portal_users columns
-    echo PHP_EOL . "=== CUSTOMER PORTAL USERS ===" . PHP_EOL;
-    $cpuCols = $pdo->query("SHOW COLUMNS FROM {$prefix}customer_portal_users")->fetchAll(PDO::FETCH_ASSOC);
-    $colNames = array_column($cpuCols, 'Field');
-    $requiredCols = ['password_reset_token', 'password_reset_expires'];
-    foreach ($requiredCols as $col) {
-        echo "  $col: " . (in_array($col, $colNames) ? 'EXISTS' : 'MISSING') . PHP_EOL;
-    }
-    
-    // Check transactions
+
+    // Transaction data
     echo PHP_EOL . "=== TRANSACTIONS ===" . PHP_EOL;
-    $txns = $pdo->query("SELECT COUNT(*) as cnt FROM {$prefix}transactions")->fetch(PDO::FETCH_ASSOC);
-    echo "Total transactions: " . $txns['cnt'] . PHP_EOL;
+    $txnCount = $pdo->query("SELECT COUNT(*) as cnt FROM {$prefix}transactions")->fetch(PDO::FETCH_ASSOC);
+    echo "Total: " . $txnCount['cnt'] . PHP_EOL;
+    // Dynamically detect correct column names
+    $colNames = array_column($cols, 'Field');
+    $debitCol = in_array('debit', $colNames) ? 'debit' : (in_array('debit_amount', $colNames) ? 'debit_amount' : 'debit');
+    $creditCol = in_array('credit', $colNames) ? 'credit' : (in_array('credit_amount', $colNames) ? 'credit_amount' : 'credit');
     
-    $recentTxns = $pdo->query("SELECT id, transaction_number, account_id, description, debit_amount, credit_amount, 
+    $recentTxns = $pdo->query("SELECT id, transaction_number, account_id, description, 
+        `$debitCol` as debit_val, `$creditCol` as credit_val, 
         reference, status, created_at FROM {$prefix}transactions ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
     foreach ($recentTxns as $t) {
         echo "  #{$t['id']}: {$t['transaction_number']} | acct={$t['account_id']} | {$t['description']} | " .
-             "DR={$t['debit_amount']} CR={$t['credit_amount']} | ref={$t['reference']} | status={$t['status']}" . PHP_EOL;
+             "DR={$t['debit_val']} CR={$t['credit_val']} | ref={$t['reference']} | {$t['status']}" . PHP_EOL;
+    }
+
+    // ========== EMAIL CONFIG ==========
+    echo PHP_EOL . "=== EMAIL CONFIG ===" . PHP_EOL;
+    $emailSettings = $config['email'] ?? [];
+    if (empty($emailSettings)) {
+        echo "NO EMAIL SETTINGS in config.installed.php!" . PHP_EOL;
+        echo "Password reset emails will use PHP mail() as fallback." . PHP_EOL;
+        echo "If PHP mail() is disabled on your host, emails won't be sent." . PHP_EOL;
+    } else {
+        echo "SMTP Host: " . ($emailSettings['smtp_host'] ?? 'not set') . PHP_EOL;
+        echo "SMTP User: " . ($emailSettings['smtp_username'] ?? 'not set') . PHP_EOL;
+        echo "SMTP Pass: " . (!empty($emailSettings['smtp_password']) ? '***set***' : 'not set') . PHP_EOL;
+        echo "From Email: " . ($emailSettings['from_email'] ?? 'not set') . PHP_EOL;
     }
     
-    // Check for errors in PHP error log
-    echo PHP_EOL . "=== RECENT DEBUG LOGS ===" . PHP_EOL;
-    $logFile = __DIR__ . '/logs/debug_wizard_log.txt';
-    if (file_exists($logFile)) {
-        $lines = file($logFile);
-        $lastLines = array_slice($lines, -20);
+    // Check PHP mail() availability
+    echo "PHP mail(): " . (function_exists('mail') ? 'available' : 'NOT AVAILABLE') . PHP_EOL;
+
+    // ========== CUSTOMER PORTAL USERS ==========
+    echo PHP_EOL . "=== CUSTOMER PORTAL USERS ===" . PHP_EOL;
+    $cpuCount = $pdo->query("SELECT COUNT(*) as cnt FROM {$prefix}customer_portal_users")->fetch(PDO::FETCH_ASSOC);
+    echo "Total: " . $cpuCount['cnt'] . PHP_EOL;
+    $cpUsers = $pdo->query("SELECT id, email, first_name, last_name, status, is_guest, 
+        password_reset_token, password_reset_expires, created_at 
+        FROM {$prefix}customer_portal_users ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($cpUsers as $u) {
+        echo "  #{$u['id']}: {$u['email']} | {$u['first_name']} {$u['last_name']} | status={$u['status']} | " .
+             "guest=" . ($u['is_guest'] ? 'Y' : 'N') . " | " .
+             "reset_token=" . ($u['password_reset_token'] ? 'SET' : 'none') . " | " .
+             "token_expires=" . ($u['password_reset_expires'] ?? 'none') . PHP_EOL;
+    }
+    
+    // ========== REQUIRED MODEL FILES ==========
+    echo PHP_EOL . "=== MODEL FILES CHECK ===" . PHP_EOL;
+    $requiredModels = [
+        'Booking_model', 'Facility_model', 'Booking_payment_model', 
+        'Transaction_model', 'Cash_account_model', 'Account_model',
+        'Activity_model', 'Booking_resource_model', 'Booking_addon_model',
+        'Addon_model', 'Promo_code_model', 'Cancellation_policy_model',
+        'Payment_schedule_model', 'Booking_modification_model',
+        'Location_model', 'Space_model', 'Customer_portal_user_model'
+    ];
+    foreach ($requiredModels as $model) {
+        $path = __DIR__ . '/application/models/' . $model . '.php';
+        echo "  $model: " . (file_exists($path) ? 'EXISTS' : 'MISSING !!!') . PHP_EOL;
+    }
+
+    // Check Transaction_service
+    $svcPath = __DIR__ . '/application/services/Transaction_service.php';
+    echo "  Transaction_service: " . (file_exists($svcPath) ? 'EXISTS' : 'MISSING (non-critical)') . PHP_EOL;
+    
+    // ========== PHP ERROR LOG ==========
+    echo PHP_EOL . "=== RECENT PHP ERRORS ===" . PHP_EOL;
+    $phpLog = ini_get('error_log');
+    if ($phpLog && file_exists($phpLog)) {
+        $lines = file($phpLog);
+        $lastLines = array_slice($lines, -15);
         echo implode('', $lastLines);
     } else {
-        echo "No debug wizard log found." . PHP_EOL;
+        echo "PHP error_log: $phpLog" . PHP_EOL;
+        // Check common locations
+        $commonLogs = [
+            __DIR__ . '/logs/error.log',
+            __DIR__ . '/logs/debug_wizard_log.txt',
+            '/home/' . get_current_user() . '/logs/error.log',
+        ];
+        foreach ($commonLogs as $log) {
+            if (file_exists($log)) {
+                echo "Found log: $log" . PHP_EOL;
+                $lines = file($log);
+                $lastLines = array_slice($lines, -10);
+                echo implode('', $lastLines);
+            }
+        }
     }
     
 } catch (Exception $e) {

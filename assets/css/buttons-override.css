@@ -5,23 +5,23 @@
  * IMPORTANT: This file must load AFTER Bootstrap CSS
  */
 
-/* Force white text on ALL buttons (except outline variants when not hovered) */
-button.btn,
-a.btn,
-input[type="button"].btn,
-input[type="submit"].btn,
-input[type="reset"].btn,
-.btn {
+/* Force white text on ALL solid buttons (exclude outline, link, close, and ghost variants) */
+button.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):not(.btn-ghost),
+a.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):not(.btn-ghost),
+input[type="button"].btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-ghost),
+input[type="submit"].btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-ghost),
+input[type="reset"].btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-ghost),
+.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):not(.btn-ghost) {
     color: #ffffff !important;
 }
 
-/* Override any hover states that might change text color */
-.btn:hover,
-.btn:focus,
-.btn:active,
-button.btn:hover,
-a.btn:hover,
-input.btn:hover {
+/* Override any hover states that might change text color (solid buttons only) */
+.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):not(.btn-ghost):hover,
+.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):not(.btn-ghost):focus,
+.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):not(.btn-ghost):active,
+button.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):hover,
+a.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):hover,
+input.btn:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):hover {
     color: #ffffff !important;
 }
 
@@ -260,12 +260,12 @@ a.btn-outline-secondary {
 .table .btn-primary,
 .table .btn-dark,
 .table .btn-secondary,
-.table .btn-sm {
+.table .btn-sm:not([class*="btn-outline"]):not(.btn-link):not(.btn-close) {
     color: #ffffff !important;
 }
 
 /* Override Bootstrap's default button colors completely */
-[class*="btn-"]:not(.btn-outline-primary):not(.btn-outline-dark):not(.btn-outline-secondary):not(.btn-outline-success):not(.btn-outline-danger):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-link):not(.btn-ghost) {
+[class*="btn-"]:not([class*="btn-outline"]):not(.btn-link):not(.btn-close):not(.btn-ghost) {
     color: #ffffff !important;
 }
 
