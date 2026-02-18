@@ -78,10 +78,10 @@ try {
     
     $recentTxns = $pdo->query("SELECT id, transaction_number, account_id, description, 
         `$debitCol` as debit_val, `$creditCol` as credit_val, 
-        reference, status, created_at FROM {$prefix}transactions ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+        reference_type, reference_id, status, created_at FROM {$prefix}transactions ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
     foreach ($recentTxns as $t) {
         echo "  #{$t['id']}: {$t['transaction_number']} | acct={$t['account_id']} | {$t['description']} | " .
-             "DR={$t['debit_val']} CR={$t['credit_val']} | ref={$t['reference']} | {$t['status']}" . PHP_EOL;
+             "DR={$t['debit_val']} CR={$t['credit_val']} | ref_type={$t['reference_type']} ref_id={$t['reference_id']} | {$t['status']}" . PHP_EOL;
     }
 
     // ========== EMAIL CONFIG ==========

@@ -53,16 +53,27 @@ class Bookings extends Base_Controller {
 
     public function index() {
         $status = $_GET['status'] ?? 'all';
-        $date = $_GET['date'] ?? date('Y-m-d');
+        $date = $_GET['date'] ?? '';
+        $hasDateFilter = !empty($_GET['date']); // Only filter by date if user explicitly set one
         
         try {
-            if ($status === 'all') {
-                // Use the selected date to determine the month range
+            if ($hasDateFilter) {
+                // User explicitly selected a date — show that month's bookings
                 $startDate = date('Y-m-01', strtotime($date));
                 $endDate = date('Y-m-t', strtotime($date));
-                $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
+                if ($status !== 'all') {
+                    // Filter by both date and status
+                    $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
+                    $bookings = array_filter($bookings, function($b) use ($status) {
+                        return $b['status'] === $status;
+                    });
+                    $bookings = array_values($bookings);
+                } else {
+                    $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
+                }
             } else {
-                $bookings = $this->bookingModel->getByStatus($status);
+                // No date filter — show ALL bookings (optionally filtered by status)
+                $bookings = $this->bookingModel->getAllBookings($status !== 'all' ? $status : null);
             }
         } catch (Exception $e) {
             $bookings = [];

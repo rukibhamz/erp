@@ -36,6 +36,31 @@ class Booking_model extends Base_Model {
         return parent::create($data);
     }
     
+    public function getAllBookings($status = null) {
+        try {
+            $sql = "SELECT b.*, 
+                COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name, 
+                COALESCE(s.space_number, f.facility_code) as facility_code 
+                FROM `" . $this->db->getPrefix() . $this->table . "` b
+                LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
+                LEFT JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                WHERE b.status NOT IN ('cancelled', 'refunded', 'no_show')";
+            
+            $params = [];
+            if ($status && $status !== 'all') {
+                $sql .= " AND b.status = ?";
+                $params[] = $status;
+            }
+            
+            $sql .= " ORDER BY b.booking_date DESC, b.start_time DESC";
+            
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Booking_model getAllBookings error: ' . $e->getMessage());
+            return [];
+        }
+    }
+    
     public function getByDateRange($startDate, $endDate, $spaceId = null) {
         try {
             // Updated to use LEFT JOIN and prefer Spaces table but fallback to Facilities
