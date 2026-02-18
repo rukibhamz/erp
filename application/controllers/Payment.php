@@ -553,6 +553,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 
                 // Create booking payment record
                 file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3 - Creating booking payment record...\n", FILE_APPEND);
+                
+                // Use ONLY columns guaranteed to exist in the base table schema
                 $paymentData = [
                     'booking_id' => $booking['id'],
                     'payment_number' => $this->bookingPaymentModel->getNextPaymentNumber(),
@@ -560,14 +562,28 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     'payment_type' => 'full',
                     'payment_method' => 'gateway',
                     'amount' => $transaction['amount'],
-                    'currency' => $transaction['currency'] ?? 'NGN',
                     'status' => 'completed',
-                    'reference' => $transaction['transaction_ref'],
                     'created_by' => null
                 ];
                 
                 $paymentId = $this->bookingPaymentModel->create($paymentData);
                 file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3 RESULT - Payment record ID: " . var_export($paymentId, true) . "\n", FILE_APPEND);
+                
+                // Try to set optional columns (may not exist on older schemas)
+                if ($paymentId) {
+                    try {
+                        $optionalPaymentData = [
+                            'currency' => $transaction['currency'] ?? 'NGN',
+                            'reference' => $transaction['transaction_ref'],
+                            'gateway_transaction_id' => $transaction['transaction_ref']
+                        ];
+                        $this->bookingPaymentModel->update($paymentId, $optionalPaymentData);
+                        file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3b - Optional payment columns updated OK\n", FILE_APPEND);
+                    } catch (Exception $optEx) {
+                        file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3b - Optional payment columns skipped: " . $optEx->getMessage() . "\n", FILE_APPEND);
+                        // Not critical - the base payment record was created successfully
+                    }
+                }
                 
                 // Update booking paid amount and balance
                 $newPaidAmount = floatval($booking['paid_amount'] ?? 0) + floatval($transaction['amount']);

@@ -2102,16 +2102,34 @@ class AutoMigration {
                 error_log("AutoMigration: Created booking_payments table");
             }
             
-            // Ensure gateway_transaction_id column exists (may be missing on tables created before this column was added)
-            try {
-                $colCheck = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}booking_payments` LIKE 'gateway_transaction_id'");
-                if ($colCheck && count($colCheck->fetchAll()) == 0) {
-                    $this->pdo->exec("ALTER TABLE `{$this->prefix}booking_payments` ADD COLUMN `gateway_transaction_id` VARCHAR(255) NULL AFTER `status`");
-                    $this->pdo->exec("ALTER TABLE `{$this->prefix}booking_payments` ADD KEY `idx_gateway_transaction_id` (`gateway_transaction_id`)");
-                    error_log("AutoMigration: Added gateway_transaction_id column to booking_payments");
+            // Ensure optional columns exist (may be missing on tables created with older schema)
+            $columnsToAdd = [
+                'currency' => "VARCHAR(10) DEFAULT 'NGN' AFTER `amount`",
+                'gateway_transaction_id' => "VARCHAR(255) NULL AFTER `status`",
+                'reference' => "VARCHAR(255) NULL AFTER `gateway_transaction_id`",
+                'notes' => "TEXT NULL AFTER `reference`"
+            ];
+            
+            foreach ($columnsToAdd as $colName => $colDef) {
+                try {
+                    $colCheck = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}booking_payments` LIKE '$colName'");
+                    if ($colCheck && count($colCheck->fetchAll()) == 0) {
+                        $this->pdo->exec("ALTER TABLE `{$this->prefix}booking_payments` ADD COLUMN `$colName` $colDef");
+                        error_log("AutoMigration: Added $colName column to booking_payments");
+                    }
+                } catch (Exception $colEx) {
+                    // Column might already exist or other issue - not critical
                 }
-            } catch (Exception $colEx) {
-                error_log("AutoMigration: Note - gateway_transaction_id column check: " . $colEx->getMessage());
+            }
+            
+            // Ensure index exists
+            try {
+                $idxCheck = $this->pdo->query("SHOW INDEX FROM `{$this->prefix}booking_payments` WHERE Key_name = 'idx_gateway_transaction_id'");
+                if ($idxCheck && count($idxCheck->fetchAll()) == 0) {
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}booking_payments` ADD KEY `idx_gateway_transaction_id` (`gateway_transaction_id`)");
+                }
+            } catch (Exception $idxEx) {
+                // Index might already exist
             }
             
             return true;
