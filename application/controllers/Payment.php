@@ -130,37 +130,56 @@ class Payment extends Base_Controller {
     }
     
     /**
-     * Payment callback (redirect after payment)
-     */
-    public function callback() {
-        $transactionRef = $_GET['reference'] ?? $_GET['tx_ref'] ?? $_GET['trxref'] ?? '';
-        $gatewayCode = $_GET['gateway'] ?? 'paystack';
-        
-        $logFile = ROOTPATH . 'debug_log.txt';
-        $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logFile, "[$timestamp] PAYMENT CALLBACK: Ref=$transactionRef Gateway=$gatewayCode\n", FILE_APPEND);
-        
-        if (!$transactionRef) {
-            file_put_contents($logFile, "[$timestamp] ERROR: Invalid reference\n", FILE_APPEND);
-            $this->setFlashMessage('danger', 'Invalid payment reference.');
-            redirect('payment/confirmation?status=failed');
-            return;
-        }
-        
-        try {
-            // Verify payment
-            $this->verifyPayment($transactionRef, $gatewayCode);
-            
-            // Get transaction for confirmation page
-            $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
-            $status = $transaction ? $transaction['status'] : 'pending';
-            
-            redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=' . $status);
-        } catch (Exception $e) {
-            error_log('Payment callback error: ' . $e->getMessage());
-            redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=failed');
-        }
+ * Payment callback (redirect after payment)
+ */
+public function callback() {
+    $logFile = ROOTPATH . 'payment_callback_debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    
+    // DIAGNOSTIC: Log everything at entry
+    $diagEntry = "\n" . str_repeat('=', 60) . "\n";
+    $diagEntry .= "[$timestamp] === PAYMENT CALLBACK ENTERED ===\n";
+    $diagEntry .= "  Full URL: " . ($_SERVER['REQUEST_URI'] ?? 'unknown') . "\n";
+    $diagEntry .= "  GET params: " . json_encode($_GET) . "\n";
+    $diagEntry .= "  HTTP Method: " . ($_SERVER['REQUEST_METHOD'] ?? 'unknown') . "\n";
+    $diagEntry .= "  User Agent: " . ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown') . "\n";
+    file_put_contents($logFile, $diagEntry, FILE_APPEND);
+    
+    $transactionRef = $_GET['reference'] ?? $_GET['tx_ref'] ?? $_GET['trxref'] ?? '';
+    $gatewayCode = $_GET['gateway'] ?? 'paystack';
+    
+    file_put_contents($logFile, "[$timestamp] Extracted ref: '$transactionRef', gateway: '$gatewayCode'\n", FILE_APPEND);
+    
+    if (!$transactionRef) {
+        file_put_contents($logFile, "[$timestamp] ERROR: Empty reference! Cannot proceed.\n", FILE_APPEND);
+        $this->setFlashMessage('danger', 'Invalid payment reference.');
+        redirect('payment/confirmation?status=failed');
+        return;
     }
+    
+    try {
+        // DIAGNOSTIC: Check if transaction exists in DB BEFORE verifying
+        $existingTxn = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+        file_put_contents($logFile, "[$timestamp] DB lookup for ref '$transactionRef': " . ($existingTxn ? 'FOUND (ID: ' . $existingTxn['id'] . ', status: ' . $existingTxn['status'] . ')' : 'NOT FOUND') . "\n", FILE_APPEND);
+        
+        // Verify payment
+        file_put_contents($logFile, "[$timestamp] Calling verifyPayment()...\n", FILE_APPEND);
+        $this->verifyPayment($transactionRef, $gatewayCode);
+        file_put_contents($logFile, "[$timestamp] verifyPayment() completed successfully\n", FILE_APPEND);
+        
+        // Get transaction for confirmation page
+        $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+        $status = $transaction ? $transaction['status'] : 'pending';
+        
+        file_put_contents($logFile, "[$timestamp] Final transaction status: $status\n", FILE_APPEND);
+        
+        redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=' . $status);
+    } catch (Exception $e) {
+        file_put_contents($logFile, "[$timestamp] CALLBACK EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+        error_log('Payment callback error: ' . $e->getMessage());
+        redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=failed');
+    }
+}
     
     /**
      * Payment confirmation/thank you page
@@ -368,83 +387,120 @@ class Payment extends Base_Controller {
     }
     
     /**
-     * Verify payment with gateway
-     */
-    private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = false) {
-        try {
-            $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
-            if (!$transaction) {
-                throw new Exception('Transaction not found');
+ * Verify payment with gateway
+ */
+private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = false) {
+    $logFile = ROOTPATH . 'payment_callback_debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    
+    try {
+        file_put_contents($logFile, "[$timestamp] verifyPayment: Looking up transaction ref '$transactionRef'\n", FILE_APPEND);
+        
+        $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+        if (!$transaction) {
+            file_put_contents($logFile, "[$timestamp] verifyPayment: TRANSACTION NOT FOUND in payment_transactions table!\n", FILE_APPEND);
+            
+            // DIAGNOSTIC: Check if table exists and has any records
+            try {
+                $prefix = $this->db->getPrefix();
+                $count = $this->db->fetchOne("SELECT COUNT(*) as cnt FROM {$prefix}payment_transactions");
+                file_put_contents($logFile, "[$timestamp] verifyPayment: payment_transactions table has " . ($count['cnt'] ?? '?') . " records\n", FILE_APPEND);
+                
+                // Show recent transactions for comparison
+                $recent = $this->db->fetchAll("SELECT id, transaction_ref, status, created_at FROM {$prefix}payment_transactions ORDER BY id DESC LIMIT 5");
+                file_put_contents($logFile, "[$timestamp] verifyPayment: Recent transactions: " . json_encode($recent) . "\n", FILE_APPEND);
+            } catch (Exception $diagEx) {
+                file_put_contents($logFile, "[$timestamp] verifyPayment: Could not query payment_transactions: " . $diagEx->getMessage() . "\n", FILE_APPEND);
             }
             
-            if ($transaction['status'] === 'success' && !$fromWebhook) {
-                return ['already_verified' => true];
-            }
-            
-            $gateway = $this->gatewayModel->getByCode($gatewayCode);
-            if (!$gateway) {
-                throw new Exception('Gateway not found');
-            }
-            
-            require_once BASEPATH . 'libraries/Payment_gateway.php';
-            
-            $gatewayConfig = [
-                'public_key' => $gateway['public_key'],
-                'private_key' => $gateway['private_key'],
-                'secret_key' => $gateway['secret_key'] ?? '',
-                'test_mode' => $gateway['test_mode'],
-                'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
-            ];
-            
-            $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
-            $verification = $paymentGateway->verify($transactionRef);
-            
-            if ($verification['success']) {
-                // Update transaction status
-                $this->paymentTransactionModel->updateStatus(
-                    $transaction['id'],
-                    'success',
-                    $verification['gateway_reference'] ?? '',
-                    $verification
-                );
-                
-                // Process payment based on type
-                $this->processPaymentSuccess($transaction);
-                
-                return $verification;
-            } else {
-                // Update as failed
-                $this->paymentTransactionModel->updateStatus(
-                    $transaction['id'],
-                    'failed',
-                    null,
-                    $verification
-                );
-                
-                // Send payment failed email notification
-                try {
-                    if ($transaction['payment_type'] === 'booking_payment') {
-                        $notificationModel = $this->loadModel('Notification_model');
-                        $bookingModel = $this->loadModel('Booking_model');
-                        $booking = $bookingModel->getById($transaction['reference_id']);
-                        if ($booking && $notificationModel && !empty($booking['customer_email'])) {
-                            $retryUrl = base_url('booking-wizard/retry-payment/' . $booking['id']);
-                            $notificationModel->sendPaymentFailedEmail($booking, $retryUrl);
-                            error_log("Payment: Sent payment failed email to " . $booking['customer_email']);
-                        }
-                    }
-                } catch (Exception $emailEx) {
-                    error_log("Payment: Error sending failed payment email: " . $emailEx->getMessage());
-                }
-                
-                throw new Exception($verification['message'] ?? 'Payment verification failed');
-            }
-            
-        } catch (Exception $e) {
-            error_log('Payment verification error: ' . $e->getMessage());
-            throw $e;
+            throw new Exception('Transaction not found for ref: ' . $transactionRef);
         }
+        
+        file_put_contents($logFile, "[$timestamp] verifyPayment: Found transaction ID={$transaction['id']}, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, status={$transaction['status']}\n", FILE_APPEND);
+        
+        if ($transaction['status'] === 'success' && !$fromWebhook) {
+            file_put_contents($logFile, "[$timestamp] verifyPayment: Already verified — skipping\n", FILE_APPEND);
+            return ['already_verified' => true];
+        }
+        
+        $gateway = $this->gatewayModel->getByCode($gatewayCode);
+        if (!$gateway) {
+            file_put_contents($logFile, "[$timestamp] verifyPayment: GATEWAY NOT FOUND for code '$gatewayCode'\n", FILE_APPEND);
+            throw new Exception('Gateway not found');
+        }
+        
+        file_put_contents($logFile, "[$timestamp] verifyPayment: Gateway found: {$gateway['gateway_name']}, test_mode={$gateway['test_mode']}\n", FILE_APPEND);
+        
+        require_once BASEPATH . 'libraries/Payment_gateway.php';
+        
+        $gatewayConfig = [
+            'public_key' => $gateway['public_key'],
+            'private_key' => $gateway['private_key'],
+            'secret_key' => $gateway['secret_key'] ?? '',
+            'test_mode' => $gateway['test_mode'],
+            'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
+        ];
+        
+        $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
+        
+        file_put_contents($logFile, "[$timestamp] verifyPayment: Calling Paystack verify API for ref '$transactionRef'...\n", FILE_APPEND);
+        $verification = $paymentGateway->verify($transactionRef);
+        file_put_contents($logFile, "[$timestamp] verifyPayment: Paystack verify result: " . json_encode($verification) . "\n", FILE_APPEND);
+        
+        if ($verification['success']) {
+            file_put_contents($logFile, "[$timestamp] verifyPayment: Payment VERIFIED SUCCESS. Updating transaction status...\n", FILE_APPEND);
+            
+            // Update transaction status
+            $this->paymentTransactionModel->updateStatus(
+                $transaction['id'],
+                'success',
+                $verification['gateway_reference'] ?? '',
+                $verification
+            );
+            
+            file_put_contents($logFile, "[$timestamp] verifyPayment: Transaction status updated. Calling processPaymentSuccess...\n", FILE_APPEND);
+            
+            // Process payment based on type
+            $this->processPaymentSuccess($transaction);
+            
+            file_put_contents($logFile, "[$timestamp] verifyPayment: processPaymentSuccess completed.\n", FILE_APPEND);
+            
+            return $verification;
+        } else {
+            file_put_contents($logFile, "[$timestamp] verifyPayment: Payment VERIFICATION FAILED: " . ($verification['message'] ?? 'no message') . "\n", FILE_APPEND);
+            
+            // Update as failed
+            $this->paymentTransactionModel->updateStatus(
+                $transaction['id'],
+                'failed',
+                null,
+                $verification
+            );
+            
+            // Send payment failed email notification
+            try {
+                if ($transaction['payment_type'] === 'booking_payment') {
+                    $notificationModel = $this->loadModel('Notification_model');
+                    $bookingModel = $this->loadModel('Booking_model');
+                    $booking = $bookingModel->getById($transaction['reference_id']);
+                    if ($booking && $notificationModel && !empty($booking['customer_email'])) {
+                        $retryUrl = base_url('booking-wizard/retry-payment/' . $booking['id']);
+                        $notificationModel->sendPaymentFailedEmail($booking, $retryUrl);
+                    }
+                }
+            } catch (Exception $emailEx) {
+                // Non-critical
+            }
+            
+            throw new Exception($verification['message'] ?? 'Payment verification failed');
+        }
+        
+    } catch (Exception $e) {
+        file_put_contents($logFile, "[$timestamp] verifyPayment EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
+        error_log('Payment verification error: ' . $e->getMessage());
+        throw $e;
     }
+}
     
     /**
      * Process successful payment

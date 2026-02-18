@@ -92,25 +92,43 @@ class Payment_gateway {
     }
     
     private function verify_paystack($reference) {
+        $logFile = defined('ROOTPATH') ? ROOTPATH . 'payment_callback_debug.log' : '/tmp/payment_callback_debug.log';
+        $timestamp = date('Y-m-d H:i:s');
+        
         $secretKey = $this->config['test_mode'] ? 
             ($this->config['test_secret_key'] ?? $this->config['private_key']) : 
             $this->config['private_key'];
         
         $url = "https://api.paystack.co/transaction/verify/{$reference}";
         
+        file_put_contents($logFile, "[$timestamp] verify_paystack: URL=$url, key_prefix=" . substr($secretKey, 0, 10) . "...\\n", FILE_APPEND);
+        
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Authorization: Bearer ' . $secretKey
         ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         
         $response = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        
+        // DIAGNOSTIC: Log raw API response
+        file_put_contents($logFile, "[$timestamp] verify_paystack: HTTP=$httpCode, cURL_error='$curlError', response_length=" . strlen($response ?: '') . "\\n", FILE_APPEND);
+        if ($curlError) {
+            file_put_contents($logFile, "[$timestamp] verify_paystack: CURL FAILED! Error: $curlError\\n", FILE_APPEND);
+            return ['success' => false, 'message' => 'cURL error: ' . $curlError];
+        }
+        file_put_contents($logFile, "[$timestamp] verify_paystack: Raw response: " . substr($response, 0, 500) . "\\n", FILE_APPEND);
         
         $result = json_decode($response, true);
         
         if ($result['status'] ?? false) {
             $data = $result['data'];
+            $payStatus = $data['status'] ?? 'unknown';
+            file_put_contents($logFile, "[$timestamp] verify_paystack: Paystack status='$payStatus', amount=" . (($data['amount'] ?? 0) / 100) . "\\n", FILE_APPEND);
             return [
                 'success' => $data['status'] === 'success',
                 'amount' => $data['amount'] / 100, // Convert back from kobo
@@ -124,6 +142,7 @@ class Payment_gateway {
             ];
         }
         
+        file_put_contents($logFile, "[$timestamp] verify_paystack: FAILED - " . ($result['message'] ?? 'no message') . "\\n", FILE_APPEND);
         return ['success' => false, 'message' => $result['message'] ?? 'Verification failed'];
     }
     

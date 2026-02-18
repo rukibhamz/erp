@@ -127,7 +127,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <a href="<?= base_url('booking-wizard/step2/' . $space['id']) ?>" class="btn btn-primary btn-lg py-3">
                         <i class="bi bi-calendar-check-fill me-2"></i> Book This Space
                     </a>
-                    <a href="<?= base_url('booking-wizard/step1') ?>" class="btn btn-outline-secondary" style="color: #6c757d; border-color: #6c757d; background: transparent;">
+                    <a href="<?= base_url('booking-wizard/step1') ?>" class="btn back-to-selection-btn" style="color: #495057 !important; border: 2px solid #6c757d !important; background-color: #f8f9fa !important;">
                         <i class="bi bi-arrow-left me-1"></i> Back to Selection
                     </a>
                 </div>
@@ -142,6 +142,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 }
 .card {
     border-radius: 1rem;
+}
+.back-to-selection-btn {
+    color: #495057 !important;
+    border: 2px solid #6c757d !important;
+    background-color: #f8f9fa !important;
+}
+.back-to-selection-btn:hover {
+    color: #fff !important;
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
 }
 .badge {
     font-weight: 500;
