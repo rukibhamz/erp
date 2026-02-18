@@ -503,7 +503,7 @@ class Booking_wizard extends Base_Controller {
         $rawDate = $_GET['date'] ?? '';
         $rawEndDate = $_GET['end_date'] ?? $rawDate;
         
-        error_log("DEBUG: Booking_wizard input - space_id: $spaceId, rawDate: $rawDate, rawEndDate: $rawEndDate");
+
 
         // Helper to normalize date to Y-m-d
         $normalizeDate = function($d) {
@@ -529,10 +529,10 @@ class Booking_wizard extends Base_Controller {
             $endDate = $date;
         }
         
-        error_log("DEBUG: Booking_wizard normalized - date: $date, endDate: $endDate");
+
         
         if (!$spaceId || !$date) {
-            error_log("DEBUG: Invalid parameters in Booking_wizard.");
+
             echo json_encode(['success' => false, 'message' => 'Invalid parameters: Space ID or Date missing']);
             exit;
         }
