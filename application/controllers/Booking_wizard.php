@@ -683,7 +683,7 @@ class Booking_wizard extends Base_Controller {
      */
     public function finalize() {
         // Define log variables for debugging
-        $logFile = ROOTPATH . 'debug_wizard_log.txt';
+        $logFile = ROOTPATH . 'logs/debug_wizard_log.txt';
         $timestamp = date('Y-m-d H:i:s');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -1143,7 +1143,7 @@ class Booking_wizard extends Base_Controller {
             
             error_log('Booking_wizard finalize error: ' . $e->getMessage());
             
-            $logFile = ROOTPATH . 'debug_wizard_log.txt';
+            $logFile = ROOTPATH . 'logs/debug_wizard_log.txt';
             $timestamp = date('Y-m-d H:i:s');
             file_put_contents($logFile, "[$timestamp] EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
             
@@ -1399,7 +1399,7 @@ class Booking_wizard extends Base_Controller {
                 'status' => 'active',
                 'notes' => 'Customer created from booking system',
                 'created_at' => date('Y-m-d H:i:s'),
-                'created_by' => $booking['created_by'] ?? null
+                'created_by' => (($booking['booking_source'] ?? '') === 'online') ? null : ($booking['created_by'] ?? null)
             ];
             
             $customerId = $this->customerModel->create($customerData);
@@ -1578,7 +1578,7 @@ class Booking_wizard extends Base_Controller {
                 'payment_method' => 'Online Payment',
                 'notes' => 'Booking #' . ($booking['booking_number'] ?? $bookingId) . ' - Space Booking',
                 'terms' => 'Payment due immediately',
-                'created_by' => $booking['created_by'] ?? null,
+                'created_by' => (($booking['booking_source'] ?? '') === 'online') ? null : ($booking['created_by'] ?? null),
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
@@ -1648,7 +1648,10 @@ class Booking_wizard extends Base_Controller {
             // Get customer-specific AR account or parent AR account
             $arAccount = null;
             if ($customerId) {
-                $arAccount = $this->accountModel->getByCode('1200-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+                $arAccount = $this->accountModel->getByCode('1100-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+            }
+            if (!$arAccount) {
+                $arAccount = $this->accountModel->getByCode('1100');
             }
             if (!$arAccount) {
                 $arAccount = $this->accountModel->getByCode('1200');
@@ -1682,8 +1685,11 @@ class Booking_wizard extends Base_Controller {
             
             $bookingRef = $booking['booking_number'] ?? 'Booking #' . $bookingId;
             
+            $transactionCreatedBy = ($booking['booking_source'] ?? '') === 'online' ? null : ($booking['created_by'] ?? null);
+            
             // ✅ Debit Accounts Receivable (customer owes us the TOTAL)
             $this->transactionModel->create([
+                'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-AR',
                 'account_id' => $arAccount['id'],
                 'transaction_date' => date('Y-m-d'),
                 'debit' => $totalAmount,
@@ -1692,12 +1698,13 @@ class Booking_wizard extends Base_Controller {
                 'reference_type' => 'invoice',
                 'reference_id' => $invoiceId,
                 'status' => 'posted',
-                'created_by' => $booking['created_by'] ?? null,
+                'created_by' => $transactionCreatedBy,
                 'created_at' => date('Y-m-d H:i:s')
             ]);
             
             // ✅ Credit Revenue (net amount: subtotal - discount)
             $this->transactionModel->create([
+                'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-REV',
                 'account_id' => $revenueAccount['id'],
                 'transaction_date' => date('Y-m-d'),
                 'debit' => 0,
@@ -1706,7 +1713,7 @@ class Booking_wizard extends Base_Controller {
                 'reference_type' => 'invoice',
                 'reference_id' => $invoiceId,
                 'status' => 'posted',
-                'created_by' => $booking['created_by'] ?? null,
+                'created_by' => $transactionCreatedBy,
                 'created_at' => date('Y-m-d H:i:s')
             ]);
             
@@ -1728,6 +1735,7 @@ class Booking_wizard extends Base_Controller {
                 
                 if ($vatAccount) {
                     $this->transactionModel->create([
+                        'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-VAT',
                         'account_id' => $vatAccount['id'],
                         'transaction_date' => date('Y-m-d'),
                         'debit' => 0,
@@ -1736,7 +1744,7 @@ class Booking_wizard extends Base_Controller {
                         'reference_type' => 'invoice',
                         'reference_id' => $invoiceId,
                         'status' => 'posted',
-                        'created_by' => $booking['created_by'] ?? null,
+                        'created_by' => $transactionCreatedBy,
                         'created_at' => date('Y-m-d H:i:s')
                     ]);
                 }
@@ -1783,7 +1791,10 @@ class Booking_wizard extends Base_Controller {
             // Get customer's AR account or parent AR account
             $arAccount = null;
             if ($customerId) {
-                $arAccount = $this->accountModel->getByCode('1200-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+                $arAccount = $this->accountModel->getByCode('1100-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+            }
+            if (!$arAccount) {
+                $arAccount = $this->accountModel->getByCode('1100');
             }
             if (!$arAccount) {
                 $arAccount = $this->accountModel->getByCode('1200');
@@ -1796,9 +1807,11 @@ class Booking_wizard extends Base_Controller {
             }
             
             $bookingRef = $booking['booking_number'] ?? 'Booking #' . $bookingId;
+            $transactionCreatedBy = ($booking['booking_source'] ?? '') === 'online' ? null : ($booking['created_by'] ?? null);
             
             // ✅ Debit Cash (money received)
             $this->transactionModel->create([
+                'transaction_number' => 'PAY-' . date('Ymd') . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT) . '-CASH',
                 'account_id' => $cashAccount['id'],
                 'transaction_date' => date('Y-m-d'),
                 'debit' => $amount,
@@ -1807,12 +1820,13 @@ class Booking_wizard extends Base_Controller {
                 'reference_type' => 'booking_payment',
                 'reference_id' => $bookingId,
                 'status' => 'posted',
-                'created_by' => $booking['created_by'] ?? null,
+                'created_by' => $transactionCreatedBy,
                 'created_at' => date('Y-m-d H:i:s')
             ]);
             
             // ✅ Credit Accounts Receivable (debt cleared)
             $this->transactionModel->create([
+                'transaction_number' => 'PAY-' . date('Ymd') . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT) . '-AR',
                 'account_id' => $arAccount['id'],
                 'transaction_date' => date('Y-m-d'),
                 'debit' => 0,
@@ -1821,7 +1835,7 @@ class Booking_wizard extends Base_Controller {
                 'reference_type' => 'booking_payment',
                 'reference_id' => $bookingId,
                 'status' => 'posted',
-                'created_by' => $booking['created_by'] ?? null,
+                'created_by' => $transactionCreatedBy,
                 'created_at' => date('Y-m-d H:i:s')
             ]);
             

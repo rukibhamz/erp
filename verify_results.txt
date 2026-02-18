@@ -1,0 +1,28 @@
+=== Bookings ===
+Total bookings: 1
+  Booking #16: SBK-000001 | Test User 1771407045 | total=2.30 | status=pending | pay_status=unpaid | invoice_id=14 | source=online | created_by=6
+
+=== Invoices ===
+Total invoices: 1
+  Invoice #14: INV-000001 | customer_id=30 | subtotal=2.00 | total=2.30 | status=sent | created_by=
+
+=== Transactions ===
+Total transactions: 4
+  Txn #7: INV-20260218-000014-VAT | acct=8 | VAT Liability - SBK-000001 | DR=0.00 CR=0.30 | ref=invoice:14 | status=posted | by=
+  Txn #6: INV-20260218-000014-REV | acct=15 | Booking Revenue - SBK-000001 | DR=0.00 CR=2.00 | ref=invoice:14 | status=posted | by=
+  Txn #5: INV-20260218-000014-AR | acct=4 | Invoice - SBK-000001 | DR=2.30 CR=0.00 | ref=invoice:14 | status=posted | by=
+  Txn #1: DIAG-TXN-1771368888 | acct=1 | Diagnostic Transaction | DR=100.00 CR=0.00 | ref=booking:13 | status=posted | by=
+
+=== Key Accounts ===
+  Account #2: Cash on Hand (code=1000, type=Assets)
+  Account #1: Cash on Hand (code=1001, type=Assets)
+  Account #3: Bank Account - Main (code=1010, type=Assets)
+  Account #4: Accounts Receivable (code=1100, type=Assets)
+  Account #5: Inventory Asset (code=1200, type=Assets)
+  Account #8: VAT Payable (code=2100, type=Liabilities)
+  Account #14: Sales Revenue (code=4000, type=Revenue)
+  Account #15: Service Revenue (code=4100, type=Revenue)
+
+=== Invoice Schema Check ===
+payment_date: EXISTS
+payment_method: EXISTS

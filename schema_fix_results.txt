@@ -1,0 +1,29 @@
+=== erp_customers ===
+  ADDED: notes (TEXT DEFAULT NULL)
+  EXISTS: customer_code
+  EXISTS: customer_type_id
+  EXISTS: contact_name
+  EXISTS: payment_terms
+  EXISTS: credit_limit
+  EXISTS: current_balance
+  ADDED: created_by (INT(11) DEFAULT NULL)
+=== erp_invoices ===
+  EXISTS: payment_date
+  EXISTS: payment_method
+  EXISTS: tax_rate
+=== erp_bookings ===
+  EXISTS: subtotal
+  EXISTS: tax_rate
+  EXISTS: invoice_id
+  EXISTS: payment_plan
+  EXISTS: promo_code
+  EXISTS: booking_source
+  EXISTS: is_recurring
+  EXISTS: recurring_pattern
+  EXISTS: recurring_end_date
+  ADDED: customer_portal_user_id (INT(11) DEFAULT NULL)
+
+=== Final Verification ===
+erp_customers: id, customer_code, company_name, contact_name, email, phone, address, city, state, zip_code, country, tax_id, credit_limit, current_balance, payment_terms, currency, customer_type_id, status, created_at, updated_at, notes, created_by
+erp_invoices: id, invoice_number, customer_id, invoice_date, due_date, reference, subtotal, tax_rate, tax_amount, discount_amount, total_amount, paid_amount, balance_amount, currency, terms, notes, status, payment_date, payment_method, created_by, created_at, updated_at
+erp_bookings: id, booking_number, space_id, facility_id, customer_name, customer_email, customer_phone, customer_address, booking_date, start_time, end_time, duration_hours, number_of_guests, booking_type, base_amount, subtotal, tax_rate, discount_amount, tax_amount, invoice_id, payment_plan, promo_code, booking_source, is_recurring, recurring_pattern, recurring_end_date, security_deposit, total_amount, paid_amount, balance_amount, refund_amount, currency, status, payment_status, booking_notes, special_requests, cancellation_reason, confirmed_at, cancelled_at, completed_at, created_by, created_at, updated_at, customer_portal_user_id
