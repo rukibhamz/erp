@@ -121,7 +121,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <a href="<?= base_url('properties/edit/' . $property['id']) ?>" class="btn btn-sm btn-primary">
                                 <i class="bi bi-pencil"></i> Edit
                             </a>
-                            <a href="<?= base_url('spaces?property_id=' . $property['id']) ?>" class="btn btn-sm btn-outline-secondary">
+                            <a href="<?= base_url('spaces?property_id=' . $property['id']) ?>" class="btn btn-sm btn-secondary">
                                 <i class="bi bi-door-open"></i> Spaces
                             </a>
                         </div>

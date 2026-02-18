@@ -5,7 +5,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Edit Location</h1>
-        <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>

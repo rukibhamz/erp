@@ -35,8 +35,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <input type="text" name="search" class="form-control" placeholder="Search..." value="<?= htmlspecialchars($search ?? '') ?>">
                 </div>
                 <div class="col-md-3">
-                    <button type="submit" class="btn btn-outline-secondary">Filter</button>
-                    <a href="<?= base_url('products') ?>" class="btn btn-primary">Clear</a>
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a href="<?= base_url('products') ?>" class="btn btn-secondary">Clear</a>
                 </div>
             </form>
         </div>

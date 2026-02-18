@@ -30,7 +30,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <?php endforeach; ?>
             <?php endif; ?>
             <?php if (!empty($show_back) || !empty($back_url)): ?>
-                <a href="<?= base_url($back_url ?? 'javascript:history.back()') ?>" class="btn btn-outline-secondary">
+                <a href="<?= base_url($back_url ?? 'javascript:history.back()') ?>" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Back
                 </a>
             <?php endif; ?>

@@ -114,11 +114,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
                 
                 <div class="date-navigation">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="navigateDate(-1)">
+                    <button class="btn btn-sm btn-secondary" onclick="navigateDate(-1)">
                         <i class="bi bi-chevron-left"></i>
                     </button>
                     <input type="date" class="form-control form-control-sm" id="selected-date" value="<?= $selected_date ?>" onchange="reloadCalendar()">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="navigateDate(1)">
+                    <button class="btn btn-sm btn-secondary" onclick="navigateDate(1)">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                     <button class="btn btn-sm btn-outline-primary" onclick="goToToday()">Today</button>
