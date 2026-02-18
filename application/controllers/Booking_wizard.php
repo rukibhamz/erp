@@ -1580,7 +1580,7 @@ class Booking_wizard extends Base_Controller {
             $customerData = [
                 'customer_code' => $customerCode,
                 'customer_type_id' => $customerTypeId,
-                'company_name' => '', // Individual customer — no company
+                'company_name' => $booking['customer_name'] ?? 'Guest', // Use customer name so they appear in Receivables
                 'contact_name' => $booking['customer_name'] ?? 'Guest',
                 'email' => $booking['customer_email'],
                 'phone' => $booking['customer_phone'] ?? '',

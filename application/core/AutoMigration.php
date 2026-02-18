@@ -357,6 +357,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error applying accountant permissions: " . $e->getMessage());
         }
+        
+        // Backfill booking customers with blank company_name
+        try {
+            $this->backfillCustomerCompanyName();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error backfilling customer company names: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2365,6 +2372,26 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR applying accountant permissions: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Backfill customers created from bookings that have blank company_name
+     * Copies contact_name into company_name so they appear in Receivables
+     */
+    private function backfillCustomerCompanyName() {
+        try {
+            $sql = "UPDATE `{$this->prefix}customers` 
+                    SET company_name = contact_name 
+                    WHERE (company_name IS NULL OR company_name = '') 
+                      AND contact_name IS NOT NULL 
+                      AND contact_name != ''";
+            $affected = $this->pdo->exec($sql);
+            if ($affected > 0) {
+                error_log("AutoMigration: Backfilled company_name for $affected customers");
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: backfillCustomerCompanyName error: " . $e->getMessage());
         }
     }
 }
