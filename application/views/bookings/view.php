@@ -246,7 +246,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     
                     <hr>
                     
-                    <a href="<?= base_url('bookings/modifications/' . $booking['id']) ?>" class="btn btn-outline-secondary w-100">
+                    <a href="<?= base_url('bookings/modifications/' . $booking['id']) ?>" class="btn btn-secondary w-100">
                         <i class="bi bi-clock-history"></i> View History
                     </a>
                 </div>

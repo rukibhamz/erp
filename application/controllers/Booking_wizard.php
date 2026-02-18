@@ -784,6 +784,40 @@ class Booking_wizard extends Base_Controller {
         // Merge step data
         $_SESSION['booking_data'] = array_merge($_SESSION['booking_data'], $data);
         
+        // VALIDATION: Check availability for Step 2 (Date & Time)
+        if ($step === 2) {
+            $bookingData = $_SESSION['booking_data'];
+            if (!empty($bookingData['date']) && !empty($bookingData['start_time']) && !empty($bookingData['end_time'])) {
+                // Ensure Facility Model is loaded
+                if (!$this->facilityModel) {
+                     $this->facilityModel = $this->loadModel('Facility_model');
+                }
+                
+                $resourceId = $bookingData['resource_id'] ?? 0;
+                // Get facility_id (might be different from space_id)
+                $space = $this->spaceModel->getById($resourceId);
+                $facilityId = $space['facility_id'] ?? $resourceId;
+                
+                // Check availability
+                // Note: end_date might be different for multi-day
+                $checkEndDate = $bookingData['end_date'] ?? $bookingData['date'];
+                
+                $isAvailable = $this->facilityModel->checkAvailability(
+                    $facilityId,
+                    $bookingData['date'],
+                    $bookingData['start_time'],
+                    $bookingData['end_time'],
+                    null, // No exclude ID (new booking)
+                    $checkEndDate
+                );
+                
+                if (!$isAvailable) {
+                    echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available.']);
+                    exit;
+                }
+            }
+        }
+
         error_log('Booking wizard saveStep: Step ' . $step . ' data saved successfully');
         
         echo json_encode(['success' => true, 'next_step' => $step + 1]);
@@ -841,11 +875,31 @@ class Booking_wizard extends Base_Controller {
             $pdo->beginTransaction();
             error_log("FINALIZE: Transaction started");
             
-            // SECURITY: Recalculate all prices to prevent TOCTOU (Time-of-Check to Time-of-Use) attacks
+            // Recalculate all prices to prevent TOCTOU (Time-of-Check to Time-of-Use) attacks
             // Never trust calculated values from session - recalculate from raw inputs
             $resource = $this->facilityModel->getById($bookingData['resource_id']);
             if (!$resource) {
                 throw new Exception('Resource not found');
+            }
+            
+            // CRITICAL: Final Availability Check
+            // Prevents race conditions where a slot was taken between Step 2 and Finalize
+            $facilityId = $resource['facility_id'] ?? $resource['id']; // Use facility ID if mapped, else resource ID
+            $checkEndDate = $bookingData['end_date'] ?? $bookingData['date'];
+            
+            $isAvailable = $this->facilityModel->checkAvailability(
+                $facilityId,
+                $bookingData['date'],
+                $bookingData['start_time'],
+                $bookingData['end_time'],
+                null,
+                $checkEndDate
+            );
+            
+            if (!$isAvailable) {
+                // Rollback is automatic if exception thrown before commit? 
+                // Actually we haven't done any SQL yet (except selects), so just throw
+                throw new Exception('The selected time slot has just been booked by another user. Please select a different time.');
             }
             
             // Recalculate base amount
@@ -1472,10 +1526,11 @@ class Booking_wizard extends Base_Controller {
         
         try {
             // ✅ STEP 1: Check if customer already exists by email
+            // MODIFIED: Removed "AND status = 'active'" to find ANY existing customer with this email
+            // This prevents duplicate entry errors if an inactive customer exists
             $existingCustomer = $this->db->fetchOne(
                 "SELECT * FROM `" . $this->db->getPrefix() . "customers` 
-                 WHERE email = ? 
-                 AND status = 'active'",
+                 WHERE email = ?",
                 [$booking['customer_email']]
             );
             
@@ -1783,15 +1838,24 @@ class Booking_wizard extends Base_Controller {
             $netRevenue = $subtotal - $discountAmount;
             
             // Get customer-specific AR account or parent AR account
+            // FIX: Use 1200 prefix to match createCustomerLedgerAccount for consistency
             $arAccount = null;
             if ($customerId) {
-                $arAccount = $this->accountModel->getByCode('1100-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+                // Try 1200 first (Correct one)
+                $arAccount = $this->accountModel->getByCode('1200-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+                
+                // Fallback to 1100 if 1200 not found (Legacy support)
+                if (!$arAccount) {
+                    $arAccount = $this->accountModel->getByCode('1100-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
+                }
+            }
+            
+            // Fallback to parents
+            if (!$arAccount) {
+                $arAccount = $this->accountModel->getByCode('1200');
             }
             if (!$arAccount) {
                 $arAccount = $this->accountModel->getByCode('1100');
-            }
-            if (!$arAccount) {
-                $arAccount = $this->accountModel->getByCode('1200');
             }
             if (!$arAccount) {
                 $assetAccounts = $this->accountModel->getByType('Assets');
