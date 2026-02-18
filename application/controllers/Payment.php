@@ -9,6 +9,8 @@ class Payment extends Base_Controller {
     private $transactionModel;
     private $cashAccountModel;
     private $accountModel;
+    private $invoiceModel;
+    private $notificationModel;
     
     public function __construct() {
         parent::__construct();
@@ -800,7 +802,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     // Note: Revenue was already credited when invoice was created
                     try {
                         if ($this->cashAccountModel && $this->transactionModel) {
-                            $defaultCashAccount = $this->cashAccountModel->getDefault();
+                            $activeAccounts = $this->cashAccountModel->getActive();
+                            $defaultCashAccount = !empty($activeAccounts) ? $activeAccounts[0] : null;
                             if ($defaultCashAccount) {
                                 // Debit cash account (cash increases)
                                 $this->transactionModel->create([
@@ -923,7 +926,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     // Create accounting entries: Dr Cash, Cr Accounts Receivable
                     try {
                         if ($this->cashAccountModel && $this->transactionModel) {
-                            $defaultCashAccount = $this->cashAccountModel->getDefault();
+                            $activeCashAccounts = $this->cashAccountModel->getActive();
+                            $defaultCashAccount = !empty($activeCashAccounts) ? $activeCashAccounts[0] : null;
                             $arAccount = $this->accountModel ? $this->accountModel->getByCode('1200') : null;
                             
                             if ($defaultCashAccount) {
@@ -989,7 +993,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     // Create accounting entries: Dr Cash, Cr Rent Revenue
                     try {
                         if ($this->cashAccountModel && $this->transactionModel) {
-                            $defaultCashAccount = $this->cashAccountModel->getDefault();
+                            $activeRentAccounts = $this->cashAccountModel->getActive();
+                            $defaultCashAccount = !empty($activeRentAccounts) ? $activeRentAccounts[0] : null;
                             $rentRevenueAccount = $this->accountModel ? $this->accountModel->getByCode('4200') : null; // Rent Revenue
                             if (!$rentRevenueAccount && $this->accountModel) {
                                 $rentRevenueAccount = $this->accountModel->getByCode('4100'); // General service revenue fallback
