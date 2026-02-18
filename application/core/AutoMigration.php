@@ -2101,6 +2101,19 @@ class AutoMigration {
                 $this->pdo->exec($sql);
                 error_log("AutoMigration: Created booking_payments table");
             }
+            
+            // Ensure gateway_transaction_id column exists (may be missing on tables created before this column was added)
+            try {
+                $colCheck = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}booking_payments` LIKE 'gateway_transaction_id'");
+                if ($colCheck && count($colCheck->fetchAll()) == 0) {
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}booking_payments` ADD COLUMN `gateway_transaction_id` VARCHAR(255) NULL AFTER `status`");
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}booking_payments` ADD KEY `idx_gateway_transaction_id` (`gateway_transaction_id`)");
+                    error_log("AutoMigration: Added gateway_transaction_id column to booking_payments");
+                }
+            } catch (Exception $colEx) {
+                error_log("AutoMigration: Note - gateway_transaction_id column check: " . $colEx->getMessage());
+            }
+            
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring booking_payments table: " . $e->getMessage());

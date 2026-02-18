@@ -562,7 +562,6 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     'amount' => $transaction['amount'],
                     'currency' => $transaction['currency'] ?? 'NGN',
                     'status' => 'completed',
-                    'gateway_transaction_id' => $transaction['transaction_ref'],
                     'reference' => $transaction['transaction_ref'],
                     'created_by' => null
                 ];
