@@ -506,6 +506,11 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
      * Process successful payment
      */
     private function processPaymentSuccess($transaction) {
+        $logFile = ROOTPATH . 'payment_callback_debug.log';
+        $ts = date('Y-m-d H:i:s');
+        
+        file_put_contents($logFile, "[$ts] processPaymentSuccess: ENTERED, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, amount={$transaction['amount']}\n", FILE_APPEND);
+        
         try {
             // Load models and assign to class properties
             $this->bookingModel = $this->loadModel('Booking_model');
@@ -518,89 +523,102 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
             $this->invoiceModel = $this->loadModel('Invoice_model');
             $this->notificationModel = $this->loadModel('Notification_model');
             
-            error_log("processPaymentSuccess: Processing payment type: " . $transaction['payment_type'] . " for ref: " . $transaction['reference_id']);
+            file_put_contents($logFile, "[$ts] processPaymentSuccess: Models loaded OK\n", FILE_APPEND);
             
             if ($transaction['payment_type'] === 'booking_payment') {
+                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 1 - Looking up booking ID={$transaction['reference_id']}\n", FILE_APPEND);
+                
                 $booking = $this->bookingModel->getById($transaction['reference_id']);
-                if ($booking) {
-                    error_log("processPaymentSuccess: Found booking #" . ($booking['booking_number'] ?? $booking['id']));
-                    
-                    // IDEMPOTENCY CHECK: Skip if already processed
-                    if ($booking['status'] === 'confirmed' && !empty($booking['payment_verified_at'])) {
-                        error_log("processPaymentSuccess: Booking already confirmed and verified - skipping (idempotency check)");
-                        return;
-                    }
-                    
-                    // Create booking payment record
-                    $paymentData = [
-                        'booking_id' => $booking['id'],
-                        'payment_number' => $this->bookingPaymentModel->getNextPaymentNumber(),
-                        'payment_date' => date('Y-m-d'),
-                        'payment_type' => 'full',
-                        'payment_method' => 'gateway',
-                        'amount' => $transaction['amount'],
-                        'currency' => $transaction['currency'] ?? 'NGN',
-                        'status' => 'completed',
-                        'gateway_transaction_id' => $transaction['transaction_ref'],
-                        'reference' => $transaction['transaction_ref'],
-                        'created_by' => null
-                    ];
-                    
-                    $paymentId = $this->bookingPaymentModel->create($paymentData);
-                    error_log("processPaymentSuccess: Created payment record ID: $paymentId");
-                    
-                    // Update booking paid amount and balance
-                    $newPaidAmount = floatval($booking['paid_amount'] ?? 0) + floatval($transaction['amount']);
-                    $newBalance = floatval($booking['total_amount'] ?? 0) - $newPaidAmount;
-                    
-                    // Core update data (columns that always exist)
-                    $updateData = [
-                        'paid_amount' => $newPaidAmount,
-                        'balance_amount' => max(0, $newBalance)
-                    ];
-                    
-                    // Update payment status based on balance
-                    $isFullPayment = false;
-                    if ($newBalance <= 0) {
-                        $updateData['payment_status'] = 'paid';
-                        $updateData['status'] = 'confirmed'; // Auto-confirm on full payment
-                        $isFullPayment = true;
-                    } elseif ($newPaidAmount > 0) {
-                        $updateData['payment_status'] = 'partial';
-                    }
-                    
-                    // Log update for debugging
-                    $debugLog = ROOTPATH . 'debug_payment_update.txt';
-                    $logEntry = date('Y-m-d H:i:s') . " - BOOKING UPDATE:\n";
-                    $logEntry .= "  Booking ID: {$booking['id']}\n";
-                    $logEntry .= "  Transaction Ref: {$transaction['transaction_ref']}\n";
-                    $logEntry .= "  Amount: {$transaction['amount']}\n";
-                    $logEntry .= "  New Paid: $newPaidAmount | New Balance: $newBalance\n";
-                    $logEntry .= "  Core Update Data: " . json_encode($updateData) . "\n";
-                    file_put_contents($debugLog, $logEntry, FILE_APPEND);
-                    
-                    // Perform CORE update first (these columns always exist)
-                    $updateResult = $this->bookingModel->update($booking['id'], $updateData);
-                    
-                    $logEntry = "  Core Update Result: " . ($updateResult ? 'SUCCESS' : 'FAILED') . "\n";
-                    file_put_contents($debugLog, $logEntry, FILE_APPEND);
-                    
-                    error_log("processPaymentSuccess: Core booking update - paid: $newPaidAmount, balance: $newBalance, result: " . ($updateResult ? 'OK' : 'FAIL'));
-                    
-                    // Try to set optional tracking columns (may not exist if migration not run)
-                    // These run as a SEPARATE update so they don't block the core update
+                
+                if (!$booking) {
+                    file_put_contents($logFile, "[$ts] processPaymentSuccess: BOOKING NOT FOUND for ID={$transaction['reference_id']}! Checking bookings table...\n", FILE_APPEND);
+                    // Diagnostic: check what's in the bookings table
                     try {
-                        $optionalData = ['payment_verified_at' => date('Y-m-d H:i:s')];
-                        if ($isFullPayment) {
-                            $optionalData['confirmed_at'] = date('Y-m-d H:i:s');
-                        }
-                        $this->bookingModel->update($booking['id'], $optionalData);
-                    } catch (Exception $ex) {
-                        // Columns may not exist yet - that's OK, core update already succeeded
-                        error_log("processPaymentSuccess: Optional columns update skipped: " . $ex->getMessage());
+                        $prefix = $this->db->getPrefix();
+                        $recent = $this->db->fetchAll("SELECT id, booking_number, status, payment_status FROM {$prefix}bookings ORDER BY id DESC LIMIT 5");
+                        file_put_contents($logFile, "[$ts] processPaymentSuccess: Recent bookings: " . json_encode($recent) . "\n", FILE_APPEND);
+                    } catch (Exception $diagEx) {
+                        file_put_contents($logFile, "[$ts] processPaymentSuccess: Cannot query bookings: " . $diagEx->getMessage() . "\n", FILE_APPEND);
                     }
-                    
-                    // BLOCK TIME SLOTS on payment confirmation
+                    return;
+                }
+                
+                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 2 - Booking found: #{$booking['booking_number']}, status={$booking['status']}, payment_status=" . ($booking['payment_status'] ?? 'N/A') . ", paid_amount=" . ($booking['paid_amount'] ?? '0') . ", total=" . ($booking['total_amount'] ?? '0') . "\n", FILE_APPEND);
+                
+                // IDEMPOTENCY CHECK: Skip if already processed
+                if ($booking['status'] === 'confirmed' && !empty($booking['payment_verified_at'])) {
+                    file_put_contents($logFile, "[$ts] processPaymentSuccess: SKIPPED - Already confirmed and verified (idempotency)\n", FILE_APPEND);
+                    return;
+                }
+                
+                // Create booking payment record
+                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3 - Creating booking payment record...\n", FILE_APPEND);
+                $paymentData = [
+                    'booking_id' => $booking['id'],
+                    'payment_number' => $this->bookingPaymentModel->getNextPaymentNumber(),
+                    'payment_date' => date('Y-m-d'),
+                    'payment_type' => 'full',
+                    'payment_method' => 'gateway',
+                    'amount' => $transaction['amount'],
+                    'currency' => $transaction['currency'] ?? 'NGN',
+                    'status' => 'completed',
+                    'gateway_transaction_id' => $transaction['transaction_ref'],
+                    'reference' => $transaction['transaction_ref'],
+                    'created_by' => null
+                ];
+                
+                $paymentId = $this->bookingPaymentModel->create($paymentData);
+                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3 RESULT - Payment record ID: " . var_export($paymentId, true) . "\n", FILE_APPEND);
+                
+                // Update booking paid amount and balance
+                $newPaidAmount = floatval($booking['paid_amount'] ?? 0) + floatval($transaction['amount']);
+                $newBalance = floatval($booking['total_amount'] ?? 0) - $newPaidAmount;
+                
+                // Core update data (columns that always exist)
+                $updateData = [
+                    'paid_amount' => $newPaidAmount,
+                    'balance_amount' => max(0, $newBalance)
+                ];
+                
+                // Update payment status based on balance
+                $isFullPayment = false;
+                if ($newBalance <= 0) {
+                    $updateData['payment_status'] = 'paid';
+                    $updateData['status'] = 'confirmed'; // Auto-confirm on full payment
+                    $isFullPayment = true;
+                } elseif ($newPaidAmount > 0) {
+                    $updateData['payment_status'] = 'partial';
+                }
+                
+                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 - Updating booking #{$booking['id']}: " . json_encode($updateData) . "\n", FILE_APPEND);
+                
+                // Perform CORE update first (these columns always exist)
+                $updateResult = $this->bookingModel->update($booking['id'], $updateData);
+                
+                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 RESULT - Update returned: " . var_export($updateResult, true) . " (rows affected)\n", FILE_APPEND);
+                
+                // DIAGNOSTIC: Verify the update actually persisted
+                $verifyBooking = $this->bookingModel->getById($booking['id']);
+                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 VERIFY - After update: status=" . ($verifyBooking['status'] ?? 'NULL') . ", payment_status=" . ($verifyBooking['payment_status'] ?? 'NULL') . ", paid_amount=" . ($verifyBooking['paid_amount'] ?? 'NULL') . ", balance=" . ($verifyBooking['balance_amount'] ?? 'NULL') . "\n", FILE_APPEND);
+                
+                error_log("processPaymentSuccess: Core booking update - paid: $newPaidAmount, balance: $newBalance, result: " . ($updateResult ? 'OK' : 'FAIL'));
+                
+                // Try to set optional tracking columns (may not exist if migration not run)
+                // These run as a SEPARATE update so they don't block the core update
+                try {
+                    $optionalData = ['payment_verified_at' => date('Y-m-d H:i:s')];
+                    if ($isFullPayment) {
+                        $optionalData['confirmed_at'] = date('Y-m-d H:i:s');
+                    }
+                    $this->bookingModel->update($booking['id'], $optionalData);
+                    file_put_contents($logFile, "[$ts] processPaymentSuccess: Optional columns updated OK\n", FILE_APPEND);
+                } catch (Exception $ex) {
+                    file_put_contents($logFile, "[$ts] processPaymentSuccess: Optional columns skipped: " . $ex->getMessage() . "\n", FILE_APPEND);
+                    // Columns may not exist yet - that's OK, core update already succeeded
+                    error_log("processPaymentSuccess: Optional columns update skipped: " . $ex->getMessage());
+                }
+                
+                // BLOCK TIME SLOTS on payment confirmation
                     if ($isFullPayment) {
                         try {
                             // Create time slots if not already done
@@ -843,9 +861,6 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                         // Log but don't fail - accounting is secondary
                         error_log('Booking payment accounting error: ' . $e->getMessage());
                     }
-                } else {
-                    error_log("processPaymentSuccess: Booking not found for ID: " . $transaction['reference_id']);
-                }
             } elseif ($transaction['payment_type'] === 'invoice_payment') {
                 // ===== INVOICE PAYMENT via gateway =====
                 $invoiceModel = $this->loadModel('Invoice_model');
@@ -1006,6 +1021,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 }
             }
         } catch (Exception $e) {
+            $logFile = ROOTPATH . 'payment_callback_debug.log';
+            file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] processPaymentSuccess OUTER CATCH: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
             error_log('Process payment success error: ' . $e->getMessage());
         }
     }
