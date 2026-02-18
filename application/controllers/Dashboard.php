@@ -417,9 +417,11 @@ class Dashboard extends Base_Controller {
     private function getRevenueForPeriod($startDate, $endDate) {
         if (!$this->db || !$this->invoiceModel) return 0;
         try {
+            // UPDATED: Now calculates Total Accrued Revenue (Sales) regardless of payment status
+            // Excludes cancelled invoices only
             $result = $this->db->fetchOne(
                 "SELECT SUM(total_amount) as total FROM `" . $this->db->getPrefix() . "invoices` 
-                 WHERE invoice_date >= ? AND invoice_date <= ? AND status = 'paid'",
+                 WHERE invoice_date >= ? AND invoice_date <= ? AND status != 'cancelled'",
                 [$startDate, $endDate]
             );
             return floatval($result['total'] ?? 0);
@@ -563,7 +565,7 @@ class Dashboard extends Base_Controller {
                  FROM `" . $this->db->getPrefix() . "invoices`
                  WHERE invoice_date >= ? 
                  AND invoice_date <= ?
-                 AND status = 'paid'
+                 AND status != 'cancelled'
                  GROUP BY DATE_FORMAT(invoice_date, '%Y-%m')
                  ORDER BY month_key ASC",
                 [$startDate, $endDate]
