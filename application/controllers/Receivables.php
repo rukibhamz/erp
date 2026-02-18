@@ -119,7 +119,41 @@ class Receivables extends Base_Controller {
                 $data['customer_code'] = $this->customerModel->getNextCustomerCode();
             }
             
-            if ($this->customerModel->create($data)) {
+            $customerId = $this->customerModel->create($data);
+            if ($customerId) {
+                // Create Ledger Account (1200-XXXX)
+                try {
+                    $this->accountModel = $this->loadModel('Account_model');
+                    
+                    // Get Parent AR Account
+                    $parentAr = $this->accountModel->getByCode('1200');
+                    if ($parentAr) {
+                        // Generate new account code
+                        // We use the customer ID padded to 4 digits as the suffix
+                        // e.g., 1200-0001
+                        $suffix = str_pad($customerId, 4, '0', STR_PAD_LEFT);
+                        $newAccountCode = '1200-' . $suffix;
+                        
+                        // Check if exists
+                        if (!$this->accountModel->getByCode($newAccountCode)) {
+                            $accountData = [
+                                'account_code' => $newAccountCode,
+                                'account_name' => $data['company_name'],
+                                'account_type' => 'Assets',
+                                'parent_account_id' => $parentAr['id'],
+                                'is_system' => 0,
+                                'status' => 'active',
+                                'created_by' => $this->session['user_id']
+                            ];
+                            $this->accountModel->create($accountData);
+                            $this->activityModel->log($this->session['user_id'], 'create', 'Accounts', 'Created ledger account: ' . $newAccountCode);
+                        }
+                    }
+                } catch (Exception $accEx) {
+                    error_log('Receivables createCustomer account creation error: ' . $accEx->getMessage());
+                    // Non-fatal, continue
+                }
+
                 $this->activityModel->log($this->session['user_id'], 'create', 'Receivables', 'Created customer: ' . $data['company_name']);
                 $this->setFlashMessage('success', 'Customer created successfully.');
                 redirect('receivables/customers');

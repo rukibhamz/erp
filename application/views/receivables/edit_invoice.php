@@ -107,6 +107,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <tr>
                                             <td><?= $index + 1 ?></td>
                                             <td>
+                                                <input type="hidden" name="items[<?= $index ?>][product_id]" value="<?= $item['product_id'] ?? '' ?>">
+                                                <input type="hidden" name="items[<?= $index ?>][account_id]" value="<?= $item['account_id'] ?? '' ?>">
                                                 <input type="text" class="form-control form-control-sm" name="items[<?= $index ?>][description]" value="<?= htmlspecialchars($item['item_description']) ?>" placeholder="Item description" required>
                                             </td>
                                             <td>
