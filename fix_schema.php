@@ -1,24 +1,42 @@
 <?php
 /**
  * Comprehensive schema fix for the booking flow.
- * Adds all missing columns that the Booking_wizard controller expects.
+ * Run via browser: https://yourdomain.com/fix_schema.php
+ * Reads DB credentials from the application config.
  */
+header('Content-Type: text/plain; charset=utf-8');
+
+// Load DB config from app config
+$configFile = __DIR__ . '/application/config/config.installed.php';
+if (!file_exists($configFile)) {
+    $configFile = __DIR__ . '/application/config/config.php';
+}
+if (!defined('BASEPATH')) define('BASEPATH', true);
+$config = require $configFile;
+$db = $config['db'];
+
+echo "Connecting to {$db['hostname']} / {$db['database']} as {$db['username']}..." . PHP_EOL;
+
 try {
-    $pdo = new PDO('mysql:host=127.0.0.1;dbname=erp', 'root', '');
+    $dsn = "mysql:host={$db['hostname']};dbname={$db['database']};charset=" . ($db['charset'] ?? 'utf8mb4');
+    $pdo = new PDO($dsn, $db['username'], $db['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $out = "";
+    $prefix = $db['dbprefix'] ?? 'erp_';
+    $dbName = $db['database'];
+
+    echo "Connected successfully." . PHP_EOL . PHP_EOL;
 
     // Helper: check if column exists
-    function columnExists($pdo, $table, $column) {
-        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='erp' AND TABLE_NAME=? AND COLUMN_NAME=?");
-        $stmt->execute([$table, $column]);
+    function columnExists($pdo, $dbName, $table, $column) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?");
+        $stmt->execute([$dbName, $table, $column]);
         $r = $stmt->fetch(PDO::FETCH_ASSOC);
         return intval($r['cnt']) > 0;
     }
 
     // Define all required columns per table
     $fixes = [
-        'erp_customers' => [
+        $prefix . 'customers' => [
             ['notes', "TEXT DEFAULT NULL"],
             ['customer_code', "VARCHAR(50) DEFAULT NULL"],
             ['customer_type_id', "INT(11) DEFAULT NULL"],
@@ -28,12 +46,12 @@ try {
             ['current_balance', "DECIMAL(15,2) DEFAULT 0.00"],
             ['created_by', "INT(11) DEFAULT NULL"],
         ],
-        'erp_invoices' => [
+        $prefix . 'invoices' => [
             ['payment_date', "DATE DEFAULT NULL"],
             ['payment_method', "VARCHAR(100) DEFAULT NULL"],
             ['tax_rate', "DECIMAL(15,2) DEFAULT 0.00"],
         ],
-        'erp_bookings' => [
+        $prefix . 'bookings' => [
             ['subtotal', "DECIMAL(15,2) DEFAULT 0.00"],
             ['tax_rate', "DECIMAL(15,2) DEFAULT 0.00"],
             ['invoice_id', "INT(11) DEFAULT NULL"],
@@ -47,36 +65,48 @@ try {
         ],
     ];
 
+    $added = 0;
+    $existed = 0;
+    $failed = 0;
+
     foreach ($fixes as $table => $columns) {
-        $out .= "=== $table ===" . PHP_EOL;
+        echo "=== $table ===" . PHP_EOL;
+        
+        // Check if table exists first
+        $tableCheck = $pdo->query("SHOW TABLES LIKE '$table'");
+        if ($tableCheck->rowCount() === 0) {
+            echo "  TABLE DOES NOT EXIST - skipping" . PHP_EOL;
+            continue;
+        }
+        
         foreach ($columns as [$col, $def]) {
-            if (!columnExists($pdo, $table, $col)) {
+            if (!columnExists($pdo, $dbName, $table, $col)) {
                 try {
-                    $pdo->exec("ALTER TABLE $table ADD COLUMN $col $def");
-                    $out .= "  ADDED: $col ($def)" . PHP_EOL;
+                    $pdo->exec("ALTER TABLE `$table` ADD COLUMN `$col` $def");
+                    echo "  ADDED: $col" . PHP_EOL;
+                    $added++;
                 } catch (Exception $e) {
-                    $out .= "  FAILED to add $col: " . $e->getMessage() . PHP_EOL;
+                    echo "  FAILED: $col - " . $e->getMessage() . PHP_EOL;
+                    $failed++;
                 }
             } else {
-                $out .= "  EXISTS: $col" . PHP_EOL;
+                echo "  EXISTS: $col" . PHP_EOL;
+                $existed++;
             }
         }
     }
 
-    // Verify final state
-    $out .= PHP_EOL . "=== Final Verification ===" . PHP_EOL;
-    foreach (array_keys($fixes) as $table) {
-        $stmt = $pdo->query("SHOW COLUMNS FROM $table");
-        $cols = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $cols[] = $row['Field'];
-        }
-        $out .= "$table: " . implode(', ', $cols) . PHP_EOL;
+    echo PHP_EOL . "========================================" . PHP_EOL;
+    echo "DONE: $added added, $existed already existed, $failed failed" . PHP_EOL;
+    echo "========================================" . PHP_EOL;
+
+    if ($added > 0) {
+        echo PHP_EOL . "Schema updated successfully! You can now delete this file." . PHP_EOL;
+    } else if ($failed === 0) {
+        echo PHP_EOL . "All columns already exist. No changes needed." . PHP_EOL;
     }
 
-    file_put_contents('schema_fix_results.txt', $out);
-    echo $out;
-    echo PHP_EOL . "All schema fixes applied." . PHP_EOL;
 } catch (Exception $e) {
     echo "FATAL: " . $e->getMessage() . PHP_EOL;
+    echo PHP_EOL . "Check your database credentials in application/config/config.installed.php" . PHP_EOL;
 }
