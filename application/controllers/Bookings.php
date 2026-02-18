@@ -332,9 +332,7 @@ class Bookings extends Base_Controller {
                 $this->setFlashMessage('danger', $msg);
                 
                 // Persist input for repopulation
-                if (isset($this->session)) {
-                    $this->session->set_flashdata('_old_input', $_POST);
-                }
+                $_SESSION['_old_input'] = $_POST;
                 
                 redirect('bookings/create');
             }
@@ -508,8 +506,11 @@ class Bookings extends Base_Controller {
             'locations' => $locations,
             'spaces_by_location' => $spacesByLocation,
             'flash' => $this->getFlashMessage(),
-            'old_input' => $this->session->flashdata('_old_input') ?? []
+            'old_input' => $_SESSION['_old_input'] ?? []
         ];
+        
+        // Clear the old input flash data after reading it
+        unset($_SESSION['_old_input']);
 
         $this->loadView('bookings/create', $data);
     }

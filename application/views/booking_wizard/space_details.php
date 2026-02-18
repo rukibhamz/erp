@@ -127,7 +127,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <a href="<?= base_url('booking-wizard/step2/' . $space['id']) ?>" class="btn btn-primary btn-lg py-3">
                         <i class="bi bi-calendar-check-fill me-2"></i> Book This Space
                     </a>
-                    <a href="<?= base_url('booking-wizard/step1') ?>" class="btn btn-outline-secondary">
+                    <a href="<?= base_url('booking-wizard/step1') ?>" class="btn btn-outline-secondary" style="color: #6c757d; border-color: #6c757d; background: transparent;">
                         <i class="bi bi-arrow-left me-1"></i> Back to Selection
                     </a>
                 </div>
