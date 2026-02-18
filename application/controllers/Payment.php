@@ -513,17 +513,6 @@ class Payment extends Base_Controller {
                         $updateData['payment_status'] = 'partial';
                     }
                     
-                    // Try to add new columns (may not exist if migration not run)
-                    // These are optional for idempotency - will be added by migration
-                    try {
-                        $updateData['payment_verified_at'] = date('Y-m-d H:i:s');
-                        if ($isFullPayment) {
-                            $updateData['confirmed_at'] = date('Y-m-d H:i:s');
-                        }
-                    } catch (Exception $ex) {
-                        // Columns may not exist yet - ignore
-                    }
-                    
                     // Log update for debugging
                     $debugLog = ROOTPATH . 'debug_payment_update.txt';
                     $logEntry = date('Y-m-d H:i:s') . " - BOOKING UPDATE:\n";
@@ -531,16 +520,29 @@ class Payment extends Base_Controller {
                     $logEntry .= "  Transaction Ref: {$transaction['transaction_ref']}\n";
                     $logEntry .= "  Amount: {$transaction['amount']}\n";
                     $logEntry .= "  New Paid: $newPaidAmount | New Balance: $newBalance\n";
-                    $logEntry .= "  Update Data: " . json_encode($updateData) . "\n";
+                    $logEntry .= "  Core Update Data: " . json_encode($updateData) . "\n";
                     file_put_contents($debugLog, $logEntry, FILE_APPEND);
                     
-                    // Perform update
+                    // Perform CORE update first (these columns always exist)
                     $updateResult = $this->bookingModel->update($booking['id'], $updateData);
                     
-                    $logEntry = "  Update Result: " . ($updateResult ? 'SUCCESS' : 'FAILED') . "\n\n";
+                    $logEntry = "  Core Update Result: " . ($updateResult ? 'SUCCESS' : 'FAILED') . "\n";
                     file_put_contents($debugLog, $logEntry, FILE_APPEND);
                     
-                    error_log("processPaymentSuccess: Updated booking - paid: $newPaidAmount, balance: $newBalance, result: " . ($updateResult ? 'OK' : 'FAIL'));
+                    error_log("processPaymentSuccess: Core booking update - paid: $newPaidAmount, balance: $newBalance, result: " . ($updateResult ? 'OK' : 'FAIL'));
+                    
+                    // Try to set optional tracking columns (may not exist if migration not run)
+                    // These run as a SEPARATE update so they don't block the core update
+                    try {
+                        $optionalData = ['payment_verified_at' => date('Y-m-d H:i:s')];
+                        if ($isFullPayment) {
+                            $optionalData['confirmed_at'] = date('Y-m-d H:i:s');
+                        }
+                        $this->bookingModel->update($booking['id'], $optionalData);
+                    } catch (Exception $ex) {
+                        // Columns may not exist yet - that's OK, core update already succeeded
+                        error_log("processPaymentSuccess: Optional columns update skipped: " . $ex->getMessage());
+                    }
                     
                     // BLOCK TIME SLOTS on payment confirmation
                     if ($isFullPayment) {
@@ -642,6 +644,49 @@ class Payment extends Base_Controller {
                                     }
                                 }
                             }
+                        } else {
+                            // NO INVOICE EXISTS - Create one now
+                            // This handles the case where the booking wizard's invoice creation failed
+                            try {
+                                $invoiceData = [
+                                    'invoice_number' => 'INV-BKG-' . ($booking['booking_number'] ?? $booking['id']),
+                                    'reference' => 'BKG-' . $booking['id'],
+                                    'customer_name' => $booking['customer_name'] ?? '',
+                                    'customer_email' => $booking['customer_email'] ?? '',
+                                    'issue_date' => date('Y-m-d'),
+                                    'due_date' => date('Y-m-d'),
+                                    'subtotal' => $booking['total_amount'] ?? $transaction['amount'],
+                                    'tax_amount' => $booking['tax_amount'] ?? 0,
+                                    'total_amount' => $booking['total_amount'] ?? $transaction['amount'],
+                                    'paid_amount' => $transaction['amount'],
+                                    'balance_amount' => max(0, floatval($booking['total_amount'] ?? $transaction['amount']) - floatval($transaction['amount'])),
+                                    'status' => ($newBalance <= 0) ? 'paid' : 'partially_paid',
+                                    'payment_date' => date('Y-m-d'),
+                                    'notes' => 'Auto-generated invoice for booking ' . ($booking['booking_number'] ?? $booking['id']),
+                                    'created_at' => date('Y-m-d H:i:s'),
+                                    'updated_at' => date('Y-m-d H:i:s')
+                                ];
+                                
+                                // Try to add reference_type/reference_id columns
+                                try {
+                                    $invoiceData['reference_type'] = 'booking';
+                                    $invoiceData['reference_id'] = $booking['id'];
+                                } catch (Exception $e) {}
+                                
+                                $newInvoiceId = $this->invoiceModel->create($invoiceData);
+                                if ($newInvoiceId) {
+                                    error_log("processPaymentSuccess: Created new invoice #$newInvoiceId for booking " . ($booking['booking_number'] ?? $booking['id']));
+                                    
+                                    // Try to link invoice to booking
+                                    try {
+                                        $this->bookingModel->update($booking['id'], ['invoice_id' => $newInvoiceId]);
+                                    } catch (Exception $e) {
+                                        // invoice_id column may not exist
+                                    }
+                                }
+                            } catch (Exception $invEx) {
+                                error_log("processPaymentSuccess: Failed to create invoice: " . $invEx->getMessage());
+                            }
                         }
                     }
 
@@ -684,15 +729,20 @@ class Payment extends Base_Controller {
                                 // Credit Accounts Receivable (clearing the customer's debt)
                                 if ($this->accountModel) {
                                     try {
-                                        // Find Accounts Receivable account (typically 1200)
-                                        $arAccount = $this->accountModel->getByCode('1200');
+                                        // Find Accounts Receivable account (code 1100, fallback to 1200)
+                                        $arAccount = $this->accountModel->getByCode('1100');
                                         if (!$arAccount) {
-                                            // Try to find any AR account
+                                            $arAccount = $this->accountModel->getByCode('1200');
+                                        }
+                                        if (!$arAccount) {
+                                            // Try to find any AR account by name
                                             $assetAccounts = $this->accountModel->getByType('Asset');
-                                            foreach ($assetAccounts as $acc) {
-                                                if (stripos($acc['account_name'], 'receivable') !== false) {
-                                                    $arAccount = $acc;
-                                                    break;
+                                            if (is_array($assetAccounts)) {
+                                                foreach ($assetAccounts as $acc) {
+                                                    if (stripos($acc['account_name'], 'receivable') !== false) {
+                                                        $arAccount = $acc;
+                                                        break;
+                                                    }
                                                 }
                                             }
                                         }
