@@ -807,7 +807,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                             if ($defaultCashAccount) {
                                 // Debit cash account (cash increases)
                                 $this->transactionModel->create([
-                                    'account_id' => $defaultCashAccount['id'],
+                                    'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
                                     'debit' => $transaction['amount'],
                                     'credit' => 0,
                                     'description' => 'Online payment received for booking: ' . ($booking['booking_number'] ?? $booking['id']),
@@ -817,6 +817,9 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                                     'status' => 'posted',
                                     'created_by' => null
                                 ]);
+                                
+                                // Update cash account balance
+                                $this->cashAccountModel->updateBalance($defaultCashAccount['id'], $transaction['amount'], 'deposit');
                                 
                                 // Credit Accounts Receivable (clearing the customer's debt)
                                 if ($this->accountModel) {
