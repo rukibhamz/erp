@@ -1779,8 +1779,19 @@ class Booking_wizard extends Base_Controller {
             if ($invoiceId) {
                 @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Created invoice ID: $invoiceId\n", FILE_APPEND);
                 
-                // ✅ STEP 4: Add invoice line items
+            // ✅ STEP 4: Add invoice line items
                 try {
+                    // Get Revenue account for the item
+                    $revenueAccount = $this->accountModel->getByCode('4100'); // Service Revenue
+                    if (!$revenueAccount) {
+                        $revenueAccount = $this->accountModel->getByCode('4000'); // General Revenue
+                    }
+                    if (!$revenueAccount) {
+                        // Fallback to any revenue account
+                        $revenueAccounts = $this->accountModel->getByType('Revenue');
+                        $revenueAccount = is_array($revenueAccounts) && !empty($revenueAccounts) ? $revenueAccounts[0] : null;
+                    }
+
                     $this->invoiceModel->addItem($invoiceId, [
                         'item_description' => 'Space Booking - ' . ($booking['facility_name'] ?? 'Facility'),
                         'quantity' => 1,

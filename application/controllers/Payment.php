@@ -768,6 +768,31 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                                 if ($newInvoiceId) {
                                     error_log("processPaymentSuccess: Created new invoice #$newInvoiceId for booking " . ($booking['booking_number'] ?? $booking['id']));
                                     
+                                    // Add invoice line item
+                                    try {
+                                        // Get Revenue account
+                                        $revenueAccount = $this->accountModel->getByCode('4100');
+                                        if (!$revenueAccount) {
+                                            $revenueAccount = $this->accountModel->getByCode('4000');
+                                        }
+                                        if (!$revenueAccount) {
+                                            $revenueAccounts = $this->accountModel->getByType('Revenue');
+                                            $revenueAccount = is_array($revenueAccounts) && !empty($revenueAccounts) ? $revenueAccounts[0] : null;
+                                        }
+
+                                        $this->invoiceModel->addItem($newInvoiceId, [
+                                            'item_description' => 'Space Booking - ' . ($booking['facility_name'] ?? 'Facility'),
+                                            'quantity' => 1,
+                                            'unit_price' => $booking['total_amount'] ?? $transaction['amount'], // Assuming subtotal basically
+                                            'line_total' => $booking['total_amount'] ?? $transaction['amount'],
+                                            'tax_rate' => 0, // Simplified for fallback
+                                            'tax_amount' => $booking['tax_amount'] ?? 0,
+                                            'account_id' => $revenueAccount['id'] ?? null
+                                        ]);
+                                    } catch (Exception $itemEx) {
+                                        error_log("processPaymentSuccess: Failed to add item to new invoice: " . $itemEx->getMessage());
+                                    }
+
                                     // Try to link invoice to booking
                                     try {
                                         $this->bookingModel->update($booking['id'], ['invoice_id' => $newInvoiceId]);
