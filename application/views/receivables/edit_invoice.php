@@ -217,7 +217,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-circle"></i> Update Invoice
                         </button>
-                        <a href="<?= base_url('receivables/invoices/view/' . $invoice['id']) ?>" class="btn btn-outline-secondary">
+                        <a href="<?= base_url('receivables/invoices/view/' . $invoice['id']) ?>" class="btn btn-secondary">
                             <i class="bi bi-eye"></i> View
                         </a>
                         <a href="<?= base_url('receivables/invoices') ?>" class="btn btn-secondary">
