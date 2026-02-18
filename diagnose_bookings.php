@@ -105,15 +105,31 @@ try {
     echo PHP_EOL . "=== CUSTOMER PORTAL USERS ===" . PHP_EOL;
     $cpuCount = $pdo->query("SELECT COUNT(*) as cnt FROM {$prefix}customer_portal_users")->fetch(PDO::FETCH_ASSOC);
     echo "Total: " . $cpuCount['cnt'] . PHP_EOL;
-    $cpUsers = $pdo->query("SELECT id, email, first_name, last_name, status, is_guest, 
-        password_reset_token, password_reset_expires, created_at 
-        FROM {$prefix}customer_portal_users ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    // Detect columns in customer_portal_users
+    $cpCols = $pdo->query("SHOW COLUMNS FROM {$prefix}customer_portal_users")->fetchAll(PDO::FETCH_ASSOC);
+    $cpColNames = array_column($cpCols, 'Field');
+    $hasIsGuest = in_array('is_guest', $cpColNames);
+    $hasResetToken = in_array('password_reset_token', $cpColNames);
+    $hasResetExpires = in_array('password_reset_expires', $cpColNames);
+    
+    $selectCols = "id, email, first_name, last_name, status, created_at";
+    if ($hasIsGuest) $selectCols .= ", is_guest";
+    if ($hasResetToken) $selectCols .= ", password_reset_token";
+    if ($hasResetExpires) $selectCols .= ", password_reset_expires";
+    
+    $cpUsers = $pdo->query("SELECT $selectCols FROM {$prefix}customer_portal_users ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
     foreach ($cpUsers as $u) {
-        echo "  #{$u['id']}: {$u['email']} | {$u['first_name']} {$u['last_name']} | status={$u['status']} | " .
-             "guest=" . ($u['is_guest'] ? 'Y' : 'N') . " | " .
-             "reset_token=" . ($u['password_reset_token'] ? 'SET' : 'none') . " | " .
-             "token_expires=" . ($u['password_reset_expires'] ?? 'none') . PHP_EOL;
+        $line = "  #{$u['id']}: {$u['email']} | {$u['first_name']} {$u['last_name']} | status={$u['status']}";
+        if ($hasIsGuest) $line .= " | guest=" . (($u['is_guest'] ?? 0) ? 'Y' : 'N');
+        if ($hasResetToken) $line .= " | reset_token=" . (!empty($u['password_reset_token']) ? 'SET' : 'none');
+        if ($hasResetExpires) $line .= " | token_expires=" . ($u['password_reset_expires'] ?? 'none');
+        echo $line . PHP_EOL;
     }
+    
+    echo "Columns: " . implode(', ', $cpColNames) . PHP_EOL;
+    if (!$hasIsGuest) echo "  NOTE: 'is_guest' column is MISSING" . PHP_EOL;
+    if (!$hasResetToken) echo "  NOTE: 'password_reset_token' column is MISSING" . PHP_EOL;
+    if (!$hasResetExpires) echo "  NOTE: 'password_reset_expires' column is MISSING" . PHP_EOL;
     
     // ========== REQUIRED MODEL FILES ==========
     echo PHP_EOL . "=== MODEL FILES CHECK ===" . PHP_EOL;

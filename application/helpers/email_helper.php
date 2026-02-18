@@ -29,6 +29,33 @@ if (!function_exists('send_email')) {
             $config = require $configFile;
             $settings = $config['email'] ?? [];
             
+            // If no email settings in config file, try database settings table
+            if (empty($settings) || empty($settings['smtp_host'])) {
+                try {
+                    $db = $config['db'] ?? [];
+                    $dsn = "mysql:host=" . ($db['hostname'] ?? 'localhost') . ";dbname=" . ($db['database'] ?? '');
+                    $pdo = new PDO($dsn, $db['username'] ?? '', $db['password'] ?? '');
+                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    $prefix = $db['dbprefix'] ?? 'erp_';
+                    
+                    $smtpKeys = ['smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 
+                                 'smtp_encryption', 'from_email', 'from_name'];
+                    $placeholders = implode(',', array_fill(0, count($smtpKeys), '?'));
+                    $stmt = $pdo->prepare(
+                        "SELECT setting_key, setting_value FROM {$prefix}settings WHERE setting_key IN ($placeholders)"
+                    );
+                    $stmt->execute($smtpKeys);
+                    $dbSettings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                    
+                    if (!empty($dbSettings['smtp_host'])) {
+                        $settings = $dbSettings;
+                    }
+                } catch (Exception $dbEx) {
+                    // Database settings not available, continue with config file settings
+                    error_log("send_email: Could not load DB email settings: " . $dbEx->getMessage());
+                }
+            }
+            
             // Get SMTP settings or use defaults
             $smtpHost = $settings['smtp_host'] ?? null;
             $smtpPort = $settings['smtp_port'] ?? 587;
