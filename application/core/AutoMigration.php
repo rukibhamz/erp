@@ -2474,9 +2474,10 @@ class AutoMigration {
             if ($stmt->fetchColumn() == 0) {
                 try {
                 // Create Cash Account - usage 'asset' (lowercase) to be safe
+                // Removed is_default as it might missing in older schemas
                 $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
-                    (account_code, account_name, account_type, is_default, status, created_at)
-                    VALUES ('1001', 'Cash', 'asset', 1, 'active', NOW())");
+                    (account_code, account_name, account_type, status, created_at)
+                    VALUES ('1001', 'Cash', 'asset', 'active', NOW())");
                 file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Cash account (1001)\n", FILE_APPEND);
                 } catch (Exception $e) {
                      file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Cash account: " . $e->getMessage() . "\n", FILE_APPEND);
@@ -2490,8 +2491,8 @@ class AutoMigration {
             if ($stmt->fetchColumn() == 0) {
                 try {
                 $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
-                    (account_code, account_name, account_type, is_default, status, created_at)
-                    VALUES ('4001', 'Sales Revenue', 'revenue', 1, 'active', NOW())");
+                    (account_code, account_name, account_type, status, created_at)
+                    VALUES ('4001', 'Sales Revenue', 'revenue', 'active', NOW())");
                 file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Revenue account (4001)\n", FILE_APPEND);
                 } catch (Exception $e) {
                      file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Revenue account: " . $e->getMessage() . "\n", FILE_APPEND);
@@ -2503,8 +2504,8 @@ class AutoMigration {
             if ($stmt->fetchColumn() == 0) {
                 try {
                 $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
-                    (account_code, account_name, account_type, is_default, status, created_at)
-                    VALUES ('2001', 'VAT Liability', 'liability', 1, 'active', NOW())");
+                    (account_code, account_name, account_type, status, created_at)
+                    VALUES ('2001', 'VAT Liability', 'liability', 'active', NOW())");
                 file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Liability account (2001)\n", FILE_APPEND);
                 } catch (Exception $e) {
                      file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Liability account: " . $e->getMessage() . "\n", FILE_APPEND);
