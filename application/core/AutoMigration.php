@@ -371,6 +371,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring POS table columns: " . $e->getMessage());
         }
+        
+        // Ensure essential POS accounts (Cash, Sales, Tax) exist
+        try {
+            $this->ensureEssentialPOSAccounts();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring essential POS accounts: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2441,6 +2448,54 @@ class AutoMigration {
             
         } catch (Exception $e) {
             // Table might not exist yet, which is fine (migrations_pos.php will create it)
+        }
+    }
+
+    /**
+     * Ensure essential accounts for POS exist
+     * 1001 (Cash), Revenue, Liability
+     */
+    private function ensureEssentialPOSAccounts() {
+        try {
+            // Check if accounts table exists
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
+            if (!$stmt || count($stmt->fetchAll()) == 0) {
+                return false;
+            }
+            
+            // Ensure Cash Account (1001)
+            $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE account_code = ?");
+            $stmt->execute(['1001']);
+            if ($stmt->fetchColumn() == 0) {
+                // Create Cash Account
+                $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
+                    (account_code, account_name, account_type, is_default, status, created_at)
+                    VALUES ('1001', 'Cash', 'Assets', 1, 'active', NOW())");
+                error_log("AutoMigration: Created default Cash account (1001)");
+            }
+            
+            // Ensure Sales Revenue Account
+            $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE account_type = 'Revenue' OR account_type = 'Income'");
+            if ($stmt->fetchColumn() == 0) {
+                $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
+                    (account_code, account_name, account_type, is_default, status, created_at)
+                    VALUES ('4001', 'Sales Revenue', 'Revenue', 1, 'active', NOW())");
+                error_log("AutoMigration: Created default Sales Revenue account (4001)");
+            }
+            
+            // Ensure VAT Liability Account
+            $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE account_type = 'Liabilities' OR account_type = 'Liability'");
+            if ($stmt->fetchColumn() == 0) {
+                $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
+                    (account_code, account_name, account_type, is_default, status, created_at)
+                    VALUES ('2001', 'VAT Liability', 'Liabilities', 1, 'active', NOW())");
+                error_log("AutoMigration: Created default VAT Liability account (2001)");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring POS accounts: " . $e->getMessage());
+            return false;
         }
     }
 }
