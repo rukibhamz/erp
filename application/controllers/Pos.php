@@ -31,8 +31,8 @@ class Pos extends Base_Controller {
         $this->taxTypeModel = $this->loadModel('Tax_type_model'); // Use Tax_type_model for erp_tax_types table
         
         // Load Transaction Service
-        // Use APPPATH for application/services
-        require_once APPPATH . 'services/Transaction_service.php';
+        // Use relative path to be safe (APPPATH constant is not defined in this environment)
+        require_once __DIR__ . '/../services/Transaction_service.php';
         $this->transactionService = new Transaction_service();
     }
     
