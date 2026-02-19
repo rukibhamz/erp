@@ -2486,6 +2486,8 @@ class AutoMigration {
                  file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Cash account (1001) already exists\n", FILE_APPEND);
             }
             
+            file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Checking Revenue Account...\n", FILE_APPEND);
+
             // Ensure Sales Revenue Account
             $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE account_type = 'Revenue' OR account_type = 'revenue' OR account_type = 'Income' OR account_type = 'income'");
             if ($stmt && $stmt->fetchColumn() == 0) {

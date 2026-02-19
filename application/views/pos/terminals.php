@@ -97,6 +97,39 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <label class="form-label">Location</label>
                         <input type="text" name="location" class="form-control">
                     </div>
+                    
+                    <hr>
+                    <h6 class="mb-3">Default Accounts (Accounting)</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Default Cash Account</label>
+                        <select name="cash_account_id" class="form-select">
+                            <option value="">Select Cash Account (Optional)</option>
+                            <?php foreach ($accounts['assets'] ?? [] as $acc): ?>
+                                <option value="<?= $acc['id'] ?>"><?= $acc['account_code'] ?> - <?= $acc['account_name'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Used for cash payments.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Default Sales/Revenue Account</label>
+                        <select name="sales_account_id" class="form-select">
+                            <option value="">Select Revenue Account (Optional)</option>
+                            <?php foreach ($accounts['revenue'] ?? [] as $acc): ?>
+                                <option value="<?= $acc['id'] ?>"><?= $acc['account_code'] ?> - <?= $acc['account_name'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                         <small class="text-muted">Used to record sales revenue.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Default Tax Liability Account</label>
+                        <select name="tax_account_id" class="form-select">
+                            <option value="">Select Liability Account (Optional)</option>
+                            <?php foreach ($accounts['liabilities'] ?? [] as $acc): ?>
+                                <option value="<?= $acc['id'] ?>"><?= $acc['account_code'] ?> - <?= $acc['account_name'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                         <small class="text-muted">Used to record tax/VAT liability.</small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

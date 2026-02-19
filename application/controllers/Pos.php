@@ -324,13 +324,19 @@ class Pos extends Base_Controller {
                 $cashAccountId = $cashAccount['id'] ?? null;
             }
             
-            // Get sales revenue account
-            $salesAccount = $this->accountModel->getByType('Revenue');
-            $salesAccountId = $salesAccount[0]['id'] ?? null;
+            // Get sales revenue account (Terminal setting > Default)
+            $salesAccountId = $terminal['sales_account_id'] ?? null;
+            if (!$salesAccountId) {
+                $salesAccount = $this->accountModel->getByType('Revenue');
+                $salesAccountId = $salesAccount[0]['id'] ?? null;
+            }
             
-            // Get tax account
-            $taxAccount = $this->accountModel->getByType('Liabilities');
-            $taxAccountId = $taxAccount[0]['id'] ?? null;
+            // Get tax account (Terminal setting > Default)
+            $taxAccountId = $terminal['tax_account_id'] ?? null;
+            if (!$taxAccountId) {
+                $taxAccount = $this->accountModel->getByType('Liabilities');
+                $taxAccountId = $taxAccount[0]['id'] ?? null;
+            }
             
             // Log account IDs for debugging
             file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Accounting Debug: CashID={$cashAccountId}, SalesID={$salesAccountId}, TaxID={$taxAccountId}\n", FILE_APPEND);
@@ -485,7 +491,10 @@ class Pos extends Base_Controller {
                 'terminal_code' => $terminalCode,
                 'name' => sanitize_input($_POST['name'] ?? ''),
                 'location' => sanitize_input($_POST['location'] ?? ''),
-                'status' => 'active'
+                'status' => 'active',
+                'cash_account_id' => !empty($_POST['cash_account_id']) ? intval($_POST['cash_account_id']) : null,
+                'sales_account_id' => !empty($_POST['sales_account_id']) ? intval($_POST['sales_account_id']) : null,
+                'tax_account_id' => !empty($_POST['tax_account_id']) ? intval($_POST['tax_account_id']) : null
             ];
             
             if ($this->terminalModel->create($data)) {
@@ -499,13 +508,25 @@ class Pos extends Base_Controller {
         
         try {
             $terminals = $this->terminalModel->getAll();
+            // Load accounts for the dropdowns
+            $assets = $this->accountModel->getByType('asset'); // Cash/Bank
+            $revenue = $this->accountModel->getByType('revenue'); // Sales
+            $liabilities = $this->accountModel->getByType('liability'); // Tax
         } catch (Exception $e) {
             $terminals = [];
+            $assets = [];
+            $revenue = [];
+            $liabilities = [];
         }
         
         $data = [
             'page_title' => 'POS Terminals',
             'terminals' => $terminals,
+            'accounts' => [
+                'assets' => $assets,
+                'revenue' => $revenue,
+                'liabilities' => $liabilities
+            ],
             'flash' => $this->getFlashMessage()
         ];
         
