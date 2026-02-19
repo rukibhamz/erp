@@ -128,15 +128,18 @@ class Pos extends Base_Controller {
     }
     
     public function processSale() {
-        $this->requirePermission('pos', 'create');
-        
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('pos');
-        }
-        
-        check_csrf(); // CSRF Protection
-        
+        // Log start of request (to confirm we reach here)
+        file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - START processSale request\n", FILE_APPEND);
+
         try {
+            $this->requirePermission('pos', 'create');
+            
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                redirect('pos');
+            }
+            
+            check_csrf(); // CSRF Protection
+            
             $terminalId = intval($_POST['terminal_id'] ?? 0);
             $customerId = !empty($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
             // Use safe JSON decoding with validation
@@ -244,7 +247,7 @@ class Pos extends Base_Controller {
             $saleId = $this->saleModel->createSale($saleData, $saleItems);
             
             if (!$saleId) {
-                throw new Exception('Failed to create sale');
+                throw new Exception('Failed to create sale in database');
             }
             
             // Update inventory
@@ -257,8 +260,13 @@ class Pos extends Base_Controller {
             }
             
             // Create accounting entries
-            $this->createAccountingEntries($saleId, $totalAmount, $taxAmount, $paymentMethod, $terminalId, $saleItems);
-            
+            try {
+                $this->createAccountingEntries($saleId, $totalAmount, $taxAmount, $paymentMethod, $terminalId, $saleItems);
+            } catch (Exception $e) {
+                error_log('POS Accounting Error: ' . $e->getMessage());
+                // Don't fail the whole sale for accounting error
+            }
+
             // Update session totals
             $session = $this->sessionModel->getOpenSession($terminalId, $this->session['user_id']);
             if ($session) {
@@ -269,6 +277,7 @@ class Pos extends Base_Controller {
             
             // Return success with sale ID for receipt printing
             if (isset($_POST['ajax'])) {
+                header('Content-Type: application/json');
                 echo json_encode([
                     'success' => true,
                     'sale_id' => $saleId,
@@ -280,17 +289,19 @@ class Pos extends Base_Controller {
             
             $this->setFlashMessage('success', 'Sale completed successfully!');
             redirect('pos/receipt/' . $saleId);
-            
-        } catch (Exception $e) {
+
+        } catch (\Throwable $e) {
             $errorMessage = $e->getMessage();
-            file_put_contents('pos_debug.log', date('Y-m-d H:i:s') . " - Error: " . $errorMessage . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
-            error_log('POS processSale error: ' . $errorMessage);
+            $trace = $e->getTraceAsString();
+            
+            file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - EXCEPTION: " . $errorMessage . "\n" . $trace . "\n", FILE_APPEND);
+            error_log('POS processSale fatal error: ' . $errorMessage);
             
             if (isset($_POST['ajax'])) {
                 header('Content-Type: application/json');
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Error processing sale: ' . $errorMessage
+                    'message' => 'Error: ' . $errorMessage
                 ]);
                 exit;
             }
