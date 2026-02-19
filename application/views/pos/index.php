@@ -35,6 +35,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <script>
             // Store items globally for JS access
             const itemsList = <?= json_encode($items) ?>;
+            const csrfToken = '<?= csrf_token() ?>';
         </script>
         <!-- Left Panel - Items & Cart -->
         <div class="col-md-8">
@@ -323,9 +324,14 @@ function processSale() {
     formData.append('discount_amount', document.getElementById('discountAmount').value);
     formData.append('discount_type', document.getElementById('discountType').value);
     formData.append('ajax', '1');
+    formData.append('csrf_token', csrfToken);
     
     fetch('<?= base_url('pos/process') ?>', {
         method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(response => response.json())
