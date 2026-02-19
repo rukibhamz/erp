@@ -6,17 +6,25 @@ class Pos_sale_model extends Base_Model {
     
     public function getNextSaleNumber() {
         try {
-            $result = $this->db->fetchOne(
-                "SELECT MAX(CAST(SUBSTRING(sale_number, 5) AS UNSIGNED)) as max_num 
-                 FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE sale_number LIKE 'POS-%' AND DATE(created_at) = CURDATE()"
-            );
-            $nextNum = ($result['max_num'] ?? 0) + 1;
             $date = date('Ymd');
-            return 'POS-' . $date . '-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
+            $prefix = 'POS-' . $date . '-';
+            
+            // Get the maximum sequence number for today's sales
+            // We look for sales starting with POS-YYYYMMDD- and extract the last 5 digits
+            $result = $this->db->fetchOne(
+                "SELECT MAX(CAST(RIGHT(sale_number, 5) AS UNSIGNED)) as max_num 
+                 FROM `" . $this->db->getPrefix() . $this->table . "` 
+                 WHERE sale_number LIKE ?",
+                [$prefix . '%']
+            );
+            
+            $nextNum = ($result['max_num'] ?? 0) + 1;
+            
+            return $prefix . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
         } catch (Exception $e) {
             error_log('Pos_sale_model getNextSaleNumber error: ' . $e->getMessage());
-            return 'POS-' . date('Ymd') . '-00001';
+            // Fallback unique ID using timestamp if generation fails
+            return 'POS-' . date('YmdHis') . '-' . rand(100, 999);
         }
     }
     
