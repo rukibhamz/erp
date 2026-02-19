@@ -364,6 +364,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error backfilling customer company names: " . $e->getMessage());
         }
+        
+        // Ensure POS tables have required columns (tax_rate, tax_amount, etc.)
+        try {
+            $this->ensurePosTableColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring POS table columns: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2392,6 +2399,48 @@ class AutoMigration {
             }
         } catch (Exception $e) {
             error_log("AutoMigration: backfillCustomerCompanyName error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Ensure POS tables have all required columns
+     * Fixes potential schema mismatch if tables were created by older version
+     */
+    private function ensurePosTableColumns() {
+        try {
+            // Ensure pos_sale_items has tax columns
+            $columns = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}pos_sale_items`")->fetchAll(PDO::FETCH_COLUMN);
+            
+            if (!in_array('tax_rate', $columns)) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}pos_sale_items` ADD COLUMN `tax_rate` DECIMAL(5,2) DEFAULT 0 AFTER `discount_amount`");
+                error_log("AutoMigration: Added tax_rate to pos_sale_items");
+            }
+            
+            if (!in_array('tax_amount', $columns)) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}pos_sale_items` ADD COLUMN `tax_amount` DECIMAL(15,2) DEFAULT 0 AFTER `tax_rate`");
+                error_log("AutoMigration: Added tax_amount to pos_sale_items");
+            }
+            
+            if (!in_array('item_code', $columns)) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}pos_sale_items` ADD COLUMN `item_code` VARCHAR(100) DEFAULT NULL AFTER `item_name`");
+                error_log("AutoMigration: Added item_code to pos_sale_items");
+            }
+            
+            // Ensure pos_sales has discount/tax columns
+            $salesColumns = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}pos_sales`")->fetchAll(PDO::FETCH_COLUMN);
+            
+            if (!in_array('discount_type', $salesColumns)) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}pos_sales` ADD COLUMN `discount_type` ENUM('percentage', 'fixed') DEFAULT 'fixed' AFTER `discount_amount`");
+                error_log("AutoMigration: Added discount_type to pos_sales");
+            }
+            
+            if (!in_array('tax_amount', $salesColumns)) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}pos_sales` ADD COLUMN `tax_amount` DECIMAL(15,2) DEFAULT 0 AFTER `discount_type`");
+                error_log("AutoMigration: Added tax_amount to pos_sales");
+            }
+            
+        } catch (Exception $e) {
+            // Table might not exist yet, which is fine (migrations_pos.php will create it)
         }
     }
 }
