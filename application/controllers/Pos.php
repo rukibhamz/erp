@@ -31,7 +31,8 @@ class Pos extends Base_Controller {
         $this->taxTypeModel = $this->loadModel('Tax_type_model'); // Use Tax_type_model for erp_tax_types table
         
         // Load Transaction Service
-        require_once BASEPATH . 'services/Transaction_service.php';
+        // Use APPPATH for application/services
+        require_once APPPATH . 'services/Transaction_service.php';
         $this->transactionService = new Transaction_service();
     }
     
@@ -331,6 +332,9 @@ class Pos extends Base_Controller {
             $taxAccount = $this->accountModel->getByType('Liabilities');
             $taxAccountId = $taxAccount[0]['id'] ?? null;
             
+            // Log account IDs for debugging
+            file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Accounting Debug: CashID={$cashAccountId}, SalesID={$salesAccountId}, TaxID={$taxAccountId}\n", FILE_APPEND);
+
             if ($cashAccountId && $salesAccountId) {
                 // Prepare journal entry data
                 $journalData = [
@@ -374,6 +378,10 @@ class Pos extends Base_Controller {
                 
                 // Update cash account balance
                 $this->loadModel('Cash_account_model')->updateBalance($cashAccountId, $totalAmount, 'deposit');
+                
+                file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Accounting: Journal posted successfully.\n", FILE_APPEND);
+            } else {
+                file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Accounting Skipped: Missing Cash or Sales Account ID.\n", FILE_APPEND);
             }
             
             // Get walk-in customer if needed
