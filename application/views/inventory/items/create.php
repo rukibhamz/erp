@@ -22,7 +22,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card">
     <div class="card-body">
-        <form action="<?= base_url('inventory/items/create') ?>" >
+        <form action="<?= base_url('inventory/items/create') ?>" method="post">
             <?php echo csrf_field(); ?>
             <ul class="nav nav-tabs mb-4" role="tablist">
                 <li class="nav-item">
@@ -277,7 +277,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             
             <div class="mt-4 d-flex justify-content-end gap-2">
-                <a href="<?= base_url('inventory/items') ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('inventory/items') ?>" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle"></i> Create Item
                 </button>
