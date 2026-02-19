@@ -508,11 +508,34 @@ class Pos extends Base_Controller {
         
         try {
             $terminals = $this->terminalModel->getAll();
-            // Load accounts for the dropdowns
-            $assets = $this->accountModel->getByType('asset'); // Cash/Bank
-            $revenue = $this->accountModel->getByType('revenue'); // Sales
-            $liabilities = $this->accountModel->getByType('liability'); // Tax
+            
+            // Load all active accounts and filter in PHP to ensure we catch them regardless of case/pluralization
+            $allAccounts = $this->accountModel->getFiltered();
+            
+            $assets = [];
+            $revenue = [];
+            $liabilities = [];
+            
+            foreach ($allAccounts as $acc) {
+                $type = strtolower(trim($acc['account_type']));
+                
+                // Assets (Cash/Bank)
+                if (in_array($type, ['asset', 'assets', 'cash', 'bank'])) {
+                    $assets[] = $acc;
+                }
+                
+                // Revenue (Sales)
+                if (in_array($type, ['revenue', 'income', 'sales'])) {
+                    $revenue[] = $acc;
+                }
+                
+                // Liabilities (Tax/VAT)
+                if (in_array($type, ['liability', 'liabilities', 'tax', 'vat'])) {
+                    $liabilities[] = $acc;
+                }
+            }
         } catch (Exception $e) {
+            file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Error loading terminals/accounts: " . $e->getMessage() . "\n", FILE_APPEND);
             $terminals = [];
             $assets = [];
             $revenue = [];
