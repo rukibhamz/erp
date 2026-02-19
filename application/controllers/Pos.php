@@ -419,7 +419,8 @@ class Pos extends Base_Controller {
             
             // Link invoice to sale
             if ($invoiceId) {
-                $this->saleModel->update(['invoice_id' => $invoiceId], "id = ?", [$saleId]);
+                // Base_Model::update($id, $data)
+                $this->saleModel->update($saleId, ['invoice_id' => $invoiceId]);
                 
                 // Add invoice items
                 foreach ($saleItems as $item) {
