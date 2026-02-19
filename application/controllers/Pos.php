@@ -282,9 +282,20 @@ class Pos extends Base_Controller {
             redirect('pos/receipt/' . $saleId);
             
         } catch (Exception $e) {
-            file_put_contents('logs/pos_debug.log', date('Y-m-d H:i:s') . " - Error: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
-            error_log('POS processSale error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error processing sale: ' . $e->getMessage());
+            $errorMessage = $e->getMessage();
+            file_put_contents('pos_debug.log', date('Y-m-d H:i:s') . " - Error: " . $errorMessage . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+            error_log('POS processSale error: ' . $errorMessage);
+            
+            if (isset($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Error processing sale: ' . $errorMessage
+                ]);
+                exit;
+            }
+            
+            $this->setFlashMessage('danger', 'Error processing sale: ' . $errorMessage);
             redirect('pos');
         }
     }
