@@ -28,7 +28,13 @@ class Pos_sale_model extends Base_Model {
             $saleId = $this->create($saleData);
             
             if (!$saleId) {
-                throw new Exception('Failed to create sale');
+                // Check if there's a specific DB error we can log
+                if (method_exists($this->db, 'error')) {
+                    $error = $this->db->error();
+                    error_log('Pos_sale_model createSale DB Error: ' . print_r($error, true));
+                    file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - DBINSERT ERROR: " . print_r($error, true) . "\n", FILE_APPEND);
+                }
+                throw new Exception('Failed to create sale (Insert returned false)');
             }
             
             // Create sale items
@@ -49,7 +55,9 @@ class Pos_sale_model extends Base_Model {
             return $saleId;
         } catch (Exception $e) {
             $this->db->rollBack();
-            error_log('Pos_sale_model createSale error: ' . $e->getMessage());
+            $errorMessage = $e->getMessage();
+            error_log('Pos_sale_model createSale error: ' . $errorMessage);
+            file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Pos_sale_model EXCEPTION: " . $errorMessage . "\n", FILE_APPEND);
             return false;
         }
     }
