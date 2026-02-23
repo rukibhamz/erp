@@ -124,7 +124,30 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Total Amount:</span>
+                            <span class="text-muted">Subtotal:</span>
+                            <span><?= format_currency($booking['subtotal'] ?? 0) ?></span>
+                        </div>
+                        <?php if (($booking['discount_amount'] ?? 0) > 0): ?>
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Discount:</span>
+                            <span>-<?= format_currency($booking['discount_amount']) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (($booking['tax_amount'] ?? 0) > 0): ?>
+                        <div class="d-flex justify-content-between mb-2 text-muted">
+                            <span>Tax <?php if(($booking['tax_rate']??0)>0) echo '('.number_format($booking['tax_rate'], 1).'%)'; ?>:</span>
+                            <span><?= format_currency($booking['tax_amount']) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (($booking['security_deposit'] ?? 0) > 0): ?>
+                        <div class="d-flex justify-content-between mb-2 text-muted">
+                            <span>Security Deposit:</span>
+                            <span><?= format_currency($booking['security_deposit']) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Total Amount:</strong>
                             <strong><?= format_currency($booking['total_amount']) ?></strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">

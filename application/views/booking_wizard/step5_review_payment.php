@@ -164,8 +164,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </option>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
-                                    <option value="cash">Cash (Pay on Site)</option>
-                                    <option value="bank">Bank Transfer</option>
+                                    <option value="cash" <?= empty($gateways) ? 'selected' : '' ?>>Cash (Pay on Site)</option>
+                                    
+                                    <?php if ($has_bank_details ?? false): ?>
+                                        <option value="bank">Bank Transfer</option>
+                                    <?php else: ?>
+                                        <option value="bank" disabled class="text-muted">Bank Transfer (Unavailable)</option>
+                                    <?php endif; ?>
                                 </select>
                             </div>
 

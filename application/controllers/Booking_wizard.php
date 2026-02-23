@@ -105,7 +105,7 @@ class Booking_wizard extends Base_Controller {
             
             // Find active payment gateway (Paystack)
             $gatewayCode = 'paystack';
-            $gatewayPath = BASEPATH . 'libraries/Payment_gateway.php';
+            $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
             
             if (!file_exists($gatewayPath)) {
                 $this->setFlashMessage('danger', 'Payment gateway not available. Please contact support.');
@@ -712,7 +712,30 @@ class Booking_wizard extends Base_Controller {
             $cancellationPolicy = $this->cancellationPolicyModel->getDefault();
             
             // Get available payment gateways
-            $gateways = $this->gatewayModel->getActive();
+        $rawGateways = $this->gatewayModel->getActive();
+        $gateways = [];
+        foreach ($rawGateways as $gw) {
+            if (!empty($gw['public_key']) && (!empty($gw['secret_key']) || !empty($gw['private_key']))) {
+                $gateways[] = $gw;
+            }
+        }
+        
+        // Check if any bank account details are configured
+        $cashAccountModel = $this->loadModel('Cash_account_model');
+        $hasBankDetails = false;
+        if ($cashAccountModel) {
+            try {
+                $cashAccounts = $cashAccountModel->getActive();
+                foreach ($cashAccounts as $account) {
+                    if (!empty($account['bank_name']) && !empty($account['account_number'])) {
+                        $hasBankDetails = true;
+                        break;
+                    }
+                }
+            } catch (Exception $e) {
+                // Ignore errors
+            }
+        }
             
             // Store calculated amounts in session
             $bookingData['base_amount'] = $baseAmount;
@@ -727,6 +750,7 @@ class Booking_wizard extends Base_Controller {
             error_log('Booking_wizard step5 error: ' . $e->getMessage());
             $resource = null;
             $gateways = [];
+            $hasBankDetails = false;
             $cancellationPolicy = null;
         }
 
@@ -735,6 +759,7 @@ class Booking_wizard extends Base_Controller {
             'resource' => $resource,
             'booking_data' => $bookingData,
             'gateways' => $gateways,
+            'has_bank_details' => $hasBankDetails ?? false,
             'cancellation_policy' => $cancellationPolicy,
             'flash' => $this->getFlashMessage()
         ];
@@ -1182,7 +1207,7 @@ class Booking_wizard extends Base_Controller {
                 error_log("FINALIZE: Using gateway: $gatewayCode");
                 
                 // Initialize payment gateway
-                $gatewayPath = BASEPATH . 'libraries/Payment_gateway.php';
+                $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
                 if (!file_exists($gatewayPath)) {
                     $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
                 }
