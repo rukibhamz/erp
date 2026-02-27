@@ -141,6 +141,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <strong>-<?= format_currency($booking_data['discount_amount'] ?? 0) ?></strong>
                                 </div>
                             <?php endif; ?>
+                            <?php if (($booking_data['tax_amount'] ?? 0) > 0): ?>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Tax (<?= number_format($booking_data['tax_rate'] ?? 0, 1) ?>%):</span>
+                                    <strong><?= format_currency($booking_data['tax_amount'] ?? 0) ?></strong>
+                                </div>
+                            <?php endif; ?>
                             <?php if (($booking_data['security_deposit'] ?? 0) > 0): ?>
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Security Deposit:</span>

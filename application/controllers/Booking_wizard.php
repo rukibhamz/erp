@@ -706,7 +706,33 @@ class Booking_wizard extends Base_Controller {
             }
             
             $subtotal = $baseAmount + $addonsTotal;
-            $total = $subtotal - $discountAmount + floatval($resource['security_deposit'] ?? 0);
+            
+            // Calculate tax (VAT) if applicable
+            $taxAmount = 0;
+            $taxRate = 0;
+            try {
+                $taxModel = $this->loadModel('Tax_model');
+                if ($taxModel) {
+                    $vatTax = $taxModel->getByCode('VAT');
+                    if (!$vatTax) {
+                        $activeTaxes = $taxModel->getActive();
+                        if (!empty($activeTaxes)) {
+                            $vatTax = $activeTaxes[0];
+                        }
+                    }
+                    
+                    if ($vatTax) {
+                        $taxCalculation = $taxModel->calculateTax($subtotal - $discountAmount, $vatTax['id']);
+                        $taxAmount = $taxCalculation['tax_amount'] ?? 0;
+                        $taxRate = floatval($vatTax['rate'] ?? 0);
+                    }
+                }
+            } catch (Exception $taxEx) {
+                error_log("Booking_wizard step5: Tax calculation error - " . $taxEx->getMessage());
+                $taxAmount = 0;
+            }
+            
+            $total = $subtotal - $discountAmount + $taxAmount + floatval($resource['security_deposit'] ?? 0);
             
             // Get cancellation policy
             $cancellationPolicy = $this->cancellationPolicyModel->getDefault();
@@ -742,6 +768,8 @@ class Booking_wizard extends Base_Controller {
             $bookingData['addons_total'] = $addonsTotal;
             $bookingData['discount_amount'] = $discountAmount;
             $bookingData['subtotal'] = $subtotal;
+            $bookingData['tax_rate'] = $taxRate;
+            $bookingData['tax_amount'] = $taxAmount;
             $bookingData['total_amount'] = $total;
             $bookingData['security_deposit'] = floatval($resource['security_deposit'] ?? 0);
             $_SESSION['booking_data'] = $bookingData;
