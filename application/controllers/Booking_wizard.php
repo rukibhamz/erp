@@ -639,6 +639,31 @@ class Booking_wizard extends Base_Controller {
             redirect('booking-wizard/step1');
         }
 
+        // Auto-fill from customer portal session if logged in and form fields are empty
+        if (isset($_SESSION['customer_user_id']) && empty($bookingData['customer_email'])) {
+            try {
+                $user = $this->customerPortalUserModel->getById($_SESSION['customer_user_id']);
+                if ($user) {
+                    $bookingData['customer_name'] = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+                    $bookingData['customer_email'] = $user['email'];
+                    $bookingData['customer_phone'] = $user['phone'] ?? '';
+                    
+                    $addressParts = array_filter([
+                        $user['address'] ?? '',
+                        $user['city'] ?? '',
+                        $user['state'] ?? '',
+                        $user['country'] ?? ''
+                    ]);
+                    $bookingData['customer_address'] = implode(', ', $addressParts);
+                    
+                    // Update session with pre-filled data
+                    $_SESSION['booking_data'] = $bookingData;
+                }
+            } catch (Exception $e) {
+                error_log('Failed to load customer profile for auto-fill in booking wizard: ' . $e->getMessage());
+            }
+        }
+
         $data = [
             'page_title' => 'Your Information',
             'booking_data' => $bookingData,

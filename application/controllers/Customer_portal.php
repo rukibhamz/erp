@@ -190,6 +190,15 @@ class Customer_portal extends Base_Controller {
             $result = $this->customerPortalUserModel->authenticate($email, $password, $rememberMe);
             
             if ($result['success']) {
+                // Clear any existing staff session to prevent concurrent logins
+                unset($this->session['user_id']);
+                unset($this->session['username']);
+                unset($this->session['email']);
+                unset($this->session['role']);
+                unset($this->session['first_name']);
+                unset($this->session['last_name']);
+                unset($this->session['last_activity']);
+                
                 // Set session
                 $this->session['customer_user_id'] = $result['user']['id'];
                 $this->session['customer_email'] = $result['user']['email'];

@@ -86,6 +86,11 @@ class Auth extends Base_Controller {
                     // Regenerate session ID to prevent session fixation
                     session_regenerate_id(true);
                     
+                    // Clear any existing customer session to prevent concurrent logins
+                    unset($this->session['customer_user_id']);
+                    unset($this->session['customer_email']);
+                    unset($this->session['customer_name']);
+                    
                     // Set session
                     $this->session['user_id'] = $user['id'];
                     $this->session['username'] = $user['username'];
