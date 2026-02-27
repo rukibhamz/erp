@@ -30,7 +30,7 @@
                 <a href="<?= htmlspecialchars($returnLink) ?>" class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-arrow-left"></i> Return to Website
                 </a>
-                <a href="<?= base_url('customer-portal/login') ?>" class="btn btn-outline-secondary btn-sm">
+                <a href="<?= base_url('customer-portal/login') ?>" class="btn btn-outline-dark btn-sm">
                     <i class="bi bi-person-badge"></i> Customer Login
                 </a>
                 <a href="<?= base_url('login') ?>" class="btn btn-primary btn-sm">
