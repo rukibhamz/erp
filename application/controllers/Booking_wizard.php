@@ -56,8 +56,8 @@ class Booking_wizard extends Base_Controller {
     
     public function index() {
         // Handle payment action for existing bookings from customer portal
-        $bookingId = intval($_GET['booking_id'] ?? 0);
-        $action = $_GET['action'] ?? '';
+        $bookingId = intval(isset($_GET['booking_id']) ? $_GET['booking_id'] : 0);
+        $action = isset($_GET['action']) ? $_GET['action'] : '';
         
         if ($bookingId && $action === 'pay') {
             $this->makePayment($bookingId);
@@ -75,6 +75,7 @@ class Booking_wizard extends Base_Controller {
         $bookingId = intval($bookingId);
         
         if (!$bookingId) {
+            error_log("makePayment redirect: Invalid booking.");
             $this->setFlashMessage('danger', 'Invalid booking.');
             redirect('booking-wizard/step1');
             return;
@@ -85,6 +86,7 @@ class Booking_wizard extends Base_Controller {
             $booking = $this->bookingModel->getById($bookingId);
             
             if (!$booking) {
+                error_log("makePayment redirect: Booking not found for ID $bookingId");
                 $this->setFlashMessage('danger', 'Booking not found.');
                 redirect('booking-wizard/step1');
                 return;
@@ -93,6 +95,7 @@ class Booking_wizard extends Base_Controller {
             // Check if booking has a balance to pay
             $balance = floatval($booking['balance_amount'] ?? $booking['total_amount']);
             if ($balance <= 0) {
+                error_log("makePayment redirect: Booking already fully paid ID $bookingId");
                 $this->setFlashMessage('info', 'This booking is already fully paid.');
                 redirect('customer-portal/bookings');
                 return;

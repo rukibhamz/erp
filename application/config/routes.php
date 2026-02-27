@@ -313,6 +313,7 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         // Public Booking Portal - Enhanced Multi-step Wizard
         // Legacy routes redirect to new wizard
         $route['booking-wizard'] = 'Booking_wizard/step1';
+        $route['booking-wizard/index'] = 'Booking_wizard/index';
         $route['booking-wizard/step1'] = 'Booking_wizard/step1';
 $route['booking-wizard/space/details/(:num)'] = 'Booking_wizard/space_details/$1';
 $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';

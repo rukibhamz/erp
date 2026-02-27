@@ -164,7 +164,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                         <?php if ($booking['balance_amount'] > 0 && $booking['status'] !== 'cancelled'): ?>
                             <hr>
-                            <a href="<?= base_url('booking-wizard?booking_id=' . $booking['id'] . '&action=pay') ?>" 
+                            <a href="<?= base_url('booking-wizard/index?booking_id=' . $booking['id'] . '&action=pay') ?>" 
                                class="btn btn-primary w-100">
                                 <i class="bi bi-credit-card"></i> Make Payment
                             </a>
