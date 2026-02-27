@@ -466,7 +466,7 @@ function runEnhancedMigrations($pdo, $prefix = 'erp_') {
 function insertDefaultAccountingData($pdo, $prefix) {
     // Insert default tax rates
     $defaultTaxes = [
-        ['VAT', 'VAT', 'percentage', 15.00, 0, 'Value Added Tax'],
+        ['VAT', 'VAT', 'percentage', 7.50, 0, 'Value Added Tax'],
         ['Sales Tax', 'ST', 'percentage', 8.00, 0, 'Sales Tax'],
         ['Service Tax', 'SVCTAX', 'percentage', 10.00, 0, 'Service Tax'],
     ];

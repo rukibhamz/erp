@@ -50,6 +50,7 @@ class Booking_wizard extends Base_Controller {
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->entityModel = $this->loadModel('Entity_model');
         $this->customerModel = $this->loadModel('Customer_model');
+        $this->journalEntryModel = $this->loadModel('Journal_entry_model');
     }
     
     public function index() {
@@ -1902,19 +1903,13 @@ class Booking_wizard extends Base_Controller {
             $netRevenue = $subtotal - $discountAmount;
             
             // Get customer-specific AR account or parent AR account
-            // FIX: Use 1200 prefix to match createCustomerLedgerAccount for consistency
             $arAccount = null;
             if ($customerId) {
-                // Try 1200 first (Correct one)
                 $arAccount = $this->accountModel->getByCode('1200-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
-                
-                // Fallback to 1100 if 1200 not found (Legacy support)
                 if (!$arAccount) {
                     $arAccount = $this->accountModel->getByCode('1100-' . str_pad($customerId, 4, '0', STR_PAD_LEFT));
                 }
             }
-            
-            // Fallback to parents
             if (!$arAccount) {
                 $arAccount = $this->accountModel->getByCode('1200');
             }
@@ -1949,40 +1944,16 @@ class Booking_wizard extends Base_Controller {
             }
             
             $bookingRef = $booking['booking_number'] ?? 'Booking #' . $bookingId;
-            
             $transactionCreatedBy = ($booking['booking_source'] ?? '') === 'online' ? null : ($booking['created_by'] ?? null);
             
-            // ✅ Debit Accounts Receivable (customer owes us the TOTAL)
-            $this->transactionModel->create([
-                'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-AR',
-                'account_id' => $arAccount['id'],
-                'transaction_date' => date('Y-m-d'),
-                'debit' => $totalAmount,
-                'credit' => 0,
-                'description' => 'Invoice - ' . $bookingRef,
-                'reference_type' => 'invoice',
-                'reference_id' => $invoiceId,
-                'status' => 'posted',
-                'created_by' => $transactionCreatedBy,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
+            // ✅ Create Journal Entry for invoice (so it appears in Reports & Journal Entries)
+            $journalLines = [
+                ['account_id' => $arAccount['id'], 'description' => 'Accounts Receivable - ' . $bookingRef, 'debit' => $totalAmount, 'credit' => 0],
+                ['account_id' => $revenueAccount['id'], 'description' => 'Booking Revenue - ' . $bookingRef, 'debit' => 0, 'credit' => $netRevenue],
+            ];
             
-            // ✅ Credit Revenue (net amount: subtotal - discount)
-            $this->transactionModel->create([
-                'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-REV',
-                'account_id' => $revenueAccount['id'],
-                'transaction_date' => date('Y-m-d'),
-                'debit' => 0,
-                'credit' => $netRevenue,
-                'description' => 'Booking Revenue - ' . $bookingRef,
-                'reference_type' => 'invoice',
-                'reference_id' => $invoiceId,
-                'status' => 'posted',
-                'created_by' => $transactionCreatedBy,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
-            
-            // ✅ Credit VAT Liability if there is tax
+            // Add VAT line if applicable
+            $vatAccount = null;
             if ($taxAmount > 0) {
                 $vatAccount = $this->accountModel->getByCode('2100');
                 if (!$vatAccount) {
@@ -1997,25 +1968,67 @@ class Booking_wizard extends Base_Controller {
                         }
                     }
                 }
-                
                 if ($vatAccount) {
-                    $this->transactionModel->create([
-                        'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-VAT',
-                        'account_id' => $vatAccount['id'],
-                        'transaction_date' => date('Y-m-d'),
-                        'debit' => 0,
-                        'credit' => $taxAmount,
-                        'description' => 'VAT Liability - ' . $bookingRef,
-                        'reference_type' => 'invoice',
-                        'reference_id' => $invoiceId,
-                        'status' => 'posted',
-                        'created_by' => $transactionCreatedBy,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
+                    $journalLines[] = ['account_id' => $vatAccount['id'], 'description' => 'VAT Liability - ' . $bookingRef, 'debit' => 0, 'credit' => $taxAmount];
                 }
             }
             
-            error_log("recordInvoiceInAccounting: Created entries - AR DR: $totalAmount, Revenue CR: $netRevenue, VAT CR: $taxAmount");
+            // Create journal entry + lines
+            $journalEntryId = $this->createBookingJournalEntry(
+                'booking_invoice:' . $invoiceId,
+                'Invoice for booking: ' . $bookingRef,
+                $totalAmount,
+                $journalLines,
+                $transactionCreatedBy,
+                'sales'
+            );
+            
+            // ✅ Create transactions with journal entry reference
+            $this->transactionModel->create([
+                'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-AR',
+                'account_id' => $arAccount['id'],
+                'transaction_date' => date('Y-m-d'),
+                'debit' => $totalAmount,
+                'credit' => 0,
+                'description' => 'Invoice - ' . $bookingRef,
+                'reference_type' => 'invoice',
+                'reference_id' => $invoiceId,
+                'status' => 'posted',
+                'created_by' => $transactionCreatedBy,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            $this->transactionModel->create([
+                'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-REV',
+                'account_id' => $revenueAccount['id'],
+                'transaction_date' => date('Y-m-d'),
+                'debit' => 0,
+                'credit' => $netRevenue,
+                'description' => 'Booking Revenue - ' . $bookingRef,
+                'reference_type' => 'invoice',
+                'reference_id' => $invoiceId,
+                'status' => 'posted',
+                'created_by' => $transactionCreatedBy,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            if ($taxAmount > 0 && $vatAccount) {
+                $this->transactionModel->create([
+                    'transaction_number' => 'INV-' . date('Ymd') . '-' . str_pad($invoiceId, 6, '0', STR_PAD_LEFT) . '-VAT',
+                    'account_id' => $vatAccount['id'],
+                    'transaction_date' => date('Y-m-d'),
+                    'debit' => 0,
+                    'credit' => $taxAmount,
+                    'description' => 'VAT Liability - ' . $bookingRef,
+                    'reference_type' => 'invoice',
+                    'reference_id' => $invoiceId,
+                    'status' => 'posted',
+                    'created_by' => $transactionCreatedBy,
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
+            }
+            
+            error_log("recordInvoiceInAccounting: Created entries + journal - AR DR: $totalAmount, Revenue CR: $netRevenue, VAT CR: $taxAmount");
             
         } catch (Exception $e) {
             error_log("recordInvoiceInAccounting error: " . $e->getMessage());
@@ -2074,14 +2087,30 @@ class Booking_wizard extends Base_Controller {
             $bookingRef = $booking['booking_number'] ?? 'Booking #' . $bookingId;
             $transactionCreatedBy = ($booking['booking_source'] ?? '') === 'online' ? null : ($booking['created_by'] ?? null);
             
-            // ✅ Debit Cash (money received)
+            // ✅ Create Journal Entry for payment (so it appears in Reports & Journal Entries)
+            $journalLines = [
+                ['account_id' => $cashAccount['id'], 'description' => 'Online payment received for booking: ' . $bookingRef, 'debit' => $amount, 'credit' => 0],
+                ['account_id' => $arAccount['id'], 'description' => 'Payment received - booking: ' . $bookingRef, 'debit' => 0, 'credit' => $amount],
+            ];
+            
+            $invoiceRef = $invoice ? $invoice['invoice_number'] : 'BKG-' . $bookingId;
+            $journalEntryId = $this->createBookingJournalEntry(
+                'booking_payment:' . $bookingId,
+                'Payment for ' . $invoiceRef . ' - ' . $bookingRef,
+                $amount,
+                $journalLines,
+                $transactionCreatedBy,
+                'cash'
+            );
+            
+            // ✅ Create transactions
             $this->transactionModel->create([
                 'transaction_number' => 'PAY-' . date('Ymd') . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT) . '-CASH',
                 'account_id' => $cashAccount['id'],
                 'transaction_date' => date('Y-m-d'),
                 'debit' => $amount,
                 'credit' => 0,
-                'description' => 'Payment received - ' . $bookingRef . ' (' . $reference . ')',
+                'description' => 'Online payment received for booking: ' . $bookingRef,
                 'reference_type' => 'booking_payment',
                 'reference_id' => $bookingId,
                 'status' => 'posted',
@@ -2089,14 +2118,13 @@ class Booking_wizard extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ]);
             
-            // ✅ Credit Accounts Receivable (debt cleared)
             $this->transactionModel->create([
                 'transaction_number' => 'PAY-' . date('Ymd') . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT) . '-AR',
                 'account_id' => $arAccount['id'],
                 'transaction_date' => date('Y-m-d'),
                 'debit' => 0,
                 'credit' => $amount,
-                'description' => 'Payment received - ' . $bookingRef,
+                'description' => 'Payment received - booking: ' . $bookingRef,
                 'reference_type' => 'booking_payment',
                 'reference_id' => $bookingId,
                 'status' => 'posted',
@@ -2145,12 +2173,81 @@ class Booking_wizard extends Base_Controller {
                 $this->updateCustomerBalance($customerId);
             }
             
-            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Payment recording complete: Cash DR $amount, AR CR $amount\n", FILE_APPEND);
-            error_log("recordPaymentInAccounting: Recorded payment - Cash DR: $amount, AR CR: $amount");
+            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Payment recording complete: Cash DR $amount, AR CR $amount, JE: $journalEntryId\n", FILE_APPEND);
+            error_log("recordPaymentInAccounting: Recorded payment - Cash DR: $amount, AR CR: $amount, JE: $journalEntryId");
             
         } catch (Exception $e) {
             @file_put_contents($logFile, "ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
             error_log("recordPaymentInAccounting error: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Create a journal entry with lines for booking accounting
+     * This ensures booking transactions appear in Journal Entries and Reports
+     * @param string $reference Reference identifier
+     * @param string $description Journal entry description
+     * @param float $amount Total amount
+     * @param array $lines Array of line items with account_id, description, debit, credit
+     * @param int|null $createdBy User ID
+     * @param string $journalType Type: sales, cash, general
+     * @return int|null Journal entry ID
+     */
+    private function createBookingJournalEntry($reference, $description, $amount, $lines, $createdBy = null, $journalType = 'general') {
+        try {
+            if (!$this->journalEntryModel) {
+                error_log("createBookingJournalEntry: Journal_entry_model not loaded");
+                return null;
+            }
+            
+            // Generate entry number
+            $entryNumber = $this->journalEntryModel->getNextEntryNumber();
+            
+            // Create journal entry - directly as 'posted' for booking transactions
+            $entryId = $this->journalEntryModel->create([
+                'entry_number' => $entryNumber,
+                'entry_date' => date('Y-m-d'),
+                'reference' => $reference,
+                'description' => $description,
+                'amount' => $amount,
+                'status' => 'posted',
+                'posted_by' => $createdBy,
+                'posted_at' => date('Y-m-d H:i:s'),
+                'created_by' => $createdBy,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            
+            if (!$entryId) {
+                error_log("createBookingJournalEntry: Failed to create journal entry");
+                return null;
+            }
+            
+            // Try to set journal_type if the column exists
+            try {
+                $this->db->query(
+                    "UPDATE `" . $this->db->getPrefix() . "journal_entries` SET journal_type = ? WHERE id = ?",
+                    [$journalType, $entryId]
+                );
+            } catch (Exception $e) {
+                // journal_type column may not exist
+            }
+            
+            // Add journal entry lines
+            foreach ($lines as $line) {
+                $this->journalEntryModel->addLine($entryId, [
+                    'account_id' => $line['account_id'],
+                    'description' => $line['description'] ?? '',
+                    'debit' => $line['debit'] ?? 0,
+                    'credit' => $line['credit'] ?? 0
+                ]);
+            }
+            
+            error_log("createBookingJournalEntry: Created JE $entryNumber (ID: $entryId) with " . count($lines) . " lines");
+            return $entryId;
+            
+        } catch (Exception $e) {
+            error_log("createBookingJournalEntry error: " . $e->getMessage());
+            return null;
         }
     }
 

@@ -6,9 +6,10 @@ class Customer_model extends Base_Model {
     
     public function getNextCustomerCode() {
         $result = $this->db->fetchOne(
-            "SELECT MAX(CAST(SUBSTRING(customer_code, 5) AS UNSIGNED)) as max_code 
+            "SELECT MAX(CAST(SUBSTRING(customer_code, 6) AS UNSIGNED)) as max_code 
              FROM `" . $this->db->getPrefix() . $this->table . "` 
-             WHERE customer_code LIKE 'CUST-%'"
+             WHERE customer_code LIKE 'CUST-%' 
+             AND customer_code REGEXP '^CUST-[0-9]+$'"
         );
         $nextNum = ($result['max_code'] ?? 0) + 1;
         return 'CUST-' . str_pad($nextNum, 5, '0', STR_PAD_LEFT);
