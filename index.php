@@ -6,6 +6,7 @@
 
 // Define base path
 define('BASEPATH', __DIR__ . '/application/');
+define('APPPATH', __DIR__ . '/application/');
 define('ROOTPATH', __DIR__ . '/');
 define('SYSPATH', __DIR__ . '/application/core/');
 
