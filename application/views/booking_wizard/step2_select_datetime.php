@@ -532,14 +532,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     currentSlotsData = data.slots || [];
+                    const occupiedData = data.occupied || [];
                     
-                    // Also store occupied for reference if needed, but render logic mainly cares about availablity
-                    // For contiguous checking we need to know all slots in order. 
-                    // Current API returns valid slots and occupied slots separately. This makes "gap" checking hard.
-                    // Ideally we should merge them or assume they are derived from a full day grid.
-                    // Facility_model generates 'allSlots' then filters.
-                    
-                    renderTimeSlots(currentSlotsData);
+                    renderTimeSlots(currentSlotsData, occupiedData);
                 } else {
                      timeSlotsContainer.innerHTML = `<div class="col-12"><div class="alert alert-warning">${data.message || 'No available time slots.'}</div></div>`;
                      selectedTimeSummary.style.display = 'none';
@@ -787,9 +782,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function renderTimeSlots(slots) {
+    function renderTimeSlots(slots, occupiedSlots = []) {
         let html = '';
         let availableCount = 0;
+        let renderedBoxes = [];
         
         // Helper to parsing HH:mm
         const parseTime = (t) => {
@@ -812,10 +808,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
         };
 
-        // Allow selection of slots where (slot_start) -> (slot_start + duration) is fully available
-        // Since `slots` only contains AVAILABLE slots (without gaps?), we need to be careful.
-        // We really need to know if the consecutive slots exist in `slots`.
-        
         // Sort slots by start time to be sure
         slots.sort((a, b) => parseTime(a.start) - parseTime(b.start));
         
@@ -825,14 +817,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const targetEndMin = startMin + (selectedDuration * 60);
             
             // Check availability for full duration
-            // We need to find if all 60-min blocks between startMin and targetEndMin exist in 'slots'
             let isFeasible = true;
             
             if (selectedDuration > 1) {
                 for (let i = 1; i < selectedDuration; i++) {
                     const requiredStart = startMin + (i * 60); // Start of next hour
-                    // Find a slot that starts at requiredStart
-                    // We assume slots are atomic 1-hour slots from backend
                     const foundNext = slots.find(s => parseTime(s.start) === requiredStart && s.date === slot.date);
                     if (!foundNext) {
                         isFeasible = false;
@@ -841,12 +830,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            if (isFeasible && targetEndMin <= 24 * 60) { // must end within same day logic? Backend seems to split days
+            if (isFeasible && targetEndMin <= 24 * 60) { // must end within same day logic
                 availableCount++;
                 const endDisplay = formatDisplayTime(targetEndMin);
                 const endDbStr = formatTime(targetEndMin);
                 
-                html += `
+                renderedBoxes.push({
+                    startMin: startMin,
+                    html: `
                     <div class="col-md-6 col-lg-4">
                         <button type="button" class="btn btn-outline-success w-100 time-slot-btn available-slot" 
                                 data-start="${slot.start}" 
@@ -857,15 +848,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="fw-bold">${slot.display.split('-')[0]} - ${endDisplay}</span>
                             <div class="small text-success">${selectedDuration} Hour${selectedDuration > 1 ? 's' : ''}</div>
                         </button>
-                    </div>
-                `;
+                    </div>`
+                });
             }
         });
         
         if (availableCount === 0) {
+             let warningHtml = '';
              // If no consecutive slots available for the duration, show all available 1-hour slots as alternative
              if (selectedDuration > 1 && slots.length > 0) {
-                 html = `<div class="col-12"><div class="alert alert-warning mb-3">
+                 warningHtml = `<div class="col-12"><div class="alert alert-warning mb-3">
                     <strong>No ${selectedDuration}-hour consecutive slots available.</strong><br>
                     Try selecting a shorter duration, or choose from the available individual hours below:
                  </div></div>`;
@@ -877,7 +869,9 @@ document.addEventListener('DOMContentLoaded', function() {
                      const endDisplay = formatDisplayTime(endMin);
                      const endDbStr = formatTime(endMin);
                      
-                     html += `
+                     renderedBoxes.push({
+                         startMin: startMin,
+                         html: `
                          <div class="col-md-6 col-lg-4">
                              <button type="button" class="btn btn-outline-info w-100 time-slot-btn available-slot" 
                                      data-start="${slot.start}" 
@@ -889,17 +883,55 @@ document.addEventListener('DOMContentLoaded', function() {
                                  <span class="fw-bold">${slot.display.split('-')[0]} - ${endDisplay}</span>
                                  <div class="small text-info">1 Hour</div>
                              </button>
-                         </div>
-                     `;
+                         </div>`
+                     });
                  });
              } else {
-                 html = `<div class="col-12"><div class="alert alert-warning">
-                    No time slots available on this date. Please try a different date.
+                 warningHtml = `<div class="col-12"><div class="alert alert-warning">
+                    No available time slots on this date. Please try a different date.
                  </div></div>`;
+             }
+             
+             if (warningHtml) {
+                 renderedBoxes.push({ startMin: -1, html: warningHtml });
              }
         }
         
-        timeSlotsContainer.innerHTML = html;
+        occupiedSlots.forEach(slot => {
+            const startMin = parseTime(slot.start);
+            const actualEndStr = slot.end; 
+            
+            if (slot.is_buffer) {
+                 renderedBoxes.push({
+                     startMin: startMin,
+                     html: `
+                     <div class="col-md-6 col-lg-4">
+                         <button type="button" class="btn btn-warning w-100 time-slot-btn" disabled style="min-height: 60px;">
+                             <small class="d-block text-dark">${slot.date === todayDate ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
+                             <span class="fw-bold text-dark">${slot.display.split('-')[0]} - ${formatDisplayTime(parseTime(actualEndStr))}</span>
+                             <div class="small text-dark fw-bold">Buffer</div>
+                         </button>
+                     </div>`
+                 });
+            } else {
+                 renderedBoxes.push({
+                     startMin: startMin,
+                     html: `
+                     <div class="col-md-6 col-lg-4">
+                         <button type="button" class="btn btn-danger w-100 time-slot-btn" disabled style="min-height: 60px;">
+                             <small class="d-block text-white">${slot.date === todayDate ? 'Today' : new Date(slot.date).toLocaleDateString()}</small>
+                             <span class="fw-bold">${slot.display.split('-')[0]} - ${formatDisplayTime(parseTime(actualEndStr))}</span>
+                             <div class="small text-white">Occupied</div>
+                         </button>
+                     </div>`
+                 });
+            }
+        });
+        
+        // Sort boxes by startMin
+        renderedBoxes.sort((a, b) => a.startMin - b.startMin);
+        
+        timeSlotsContainer.innerHTML = renderedBoxes.map(b => b.html).join('');
         
         // Add click handlers
          document.querySelectorAll('.available-slot').forEach(btn => {

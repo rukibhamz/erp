@@ -465,6 +465,7 @@ class Facility_model extends Base_Model {
                         $isOccupied = false;
                         $occupier = null;
                         $bookingData = null;
+                        $isBuffer = false;
                         
                         foreach ($occupiedSlots as $occupied) {
                             if ($occupied['date'] == $currentDay) {
@@ -473,6 +474,24 @@ class Facility_model extends Base_Model {
                                     $isOccupied = true;
                                     $occupier = $occupied['customer_name'];
                                     $bookingData = $occupied['booking'];
+                                    
+                                    // Determine if it's buffer or actual occupied
+                                    if ($bookingData) {
+                                        $actualStart = substr($bookingData['start_time'], 0, 5);
+                                        $actualEnd = substr($bookingData['end_time'], 0, 5);
+                                        $actualDate = $bookingData['booking_date'];
+                                        
+                                        // If date matches, check time overlap. If it's a multi-day booking, checking time gets complex, 
+                                        // but for hourly buffers, it's usually same day.
+                                        if ($actualDate == $currentDay) {
+                                            $overlapsActual = ($slotStartStr < $actualEnd && $slotEndStr > $actualStart);
+                                            $isBuffer = !$overlapsActual;
+                                        } else {
+                                            // Spanning days, assume actual occupied if within range
+                                            $isBuffer = false; 
+                                        }
+                                    }
+                                    
                                     break;
                                 }
                             }
@@ -483,6 +502,7 @@ class Facility_model extends Base_Model {
                             'start' => $slotStartStr,
                             'end' => $slotEndStr,
                             'available' => !$isOccupied,
+                            'is_buffer' => $isBuffer,
                             'occupied_by' => $occupier,
                             'booking' => $bookingData,
                             'display' => $slotStartDT->format('g:i A') . ' - ' . $slotEndDT->format('g:i A')
