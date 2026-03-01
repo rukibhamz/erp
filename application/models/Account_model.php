@@ -50,7 +50,11 @@ class Account_model extends Base_Model {
                 $params[] = "%$search%";
             }
             
-            $sql .= " ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code";
+            if ($this->hasAccountNumberColumn()) {
+                $sql .= " ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code";
+            } else {
+                $sql .= " ORDER BY account_code";
+            }
             
             return $this->db->fetchAll($sql, $params);
         } catch (Exception $e) {
@@ -68,11 +72,15 @@ class Account_model extends Base_Model {
             else if ($normalizedType === 'liabilities') $normalizedType = 'liability';
             else if ($normalizedType === 'expenses') $normalizedType = 'expense';
 
-            // Order by account_number if available, otherwise by account_code
+            // Order by account_number if column exists, otherwise by account_code
+            $orderBy = $this->hasAccountNumberColumn()
+                ? "COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code"
+                : "account_code";
+
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
                  WHERE (account_type = ? OR account_type = ?) AND status = 'active' 
-                 ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code",
+                 ORDER BY {$orderBy}",
                 [$normalizedType, $type]
             );
         } catch (Exception $e) {
@@ -92,17 +100,23 @@ class Account_model extends Base_Model {
             $params[] = $parentId;
         }
         
-        $sql .= " AND status = 'active' ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code";
+        $orderBy = $this->hasAccountNumberColumn()
+            ? "COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code"
+            : "account_code";
+        $sql .= " AND status = 'active' ORDER BY {$orderBy}";
         
         return $this->db->fetchAll($sql, $params);
     }
     
     public function getChildren($parentId) {
         try {
+            $orderBy = $this->hasAccountNumberColumn()
+                ? "COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code"
+                : "account_code";
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
                  WHERE parent_account_id = ? AND status = 'active' 
-                 ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code",
+                 ORDER BY {$orderBy}",
                 [$parentId]
             );
         } catch (Exception $e) {
@@ -272,13 +286,23 @@ class Account_model extends Base_Model {
     public function search($query) {
         try {
             $searchTerm = "%{$query}%";
-            return $this->db->fetchAll(
-                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE (account_code LIKE ? OR account_name LIKE ? OR account_number LIKE ?) AND status = 'active' 
-                 ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code
-                 LIMIT 50",
-                [$searchTerm, $searchTerm, $searchTerm]
-            );
+            if ($this->hasAccountNumberColumn()) {
+                return $this->db->fetchAll(
+                    "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                     WHERE (account_code LIKE ? OR account_name LIKE ? OR account_number LIKE ?) AND status = 'active' 
+                     ORDER BY COALESCE(CAST(account_number AS UNSIGNED), 9999), account_code
+                     LIMIT 50",
+                    [$searchTerm, $searchTerm, $searchTerm]
+                );
+            } else {
+                return $this->db->fetchAll(
+                    "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
+                     WHERE (account_code LIKE ? OR account_name LIKE ?) AND status = 'active' 
+                     ORDER BY account_code
+                     LIMIT 50",
+                    [$searchTerm, $searchTerm]
+                );
+            }
         } catch (Exception $e) {
             error_log('Account_model search error: ' . $e->getMessage());
             return [];

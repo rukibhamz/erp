@@ -258,7 +258,7 @@ class Reports extends Base_Controller {
                 
                 // Determine if debit or credit based on account type
                 $accountType = $account['account_type'];
-                if (in_array($accountType, ['Assets', 'Expenses'])) {
+                if (in_array(strtolower($accountType), ['assets', 'asset', 'expenses', 'expense'])) {
                     $debit = abs($balance);
                 } else {
                     $credit = abs($balance);
@@ -601,7 +601,7 @@ class Reports extends Base_Controller {
              FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
              JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
              JOIN `" . $this->db->getPrefix() . "accounts` a ON jel.account_id = a.id
-             WHERE a.account_type = 'Revenue' 
+             WHERE a.account_type IN ('Revenue', 'income') 
              AND je.entry_date BETWEEN ? AND ?
              AND je.status = 'posted'",
             [$startDate, $endDate]
@@ -612,7 +612,7 @@ class Reports extends Base_Controller {
              FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
              JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
              JOIN `" . $this->db->getPrefix() . "accounts` a ON jel.account_id = a.id
-             WHERE a.account_type = 'Expenses' 
+             WHERE a.account_type IN ('Expenses', 'expense') 
              AND je.entry_date BETWEEN ? AND ?
              AND je.status = 'posted'",
             [$startDate, $endDate]

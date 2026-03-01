@@ -73,7 +73,7 @@ class Balance_calculator {
             $credit = floatval($entry['credit']);
             
             // For Assets and Expenses: Debit increases, Credit decreases
-            if (in_array($accountType, ['Assets', 'Expenses'])) {
+            if (in_array(strtolower($accountType), ['assets', 'asset', 'expenses', 'expense'])) {
                 $balance += $debit - $credit;
             }
             // For Liabilities, Equity, Revenue: Credit increases, Debit decreases
