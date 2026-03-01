@@ -809,7 +809,9 @@ class Bookings extends Base_Controller {
                     $defaultCashAccount = $this->cashAccountModel->getDefault();
                     if ($defaultCashAccount) {
                         // Debit Cash/Bank (asset increases)
+                        $payTxnBase = 'PAY-' . date('Ymd') . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT);
                         $this->transactionModel->create([
+                            'transaction_number' => $payTxnBase . '-CASH',
                             'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
                             'debit' => $amount,
                             'credit' => 0,
@@ -829,6 +831,7 @@ class Bookings extends Base_Controller {
                             $arAccount = $this->accountModel->getByCode('1200');
                             if ($arAccount) {
                                 $this->transactionModel->create([
+                                    'transaction_number' => $payTxnBase . '-AR',
                                     'account_id' => $arAccount['id'],
                                     'debit' => 0,
                                     'credit' => $amount,

@@ -831,7 +831,9 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                             $defaultCashAccount = !empty($activeAccounts) ? $activeAccounts[0] : null;
                             if ($defaultCashAccount) {
                                 // Debit cash account (cash increases)
+                                $payTxnBase = 'PAY-' . date('Ymd') . '-' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT);
                                 $this->transactionModel->create([
+                                    'transaction_number' => $payTxnBase . '-CASH',
                                     'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
                                     'debit' => $transaction['amount'],
                                     'credit' => 0,
@@ -869,6 +871,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                                         
                                         if ($arAccount) {
                                             $this->transactionModel->create([
+                                                'transaction_number' => $payTxnBase . '-AR',
                                                 'account_id' => $arAccount['id'],
                                                 'debit' => 0,
                                                 'credit' => $transaction['amount'],
@@ -885,6 +888,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                                             $revenueAccount = $this->accountModel->getByCode('4100') ?? $this->accountModel->getByCode('4000');
                                             if ($revenueAccount) {
                                                 $this->transactionModel->create([
+                                                    'transaction_number' => $payTxnBase . '-REV',
                                                     'account_id' => $revenueAccount['id'],
                                                     'debit' => 0,
                                                     'credit' => $transaction['amount'],
