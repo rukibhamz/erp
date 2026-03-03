@@ -150,7 +150,7 @@ include(BASEPATH . 'views/tax/_nav.php');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.getElementById('taxRatesForm')?.addEventListener('submit', function(e) {
     const form = this;
     const rates = form.querySelectorAll('input[name^="tax_rates"]');

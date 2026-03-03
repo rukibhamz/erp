@@ -98,7 +98,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('customer-info-form');
     

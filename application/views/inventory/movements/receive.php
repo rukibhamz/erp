@@ -97,7 +97,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function calculateTotal() {
     const quantity = parseFloat(document.getElementById('quantity').value) || 0;
     const unitCost = parseFloat(document.getElementById('unit_cost').value) || 0;

@@ -128,7 +128,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function checkAvailability() {
     const spaceId = document.getElementById('space_id').value;
     const bookingDate = document.getElementById('booking_date').value;

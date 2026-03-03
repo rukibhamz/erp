@@ -109,6 +109,16 @@ class Profile extends Base_Controller {
             return;
         }
         
+        // SECURITY: Enforce password complexity
+        if (strlen($newPassword) < 8) {
+            $this->setFlashMessage('danger', 'Password must be at least 8 characters long.');
+            return;
+        }
+        if (!preg_match('/[A-Z]/', $newPassword) || !preg_match('/[a-z]/', $newPassword) || !preg_match('/[0-9]/', $newPassword)) {
+            $this->setFlashMessage('danger', 'Password must contain at least one uppercase letter, one lowercase letter, and one number.');
+            return;
+        }
+        
         $user = $this->userModel->getById($userId);
         if (!password_verify($currentPassword, $user['password'])) {
             $this->setFlashMessage('danger', 'Current password is incorrect.');
@@ -120,7 +130,9 @@ class Profile extends Base_Controller {
             $this->activityModel->log($userId, 'password_changed', 'Profile');
             $this->setFlashMessage('success', 'Password changed successfully.');
         } catch (Exception $e) {
-            $this->setFlashMessage('danger', $e->getMessage());
+            // SECURITY: Don't leak exception details to users
+            error_log('Password change error for user ' . $userId . ': ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to change password. Please try again.');
         }
     }
     
@@ -131,10 +143,11 @@ class Profile extends Base_Controller {
         }
         
         $file = $_FILES['avatar'];
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
         
-        if (!in_array($file['type'], $allowedTypes)) {
-            $this->setFlashMessage('danger', 'Invalid file type. Only JPEG, PNG, and GIF are allowed.');
+        // SECURITY: Use server-side MIME detection instead of trusting client data
+        $validation = validateFileUpload($file, ['image/jpeg', 'image/png', 'image/gif']);
+        if (!$validation['valid']) {
+            $this->setFlashMessage('danger', $validation['error']);
             return;
         }
         
@@ -169,6 +182,15 @@ class Profile extends Base_Controller {
     
     public function terminateSession($sessionId) {
         $userId = $this->session['user_id'];
+        
+        // SECURITY: Verify the session belongs to the current user (prevent IDOR)
+        $targetSession = $this->sessionModel->getById($sessionId);
+        if (!$targetSession || ($targetSession['user_id'] ?? null) != $userId) {
+            $this->setFlashMessage('danger', 'Session not found or access denied.');
+            redirect('profile');
+            return;
+        }
+        
         $this->sessionModel->destroySession($sessionId);
         $this->setFlashMessage('success', 'Session terminated.');
         redirect('profile');

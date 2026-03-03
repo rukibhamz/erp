@@ -209,7 +209,8 @@ class Customer_portal extends Base_Controller {
                 
                 // Set remember me cookie
                 if ($rememberMe && isset($result['user']['remember_token'])) {
-                    setcookie('customer_remember_token', $result['user']['remember_token'], time() + (86400 * 30), '/'); // 30 days
+                    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+                    setcookie('customer_remember_token', $result['user']['remember_token'], time() + (86400 * 30), '/', '', $isHttps, true); // 30 days, httponly, secure
                 }
                 
                 $this->setFlashMessage('success', 'Welcome back!');

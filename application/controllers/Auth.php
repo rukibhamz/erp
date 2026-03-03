@@ -268,7 +268,9 @@ class Auth extends Base_Controller {
                 $this->setFlashMessage('success', 'Password has been reset successfully. Please login.');
                 redirect('login');
             } catch (Exception $e) {
-                $this->setFlashMessage('danger', $e->getMessage());
+                // SECURITY: Don't leak exception details to users
+                error_log('Password reset error for user ' . $user['id'] . ': ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to reset password. Please try again.');
                 redirect('auth/resetPassword?token=' . $token);
             }
         }
@@ -307,6 +309,9 @@ class Auth extends Base_Controller {
             $user = $this->userModel->getByRememberToken($token);
             
             if ($user) {
+                // SECURITY: Regenerate session ID on auto-login to prevent session fixation
+                session_regenerate_id(true);
+                
                 // Auto-login
                 $this->session['user_id'] = $user['id'];
                 $this->session['username'] = $user['username'];

@@ -41,7 +41,8 @@ class Cache_manager {
             return null;
         }
         
-        $data = unserialize(file_get_contents($filename));
+        // SECURITY: Use json_decode instead of unserialize to prevent PHP object injection
+        $data = json_decode(file_get_contents($filename), true);
         
         // Check if expired
         if ($data['expires'] < time()) {
@@ -74,7 +75,8 @@ class Cache_manager {
             'created' => time()
         ];
         
-        return file_put_contents($filename, serialize($data), LOCK_EX) !== false;
+        // SECURITY: Use json_encode instead of serialize to prevent object injection on read
+        return file_put_contents($filename, json_encode($data), LOCK_EX) !== false;
     }
     
     /**
@@ -121,7 +123,7 @@ class Cache_manager {
         $deleted = 0;
         
         foreach ($files as $file) {
-            $data = unserialize(file_get_contents($file));
+            $data = json_decode(file_get_contents($file), true);
             
             if ($data['expires'] < time()) {
                 if (unlink($file)) {
@@ -167,7 +169,7 @@ class Cache_manager {
         
         foreach ($files as $file) {
             $total_size += filesize($file);
-            $data = unserialize(file_get_contents($file));
+            $data = json_decode(file_get_contents($file), true);
             
             if ($data['expires'] < time()) {
                 $expired++;

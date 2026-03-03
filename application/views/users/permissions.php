@@ -89,7 +89,7 @@ $userPermissions = $userPermissions ?? [];
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function selectAll() {
     const checkboxes = document.querySelectorAll('input[name="permissions[]"]');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);

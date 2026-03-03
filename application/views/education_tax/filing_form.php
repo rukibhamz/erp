@@ -70,7 +70,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.getElementById('profit').addEventListener('input', function() {
     const profit = parseFloat(this.value) || 0;
     const rate = parseFloat(document.getElementById('rate').value) || 2.5;

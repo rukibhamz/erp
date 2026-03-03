@@ -193,7 +193,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     let itemIndex = <?= count($items) ?>;
     

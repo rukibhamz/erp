@@ -29,7 +29,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 // Session timeout configuration
 const SESSION_TIMEOUT = <?= $this->config->item('sess_expiration') ?? 3600 ?>; // seconds
 const WARNING_TIME = 300; // Show warning 5 minutes before timeout

@@ -178,7 +178,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 let itemIndex = 1;
 
 // Define tax options from PHP

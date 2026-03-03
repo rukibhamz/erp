@@ -108,7 +108,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 const bookValue = <?= floatval($asset['current_value'] ?? 0) ?>;
 
 function calculateGainLoss() {

@@ -25,7 +25,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="ERP">
     
-    <script>
+    <script nonce="<?= csp_nonce() ?>">
         // Initialize theme before page loads to prevent flash
         (function() {
             const theme = localStorage.getItem('theme') || 'light';

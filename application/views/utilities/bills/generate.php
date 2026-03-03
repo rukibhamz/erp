@@ -106,7 +106,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const meterSelect = document.getElementById('meter_id');
     const previousReadingInput = document.getElementById('previous_reading');

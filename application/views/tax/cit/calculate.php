@@ -94,7 +94,7 @@ include(BASEPATH . 'views/tax/_nav.php');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 let adjustmentCount = 1;
 
 document.getElementById('add-adjustment').addEventListener('click', function() {

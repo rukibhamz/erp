@@ -192,7 +192,7 @@ include(BASEPATH . 'views/tax/_nav.php');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function showTaxBands(bands) {
     const tbody = document.getElementById('taxBandsBody');
     tbody.innerHTML = '';

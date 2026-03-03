@@ -194,7 +194,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function exportReport(format) {
     const vendorId = document.getElementById('vendor_id').value;
     const status = document.getElementById('status').value;

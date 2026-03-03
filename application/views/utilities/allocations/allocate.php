@@ -195,7 +195,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     let allocationIndex = <?= count($allocations) ?>;
     const totalAmount = <?= floatval($bill['total_amount'] ?? 0) ?>;

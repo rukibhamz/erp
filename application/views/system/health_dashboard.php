@@ -146,7 +146,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function refreshHealth() {
     $.get('<?= base_url('system_health/ajax_get_health') ?>', function(response) {
         if (response.success) {

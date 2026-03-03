@@ -153,7 +153,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function toggleInventory() {
     const checkbox = document.getElementById('inventory_tracked');
     const fields = document.getElementById('inventory_fields');

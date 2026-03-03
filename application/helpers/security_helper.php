@@ -249,14 +249,56 @@ function set_security_headers($strictCsp = false) {
     // Permissions Policy (formerly Feature-Policy)
     header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
     
-    // Content Security Policy
-    if ($strictCsp) {
-        // Strict CSP - may break some functionality
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://js.paystack.co https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' https://api.paystack.co https://cdn.jsdelivr.net https://cloudflareinsights.com; frame-ancestors 'none';");
-    } else {
-        // Relaxed CSP - allows inline scripts/styles for compatibility
-        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://js.paystack.co https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; connect-src 'self' https://api.paystack.co https://cdn.jsdelivr.net https://cloudflareinsights.com; frame-ancestors 'none';");
+    // SECURITY: Generate CSP nonce for this request
+    // This allows inline scripts with the correct nonce while blocking injected scripts
+    $nonce = generate_csp_nonce();
+    
+    // Content Security Policy with nonce-based script protection
+    // - Scripts: only allowed with matching nonce (no more unsafe-inline/unsafe-eval)
+    // - Styles: still uses 'unsafe-inline' because Bootstrap and dynamic styles require it
+    $scriptSrc = "'self' 'nonce-{$nonce}' https://cdn.jsdelivr.net https://js.paystack.co https://static.cloudflareinsights.com";
+    $styleSrc = "'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com";
+    $fontSrc = "'self' https://fonts.gstatic.com https://cdn.jsdelivr.net";
+    $imgSrc = "'self' data: https: blob:";
+    $connectSrc = "'self' https://api.paystack.co https://cdn.jsdelivr.net https://cloudflareinsights.com";
+    
+    header("Content-Security-Policy: default-src 'self'; script-src {$scriptSrc}; style-src {$styleSrc}; font-src {$fontSrc}; img-src {$imgSrc}; connect-src {$connectSrc}; frame-ancestors 'none';");
+}
+
+/**
+ * Generate or retrieve a CSP nonce for the current request
+ * SECURITY: Uses cryptographically secure random bytes
+ * 
+ * @return string Base64-encoded nonce value
+ */
+function generate_csp_nonce() {
+    // Use a global to ensure the same nonce is used throughout the request
+    if (!isset($GLOBALS['_csp_nonce'])) {
+        $GLOBALS['_csp_nonce'] = base64_encode(random_bytes(16));
     }
+    return $GLOBALS['_csp_nonce'];
+}
+
+/**
+ * Get the current CSP nonce value
+ * Use this in views to add nonce attributes to inline script tags:
+ *   <script nonce="<?= csp_nonce() ?>">...</script>
+ * 
+ * @return string The current request's CSP nonce
+ */
+function csp_nonce() {
+    return generate_csp_nonce();
+}
+
+/**
+ * Get a complete nonce attribute for inline script tags
+ * Use this for convenience:
+ *   <script <?= csp_nonce_attr() ?>>...</script>
+ * 
+ * @return string HTML nonce attribute string
+ */
+function csp_nonce_attr() {
+    return 'nonce="' . htmlspecialchars(generate_csp_nonce(), ENT_QUOTES, 'UTF-8') . '"';
 }
 
 /**

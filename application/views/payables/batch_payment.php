@@ -116,7 +116,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function toggleAll() {
     const selectAll = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('.bill-checkbox');

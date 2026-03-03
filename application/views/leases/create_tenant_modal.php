@@ -66,7 +66,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const tenantWrapper = document.getElementById('createTenantModal');
     const tenantForm = document.getElementById('createTenantForm');

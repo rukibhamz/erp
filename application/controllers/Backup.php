@@ -40,7 +40,7 @@ class Backup extends Base_Controller {
             }
         } catch (Exception $e) {
             error_log('Backup error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error creating backup: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to create backup. Please try again.');
         }
         
         redirect('settings/backup');
@@ -180,6 +180,9 @@ class Backup extends Base_Controller {
             $this->setFlashMessage('danger', 'No backup file uploaded.');
             redirect('settings/backup');
         }
+        
+        // SECURITY: Validate CSRF token
+        check_csrf();
         
         try {
             // Create backup before restore

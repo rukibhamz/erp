@@ -192,7 +192,7 @@
 .log-level-critical { background-color: #f5c6cb; font-weight: bold; }
 </style>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function refreshLogs() {
     location.reload();
 }

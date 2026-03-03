@@ -73,7 +73,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function toggleModule(moduleKey, isActive) {
     fetch('<?= site_url('modules/toggle') ?>', {
         method: 'POST',

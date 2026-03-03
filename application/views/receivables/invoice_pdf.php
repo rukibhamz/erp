@@ -392,7 +392,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </div>
     
-    <script>
+    <script nonce="<?= csp_nonce() ?>">
         // Auto-print when page loads (optional - can be removed if not desired)
         // window.onload = function() {
         //     window.print();

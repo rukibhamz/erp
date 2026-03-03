@@ -32,7 +32,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <?php endif; ?>
 
     <div class="row g-3">
-        <script>
+        <script nonce="<?= csp_nonce() ?>">
             // Store items globally for JS access
             const itemsList = <?= json_encode($items) ?>;
             const csrfToken = '<?= csrf_token() ?>';
@@ -164,7 +164,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 let cart = [];
 
 // Event delegation for item clicks

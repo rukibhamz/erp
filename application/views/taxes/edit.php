@@ -90,7 +90,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function toggleRateType() {
     const type = document.getElementById('tax_type').value;
     const hint = document.getElementById('rate_hint');

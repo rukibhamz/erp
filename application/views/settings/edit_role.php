@@ -160,7 +160,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <?php endif; ?>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function selectAll() {
     document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = true);
 }

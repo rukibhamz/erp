@@ -357,7 +357,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function toggleBookableConfig() {
     const checkbox = document.getElementById('is_bookable');
     const configDiv = document.getElementById('bookableConfig');

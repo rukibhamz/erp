@@ -56,7 +56,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function markAsRead(id) {
     fetch('<?= base_url('notifications/mark-read/') ?>' + id, {
         method: 'POST',

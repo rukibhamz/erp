@@ -100,7 +100,7 @@ include(BASEPATH . 'views/staff_management/_nav.php');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('selectAll');
     const employeeCheckboxes = document.querySelectorAll('.employee-checkbox');

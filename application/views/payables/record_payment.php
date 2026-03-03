@@ -199,7 +199,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const paymentMethod = document.getElementById('payment_method');
     const chequeDateGroup = document.getElementById('cheque_date_group');

@@ -133,7 +133,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const qtyInputs = document.querySelectorAll('.qty-input');
     const plusBtns = document.querySelectorAll('.plus-btn');

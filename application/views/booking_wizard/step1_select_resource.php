@@ -167,7 +167,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function filterByLocation() {
     const locationId = document.getElementById('location_filter').value;
     const sections = document.querySelectorAll('.location-section');

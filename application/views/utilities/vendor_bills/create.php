@@ -110,7 +110,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('amount');
     const taxAmountInput = document.getElementById('tax_amount');

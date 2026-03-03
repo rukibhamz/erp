@@ -151,7 +151,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function addItemRow() {
     // TODO: Implement dynamic item row addition for manual GRN
 }

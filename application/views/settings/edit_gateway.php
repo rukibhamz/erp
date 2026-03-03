@@ -179,7 +179,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <?php endif; ?>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(function() {
         alert('Webhook URL copied to clipboard!');

@@ -132,7 +132,7 @@ $isAdmin = in_array($current_user['role'] ?? '', ['super_admin', 'admin']);
 </div>
 
 <?php if ($isAdmin): ?>
-<script>
+<script nonce="<?= csp_nonce() ?>">
 // Add confirmation and feedback for individual updates
 document.querySelectorAll('form[id^="form_"]').forEach(function(form) {
     form.addEventListener('submit', function(e) {

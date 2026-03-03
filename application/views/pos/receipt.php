@@ -95,7 +95,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 }
 </style>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 // Auto-print receipt on load
 window.onload = function() {
     setTimeout(function() {

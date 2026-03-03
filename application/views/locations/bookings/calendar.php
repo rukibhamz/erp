@@ -304,7 +304,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function reloadCalendar() {
     const spaceId = document.getElementById('space_filter').value;
     const locationId = document.getElementById('location_filter').value;

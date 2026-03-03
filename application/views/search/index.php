@@ -115,7 +115,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 // Auto-search on input (debounced)
 let searchTimeout;
 document.getElementById('searchInput')?.addEventListener('input', function(e) {

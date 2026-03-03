@@ -88,7 +88,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function loadStockInfo(itemId, locationId) {
     if (itemId && locationId) {
         // TODO: AJAX call to get stock info

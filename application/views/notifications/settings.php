@@ -190,7 +190,7 @@ $notificationTypes = [
     </div>
 </form>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.getElementById('notificationPreferencesForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     

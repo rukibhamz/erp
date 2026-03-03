@@ -187,7 +187,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const propertySelect = document.getElementById('property_id');
     const spaceSelect = document.getElementById('space_id');

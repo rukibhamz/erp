@@ -122,7 +122,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function toggleAllEmployees(checkbox) {
     const employeeCheckboxes = document.querySelectorAll('.employee-checkbox');
     employeeCheckboxes.forEach(cb => {

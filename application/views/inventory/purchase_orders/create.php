@@ -123,7 +123,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 let itemRowIndex = 1;
 
 function addItemRow() {

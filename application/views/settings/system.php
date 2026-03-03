@@ -391,7 +391,7 @@ $activeTab = $active_tab ?? 'company';
     </div>
 <?php endif; ?>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function testEmail() {
     const btn = document.getElementById('testEmailBtn');
     const resultDiv = document.getElementById('testEmailResult');

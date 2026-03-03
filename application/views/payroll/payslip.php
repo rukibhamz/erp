@@ -184,7 +184,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 }
 </style>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function downloadPDF() {
     // Set document title for PDF filename
     const employeeName = '<?= htmlspecialchars(($employee['first_name'] ?? '') . '_' . ($employee['last_name'] ?? '')) ?>';

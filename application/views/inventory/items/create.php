@@ -286,7 +286,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const itemTypeSelect = document.getElementById('item_type');
     const isSellableCheckbox = document.getElementById('is_sellable');

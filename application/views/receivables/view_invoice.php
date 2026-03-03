@@ -176,7 +176,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 function generatePdf(btn) {
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';

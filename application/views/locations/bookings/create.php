@@ -261,7 +261,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 const BASE_URL = '<?= base_url() ?>';
 let currentSpaceData = null;
 let spacesData = {};

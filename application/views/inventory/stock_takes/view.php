@@ -141,7 +141,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <?php if ($stock_take['status'] === 'in_progress'): ?>
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const saveButtons = document.querySelectorAll('.save-count');
     const stockTakeId = <?= $stock_take['id'] ?>;

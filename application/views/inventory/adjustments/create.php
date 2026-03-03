@@ -97,7 +97,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const itemSelect = document.getElementById('item_id');
     const locationSelect = document.getElementById('location_id');
