@@ -283,6 +283,7 @@ class Bookings extends Base_Controller {
             $bookingDate = sanitize_input($_POST['booking_date'] ?? '');
             $startTime = sanitize_input($_POST['start_time'] ?? '');
             $endTime = sanitize_input($_POST['end_time'] ?? '');
+            $endDate = sanitize_input($_POST['end_date'] ?? $bookingDate);
             $bookingType = sanitize_input($_POST['booking_type'] ?? 'hourly');
 
             // Validate location and space
@@ -344,13 +345,21 @@ class Bookings extends Base_Controller {
             }
 
             // Calculate price based on space's booking type
-            $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType);
+            $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, 1, false, $endDate);
             
             // Calculate duration
-            $start = new DateTime($bookingDate . ' ' . $startTime);
-            $end = new DateTime($bookingDate . ' ' . $endTime);
-            $duration = $end->diff($start);
-            $hours = $duration->h + ($duration->i / 60);
+            if ($bookingType === 'multi_day' && $endDate !== $bookingDate) {
+                $startDT = new DateTime($bookingDate);
+                $endDT = new DateTime($endDate);
+                $interval = $endDT->diff($startDT);
+                $days = $interval->days + 1; 
+                $hours = $days * 24; 
+            } else {
+                $start = new DateTime($bookingDate . ' ' . $startTime);
+                $end = new DateTime($bookingDate . ' ' . $endTime);
+                $duration = $end->diff($start);
+                $hours = $duration->h + ($duration->i / 60);
+            }
 
             // Validate customer email if provided
             if (!empty($_POST['customer_email']) && !validate_email($_POST['customer_email'])) {
@@ -427,7 +436,7 @@ class Bookings extends Base_Controller {
                 }
 
                 // Create booking slots
-                $this->bookingModel->createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endTime);
+                $this->bookingModel->createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endDate, $endTime);
 
                 // If confirmed, recognize revenue (or create unearned revenue entry)
                 if ($data['status'] === 'confirmed') {

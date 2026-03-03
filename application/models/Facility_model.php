@@ -598,7 +598,7 @@ class Facility_model extends Base_Model {
         }
     }
     
-    public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly', $quantity = 1, $isMember = false) {
+    public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly', $quantity = 1, $isMember = false, $endDate = null) {
         try {
             // getById now handles both facilities and spaces
             $facility = $this->getById($facilityId);
@@ -608,11 +608,20 @@ class Facility_model extends Base_Model {
             }
             
             // Calculate duration
-            $start = new DateTime($bookingDate . ' ' . $startTime);
-            $end = new DateTime($bookingDate . ' ' . $endTime);
-            $duration = $end->diff($start);
-            $hours = $duration->h + ($duration->i / 60);
-            $days = ceil($hours / 24);
+            // For multiday bookings, use endDate to calculate actual number of days
+            if ($bookingType === 'multi_day' && $endDate && $endDate !== $bookingDate) {
+                $startDT = new DateTime($bookingDate);
+                $endDT = new DateTime($endDate);
+                $interval = $endDT->diff($startDT);
+                $days = $interval->days + 1; // +1 because both start and end dates are inclusive
+                $hours = $days * 24; // Not really used for multi_day, but keep for consistency
+            } else {
+                $start = new DateTime($bookingDate . ' ' . $startTime);
+                $end = new DateTime($bookingDate . ' ' . $endTime);
+                $duration = $end->diff($start);
+                $hours = $duration->h + ($duration->i / 60);
+                $days = max(1, ceil($hours / 24));
+            }
             
             // Check for custom pricing rules from resource_pricing table
             $dayOfWeek = date('w', strtotime($bookingDate));
