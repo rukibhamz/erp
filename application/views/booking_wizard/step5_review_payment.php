@@ -45,7 +45,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </div>
                                 <div class="col-md-6">
                                     <strong>Date & Time:</strong><br>
-                                    <?= date('F j, Y', strtotime($booking_data['date'] ?? '')) ?><br>
+                                    <?php $isMultiDay5 = !empty($booking_data['end_date']) && ($booking_data['end_date'] ?? '') !== ($booking_data['date'] ?? ''); ?>
+                                    <?php if ($isMultiDay5): ?>
+                                        <strong>Start:</strong> <?= date('F j, Y', strtotime($booking_data['date'] ?? '')) ?><br>
+                                        <strong>End:</strong> <?= date('F j, Y', strtotime($booking_data['end_date'])) ?><br>
+                                    <?php else: ?>
+                                        <?= date('F j, Y', strtotime($booking_data['date'] ?? '')) ?><br>
+                                    <?php endif; ?>
                                     <?= date('g:i A', strtotime($booking_data['start_time'] ?? '')) ?> - 
                                     <?= date('g:i A', strtotime($booking_data['end_time'] ?? '')) ?>
                                 </div>

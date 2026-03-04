@@ -83,12 +83,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <strong><?= htmlspecialchars($resource['facility_name']) ?></strong>
                                 </div>
                             </div>
+                            <?php
+                            $isMultiDay = !empty($booking_data['end_date']) && ($booking_data['end_date'] ?? '') !== ($booking_data['date'] ?? '');
+                            if ($isMultiDay): ?>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Start Date:</span>
+                                    <span><?= date('M j, Y', strtotime($booking_data['date'])) ?></span>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>End Date:</span>
+                                    <span><?= date('M j, Y', strtotime($booking_data['end_date'])) ?></span>
+                                </div>
+                            </div>
+                            <?php else: ?>
                             <div class="mb-2">
                                 <div class="d-flex justify-content-between">
                                     <span>Date:</span>
-                                    <span id="summary-date"><?= $booking_data['date'] ?? 'Select date' ?></span>
+                                    <span id="summary-date"><?= !empty($booking_data['date']) ? date('M j, Y', strtotime($booking_data['date'])) : 'Select date' ?></span>
                                 </div>
                             </div>
+                            <?php endif; ?>
                             <div class="mb-2">
                                 <div class="d-flex justify-content-between">
                                     <span>Time:</span>
