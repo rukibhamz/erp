@@ -30,12 +30,22 @@
                 <a href="<?= htmlspecialchars($returnLink) ?>" class="btn btn-outline-primary btn-sm">
                     <i class="bi bi-arrow-left"></i> Return to Website
                 </a>
-                <a href="<?= base_url('customer-portal/login') ?>" class="btn btn-outline-dark btn-sm">
-                    <i class="bi bi-person-badge"></i> Customer Login
-                </a>
-                <a href="<?= base_url('login') ?>" class="btn btn-primary btn-sm">
-                    <i class="bi bi-box-arrow-in-right"></i> Staff Login
-                </a>
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <a href="<?= base_url('dashboard') ?>" class="btn btn-primary btn-sm">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                <?php elseif (isset($_SESSION['customer_user_id'])): ?>
+                    <a href="<?= base_url('customer-portal/dashboard') ?>" class="btn btn-primary btn-sm">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                <?php else: ?>
+                    <a href="<?= base_url('customer-portal/login') ?>" class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-person-badge"></i> Customer Login
+                    </a>
+                    <a href="<?= base_url('login') ?>" class="btn btn-primary btn-sm">
+                        <i class="bi bi-box-arrow-in-right"></i> Staff Login
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     </nav>
