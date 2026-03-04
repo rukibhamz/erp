@@ -51,7 +51,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <tbody>
                             <?php foreach ($revenue as $item): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) ?></td>
+                                    <td><?= htmlspecialchars(($item['account_code'] ?? '') . ' - ' . ($item['account_name'] ?? 'Unknown')) ?></td>
                                     <td class="text-end"><?= format_currency($item['total'] ?? 0) ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -75,7 +75,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <tbody>
                             <?php foreach ($expenses as $item): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) ?></td>
+                                    <td><?= htmlspecialchars(($item['account_code'] ?? '') . ' - ' . ($item['account_name'] ?? 'Unknown')) ?></td>
                                     <td class="text-end"><?= format_currency($item['total'] ?? 0) ?></td>
                                 </tr>
                             <?php endforeach; ?>

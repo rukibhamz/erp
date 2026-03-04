@@ -961,6 +961,23 @@ class Booking_wizard extends Base_Controller {
             $pdo->beginTransaction();
             error_log("FINALIZE: Transaction started");
             
+            // --- ENFORCE EMAIL VALIDATION ---
+            // Tie email to name and phone: if customer exists, override the submitted details
+            $customerModel = $this->loadModel('Customer_model');
+            if ($customerModel) {
+                $existingCustomer = $this->db->fetchOne(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "customers` WHERE email = ?",
+                    [$bookingData['customer_email']]
+                );
+                if ($existingCustomer) {
+                    $bookingData['customer_name'] = $existingCustomer['company_name'] ?: ($existingCustomer['contact_name'] ?: ($bookingData['customer_name'] ?? ''));
+                    $bookingData['customer_phone'] = $existingCustomer['phone'] ?: ($bookingData['customer_phone'] ?? '');
+                    $bookingData['customer_address'] = $existingCustomer['address'] ?: ($bookingData['customer_address'] ?? '');
+                    error_log("FINALIZE: Enforced existing customer details for email: " . $bookingData['customer_email']);
+                }
+            }
+            // --------------------------------
+            
             // Recalculate all prices to prevent TOCTOU (Time-of-Check to Time-of-Use) attacks
             // Never trust calculated values from session - recalculate from raw inputs
             $resource = $this->facilityModel->getById($bookingData['resource_id']);
@@ -1624,21 +1641,6 @@ class Booking_wizard extends Base_Controller {
             if ($existingCustomer) {
                 // Customer exists - just return the ID
                 @file_put_contents($logFile, "Found existing customer ID: " . $existingCustomer['id'] . "\n", FILE_APPEND);
-                
-                // Update customer info if it has changed
-                $updateData = [];
-                if (($existingCustomer['phone'] ?? '') != ($booking['customer_phone'] ?? '') && !empty($booking['customer_phone'])) {
-                    $updateData['phone'] = $booking['customer_phone'];
-                }
-                if (($existingCustomer['address'] ?? '') != ($booking['customer_address'] ?? '') && !empty($booking['customer_address'])) {
-                    $updateData['address'] = $booking['customer_address'];
-                }
-                
-                if (!empty($updateData)) {
-                    $this->customerModel->update($existingCustomer['id'], $updateData);
-                    @file_put_contents($logFile, "Updated customer info\n", FILE_APPEND);
-                }
-                
                 return $existingCustomer['id'];
             }
             
