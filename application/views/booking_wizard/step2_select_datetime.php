@@ -655,12 +655,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide time slots legend for multi-day bookings
         document.getElementById('time-slot-legend').style.display = 'none';
         
-        if (!selectedDate || !selectedEndDate || selectedEndDate < selectedDate) {
+        if (!selectedDate || !selectedEndDate || selectedEndDate <= selectedDate) {
             timeSlotsContainer.innerHTML = `
                 <div class="col-12">
                     <div class="alert alert-info">
                         <i class="bi bi-calendar-range"></i> <strong>Multi-Day Booking</strong><br>
-                        Please select both a start date and end date to continue.
+                        Please select an end date that is after the start date to continue.
                     </div>
                 </div>
             `;

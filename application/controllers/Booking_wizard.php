@@ -3,23 +3,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Booking_wizard extends Base_Controller {
 
-    public function test_tax() {
-        $taxModel = $this->loadModel('Tax_model');
-        $vatTax = $taxModel->getByCode('VAT');
-        $activeTaxes = $taxModel->getActive();
-        $calc = null;
-        if ($vatTax) {
-            $calc = $taxModel->calculateTax(4000, $vatTax['id']);
-        }
-        echo json_encode([
-            'vatTax' => $vatTax,
-            'calc' => $calc,
-            'session_tax_rate' => $_SESSION['booking_data']['tax_rate'] ?? 'not_set'
-        ]);
-        exit;
-    }
-
-
     private $facilityModel;
     private $bookingModel;
     private $addonModel;

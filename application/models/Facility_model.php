@@ -601,6 +601,7 @@ class Facility_model extends Base_Model {
     public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly', $quantity = 1, $isMember = false, $endDate = null) {
         try {
             // getById now handles both facilities and spaces
+
             $facility = $this->getById($facilityId);
             
             if (!$facility) {
