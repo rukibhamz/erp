@@ -744,11 +744,11 @@ class Booking_wizard extends Base_Controller {
             $taxAmount = 0;
             $taxRate = 0;
             try {
-                $taxModel = $this->loadModel('Tax_model');
+                $taxModel = $this->loadModel('Tax_type_model');
                 if ($taxModel) {
                     $vatTax = $taxModel->getByCode('VAT');
                     if (!$vatTax) {
-                        $activeTaxes = $taxModel->getActive();
+                        $activeTaxes = $taxModel->getAllActive();
                         if (!empty($activeTaxes)) {
                             $vatTax = $activeTaxes[0];
                         }
@@ -1043,13 +1043,13 @@ class Booking_wizard extends Base_Controller {
             $taxAmount = 0;
             $taxRate = 0;
             try {
-                $taxModel = $this->loadModel('Tax_model');
+                $taxModel = $this->loadModel('Tax_type_model');
                 if ($taxModel) {
                     // Try to get VAT tax or any active sales tax
                     $vatTax = $taxModel->getByCode('VAT');
                     if (!$vatTax) {
                         // Try to get any active tax
-                        $activeTaxes = $taxModel->getActive();
+                        $activeTaxes = $taxModel->getAllActive();
                         if (!empty($activeTaxes)) {
                             $vatTax = $activeTaxes[0]; // Use first active tax
                         }

@@ -11,7 +11,7 @@ class Products extends Base_Controller {
         parent::__construct();
         $this->requirePermission('products', 'read');
         $this->productModel = $this->loadModel('Product_model');
-        $this->taxModel = $this->loadModel('Tax_model');
+        $this->taxModel = $this->loadModel('Tax_type_model');
         $this->accountModel = $this->loadModel('Account_model');
         $this->activityModel = $this->loadModel('Activity_model');
     }
@@ -130,7 +130,7 @@ class Products extends Base_Controller {
         }
 
         try {
-            $taxes = $this->taxModel->getActive();
+            $taxes = $this->taxModel->getAllActive();
             $accounts = $this->accountModel->getByType('Revenue');
         } catch (Exception $e) {
             $taxes = [];
@@ -185,7 +185,7 @@ class Products extends Base_Controller {
         }
 
         try {
-            $taxes = $this->taxModel->getActive();
+            $taxes = $this->taxModel->getAllActive();
             $accounts = $this->accountModel->getByType('Revenue');
         } catch (Exception $e) {
             $taxes = [];

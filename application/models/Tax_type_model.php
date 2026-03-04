@@ -94,5 +94,39 @@ class Tax_type_model extends Base_Model {
             return [];
         }
     }
+
+    public function calculateTax($amount, $taxId, $taxInclusive = false) {
+        try {
+            $tax = $this->getById($taxId);
+            if (!$tax || $tax['is_active'] != 1) {
+                return ['tax_amount' => 0, 'base_amount' => $amount];
+            }
+            
+            $rate = floatval($tax['rate']);
+            
+            if ($tax['calculation_method'] === 'fixed') {
+                $taxAmount = $rate;
+                $baseAmount = $taxInclusive ? $amount - $taxAmount : $amount;
+            } else {
+                if ($taxInclusive) {
+                    // Tax included in amount
+                    $baseAmount = $amount / (1 + ($rate / 100));
+                    $taxAmount = $amount - $baseAmount;
+                } else {
+                    // Tax added to amount
+                    $baseAmount = $amount;
+                    $taxAmount = $amount * ($rate / 100);
+                }
+            }
+            
+            return [
+                'tax_amount' => round($taxAmount, 2),
+                'base_amount' => round($baseAmount, 2)
+            ];
+        } catch (Exception $e) {
+            error_log('Tax_type_model calculateTax error: ' . $e->getMessage());
+            return ['tax_amount' => 0, 'base_amount' => $amount];
+        }
+    }
 }
 
