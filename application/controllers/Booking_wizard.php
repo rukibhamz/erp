@@ -758,18 +758,6 @@ class Booking_wizard extends Base_Controller {
                         $taxCalculation = $taxModel->calculateTax($subtotal - $discountAmount, $vatTax['id']);
                         $taxAmount = $taxCalculation['tax_amount'] ?? 0;
                         $taxRate = floatval($vatTax['rate'] ?? 0);
-                        // TEMP DEBUG: Write tax debug info to file
-                        file_put_contents('c:/xampp/htdocs/newerp/tax_debug.json', json_encode([
-                            'vatTax_record' => $vatTax,
-                            'vatTax_rate_from_record' => $vatTax['rate'] ?? 'NULL',
-                            'taxRate_float' => $taxRate,
-                            'subtotal' => $subtotal,
-                            'discountAmount' => $discountAmount,
-                            'taxCalculation' => $taxCalculation,
-                            'taxAmount' => $taxAmount,
-                            'expected_at_7_5' => ($subtotal - $discountAmount) * 0.075,
-                            'timestamp' => date('Y-m-d H:i:s')
-                        ], JSON_PRETTY_PRINT));
                     }
                 }
             } catch (Exception $taxEx) {
