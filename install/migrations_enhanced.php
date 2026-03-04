@@ -36,50 +36,6 @@ function runEnhancedMigrations($pdo, $prefix = 'erp_') {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ",
         
-        // Tax Management
-        'taxes' => "
-            CREATE TABLE IF NOT EXISTS `{$prefix}taxes` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `tax_name` varchar(100) NOT NULL,
-                `tax_code` varchar(50) DEFAULT NULL,
-                `tax_type` enum('percentage','fixed','compound') NOT NULL DEFAULT 'percentage',
-                `rate` decimal(5,2) NOT NULL DEFAULT 0.00,
-                `tax_inclusive` tinyint(1) DEFAULT 0,
-                `description` text DEFAULT NULL,
-                `status` enum('active','inactive') NOT NULL DEFAULT 'active',
-                `created_at` datetime NOT NULL,
-                `updated_at` datetime DEFAULT NULL,
-                PRIMARY KEY (`id`),
-                UNIQUE KEY `tax_code` (`tax_code`),
-                KEY `status` (`status`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        ",
-        
-        'tax_groups' => "
-            CREATE TABLE IF NOT EXISTS `{$prefix}tax_groups` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `group_name` varchar(100) NOT NULL,
-                `description` text DEFAULT NULL,
-                `status` enum('active','inactive') NOT NULL DEFAULT 'active',
-                `created_at` datetime NOT NULL,
-                PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        ",
-        
-        'tax_group_items' => "
-            CREATE TABLE IF NOT EXISTS `{$prefix}tax_group_items` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `tax_group_id` int(11) NOT NULL,
-                `tax_id` int(11) NOT NULL,
-                `sequence` int(11) DEFAULT 1,
-                PRIMARY KEY (`id`),
-                KEY `tax_group_id` (`tax_group_id`),
-                KEY `tax_id` (`tax_id`),
-                CONSTRAINT `{$prefix}tax_group_items_ibfk_1` FOREIGN KEY (`tax_group_id`) REFERENCES `{$prefix}tax_groups` (`id`) ON DELETE CASCADE,
-                CONSTRAINT `{$prefix}tax_group_items_ibfk_2` FOREIGN KEY (`tax_id`) REFERENCES `{$prefix}taxes` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        ",
-        
         // Estimates/Quotes
         'estimates' => "
             CREATE TABLE IF NOT EXISTS `{$prefix}estimates` (
@@ -462,27 +418,8 @@ function runEnhancedMigrations($pdo, $prefix = 'erp_') {
     // Insert default data
     insertDefaultAccountingData($pdo, $prefix);
 }
-
 function insertDefaultAccountingData($pdo, $prefix) {
-    // Insert default tax rates
-    $defaultTaxes = [
-        ['VAT', 'VAT', 'percentage', 7.50, 0, 'Value Added Tax'],
-        ['Sales Tax', 'ST', 'percentage', 8.00, 0, 'Sales Tax'],
-        ['Service Tax', 'SVCTAX', 'percentage', 10.00, 0, 'Service Tax'],
-    ];
-    
-    foreach ($defaultTaxes as $tax) {
-        try {
-            $stmt = $pdo->prepare("INSERT IGNORE INTO `{$prefix}taxes` 
-                (tax_name, tax_code, tax_type, rate, tax_inclusive, description, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, 'active', NOW())");
-            $stmt->execute($tax);
-        } catch (PDOException $e) {
-            // Ignore duplicates
-        }
-    }
-    
-    // Insert base currency (NGN - Nigerian Naira)
+    // Removed legacy tax_groups logic
     try {
         $stmt = $pdo->prepare("INSERT IGNORE INTO `{$prefix}currencies` 
             (currency_code, currency_name, symbol, exchange_rate, is_base, position, precision, status, updated_at) 
