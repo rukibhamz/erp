@@ -834,80 +834,94 @@ class Booking_wizard extends Base_Controller {
     public function saveStep() {
         header('Content-Type: application/json');
         
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Invalid request']);
-            exit;
-        }
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                echo json_encode(['success' => false, 'message' => 'Invalid request']);
+                exit;
+            }
 
-        $step = intval($_POST['step'] ?? 0);
-        $rawData = $_POST['data'] ?? '';
-        
-        // Decode JSON data if it's a string
-        if (is_string($rawData) && !is_array($rawData)) {
-            $decoded = json_decode($rawData, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // Not JSON, might already be an array from form data
-                // Check if it looks like form data came through as array
-                $data = $rawData;
+            $step = intval($_POST['step'] ?? 0);
+            $rawData = $_POST['data'] ?? '';
+            
+            // Decode JSON data if it's a string
+            if (is_string($rawData) && !is_array($rawData)) {
+                $decoded = json_decode($rawData, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $data = $rawData;
+                } else {
+                    $data = $decoded;
+                }
             } else {
-                $data = $decoded;
+                $data = $rawData;
             }
-        } else {
-            $data = $rawData;
-        }
-        
-        // Validate that data is an array
-        if (!is_array($data)) {
-            error_log('Booking wizard saveStep: Data is not an array - received: ' . gettype($data));
-            echo json_encode(['success' => false, 'message' => 'Invalid data structure']);
+            
+            // Validate that data is an array
+            if (!is_array($data)) {
+                error_log('Booking wizard saveStep: Data is not an array - received: ' . gettype($data));
+                echo json_encode(['success' => false, 'message' => 'Invalid data structure']);
+                exit;
+            }
+            
+            if (!isset($_SESSION['booking_data'])) {
+                $_SESSION['booking_data'] = [];
+            }
+            
+            // Merge step data
+            $_SESSION['booking_data'] = array_merge($_SESSION['booking_data'], $data);
+            
+            // VALIDATION: Check availability for Step 2 (Date & Time)
+            if ($step === 2) {
+                $bookingData = $_SESSION['booking_data'];
+                if (!empty($bookingData['date']) && !empty($bookingData['start_time']) && !empty($bookingData['end_time'])) {
+                    try {
+                        // Ensure Facility Model is loaded
+                        if (!$this->facilityModel) {
+                             $this->facilityModel = $this->loadModel('Facility_model');
+                        }
+                        
+                        $resourceId = $bookingData['resource_id'] ?? 0;
+                        // Get facility_id (might be different from space_id)
+                        $space = $this->spaceModel ? $this->spaceModel->getById($resourceId) : null;
+                        $facilityId = $space['facility_id'] ?? $resourceId;
+                        
+                        // Check availability
+                        // Note: end_date might be different for multi-day
+                        $checkEndDate = $bookingData['end_date'] ?? $bookingData['date'];
+                        
+                        $isAvailable = $this->facilityModel->checkAvailability(
+                            $facilityId,
+                            $bookingData['date'],
+                            $bookingData['start_time'],
+                            $bookingData['end_time'],
+                            null, // No exclude ID (new booking)
+                            $checkEndDate
+                        );
+                        
+                        if (!$isAvailable) {
+                            echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available.']);
+                            exit;
+                        }
+                    } catch (Exception $availEx) {
+                        // Log availability check error but don't block booking (fail open)
+                        error_log('Booking wizard saveStep: Availability check error - ' . $availEx->getMessage());
+                    }
+                }
+            }
+
+            error_log('Booking wizard saveStep: Step ' . $step . ' data saved successfully');
+            
+            echo json_encode(['success' => true, 'next_step' => $step + 1]);
+            exit;
+            
+        } catch (Exception $e) {
+            error_log('Booking wizard saveStep FATAL: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
+            exit;
+        } catch (\Throwable $t) {
+            error_log('Booking wizard saveStep THROWABLE: ' . $t->getMessage() . "\n" . $t->getTraceAsString());
+            echo json_encode(['success' => false, 'message' => 'Server error: ' . $t->getMessage()]);
             exit;
         }
-        
-        if (!isset($_SESSION['booking_data'])) {
-            $_SESSION['booking_data'] = [];
-        }
-        
-        // Merge step data
-        $_SESSION['booking_data'] = array_merge($_SESSION['booking_data'], $data);
-        
-        // VALIDATION: Check availability for Step 2 (Date & Time)
-        if ($step === 2) {
-            $bookingData = $_SESSION['booking_data'];
-            if (!empty($bookingData['date']) && !empty($bookingData['start_time']) && !empty($bookingData['end_time'])) {
-                // Ensure Facility Model is loaded
-                if (!$this->facilityModel) {
-                     $this->facilityModel = $this->loadModel('Facility_model');
-                }
-                
-                $resourceId = $bookingData['resource_id'] ?? 0;
-                // Get facility_id (might be different from space_id)
-                $space = $this->spaceModel->getById($resourceId);
-                $facilityId = $space['facility_id'] ?? $resourceId;
-                
-                // Check availability
-                // Note: end_date might be different for multi-day
-                $checkEndDate = $bookingData['end_date'] ?? $bookingData['date'];
-                
-                $isAvailable = $this->facilityModel->checkAvailability(
-                    $facilityId,
-                    $bookingData['date'],
-                    $bookingData['start_time'],
-                    $bookingData['end_time'],
-                    null, // No exclude ID (new booking)
-                    $checkEndDate
-                );
-                
-                if (!$isAvailable) {
-                    echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available.']);
-                    exit;
-                }
-            }
-        }
-
-        error_log('Booking wizard saveStep: Step ' . $step . ' data saved successfully');
-        
-        echo json_encode(['success' => true, 'next_step' => $step + 1]);
-        exit;
     }
 
     /**
