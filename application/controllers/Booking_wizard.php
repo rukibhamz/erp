@@ -834,6 +834,13 @@ class Booking_wizard extends Base_Controller {
     public function saveStep() {
         header('Content-Type: application/json');
         
+        // --- DIAGNOSTIC LOGGING ---
+        $logFile = ROOTPATH . 'logs/save_step_debug.log';
+        $startMs = microtime(true);
+        $ts = date('Y-m-d H:i:s');
+        @file_put_contents($logFile, "\n[$ts] === SAVE STEP START ===\n", FILE_APPEND);
+        @file_put_contents($logFile, "[$ts] Method: " . $_SERVER['REQUEST_METHOD'] . "\n", FILE_APPEND);
+        
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Invalid request']);
@@ -842,6 +849,7 @@ class Booking_wizard extends Base_Controller {
 
             $step = intval($_POST['step'] ?? 0);
             $rawData = $_POST['data'] ?? '';
+            @file_put_contents($logFile, "[$ts] Step: $step, POST keys: " . implode(',', array_keys($_POST)) . "\n", FILE_APPEND);
             
             // Decode JSON data if it's a string
             if (is_string($rawData) && !is_array($rawData)) {
@@ -868,10 +876,12 @@ class Booking_wizard extends Base_Controller {
             
             // Merge step data
             $_SESSION['booking_data'] = array_merge($_SESSION['booking_data'], $data);
+            @file_put_contents($logFile, "[$ts] Data merged. Elapsed: " . round((microtime(true) - $startMs) * 1000) . "ms\n", FILE_APPEND);
             
             // VALIDATION: Check availability for Step 2 (Date & Time)
             if ($step === 2) {
                 $bookingData = $_SESSION['booking_data'];
+                @file_put_contents($logFile, "[$ts] Step 2 validation. booking_type=" . ($bookingData['booking_type'] ?? 'N/A') . ", date=" . ($bookingData['date'] ?? 'N/A') . ", end_date=" . ($bookingData['end_date'] ?? 'N/A') . ", start_time=" . ($bookingData['start_time'] ?? 'N/A') . ", end_time=" . ($bookingData['end_time'] ?? 'N/A') . "\n", FILE_APPEND);
                 if (!empty($bookingData['date']) && !empty($bookingData['start_time']) && !empty($bookingData['end_time'])) {
                     try {
                         // Ensure Facility Model is loaded
@@ -883,6 +893,7 @@ class Booking_wizard extends Base_Controller {
                         // Get facility_id (might be different from space_id)
                         $space = $this->spaceModel ? $this->spaceModel->getById($resourceId) : null;
                         $facilityId = $space['facility_id'] ?? $resourceId;
+                        @file_put_contents($logFile, "[$ts] Availability check: resourceId=$resourceId, facilityId=$facilityId. Elapsed: " . round((microtime(true) - $startMs) * 1000) . "ms\n", FILE_APPEND);
                         
                         // Check availability
                         // Note: end_date might be different for multi-day
@@ -896,6 +907,7 @@ class Booking_wizard extends Base_Controller {
                             null, // No exclude ID (new booking)
                             $checkEndDate
                         );
+                        @file_put_contents($logFile, "[$ts] Availability result: " . ($isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE') . ". Elapsed: " . round((microtime(true) - $startMs) * 1000) . "ms\n", FILE_APPEND);
                         
                         if (!$isAvailable) {
                             echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available.']);
@@ -903,21 +915,25 @@ class Booking_wizard extends Base_Controller {
                         }
                     } catch (Exception $availEx) {
                         // Log availability check error but don't block booking (fail open)
+                        @file_put_contents($logFile, "[$ts] Availability check EXCEPTION: " . $availEx->getMessage() . "\n", FILE_APPEND);
                         error_log('Booking wizard saveStep: Availability check error - ' . $availEx->getMessage());
                     }
                 }
             }
 
             error_log('Booking wizard saveStep: Step ' . $step . ' data saved successfully');
+            @file_put_contents($logFile, "[$ts] SUCCESS. Total elapsed: " . round((microtime(true) - $startMs) * 1000) . "ms\n", FILE_APPEND);
             
             echo json_encode(['success' => true, 'next_step' => $step + 1]);
             exit;
             
         } catch (Exception $e) {
+            @file_put_contents($logFile, "[$ts] EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
             error_log('Booking wizard saveStep FATAL: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
             exit;
         } catch (\Throwable $t) {
+            @file_put_contents($logFile, "[$ts] THROWABLE: " . $t->getMessage() . "\n" . $t->getTraceAsString() . "\n", FILE_APPEND);
             error_log('Booking wizard saveStep THROWABLE: ' . $t->getMessage() . "\n" . $t->getTraceAsString());
             echo json_encode(['success' => false, 'message' => 'Server error: ' . $t->getMessage()]);
             exit;

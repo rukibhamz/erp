@@ -1038,14 +1038,26 @@ document.addEventListener('DOMContentLoaded', function() {
             ).join('&') + `&step=${requestData.step}`
         })
         .then(response => {
-            // Check if response is ok
-            if (!response.ok) {
-                console.error('Server error:', response.status, response.statusText);
-            }
-            return response.text(); // Get as text first to see raw response
+            // Capture status before reading body
+            const status = response.status;
+            const statusText = response.statusText;
+            
+            return response.text().then(text => {
+                if (!response.ok) {
+                    console.error('Server error:', status, statusText);
+                    console.error('Response body:', text.substring(0, 1000));
+                }
+                return { text, status, statusText };
+            });
         })
-        .then(text => {
-            console.log('Server response:', text);
+        .then(({ text, status, statusText }) => {
+            console.log('Server response (status ' + status + '):', text);
+            
+            if (status >= 500) {
+                alert('Server error (' + status + '). The server may be overloaded. Details: ' + text.substring(0, 200));
+                return;
+            }
+            
             try {
                 const data = JSON.parse(text);
                 if (data.success) {
@@ -1056,12 +1068,12 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
                 console.error('JSON parse error:', e);
                 console.error('Response was:', text.substring(0, 500));
-                alert('Server returned an invalid response. Check console for details.');
+                alert('Server returned an invalid response (HTTP ' + status + '). Check console for details.');
             }
         })
         .catch(error => {
             console.error('Fetch error:', error);
-            alert('Network error. Please try again.');
+            alert('Network error: ' + error.message + '. This could be a timeout or connectivity issue. Please try again.');
         });
     });
 });
