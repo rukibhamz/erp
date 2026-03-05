@@ -610,17 +610,25 @@ class Facility_model extends Base_Model {
             
             // Calculate duration
             // For multiday bookings, use endDate to calculate actual number of days
+            // AND calculate the actual hours per day from the selected time slot
             if ($bookingType === 'multi_day' && $endDate && $endDate !== $bookingDate) {
                 $startDT = new DateTime($bookingDate);
                 $endDT = new DateTime($endDate);
                 $interval = $endDT->diff($startDT);
                 $days = $interval->days + 1; // +1 because both start and end dates are inclusive
-                $hours = $days * 24; // Not really used for multi_day, but keep for consistency
+                
+                // Calculate actual hours PER DAY from the selected time slot
+                $dailyStart = new DateTime($bookingDate . ' ' . $startTime);
+                $dailyEnd = new DateTime($bookingDate . ' ' . $endTime);
+                $dailyDuration = $dailyEnd->diff($dailyStart);
+                $hoursPerDay = $dailyDuration->h + ($dailyDuration->i / 60);
+                $hours = $hoursPerDay * $days; // Total hours across all days
             } else {
                 $start = new DateTime($bookingDate . ' ' . $startTime);
                 $end = new DateTime($bookingDate . ' ' . $endTime);
                 $duration = $end->diff($start);
                 $hours = $duration->h + ($duration->i / 60);
+                $hoursPerDay = $hours;
                 $days = max(1, ceil($hours / 24));
             }
             
@@ -655,7 +663,8 @@ class Facility_model extends Base_Model {
                         $baseRate = floatval($facility['daily_rate']);
                         break;
                     case 'multi_day':
-                        $baseRate = floatval($facility['daily_rate']); // Per day rate for multi-day
+                        // Use hourly rate for multi-day since the user selects specific hours per day
+                        $baseRate = floatval($facility['hourly_rate']);
                         break;
                     case 'weekly':
                         $baseRate = floatval($facility['weekly_rate'] ?: ($facility['daily_rate'] * 7));
@@ -681,7 +690,8 @@ class Facility_model extends Base_Model {
             } elseif ($bookingType === 'daily' || $bookingType === 'full_day') {
                 $totalPrice = $baseRate * max(1, $days); // At least 1 day
             } elseif ($bookingType === 'multi_day') {
-                $totalPrice = $baseRate * max(1, $days); // Daily rate * number of days
+                // Hourly rate × hours per day × number of days
+                $totalPrice = $baseRate * ($hoursPerDay ?? $hours) * max(1, $days);
             } elseif ($bookingType === 'weekly') {
                 $totalPrice = $baseRate;
             }
