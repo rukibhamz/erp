@@ -899,19 +899,26 @@ class Booking_wizard extends Base_Controller {
                         // Note: end_date might be different for multi-day
                         $checkEndDate = $bookingData['end_date'] ?? $bookingData['date'];
                         
-                        $isAvailable = $this->facilityModel->checkAvailability(
-                            $facilityId,
-                            $bookingData['date'],
-                            $bookingData['start_time'],
-                            $bookingData['end_time'],
-                            null, // No exclude ID (new booking)
-                            $checkEndDate
-                        );
-                        @file_put_contents($logFile, "[$ts] Availability result: " . ($isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE') . ". Elapsed: " . round((microtime(true) - $startMs) * 1000) . "ms\n", FILE_APPEND);
-                        
-                        if (!$isAvailable) {
-                            echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available.']);
-                            exit;
+                        // Skip expensive availability check for multi-day bookings at step 2
+                        // to prevent server timeouts on slow environments. 
+                        // It will be fully validated at step 5 (finalization).
+                        if (($bookingData['booking_type'] ?? '') !== 'multi_day') {
+                            $isAvailable = $this->facilityModel->checkAvailability(
+                                $facilityId,
+                                $bookingData['date'],
+                                $bookingData['start_time'],
+                                $bookingData['end_time'],
+                                null, // No exclude ID (new booking)
+                                $checkEndDate
+                            );
+                            @file_put_contents($logFile, "[$ts] Availability result: " . ($isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE') . ". Elapsed: " . round((microtime(true) - $startMs) * 1000) . "ms\n", FILE_APPEND);
+                            
+                            if (!$isAvailable) {
+                                echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available.']);
+                                exit;
+                            }
+                        } else {
+                            @file_put_contents($logFile, "[$ts] Skipped availability check for multi_day to prevent timeout. Elapsed: " . round((microtime(true) - $startMs) * 1000) . "ms\n", FILE_APPEND);
                         }
                     } catch (Exception $availEx) {
                         // Log availability check error but don't block booking (fail open)
