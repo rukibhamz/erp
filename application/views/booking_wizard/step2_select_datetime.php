@@ -1038,23 +1038,12 @@ document.addEventListener('DOMContentLoaded', function() {
             ).join('&') + `&step=${requestData.step}`
         })
         .then(response => {
-            // Capture status before reading body
             const status = response.status;
-            const statusText = response.statusText;
-            
-            return response.text().then(text => {
-                if (!response.ok) {
-                    console.error('Server error:', status, statusText);
-                    console.error('Response body:', text.substring(0, 1000));
-                }
-                return { text, status, statusText };
-            });
+            return response.text().then(text => ({ text, status }));
         })
-        .then(({ text, status, statusText }) => {
-            console.log('Server response (status ' + status + '):', text);
-            
+        .then(({ text, status }) => {
             if (status >= 500) {
-                alert('Server error (' + status + '). The server may be overloaded. Details: ' + text.substring(0, 200));
+                alert('Server error (' + status + '). Please try again later.');
                 return;
             }
             
@@ -1063,17 +1052,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     window.location.href = `<?= base_url('booking-wizard/step3/') ?>${resourceId}`; 
                 } else {
-                    alert('Error saving data: ' + (data.message || 'Unknown error'));
+                    alert('Error: ' + (data.message || 'Unknown error'));
                 }
             } catch (e) {
-                console.error('JSON parse error:', e);
-                console.error('Response was:', text.substring(0, 500));
-                alert('Server returned an invalid response (HTTP ' + status + '). Check console for details.');
+                alert('Invalid server response (HTTP ' + status + ').');
             }
         })
         .catch(error => {
-            console.error('Fetch error:', error);
-            alert('Network error: ' + error.message + '. This could be a timeout or connectivity issue. Please try again.');
+            alert('Connection error. Please check your internet and try again.');
         });
     });
 });

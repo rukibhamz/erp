@@ -68,19 +68,14 @@ class Stock_movements extends Base_Controller {
                         'created_by' => $this->session['user_id']
                     ];
                     
-                    @file_put_contents($logFile, "[$ts] Creating stock transaction...\n", FILE_APPEND);
                     $transactionId = $this->transactionModel->create($transactionData);
-                    @file_put_contents($logFile, "[$ts] Transaction create result: " . ($transactionId ? "ID=$transactionId" : "FAILED") . "\n", FILE_APPEND);
                     
                     if ($transactionId) {
                         // Update stock level
-                        @file_put_contents($logFile, "[$ts] Updating stock level...\n", FILE_APPEND);
                         $stockResult = $this->stockLevelModel->updateStock($itemId, $locationId, $quantity);
-                        @file_put_contents($logFile, "[$ts] Stock level result: " . ($stockResult ? 'OK' : 'FAILED') . "\n", FILE_APPEND);
                         
                         // Update item average cost (weighted average)
                         $item = $this->itemModel->getById($itemId);
-                        @file_put_contents($logFile, "[$ts] Item lookup: " . ($item ? "found" : "NOT FOUND") . "\n", FILE_APPEND);
                         
                         if ($item) {
                             $currentStock = $this->stockLevelModel->getItemStock($itemId);
@@ -103,44 +98,33 @@ class Stock_movements extends Base_Controller {
                             $this->postReceiptToAccounting($transactionId, $transactionData, $item);
                         }
                         
-                        // BUG DIAGNOSTIC: transaction_number is NOT in $transactionData - it's auto-generated inside create()
-                        @file_put_contents($logFile, "[$ts] transaction_number in transactionData? " . (isset($transactionData['transaction_number']) ? 'YES=' . $transactionData['transaction_number'] : 'NO - this causes Undefined array key error') . "\n", FILE_APPEND);
-                        
                         try {
                             $this->activityModel->log($this->session['user_id'], 'create', 'Stock Movements', 'Stock received: ' . ($transactionData['transaction_number'] ?? 'N/A'));
                         } catch (Exception $logEx) {
-                            @file_put_contents($logFile, "[$ts] Activity log error: " . $logEx->getMessage() . "\n", FILE_APPEND);
+                            error_log("Activity log error: " . $logEx->getMessage());
                         }
                         
-                        @file_put_contents($logFile, "[$ts] SUCCESS - redirecting\n", FILE_APPEND);
                         $this->setFlashMessage('success', 'Stock received successfully.');
                         redirect('inventory/receive');
                     } else {
-                        @file_put_contents($logFile, "[$ts] Transaction creation returned falsy\n", FILE_APPEND);
                         $this->setFlashMessage('danger', 'Failed to create stock transaction.');
                     }
                 } catch (Exception $e) {
-                    @file_put_contents($logFile, "[$ts] EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+                    error_log("EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString());
                     $this->setFlashMessage('danger', 'Error receiving stock: ' . $e->getMessage());
                 }
             } else {
-                @file_put_contents($logFile, "[$ts] VALIDATION FAILED\n", FILE_APPEND);
                 $this->setFlashMessage('danger', 'Please fill all required fields.');
             }
         }
         
-        // --- DIAGNOSTIC: Log items and locations retrieval ---
-        @file_put_contents($logFile, "[$ts] Loading form data (items + locations)...\n", FILE_APPEND);
-        
         try {
             // Get all active inventory items using unified method
             $items = $this->itemModel->getInventoryItems();
-            @file_put_contents($logFile, "[$ts] Items loaded: " . count($items) . "\n", FILE_APPEND);
             
             $locationsRaw = $this->locationModel->getActive();
-            @file_put_contents($logFile, "[$ts] Locations raw: " . count($locationsRaw) . "\n", FILE_APPEND);
             if (empty($locationsRaw)) {
-                @file_put_contents($logFile, "[$ts] WARNING: No locations! Location_model->getActive() queries 'properties' table with status='operational'. If using 'locations' table (inventory module), it uses 'is_active' instead. This mismatch is likely the problem.\n", FILE_APPEND);
+                error_log("WARNING: No locations! Location_model->getActive() queries 'properties' table with status='operational'. If using 'locations' table (inventory module), it uses 'is_active' instead. This mismatch is likely the problem.");
             }
             
             // Map locations for view compatibility
