@@ -14,12 +14,12 @@
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="<?= base_url() ?>">
-                <i class="bi bi-calendar-check text-primary"></i> Booking Portal
+    <nav class="navbar navbar-light bg-light border-bottom py-2">
+        <div class="container flex-column flex-sm-row gap-2">
+            <a class="navbar-brand fw-bold m-0" href="<?= base_url() ?>">
+                <i class="bi bi-calendar-check text-primary"></i> <span class="d-none d-sm-inline">Booking Portal</span><span class="d-sm-none">Portal</span>
             </a>
-            <div class="ms-auto d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-wrap justify-content-center">
                 <?php
                 // Get return link from settings
                 $db = Database::getInstance();
@@ -27,23 +27,23 @@
                 $returnSetting = $db->fetchOne("SELECT setting_value FROM `{$prefix}settings` WHERE setting_key = 'portal_return_link'");
                 $returnLink = !empty($returnSetting['setting_value']) ? $returnSetting['setting_value'] : 'https://acropolispark.com/';
                 ?>
-                <a href="<?= htmlspecialchars($returnLink) ?>" class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-arrow-left"></i> Return to Website
+                <a href="<?= htmlspecialchars($returnLink) ?>" class="btn btn-outline-primary btn-sm px-2 px-sm-3">
+                    <i class="bi bi-arrow-left"></i> <span class="d-none d-md-inline">Return to Website</span><span class="d-md-none">Return</span>
                 </a>
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="<?= base_url('dashboard') ?>" class="btn btn-primary btn-sm">
-                        <i class="bi bi-speedometer2"></i> Dashboard
+                    <a href="<?= base_url('dashboard') ?>" class="btn btn-primary btn-sm px-2 px-sm-3">
+                        <i class="bi bi-speedometer2"></i> <span class="d-none d-sm-inline">Dashboard</span>
                     </a>
                 <?php elseif (isset($_SESSION['customer_user_id'])): ?>
-                    <a href="<?= base_url('customer-portal/dashboard') ?>" class="btn btn-primary btn-sm">
-                        <i class="bi bi-speedometer2"></i> Dashboard
+                    <a href="<?= base_url('customer-portal/dashboard') ?>" class="btn btn-primary btn-sm px-2 px-sm-3">
+                        <i class="bi bi-speedometer2"></i> <span class="d-none d-sm-inline">Dashboard</span>
                     </a>
                 <?php else: ?>
-                    <a href="<?= base_url('customer-portal/login') ?>" class="btn btn-outline-dark btn-sm">
-                        <i class="bi bi-person-badge"></i> Customer Login
+                    <a href="<?= base_url('customer-portal/login') ?>" class="btn btn-outline-dark btn-sm px-2 px-sm-3">
+                        <i class="bi bi-person-badge"></i> <span class="d-none d-md-inline">Customer Login</span><span class="d-md-none">Customer</span>
                     </a>
-                    <a href="<?= base_url('login') ?>" class="btn btn-primary btn-sm">
-                        <i class="bi bi-box-arrow-in-right"></i> Staff Login
+                    <a href="<?= base_url('login') ?>" class="btn btn-primary btn-sm px-2 px-sm-3">
+                        <i class="bi bi-box-arrow-in-right"></i> <span class="d-none d-md-inline">Staff Login</span><span class="d-md-none">Staff</span>
                     </a>
                 <?php endif; ?>
             </div>

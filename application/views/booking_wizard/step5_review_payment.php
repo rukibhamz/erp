@@ -1,26 +1,43 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
+
+
 ?>
 <div class="container py-5">
     <div class="row">
         <div class="col-lg-12">
             <!-- Progress Steps -->
-            <div class="mb-5">
-                <ul class="nav nav-pills nav-justified">
+            <div class="mb-4 mb-md-5">
+                <ul class="nav nav-pills nav-wizard justify-content-center">
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('booking-wizard') ?>"><strong>Step 1:</strong> Location & Space</a>
+                        <a class="nav-link" href="<?= base_url('booking-wizard') ?>">
+                            <span class="step-num">1</span>
+                            <span class="step-text">Location</span>
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('booking-wizard/step2/' . ($booking_data['resource_id'] ?? '')) ?>"><strong>Step 2:</strong> Date & Time</a>
+                        <a class="nav-link" href="<?= base_url('booking-wizard/step2/' . ($booking_data['resource_id'] ?? '')) ?>">
+                            <span class="step-num">2</span>
+                            <span class="step-text">DateTime</span>
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('booking-wizard/step3/' . ($booking_data['resource_id'] ?? '')) ?>"><strong>Step 3:</strong> Extras</a>
+                        <a class="nav-link" href="<?= base_url('booking-wizard/step3/' . ($booking_data['resource_id'] ?? '')) ?>">
+                            <span class="step-num">3</span>
+                            <span class="step-text">Extras</span>
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('booking-wizard/step4') ?>"><strong>Step 4:</strong> Information</a>
+                        <a class="nav-link" href="<?= base_url('booking-wizard/step4') ?>">
+                            <span class="step-num">4</span>
+                            <span class="step-text">Info</span>
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="#"><strong>Step 5:</strong> Review & Pay</a>
+                        <a class="nav-link active" href="#">
+                            <span class="step-num">5</span>
+                            <span class="step-text">Review</span>
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -273,15 +290,73 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-.nav-pills .nav-link {
-    background-color: #f8f9fa;
-    color: #000;
-    border: 1px solid #dee2e6;
+/* Responsive Wizard Navigation */
+.nav-wizard {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem;
 }
-.nav-pills .nav-link.active {
+.nav-wizard::-webkit-scrollbar {
+    height: 4px;
+}
+.nav-wizard::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 4px;
+}
+.nav-wizard .nav-item {
+    flex: 0 0 auto;
+}
+.nav-wizard .nav-link {
+    background-color: #f8f9fa;
+    color: #4b5563;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+.nav-wizard .nav-link.active {
     background-color: #000;
     color: #fff;
     border-color: #000;
+}
+.nav-wizard .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.75rem;
+}
+.nav-wizard .nav-link.active .step-num {
+    background: rgba(255,255,255,0.2);
+}
+@media (max-width: 576px) {
+    .nav-wizard .step-text {
+        display: none;
+    }
+    .nav-wizard .nav-link {
+        padding: 0.5rem;
+    }
+    .display-6 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .card.sticky-top {
+        position: static !important;
+        margin-top: 2rem;
+    }
 }
 </style>
 
