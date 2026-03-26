@@ -1,0 +1,12 @@
+﻿Field	Type	Null	Key	Default	Extra
+id	int(11)	NO	PRI	NULL	auto_increment
+tenant_name	varchar(255)	NO	MUL	NULL	
+tenant_type	enum('individual','corporate')	YES		individual	
+email	varchar(100)	YES		NULL	
+phone	varchar(50)	YES		NULL	
+identification_type	varchar(50)	YES		NULL	
+identification_number	varchar(50)	YES		NULL	
+address	text	YES		NULL	
+status	enum('active','inactive')	YES	MUL	active	
+created_at	datetime	NO		current_timestamp()	
+updated_at	datetime	YES		NULL	on update current_timestamp()

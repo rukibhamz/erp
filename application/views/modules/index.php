@@ -1,3 +1,4 @@
+<?php /** @var CI_Controller $this */ ?>
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
@@ -81,7 +82,7 @@ function toggleModule(moduleKey, isActive) {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-Requested-With': 'XMLHttpRequest'
         },
-        body: 'module_key=' + encodeURIComponent(moduleKey) + '&is_active=' + (isActive ? '1' : '0') + '&<?= csrf_token_name() ?>=' + encodeURIComponent('<?= csrf_hash() ?>')
+        body: 'module_key=' + encodeURIComponent(moduleKey) + '&is_active=' + (isActive ? '1' : '0') + '&<?= $this->security->get_csrf_token_name() ?>=' + encodeURIComponent('<?= $this->security->get_csrf_hash() ?>')
     })
     .then(response => response.json())
     .then(data => {

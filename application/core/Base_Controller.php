@@ -14,6 +14,9 @@ class Base_Controller {
         $this->config = require BASEPATH . 'config/config.php';
         $this->session = &$_SESSION;
         
+        // Initialize Input class (mimics CodeIgniter 3's Input class)
+        $this->input = new Input();
+        
         // Load common helper
         require_once BASEPATH . '../application/helpers/common_helper.php';
         

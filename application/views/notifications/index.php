@@ -1,4 +1,5 @@
 <?php
+/** @var CI_Controller $this */
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
@@ -34,7 +35,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div>
                                 <h6 class="mb-1 fw-bold"><?= htmlspecialchars($notification['title']) ?></h6>
                                 <p class="mb-1 text-mutedSmall"><?= htmlspecialchars($notification['message']) ?></p>
-                                <small class="text-secondary"><?= format_datetime($notification['created_at']) ?></small>
+                                <small class="text-secondary"><?= date('M j, Y H:i', strtotime($notification['created_at'])) ?></small>
                                 <?php if (!empty($notification['action_url'])): ?>
                                     <div class="mt-2">
                                         <a href="<?= base_url($notification['action_url']) ?>" class="btn btn-sm btn-outline-primary btn-rounded px-3">
@@ -61,7 +62,7 @@ function markAsRead(id) {
     fetch('<?= base_url('notifications/mark-read/') ?>' + id, {
         method: 'POST',
         headers: {
-            'X-CSRF-Token': '<?= get_csrf_token() ?>'
+            'X-CSRF-Token': '<?= $this->security->get_csrf_hash() ?>'
         }
     })
     .then(response => response.json())
@@ -82,7 +83,7 @@ function markAllRead() {
     fetch('<?= base_url('notifications/mark-all-read') ?>', {
         method: 'POST',
         headers: {
-            'X-CSRF-Token': '<?= get_csrf_token() ?>'
+            'X-CSRF-Token': '<?= $this->security->get_csrf_hash() ?>'
         }
     })
     .then(response => response.json())
