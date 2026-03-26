@@ -378,6 +378,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring essential POS accounts: " . $e->getMessage());
         }
+
+        // ALWAYS ensure spaces table has video_url and detailed_description columns
+        try {
+            $this->ensureSpacesVideoColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring spaces video columns: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2522,6 +2529,35 @@ class AutoMigration {
         } catch (\Throwable $e) {
             file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Error ensuring POS accounts: " . $e->getMessage() . "\n", FILE_APPEND);
             return false;
+        }
+    }
+
+    /**
+     * Ensure spaces table has video_url and detailed_description columns
+     * Fixes SQLSTATE[42S22] error when creating/editing spaces
+     */
+    private function ensureSpacesVideoColumns() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}spaces'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return; // spaces table doesn't exist yet, skip
+            }
+
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}spaces` LIKE 'video_url'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}spaces` 
+                    ADD COLUMN `video_url` VARCHAR(500) DEFAULT NULL AFTER `description`");
+                error_log("AutoMigration: Added video_url column to spaces table");
+            }
+
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}spaces` LIKE 'detailed_description'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}spaces` 
+                    ADD COLUMN `detailed_description` TEXT DEFAULT NULL AFTER `video_url`");
+                error_log("AutoMigration: Added detailed_description column to spaces table");
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring spaces video columns: " . $e->getMessage());
         }
     }
 }

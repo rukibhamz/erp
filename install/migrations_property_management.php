@@ -74,6 +74,8 @@ function runPropertyManagementMigrations($pdo, $prefix = 'erp_') {
             `is_bookable` tinyint(1) DEFAULT 0,
             `facility_id` int(11) DEFAULT NULL COMMENT 'Link to facilities table when bookable',
             `description` text DEFAULT NULL,
+            `video_url` varchar(500) DEFAULT NULL,
+            `detailed_description` text DEFAULT NULL,
             `notes` text DEFAULT NULL,
             `created_at` datetime NOT NULL,
             `updated_at` datetime DEFAULT NULL,

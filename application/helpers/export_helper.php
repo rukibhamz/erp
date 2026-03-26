@@ -18,7 +18,7 @@ function exportToPDF($html, $filename, $orientation = 'P') {
     // Use Dompdf
     $autoloadPath = BASEPATH . '../vendor/autoload.php';
     if (!file_exists($autoloadPath)) {
-        show_error('Dependencies are missing. Please run "composer install" in the application root directory to install DomPDF and other required libraries.', 500, 'Composer Dependencies Missing');
+        throw new Exception('Dependencies are missing. Please run "composer install" in the application root directory to install DomPDF and other required libraries.');
         return;
     }
     require_once $autoloadPath;

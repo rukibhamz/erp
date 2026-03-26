@@ -241,7 +241,7 @@ class Import_export extends Base_Controller {
         
         $vendorData = [
             'name' => sanitize_input($data['name'] ?? ''),
-            'vendor_code' => sanitize_input($data['vendor_code'] ?? $this->generateVendorCode()),
+            'vendor_code' => sanitize_input($data['vendor_code'] ?? $vendorModel->getNextVendorCode()),
             'email' => sanitize_input($data['email'] ?? ''),
             'phone' => sanitize_input($data['phone'] ?? ''),
             'address' => sanitize_input($data['address'] ?? ''),

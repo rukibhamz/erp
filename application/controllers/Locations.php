@@ -63,7 +63,6 @@ class Locations extends Base_Controller {
                 'manager_id' => !empty($_POST['manager_id']) ? intval($_POST['manager_id']) : null,
                 'status' => sanitize_input($_POST['status'] ?? 'operational'),
                 'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
-                'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
@@ -162,7 +161,6 @@ class Locations extends Base_Controller {
                 'property_value' => !empty($_POST['Location_value']) ? floatval($_POST['Location_value']) : (!empty($_POST['property_value']) ? floatval($_POST['property_value']) : null),
                 'manager_id' => !empty($_POST['manager_id']) ? intval($_POST['manager_id']) : null,
                 'status' => sanitize_input($_POST['status'] ?? 'operational'),
-                'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
                 'ownership_status' => sanitize_input($_POST['ownership_status'] ?? 'owned'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
