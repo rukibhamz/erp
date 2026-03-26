@@ -215,6 +215,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <label for="photos" class="form-label">Upload New Photos (Select multiple)</label>
                         <input type="file" class="form-control" id="photos" name="photos[]" multiple accept="image/*">
                         <div class="form-text">Supported formats: JPG, PNG, WEBP. Max size: 5MB per image.</div>
+                        <small class="form-text text-muted">(Optional) You can upload photos later.</small>
                     </div>
                 </div>
                 
