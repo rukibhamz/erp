@@ -7,6 +7,9 @@
 
 if (!defined('FCPATH')) define('FCPATH', __DIR__ . '/');
 
+if (!class_exists('CI_DB_query_builder')) { class CI_DB_query_builder {} }
+if (!class_exists('CI_DB_forge')) { class CI_DB_forge {} }
+
 if (!class_exists('CI_Model')) {
     class CI_Model {}
 }

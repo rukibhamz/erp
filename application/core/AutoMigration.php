@@ -2546,14 +2546,14 @@ class AutoMigration {
             $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}spaces` LIKE 'video_url'");
             if (!$stmt || count($stmt->fetchAll()) === 0) {
                 $this->pdo->exec("ALTER TABLE `{$this->prefix}spaces` 
-                    ADD COLUMN `video_url` VARCHAR(500) DEFAULT NULL AFTER `description`");
+                    ADD COLUMN `video_url` VARCHAR(500) DEFAULT NULL");
                 error_log("AutoMigration: Added video_url column to spaces table");
             }
 
             $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}spaces` LIKE 'detailed_description'");
             if (!$stmt || count($stmt->fetchAll()) === 0) {
                 $this->pdo->exec("ALTER TABLE `{$this->prefix}spaces` 
-                    ADD COLUMN `detailed_description` TEXT DEFAULT NULL AFTER `video_url`");
+                    ADD COLUMN `detailed_description` TEXT DEFAULT NULL");
                 error_log("AutoMigration: Added detailed_description column to spaces table");
             }
         } catch (Exception $e) {

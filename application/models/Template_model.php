@@ -126,7 +126,7 @@ class Template_model extends Base_Model {
         }
         
         // SECURITY: Remove script tags and event handlers
-        $html = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi', '', $html);
+        $html = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i', '', $html);
         $html = preg_replace('/on\w+="[^"]*"/i', '', $html);
         $html = preg_replace("/on\w+='[^']*'/i", '', $html);
         $html = preg_replace('/on\w+=\S+/i', '', $html);

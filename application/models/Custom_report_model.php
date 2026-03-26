@@ -97,7 +97,9 @@ class Custom_report_model extends Base_Model {
             
             // Get data source model
             $dataSource = $report['data_source'];
-            $model = $this->loadModel(ucfirst($dataSource) . '_model');
+            $modelName = ucfirst($dataSource) . '_model';
+            $this->load->model($modelName);
+            $model = $this->$modelName;
             
             // Build query based on report configuration
             $data = $this->buildReportQuery($model, $report);

@@ -261,6 +261,7 @@ function loadSpaces() {
         .catch(error => {
             console.error('Error:', error);
             spaceSelect.innerHTML = '<option value="">Error loading spaces</option>';
+            spaceSelect.disabled = false;
             alert('Error loading spaces. Please try again.');
         });
 }
@@ -269,8 +270,8 @@ function populateSpaces(spaces) {
     const spaceSelect = document.getElementById('space_id');
     
     if (!spaces || spaces.length === 0) {
-        spaceSelect.innerHTML = '<option value="">No spaces available for this location</option>';
-        spaceSelect.disabled = true;
+        spaceSelect.innerHTML = '<option value="">No bookable spaces found for this location</option>';
+        spaceSelect.disabled = false;
         return;
     }
     

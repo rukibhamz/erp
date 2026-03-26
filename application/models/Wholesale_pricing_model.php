@@ -56,7 +56,7 @@ class Wholesale_pricing_model extends Base_Model {
      */
     public function calculatePricing($itemId, $customerId, $quantity) {
         $item = $this->getItemModel()->getById($itemId);
-        if (!$item) return null;
+        if (!$item) return [];
         
         $customer = $this->db->fetchOne(
             "SELECT c.*, ct.code as type_code, ct.discount_percentage 

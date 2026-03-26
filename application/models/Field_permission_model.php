@@ -9,7 +9,8 @@ class Field_permission_model extends Base_Model {
      */
     public function canAccessField($userId, $module, $tableName, $fieldName, $action = 'read') {
         try {
-            $userModel = $this->loadModel('User_model');
+            $this->load->model('User_model');
+            $userModel = $this->User_model;
             $user = $userModel->getById($userId);
             if (!$user) {
                 return false;
@@ -64,7 +65,8 @@ class Field_permission_model extends Base_Model {
      */
     public function getUserFieldPermissions($userId, $module = null) {
         try {
-            $userModel = $this->loadModel('User_model');
+            $this->load->model('User_model');
+            $userModel = $this->User_model;
             $user = $userModel->getById($userId);
             $userRole = $user['role'] ?? null;
             

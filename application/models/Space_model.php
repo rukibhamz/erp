@@ -45,7 +45,6 @@ class Space_model extends Base_Model {
             $checkColumn = $this->db->fetchOne("SHOW COLUMNS FROM `" . $this->db->getPrefix() . $this->table . "` LIKE 'is_bookable'");
             
             if (!$checkColumn) {
-                // Return empty if column doesn't exist yet, or handle as legacy if needed
                 error_log("Space_model: is_bookable column missing in " . $this->table);
                 return [];
             }
@@ -53,7 +52,8 @@ class Space_model extends Base_Model {
             $sql = "SELECT s.*, p.property_name, p.property_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` s
                     JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
-                    WHERE s.is_bookable = 1 AND s.operational_status = 'active'";
+                    WHERE s.is_bookable = 1
+                    AND s.operational_status NOT IN ('decommissioned','temporarily_closed')";
             $params = [];
             
             if ($propertyId) {
@@ -63,7 +63,20 @@ class Space_model extends Base_Model {
             
             $sql .= " ORDER BY p.property_name, s.space_name";
             
-            return $this->db->fetchAll($sql, $params);
+            $spaces = $this->db->fetchAll($sql, $params);
+
+            // Fallback: if no bookable spaces found for this location, return all non-decommissioned spaces
+            if (empty($spaces) && $propertyId) {
+                $sql = "SELECT s.*, p.property_name, p.property_code 
+                        FROM `" . $this->db->getPrefix() . $this->table . "` s
+                        JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                        WHERE s.property_id = ?
+                        AND s.operational_status NOT IN ('decommissioned')
+                        ORDER BY s.space_name";
+                $spaces = $this->db->fetchAll($sql, [$propertyId]);
+            }
+
+            return $spaces;
         } catch (Exception $e) {
             error_log('Space_model getBookableSpaces error: ' . $e->getMessage());
             return [];
