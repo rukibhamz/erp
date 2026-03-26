@@ -41,6 +41,7 @@ $page_title = $page_title ?? 'My Profile';
             </div>
             <div class="card-body">
                 <form method="POST">
+<?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="update_profile">
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -81,6 +82,7 @@ $page_title = $page_title ?? 'My Profile';
             </div>
             <div class="card-body">
                 <form method="POST">
+<?php echo csrf_field(); ?>
                     <input type="hidden" name="action" value="change_password">
                     <div class="mb-3">
                         <label for="current_password" class="form-label">Current Password</label>
