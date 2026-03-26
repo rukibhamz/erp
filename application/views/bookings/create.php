@@ -3,7 +3,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
 <div class="container-fluid">
-    <div class="alert alert-warning">DEBUG MODE ACTIVE</div>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Create Booking</h1>
         <a href="<?= base_url('bookings') ?>" class="btn btn-primary">
@@ -35,7 +34,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <option value="">Select Location</option>
                                 <?php foreach ($locations as $location): ?>
                                     <option value="<?= $location['id'] ?>">
-                                        <?= htmlspecialchars($location['Location_name'] ?? $location['property_name'] ?? 'N/A') ?>
+                                        <?= htmlspecialchars($location['Location_name'] ?? $location['location_name'] ?? $location['property_name'] ?? 'N/A') ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
