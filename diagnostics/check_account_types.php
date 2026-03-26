@@ -8,6 +8,7 @@ define('ENVIRONMENT', 'development');
 require_once BASEPATH . 'core/CodeIgniter.php';
 
 // Mock the CI instance to load the model
+/** @var CI_Controller $CI */
 $CI =& get_instance();
 $CI->load->database();
 $CI->load->model('Account_model');

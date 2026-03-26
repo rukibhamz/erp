@@ -34,11 +34,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="col-md-3">
                 <label class="form-label">Start Date</label>
-                <input type="date" name="start_date" class="form-control" value="<?= $start_date ?>" onchange="this.form.submit()">
+                <input type="date" name="start_date" class="form-control" value="<?= (string)$start_date ?>" onchange="this.form.submit()">
             </div>
             <div class="col-md-3">
                 <label class="form-label">End Date</label>
-                <input type="date" name="end_date" class="form-control" value="<?= $end_date ?>" onchange="this.form.submit()">
+                <input type="date" name="end_date" class="form-control" value="<?= (string)$end_date ?>" onchange="this.form.submit()">
             </div>
             <div class="col-md-3">
                 <a href="<?= base_url('utilities/reports/cost') ?>" class="btn btn-secondary w-100">

@@ -97,7 +97,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <p class="text-muted text-center py-4">No permissions found in the system.</p>
                             <?php else: ?>
                                 <div class="accordion" id="permissionsAccordion">
-                                    <?php $i = 0; foreach ($permissions as $module => $modulePerms): $i++; ?>
+                                    <?php $i = 0; foreach ($permissions as $module => $modulePerms): $i++; 
+                                        $modulePerms = is_string($modulePerms) ? (json_decode($modulePerms, true) ?? []) : (array)$modulePerms;
+                                    ?>
                                         <div class="accordion-item">
                                             <h2 class="accordion-header">
                                                 <button class="accordion-button <?= $i > 1 ? 'collapsed' : '' ?>" 

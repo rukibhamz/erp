@@ -140,7 +140,7 @@
                                                     <?= $log['level'] ?>
                                                 </span>
                                             </td>
-                                            <td><?= character_limiter($log['message'], 100) ?></td>
+                                            <td><?= strlen((string)$log['message']) > 100 ? substr((string)$log['message'], 0, 100).'...' : $log['message'] ?></td>
                                             <td><?= $log['module'] ?? '-' ?></td>
                                             <td><?= $log['username'] ?? 'System' ?></td>
                                             <td><?= $log['ip_address'] ?></td>

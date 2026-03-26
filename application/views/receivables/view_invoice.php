@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title mb-0">Invoice: <?= htmlspecialchars($invoice['invoice_number'] ?? 'N/A') ?></h1>
         <div class="btn-group">
             <?php if ($pdf_exists && $pdf_url): ?>
-                <a href="<?= $pdf_url ?>" target="_blank" class="btn btn-primary">
+                <a href="<?= (string)$pdf_url ?>" target="_blank" class="btn btn-primary">
                     <i class="bi bi-file-pdf"></i> View PDF
                 </a>
             <?php endif; ?>
@@ -150,7 +150,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="card-title mb-0">PDF Viewer</h5>
                 <div class="btn-group btn-group-sm">
                     <?php if ($pdf_exists && $pdf_url): ?>
-                        <a href="<?= $pdf_url ?>" target="_blank" class="btn btn-primary" title="Open in new tab">
+                        <a href="<?= (string)$pdf_url ?>" target="_blank" class="btn btn-primary" title="Open in new tab">
                             <i class="bi bi-box-arrow-up-right"></i>
                         </a>
                         <a href="<?= base_url('receivables/invoices/download/' . $invoice['id']) ?>" class="btn btn-primary" title="Download">
@@ -161,7 +161,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="card-body p-0" style="min-height: 600px;">
                 <?php if ($pdf_exists && $pdf_url): ?>
-                    <iframe src="<?= $pdf_url ?>" style="width: 100%; height: 600px; border: none;" title="Invoice PDF" id="pdfViewer"></iframe>
+                    <iframe src="<?= (string)$pdf_url ?>" style="width: 100%; height: 600px; border: none;" title="Invoice PDF" id="pdfViewer"></iframe>
                 <?php else: ?>
                     <div class="p-4 text-center">
                         <i class="bi bi-file-pdf" style="font-size: 3rem; color: #ccc;"></i>
