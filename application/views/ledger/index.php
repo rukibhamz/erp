@@ -96,7 +96,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </a>
                                         <?php endif; ?>
                                         <?php if (hasPermission('ledger', 'delete') && ($entry['status'] ?? '') === 'draft'): ?>
-                                            <form method="POST" action="<?= base_url('ledger/delete/' . intval($entry['id'])) ?>" 
+                                            <form method="POST" action="<?= base_url('ledger/delete/' . intval($entry['id'])) ?>
+<?php echo csrf_field(); ?>" 
                                                   style="display: inline;" 
                                                   onsubmit="return confirm('Are you sure you want to delete this journal entry?');">
                                                 <?php echo csrf_field(); ?>

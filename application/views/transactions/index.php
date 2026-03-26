@@ -120,7 +120,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </a>
                                         <?php endif; ?>
                                         <?php if (hasPermission('accounting', 'delete') && ($txn['status'] ?? '') !== 'posted'): ?>
-                                            <form method="POST" action="<?= base_url('transactions/delete/' . intval($txn['id'])) ?>" 
+                                            <form method="POST" action="<?= base_url('transactions/delete/' . intval($txn['id'])) ?>
+<?php echo csrf_field(); ?>" 
                                                   style="display: inline;" 
                                                   onsubmit="return confirm('Are you sure you want to delete this transaction?');">
                                                 <?php echo csrf_field(); ?>

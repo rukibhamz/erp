@@ -82,7 +82,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <strong>Warning:</strong> Restoring a backup will replace all current data with the backup data. This action cannot be undone.
             <br><strong>Always create a new backup before restoring!</strong>
         </div>
-        <form method="POST" action="<?= base_url('settings/backup/restore') ?>" 
+        <form method="POST" action="<?= base_url('settings/backup/restore') ?>
+<?php echo csrf_field(); ?>" 
               enctype="multipart/form-data"
               onsubmit="return confirm('Are you sure you want to restore from backup? ALL current data will be replaced!')">
             <div class="mb-3">

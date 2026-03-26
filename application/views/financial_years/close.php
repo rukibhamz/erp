@@ -46,7 +46,8 @@
                 </tr>
             </table>
 
-            <form method="POST" action="<?= base_url('financial-years/close/' . $financial_year['id']) ?>" 
+            <form method="POST" action="<?= base_url('financial-years/close/' . $financial_year['id']) ?>
+<?php echo csrf_field(); ?>" 
                   onsubmit="return confirm('Are you sure you want to close this financial year? This action cannot be easily undone.');">
                 <?php echo csrf_field(); ?>
                 <button type="submit" class="btn btn-warning">

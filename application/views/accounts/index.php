@@ -108,7 +108,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </a>
                                         <?php endif; ?>
                                         <?php if (hasPermission('accounts', 'delete')): ?>
-                                            <form method="POST" action="<?= base_url('accounts/delete/' . intval($account['id'])) ?>" 
+                                            <form method="POST" action="<?= base_url('accounts/delete/' . intval($account['id'])) ?>
+<?php echo csrf_field(); ?>" 
                                                   style="display: inline;" 
                                                   onsubmit="return confirm('Are you sure you want to delete this account? This action cannot be undone.');">
                                                 <?php echo csrf_field(); ?>

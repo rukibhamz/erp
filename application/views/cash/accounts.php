@@ -79,7 +79,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <a href="<?= base_url('cash/accounts/edit/' . $account['id']) ?>" class="btn btn-primary" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <form method="POST" action="<?= base_url('cash/accounts/delete/' . $account['id']) ?>" 
+                                            <form method="POST" action="<?= base_url('cash/accounts/delete/' . $account['id']) ?>
+<?php echo csrf_field(); ?>" 
                                                   style="display: inline;" 
                                                   onsubmit="return confirm('Are you sure you want to delete this cash account? This action cannot be undone.');">
                                                 <?php echo csrf_field(); ?>
