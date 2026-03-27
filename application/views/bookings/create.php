@@ -264,507 +264,324 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <script nonce="<?= csp_nonce() ?>">
-const BASE_URL = '<?= base_url() ?>';
-let currentSpaceData = null;
-let spacesData = {}; // Cache spaces by location
+(function() {
+    // Configuration & State
+    const BASE_URL = window.BASE_URL || '<?= base_url() ?>';
+    let currentSpaceData = null;
+    let spacesData = {}; 
+    let selectedDuration = 1;
+    let selectedStartTime = '';
+    let selectedEndTime = '';
+    let selectedDate = '';
+    let selectedEndDate = '';
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('location_id').addEventListener('change', loadSpaces);
-    document.getElementById('space_id').addEventListener('change', loadSpaceDetails);
-    document.getElementById('number_of_guests').addEventListener('change', checkCapacity);
-    const discountEl = document.getElementById('discount_amount');
-    if (discountEl) discountEl.addEventListener('change', calculatePrice);
-    
-    document.getElementById('time-slots-container').addEventListener('click', function(e) {
-        const btn = e.target.closest('.slot-btn');
-        if (btn && !btn.classList.contains('disabled')) {
-            if (btn.dataset.action === 'setSelection') {
-                setSelection(btn.dataset.start, btn.dataset.end, btn.dataset.display);
-            } else if (btn.dataset.action === 'selectSlot') {
-                selectSlot(btn.dataset.start, btn.dataset.end);
-            }
+    // Hoisted Functions (attached to window for cross-scope access)
+    window.setSelection = function(start, end, display) {
+        console.log('DEBUG: setSelection called', {start, end, display});
+        selectedStartTime = start;
+        selectedEndTime = end;
+        
+        const startInput = document.getElementById('start_time');
+        const endInput = document.getElementById('end_time');
+        if (startInput) startInput.value = start;
+        if (endInput) endInput.value = end;
+        
+        const sumEl = document.getElementById('selected-time-summary');
+        if (sumEl) sumEl.style.display = 'block';
+        
+        const dispEl = document.getElementById('selected-time-display');
+        if (dispEl) dispEl.textContent = display;
+        
+        calculatePrice(); 
+    };
+
+    window.selectSlot = function(start, end) {
+        console.log('DEBUG: selectSlot called', {start, end, selectedDuration});
+        let [h, m] = start.split(':').map(Number);
+        h += selectedDuration;
+        
+        let endH = h > 23 ? 23 : h; 
+        let endM = m;
+        let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+        
+        window.setSelection(start, endStr, `${start} - ${endStr}`);
+    };
+
+    function calculatePrice() {
+        const pp = document.getElementById('pricePreview');
+        if (!currentSpaceData) {
+            if(pp) pp.style.display = 'none';
+            return;
         }
-    });
-});
-
-
-// Load spaces when location is selected
-function loadSpaces() {
-    const locationId = document.getElementById('location_id').value;
-    const spaceSelect = document.getElementById('space_id');
-    const bookingTypeSelect = document.getElementById('booking_type');
-    
-    // Reset UI
-    document.getElementById('time-slots-section').style.display = 'none';
-    document.getElementById('duration-container').style.display = 'none';
-    document.getElementById('end-date-container').style.display = 'none';
-    
-    if (!locationId) {
-        const sl = document.getElementById('space_id'); if(sl) { sl.innerHTML = '<option value="">Select Location First</option>'; sl.disabled = true; }
-        const bt = document.getElementById('booking_type'); if(bt) { bt.innerHTML = '<option value="">Select Space First</option>'; bt.disabled = true; }
-        const sd = document.getElementById('spaceDetails'); if(sd) sd.style.display = 'none';
-        return;
+        
+        const bookingDate = document.getElementById('booking_date').value;
+        const startTime = document.getElementById('start_time').value;
+        const endTime = document.getElementById('end_time').value;
+        const bookingType = document.getElementById('booking_type').value;
+        const discount = parseFloat(document.getElementById('discount_amount')?.value) || 0;
+        
+        if (!bookingDate || !startTime || !endTime || !bookingType) {
+            if(pp) pp.style.display = 'none';
+            return;
+        }
+        
+        const start = new Date(bookingDate + 'T' + startTime);
+        const end = new Date(bookingDate + 'T' + endTime);
+        const hours = (end - start) / (1000 * 60 * 60);
+        
+        if (hours <= 0) return;
+        
+        let basePrice = 0;
+        const days = Math.ceil(hours / 24);
+        
+        switch(bookingType) {
+            case 'hourly': basePrice = currentSpaceData.hourly_rate * hours; break;
+            case 'daily': basePrice = currentSpaceData.daily_rate * days; break;
+            case 'half_day': basePrice = currentSpaceData.half_day_rate * Math.ceil(days * 2); break;
+            case 'weekly': basePrice = currentSpaceData.weekly_rate * Math.ceil(days / 7); break;
+            case 'multi_day': basePrice = currentSpaceData.daily_rate * days; break;
+            default: basePrice = currentSpaceData.hourly_rate * hours;
+        }
+        
+        const subTotal = Math.max(0, basePrice - discount);
+        const vat = subTotal * 0.075;
+        const total = subTotal + vat;
+        const deposit = currentSpaceData.security_deposit || 0;
+        
+        document.getElementById('subTotal').textContent = '₦' + subTotal.toLocaleString();
+        document.getElementById('vatAmount').textContent = '₦' + vat.toLocaleString();
+        document.getElementById('tax_amount_input').value = vat.toFixed(2);
+        document.getElementById('estimatedPrice').textContent = '₦' + total.toLocaleString();
+        document.getElementById('securityDeposit').textContent = '₦' + deposit.toLocaleString();
+        if (pp) pp.style.display = 'block';
     }
-    
-    // Show loading
-    spaceSelect.innerHTML = '<option value="">Loading spaces...</option>';
-    spaceSelect.disabled = true;
-    
-    // Check cache first
-    if (spacesData[locationId]) {
-        populateSpaces(spacesData[locationId]);
-        return;
+
+    function loadSpaces() {
+        const locationId = document.getElementById('location_id').value;
+        const spaceSelect = document.getElementById('space_id');
+        
+        document.getElementById('time-slots-section').style.display = 'none';
+        document.getElementById('duration-container').style.display = 'none';
+        document.getElementById('end-date-container').style.display = 'none';
+        
+        if (!locationId) {
+            spaceSelect.innerHTML = '<option value="">Select Location First</option>'; 
+            spaceSelect.disabled = true;
+            return;
+        }
+        
+        spaceSelect.innerHTML = '<option value="">Loading spaces...</option>';
+        spaceSelect.disabled = true;
+        
+        if (spacesData[locationId]) {
+            populateSpaces(spacesData[locationId]);
+            return;
+        }
+        
+        fetch(BASE_URL + 'bookings/getSpacesForLocation?location_id=' + locationId)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    spacesData[locationId] = data.spaces;
+                    populateSpaces(data.spaces);
+                } else {
+                    spaceSelect.innerHTML = '<option value="">No spaces available</option>';
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                spaceSelect.innerHTML = '<option value="">Error loading spaces</option>';
+                spaceSelect.disabled = false;
+            });
     }
-    
-    // Fetch from server
-    fetch(BASE_URL + 'bookings/getSpacesForLocation?location_id=' + locationId)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                spacesData[locationId] = data.spaces;
-                populateSpaces(data.spaces);
-            } else {
-                spaceSelect.innerHTML = '<option value="">No spaces available</option>';
-                alert('Error loading spaces: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            spaceSelect.innerHTML = '<option value="">Error loading spaces</option>';
+
+    function populateSpaces(spaces) {
+        const spaceSelect = document.getElementById('space_id');
+        if (!spaces || spaces.length === 0) {
+            spaceSelect.innerHTML = '<option value="">No bookable spaces found</option>';
             spaceSelect.disabled = false;
-            alert('Error loading spaces. Please try again.');
-        });
-}
-
-function populateSpaces(spaces) {
-    const spaceSelect = document.getElementById('space_id');
-    
-    if (!spaces || spaces.length === 0) {
-        spaceSelect.innerHTML = '<option value="">No bookable spaces found for this location</option>';
-        spaceSelect.disabled = false;
-        return;
-    }
-    
-    spaceSelect.innerHTML = '<option value="">Select Space</option>';
-    spaces.forEach(space => {
-        const option = document.createElement('option');
-        option.value = space.id;
-        option.textContent = space.space_name + (space.space_number ? ' (' + space.space_number + ')' : '');
-        option.dataset.facilityId = space.facility_id || '';
-        option.dataset.bookingTypes = JSON.stringify(space.booking_types);
-        option.dataset.hourlyRate = space.hourly_rate || 0;
-        option.dataset.dailyRate = space.daily_rate || 0;
-        option.dataset.halfDayRate = space.half_day_rate || 0;
-        option.dataset.weeklyRate = space.weekly_rate || 0;
-        option.dataset.securityDeposit = space.security_deposit || 0;
-        option.dataset.capacity = space.capacity || 0;
-        option.dataset.minimumDuration = space.minimum_duration || 1;
-        option.dataset.maximumDuration = space.maximum_duration || '';
-        spaceSelect.appendChild(option);
-    });
-    
-    spaceSelect.disabled = false;
-}
-
-function loadSpaceDetails() {
-    const spaceSelect = document.getElementById('space_id');
-    const selectedOption = spaceSelect.options[spaceSelect.selectedIndex];
-    
-    if (!selectedOption || !selectedOption.value) {
-        const sd = document.getElementById('spaceDetails'); if(sd) sd.style.display = 'none';
-        const bt = document.getElementById('booking_type'); if(bt) { bt.innerHTML = '<option value="">Select Space First</option>'; bt.disabled = true; }
-        const f_id = document.getElementById('facility_id'); if(f_id) f_id.value = '';
-        currentSpaceData = null;
-        return;
-    }
-    
-    // Store facility_id
-    document.getElementById('facility_id').value = selectedOption.dataset.facilityId || '';
-    
-    // Store current space data
-    currentSpaceData = {
-        id: selectedOption.value,
-        facility_id: selectedOption.dataset.facilityId || '',
-        booking_types: JSON.parse(selectedOption.dataset.bookingTypes || '[]'),
-        hourly_rate: parseFloat(selectedOption.dataset.hourlyRate || 0),
-        daily_rate: parseFloat(selectedOption.dataset.dailyRate || 0),
-        half_day_rate: parseFloat(selectedOption.dataset.halfDayRate || 0),
-        weekly_rate: parseFloat(selectedOption.dataset.weeklyRate || 0),
-        security_deposit: parseFloat(selectedOption.dataset.securityDeposit || 0),
-        capacity: parseInt(selectedOption.dataset.capacity || 0),
-        minimum_duration: parseInt(selectedOption.dataset.minimumDuration || 1),
-        maximum_duration: selectedOption.dataset.maximumDuration ? parseInt(selectedOption.dataset.maximumDuration) : null
-    };
-    
-    // Show space details
-    const capacityEl = document.getElementById('spaceCapacity');
-    if (capacityEl) capacityEl.textContent = currentSpaceData.capacity || 'N/A';
-    
-    const typesEl = document.getElementById('spaceBookingTypes');
-    if (typesEl) typesEl.textContent = (currentSpaceData.booking_types || []).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'N/A';
-    
-    const detailsEl = document.getElementById('spaceDetails');
-    if (detailsEl) detailsEl.style.display = 'block';
-    
-    // Populate booking types
-    const bookingTypeSelect = document.getElementById('booking_type');
-    bookingTypeSelect.innerHTML = '<option value="">Select Booking Type</option>';
-    
-    const typeLabels = {
-        'hourly': 'Hourly',
-        'daily': 'Daily',
-        'half_day': 'Half Day',
-        'weekly': 'Weekly',
-        'multi_day': 'Multi-Day'
-    };
-    
-    if (currentSpaceData.booking_types && currentSpaceData.booking_types.length > 0) {
-        currentSpaceData.booking_types.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
-            bookingTypeSelect.appendChild(option);
-        });
-        bookingTypeSelect.disabled = false;
-    } else {
-        // If no booking types, enable with default options
-        bookingTypeSelect.innerHTML = '<option value="hourly">Hourly</option><option value="daily">Daily</option>';
-        bookingTypeSelect.disabled = false;
-    }
-    
-    // Calculate price if date/time are already set
-    calculatePrice();
-}
-
-function checkCapacity() {
-    const guests = parseInt(document.getElementById('number_of_guests').value) || 0;
-    const warning = document.getElementById('capacityWarning');
-    if (!warning) return;
-    
-    if (currentSpaceData && currentSpaceData.capacity > 0 && guests > currentSpaceData.capacity) {
-        warning.style.display = 'block';
-    } else {
-        warning.style.display = 'none';
-    }
-}
-
-function calculatePrice() {
-    const pp = document.getElementById('pricePreview');
-    if (!currentSpaceData) {
-        if(pp) pp.style.display = 'none';
-        return;
-    }
-    
-    const bookingDate = document.getElementById('booking_date').value;
-    const startTime = document.getElementById('start_time').value;
-    const endTime = document.getElementById('end_time').value;
-    const bookingType = document.getElementById('booking_type').value;
-    const discount = parseFloat(document.getElementById('discount_amount')?.value) || 0;
-    
-    if (!bookingDate || !startTime || !endTime || !bookingType) {
-        if(pp) pp.style.display = 'none';
-        return;
-    }
-    
-    // Calculate hours
-    const start = new Date(bookingDate + 'T' + startTime);
-    const end = new Date(bookingDate + 'T' + endTime);
-    const hours = (end - start) / (1000 * 60 * 60);
-    
-    if (hours <= 0) {
-        alert('End time must be after start time');
-        return;
-    }
-    
-    // Calculate base price based on booking type
-    let basePrice = 0;
-    const days = Math.ceil(hours / 24);
-    
-    switch(bookingType) {
-        case 'hourly':
-            basePrice = currentSpaceData.hourly_rate * hours;
-            break;
-        case 'daily':
-            basePrice = currentSpaceData.daily_rate * days;
-            break;
-        case 'half_day':
-            basePrice = currentSpaceData.half_day_rate * Math.ceil(days * 2);
-            break;
-        case 'weekly':
-            basePrice = currentSpaceData.weekly_rate * Math.ceil(days / 7);
-            break;
-        case 'multi_day':
-            basePrice = currentSpaceData.daily_rate * days;
-            break;
-        default:
-            basePrice = currentSpaceData.hourly_rate * hours;
-    }
-    
-    const subTotal = basePrice - discount;
-    const vat = subTotal * 0.075;
-    const total = subTotal + vat;
-    const deposit = currentSpaceData.security_deposit || 0;
-    
-    const subTotalEl = document.getElementById('subTotal');
-    if (subTotalEl) subTotalEl.textContent = '₦' + subTotal.toFixed(2);
-
-    const vatEl = document.getElementById('vatAmount');
-    if (vatEl) vatEl.textContent = '₦' + vat.toFixed(2);
-
-    const taxInput = document.getElementById('tax_amount_input');
-    if (taxInput) taxInput.value = vat.toFixed(2);
-
-    const estPriceEl = document.getElementById('estimatedPrice');
-    if (estPriceEl) estPriceEl.textContent = '₦' + total.toFixed(2);
-    
-    const depEl = document.getElementById('securityDeposit');
-    if (depEl) depEl.textContent = '₦' + deposit.toFixed(2);
-    
-    const previewEl = document.getElementById('pricePreview');
-    if (previewEl) previewEl.style.display = 'block';
-}
-
-// New Smart UI Logic
-let selectedDuration = 1;
-let selectedStartTime = '';
-let selectedEndTime = '';
-let selectedDate = '';
-let selectedEndDate = '';
-
-// Update Booking Type Change Handler
-document.getElementById('booking_type').addEventListener('change', function() {
-    const type = this.value;
-    const durationContainer = document.getElementById('duration-container');
-    const bookingDate = document.getElementById('booking_date');
-    const endDateContainer = document.getElementById('end-date-container');
-    
-    // Update Duration Options
-    updateDurationOptions(type);
-    
-    // Toggle End Date
-    if (type === 'multi_day' || type === 'weekly') {
-        endDateContainer.style.display = 'block';
-    } else {
-        endDateContainer.style.display = 'none';
-        document.getElementById('booking_end_date').value = ''; // Clear it
-    }
-    
-    // Reset/Load Slots if date selected
-    if (bookingDate.value) {
-        loadTimeSlots(currentSpaceData.id, bookingDate.value);
-    }
-    calculatePrice();
-});
-
-// Duration Change
-document.getElementById('duration').addEventListener('change', function() {
-    selectedDuration = parseInt(this.value);
-    const bookingDate = document.getElementById('booking_date');
-    if (bookingDate.value) {
-        loadTimeSlots(currentSpaceData.id, bookingDate.value);
-    }
-});
-
-// Date Change
-document.getElementById('booking_date').addEventListener('change', function() {
-    selectedDate = this.value;
-    loadTimeSlots(currentSpaceData.id, selectedDate);
-    // Sync min end date
-    document.getElementById('booking_end_date').min = selectedDate;
-    calculatePrice();
-    checkAvailability();
-});
-
-// End Date Change
-document.getElementById('booking_end_date').addEventListener('change', function() {
-    selectedEndDate = this.value;
-    loadTimeSlots(currentSpaceData.id, selectedDate, selectedEndDate);
-});
-
-
-function updateDurationOptions(type) {
-    const durationSelect = document.getElementById('duration');
-    const container = document.getElementById('duration-container');
-    let options = '';
-    
-    container.style.display = 'block'; // Default show
-    
-    if (type === 'hourly') {
-        for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;
-        selectedDuration = 1;
-    } else if (type === 'daily') {
-        options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
-        selectedDuration = 8;
-    } else if (type === 'half_day' || type === 'full_day') {
-        container.style.display = 'none';
-        selectedDuration = (type === 'full_day') ? 24 : 4;
-    } else if (type === 'multi_day' || type === 'weekly') {
-         options = '<option value="8">8 Hours/Day</option><option value="24">24 Hours/Day</option>';
-         selectedDuration = 8;
-    }
-    
-    durationSelect.innerHTML = options;
-    durationSelect.value = selectedDuration;
-}
-
-function loadTimeSlots(spaceId, date, endDate = null) {
-    const bookingTypeElement = document.getElementById('booking_type');
-    const bookingType = bookingTypeElement ? bookingTypeElement.value : null;
-    console.log('DEBUG: loadTimeSlots called', { spacerId: spaceId, date, bookingType });
-    
-    const container = document.getElementById('time-slots-container');
-    const section = document.getElementById('time-slots-section');
-    
-    if (!spaceId || !date || !bookingType) return;
-    
-    section.style.display = 'block';
-    container.innerHTML = '<div class="col-12 text-center"><div class="spinner-border"></div></div>';
-    
-    // Handle Special Types locally first
-    if (bookingType === 'full_day') {
-        renderFullDay();
-        return;
-    }
-    if (bookingType === 'half_day') {
-        renderHalfDay();
-        return;
-    }
-    
-    // Fetch Slots
-    const checkEndDate = endDate || date;
-    fetch(`${BASE_URL}bookings/getTimeSlots?space_id=${spaceId}&date=${date}&end_date=${checkEndDate}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                const availableSlots = data.slots || [];
-                const occupiedSlots = data.occupied || [];
-                const allSlots = [...availableSlots, ...occupiedSlots];
-                
-                // Sort by start time chronologically
-                allSlots.sort((a, b) => a.start.localeCompare(b.start));
-                
-                renderSlots(allSlots);
-            } else {
-                container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
-            }
-        })
-        .catch(e => {
-            console.error(e);
-            container.innerHTML = '<div class="alert alert-danger">Error loading slots</div>';
-        });
-}
-
-function renderFullDay() {
-    const container = document.getElementById('time-slots-container');
-    // Auto-select
-    setSelection('00:00', '23:59', 'Full Day');
-    container.innerHTML = '<div class="col-12"><div class="alert alert-info">Full Day Selected (00:00 - 23:59)</div></div>';
-}
-
-function renderHalfDay() {
-    const container = document.getElementById('time-slots-container');
-    container.innerHTML = `
-        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3 slot-btn" data-action="setSelection" data-start="08:00" data-end="12:00" data-display="Morning">Morning (8-12)</button></div>
-        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3 slot-btn" data-action="setSelection" data-start="13:00" data-end="17:00" data-display="Afternoon">Afternoon (1-5)</button></div>
-    `;
-}
-
-function renderSlots(slots) {
-    const container = document.getElementById('time-slots-container');
-    const dur = selectedDuration;
-    let html = '';
-    
-    // Simple slot rendering (assuming 1-hour slots returned)
-    // We need to find contiguous blocks for 'dur' hours
-    // This simple logic assumes slots are ordered
-    
-    slots.forEach(slot => {
-        // For hourly, we just show start times? Or we need logic to check if X hours forward are available.
-        // For simplicity, let's just show available 1-hour slots and let user pick start.
-        // Then we validate duration.
-        let btnClass = 'btn-outline-secondary disabled';
-        let subText = 'Unknown';
-        
-        if (slot.available) {
-            btnClass = 'btn-outline-success slot-btn';
-            subText = 'Available';
-        } else if (slot.is_buffer) {
-            btnClass = 'btn-warning text-dark disabled opacity-75';
-            subText = 'Buffer';
-        } else {
-            btnClass = 'btn-danger disabled opacity-50';
-            subText = 'Occupied';
+            return;
         }
         
-        let onClickData = slot.available ? `data-action="selectSlot" data-start="${slot.start}" data-end="${slot.end}"` : '';
+        let html = '<option value="">Select Space</option>';
+        spaces.forEach(space => {
+            html += `<option value="${space.id}" 
+                data-facility-id="${space.facility_id || ''}"
+                data-booking-types='${JSON.stringify(space.booking_types)}'
+                data-hourly-rate="${space.hourly_rate || 0}"
+                data-daily-rate="${space.daily_rate || 0}"
+                data-half-day-rate="${space.half_day_rate || 0}"
+                data-weekly-rate="${space.weekly_rate || 0}"
+                data-security-deposit="${space.security_deposit || 0}"
+                data-capacity="${space.capacity || 0}"
+                data-minimum-duration="${space.minimum_duration || 1}"
+                data-maximum-duration="${space.maximum_duration || ''}">${space.space_name} (${space.space_number || 'N/A'})</option>`;
+        });
+        spaceSelect.innerHTML = html;
+        spaceSelect.disabled = false;
+    }
+
+    function loadSpaceDetails() {
+        const spaceSelect = document.getElementById('space_id');
+        const opt = spaceSelect.options[spaceSelect.selectedIndex];
+        if (!opt || !opt.value) return;
         
-        html += `<div class="col-md-3 col-6">
-            <button type="button" class="btn ${btnClass} w-100 shadow-sm" ${onClickData} title="${subText}">
-                ${slot.display}
-            </button>
-        </div>`;
+        document.getElementById('facility_id').value = opt.dataset.facilityId || '';
+        currentSpaceData = {
+            id: opt.value,
+            booking_types: JSON.parse(opt.dataset.bookingTypes || '[]'),
+            hourly_rate: parseFloat(opt.dataset.hourlyRate),
+            daily_rate: parseFloat(opt.dataset.dailyRate),
+            half_day_rate: parseFloat(opt.dataset.halfDayRate),
+            weekly_rate: parseFloat(opt.dataset.weeklyRate),
+            security_deposit: parseFloat(opt.dataset.securityDeposit),
+            capacity: parseInt(opt.dataset.capacity),
+            minimum_duration: parseInt(opt.dataset.minimumDuration)
+        };
+        
+        document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
+        document.getElementById('spaceBookingTypes').textContent = currentSpaceData.booking_types.map(t => t.toUpperCase()).join(', ');
+        document.getElementById('spaceDetails').style.display = 'block';
+        
+        const typeSelect = document.getElementById('booking_type');
+        typeSelect.innerHTML = '<option value="">Select Booking Type</option>';
+        currentSpaceData.booking_types.forEach(t => {
+            const o = document.createElement('option');
+            o.value = t; o.textContent = t.replace('_', ' ').toUpperCase();
+            typeSelect.appendChild(o);
+        });
+        typeSelect.disabled = false;
+    }
+
+    function updateDurationOptions(type) {
+        const durSelect = document.getElementById('duration');
+        const container = document.getElementById('duration-container');
+        let options = '';
+        container.style.display = 'block';
+        
+        if (type === 'hourly') {
+            for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;
+            selectedDuration = 1;
+        } else if (type === 'daily') {
+            options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
+            selectedDuration = 8;
+        } else {
+            container.style.display = 'none';
+            selectedDuration = (type === 'full_day') ? 24 : 4;
+        }
+        durSelect.innerHTML = options;
+        durSelect.value = selectedDuration;
+    }
+
+    function loadTimeSlots(spaceId, date, endDate = null) {
+        if (!spaceId || !date || !document.getElementById('booking_type').value) return;
+        
+        const container = document.getElementById('time-slots-container');
+        document.getElementById('time-slots-section').style.display = 'block';
+        container.innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border text-primary"></div></div>';
+        
+        const type = document.getElementById('booking_type').value;
+        if (type === 'full_day') { renderFullDay(); return; }
+        if (type === 'half_day') { renderHalfDay(); return; }
+        
+        fetch(`${BASE_URL}bookings/getTimeSlots?space_id=${spaceId}&date=${date}&end_date=${endDate || date}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const all = [...(data.slots || []), ...(data.occupied || [])].sort((a,b) => a.start.localeCompare(b.start));
+                    renderSlots(all);
+                } else {
+                    container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                }
+            })
+            .catch(e => container.innerHTML = '<div class="alert alert-danger">Error loading slots</div>');
+    }
+
+    function renderSlots(slots) {
+        let html = '';
+        slots.forEach(s => {
+            let cls = 'btn-outline-secondary disabled';
+            if (s.available) cls = 'btn-outline-success slot-btn';
+            else if (s.is_buffer) cls = 'btn-warning disabled opacity-75';
+            else cls = 'btn-danger disabled opacity-50';
+            
+            const action = s.available ? `data-action="selectSlot" data-start="${s.start}" data-end="${s.end}"` : '';
+            html += `<div class="col-md-3 col-6"><button type="button" class="btn ${cls} w-100 shadow-sm mb-2" ${action}>${s.display}</button></div>`;
+        });
+        document.getElementById('time-slots-container').innerHTML = html || '<p class="text-center w-100">No slots available</p>';
+    }
+
+    function renderFullDay() {
+        window.setSelection('09:00', '20:00', 'Full Day (9am - 8pm)');
+        document.getElementById('time-slots-container').innerHTML = '<div class="col-12"><div class="alert alert-info">Full Day Selected (09:00 - 20:00)</div></div>';
+    }
+
+    function renderHalfDay() {
+        document.getElementById('time-slots-container').innerHTML = `
+            <div class="col-6"><button type="button" class="btn btn-outline-success w-100 py-3 slot-btn" data-action="setSelection" data-start="09:00" data-end="13:00" data-display="Morning Session">Morning (9am-1pm)</button></div>
+            <div class="col-6"><button type="button" class="btn btn-outline-success w-100 py-3 slot-btn" data-action="setSelection" data-start="14:00" data-end="18:00" data-display="Afternoon Session">Afternoon (2pm-6pm)</button></div>
+        `;
+    }
+
+    // Initialization & Event Listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        const dom = {
+            location: document.getElementById('location_id'),
+            space: document.getElementById('space_id'),
+            type: document.getElementById('booking_type'),
+            date: document.getElementById('booking_date'),
+            endDate: document.getElementById('booking_end_date'),
+            duration: document.getElementById('duration'),
+            container: document.getElementById('time-slots-container'),
+            form: document.getElementById('bookingForm')
+        };
+
+        dom.location.addEventListener('change', loadSpaces);
+        dom.space.addEventListener('change', loadSpaceDetails);
+        
+        dom.type.addEventListener('change', function() {
+            updateDurationOptions(this.value);
+            document.getElementById('end-date-container').style.display = (this.value === 'multi_day' || this.value === 'weekly') ? 'block' : 'none';
+            if (dom.date.value) loadTimeSlots(currentSpaceData.id, dom.date.value);
+            calculatePrice();
+        });
+
+        dom.duration.addEventListener('change', function() {
+            selectedDuration = parseInt(this.value);
+            if (dom.date.value) loadTimeSlots(currentSpaceData.id, dom.date.value);
+        });
+
+        dom.date.addEventListener('change', function() {
+            selectedDate = this.value;
+            dom.endDate.min = this.value;
+            loadTimeSlots(currentSpaceData.id, this.value);
+            calculatePrice();
+        });
+
+        dom.endDate.addEventListener('change', function() {
+            loadTimeSlots(currentSpaceData.id, dom.date.value, this.value);
+        });
+
+        dom.container.addEventListener('click', function(e) {
+            const btn = e.target.closest('.slot-btn');
+            if (btn && !btn.classList.contains('disabled')) {
+                try {
+                    const action = btn.dataset.action;
+                    if (action === 'setSelection') {
+                        window.setSelection(btn.dataset.start, btn.dataset.end, btn.dataset.display);
+                    } else if (action === 'selectSlot') {
+                        window.selectSlot(btn.dataset.start, btn.dataset.end);
+                    }
+                } catch (err) {
+                    console.error('Selection Error:', err);
+                }
+            }
+        });
+
+        dom.form.addEventListener('submit', function(e) {
+            if (!currentSpaceData) { e.preventDefault(); alert('Please select a space.'); return; }
+            if (!document.getElementById('start_time').value) { e.preventDefault(); alert('Please select a time slot.'); return; }
+        });
     });
-    
-    container.innerHTML = html;
-}
-
-function selectSlot(start, end) {
-    // Calculate End Time based on duration
-    // 'start' is HH:mm
-    let [h, m] = start.split(':').map(Number);
-    h += selectedDuration;
-    
-    // Check validation (if we had full slot data we could check overlap)
-    // For now, assume if displayed it's valid to start, but we should verify end.
-    // Let's just set textual display and hidden fields.
-    
-    let endH = h > 23 ? 23 : h; // Cap at midnight
-    let endM = m;
-    let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
-    
-    setSelection(start, endStr, `${start} - ${endStr}`);
-}
-
-window.setSelection = function(start, end, display) {
-    selectedStartTime = start;
-    selectedEndTime = end;
-    
-    document.getElementById('start_time').value = start;
-    document.getElementById('end_time').value = end;
-    
-    const sumEl = document.getElementById('selected-time-summary');
-    if (sumEl) sumEl.style.display = 'block';
-    
-    const dispEl = document.getElementById('selected-time-display');
-    if (dispEl) dispEl.textContent = display;
-    
-    calculatePrice(); // Update price
-}
-
-// Override checkAvailability to be no-op or purely visual since we fetch slots
-window.checkAvailability = function() {}; 
-
-// Form validation
-document.getElementById('bookingForm').addEventListener('submit', function(e) {
-    if (!currentSpaceData) {
-        e.preventDefault();
-        alert('Please select a location and space.');
-        return false;
-    }
-    
-    if (!document.getElementById('start_time').value) {
-         e.preventDefault();
-         alert('Please select a time slot.');
-         return false;
-    }
-    
-    const guests = parseInt(document.getElementById('number_of_guests').value) || 0;
-    if (currentSpaceData.capacity > 0 && guests > currentSpaceData.capacity) {
-        e.preventDefault();
-        alert('Number of guests exceeds the space capacity of ' + currentSpaceData.capacity + '.');
-        return false;
-    }
-    
-    return true;
-});
+})();
 </script>
