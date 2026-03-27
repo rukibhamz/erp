@@ -600,7 +600,14 @@ function loadTimeSlots(spaceId, date, endDate = null) {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                renderSlots(data.slots || []);
+                const availableSlots = data.slots || [];
+                const occupiedSlots = data.occupied || [];
+                const allSlots = [...availableSlots, ...occupiedSlots];
+                
+                // Sort by start time chronologically
+                allSlots.sort((a, b) => a.start.localeCompare(b.start));
+                
+                renderSlots(allSlots);
             } else {
                 container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
             }
@@ -639,15 +646,24 @@ function renderSlots(slots) {
         // For hourly, we just show start times? Or we need logic to check if X hours forward are available.
         // For simplicity, let's just show available 1-hour slots and let user pick start.
         // Then we validate duration.
-        // Actually, Wizard logic checks continuity.
-        // Let's simplified: Show all available slots. When clicked, we try to grab +duration.
+        let btnClass = 'btn-outline-secondary disabled';
+        let subText = 'Unknown';
         
-        let subText = slot.available ? 'Available' : 'Occupied';
-        let btnClass = slot.available ? 'btn-outline-success slot-btn' : 'btn-outline-secondary disabled';
+        if (slot.available) {
+            btnClass = 'btn-outline-success slot-btn';
+            subText = 'Available';
+        } else if (slot.is_buffer) {
+            btnClass = 'btn-warning text-dark disabled opacity-75';
+            subText = 'Buffer';
+        } else {
+            btnClass = 'btn-danger disabled opacity-50';
+            subText = 'Occupied';
+        }
+        
         let onClickData = slot.available ? `data-action="selectSlot" data-start="${slot.start}" data-end="${slot.end}"` : '';
         
         html += `<div class="col-md-3 col-6">
-            <button type="button" class="btn ${btnClass} w-100" ${onClickData}>
+            <button type="button" class="btn ${btnClass} w-100 shadow-sm" ${onClickData} title="${subText}">
                 ${slot.display}
             </button>
         </div>`;
