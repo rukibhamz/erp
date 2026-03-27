@@ -30,7 +30,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Location <span class="text-danger">*</span></label>
-                            <select name="location_id" id="location_id" class="form-select" required onchange="loadSpaces()">
+                            <select name="location_id" id="location_id" class="form-select" required>
                                 <option value="">Select Location</option>
                                 <?php foreach ($locations as $location): ?>
                                     <option value="<?= $location['id'] ?>">
@@ -43,7 +43,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Space <span class="text-danger">*</span></label>
-                            <select name="space_id" id="space_id" class="form-select" required onchange="loadSpaceDetails()" disabled>
+                            <select name="space_id" id="space_id" class="form-select" required disabled>
                                 <option value="">Select Location First</option>
                             </select>
                             <input type="hidden" name="facility_id" id="facility_id" value="">
@@ -68,7 +68,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Booking Type <span class="text-danger">*</span></label>
-                            <select name="booking_type" id="booking_type" class="form-select" required onchange="calculatePrice()" disabled>
+                            <select name="booking_type" id="booking_type" class="form-select" required disabled>
                                 <option value="">Select Space First</option>
                             </select>
                         </div>
@@ -76,7 +76,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Booking Date <span class="text-danger">*</span></label>
-                            <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= isset($old_input['booking_date']) ? $old_input['booking_date'] : '' ?>" onchange="calculatePrice(); checkAvailability()">
+                            <input type="date" name="booking_date" id="booking_date" class="form-control" required min="<?= date('Y-m-d') ?>" value="<?= isset($old_input['booking_date']) ? $old_input['booking_date'] : '' ?>">
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -108,7 +108,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Number of Guests</label>
-                        <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0" onchange="checkCapacity()">
+                        <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0">
                         <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
                     </div>
                 </div>
@@ -182,7 +182,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Discount Amount</label>
-                            <input type="number" name="discount_amount" id="discount_amount" class="form-control" step="0.01" value="0" onchange="calculatePrice()">
+                            <input type="number" name="discount_amount" id="discount_amount" class="form-control" step="0.01" value="0">
                         </div>
                     </div>
                 </div>
@@ -215,6 +215,26 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 const BASE_URL = '<?= base_url() ?>';
 let currentSpaceData = null;
 let spacesData = {}; // Cache spaces by location
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('location_id').addEventListener('change', loadSpaces);
+    document.getElementById('space_id').addEventListener('change', loadSpaceDetails);
+    document.getElementById('number_of_guests').addEventListener('change', checkCapacity);
+    const discountEl = document.getElementById('discount_amount');
+    if (discountEl) discountEl.addEventListener('change', calculatePrice);
+    
+    document.getElementById('time-slots-container').addEventListener('click', function(e) {
+        const btn = e.target.closest('.slot-btn');
+        if (btn && !btn.classList.contains('disabled')) {
+            if (btn.dataset.action === 'setSelection') {
+                setSelection(btn.dataset.start, btn.dataset.end, btn.dataset.display);
+            } else if (btn.dataset.action === 'selectSlot') {
+                selectSlot(btn.dataset.start, btn.dataset.end);
+            }
+        }
+    });
+});
+
 
 // Load spaces when location is selected
 function loadSpaces() {
@@ -461,6 +481,7 @@ document.getElementById('booking_type').addEventListener('change', function() {
     if (bookingDate.value) {
         loadTimeSlots(currentSpaceData.id, bookingDate.value);
     }
+    calculatePrice();
 });
 
 // Duration Change
@@ -478,6 +499,8 @@ document.getElementById('booking_date').addEventListener('change', function() {
     loadTimeSlots(currentSpaceData.id, selectedDate);
     // Sync min end date
     document.getElementById('booking_end_date').min = selectedDate;
+    calculatePrice();
+    checkAvailability();
 });
 
 // End Date Change
@@ -562,8 +585,8 @@ function renderFullDay() {
 function renderHalfDay() {
     const container = document.getElementById('time-slots-container');
     container.innerHTML = `
-        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3" onclick="setSelection('08:00', '12:00', 'Morning')">Morning (8-12)</button></div>
-        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3" onclick="setSelection('13:00', '17:00', 'Afternoon')">Afternoon (1-5)</button></div>
+        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3 slot-btn" data-action="setSelection" data-start="08:00" data-end="12:00" data-display="Morning">Morning (8-12)</button></div>
+        <div class="col-6"><button type="button" class="btn btn-outline-primary w-100 py-3 slot-btn" data-action="setSelection" data-start="13:00" data-end="17:00" data-display="Afternoon">Afternoon (1-5)</button></div>
     `;
 }
 
@@ -584,11 +607,11 @@ function renderSlots(slots) {
         // Let's simplified: Show all available slots. When clicked, we try to grab +duration.
         
         let subText = slot.available ? 'Available' : 'Occupied';
-        let btnClass = slot.available ? 'btn-outline-success' : 'btn-outline-secondary disabled';
-        let onClick = slot.available ? `selectSlot('${slot.start}', '${slot.end}')` : '';
+        let btnClass = slot.available ? 'btn-outline-success slot-btn' : 'btn-outline-secondary disabled';
+        let onClickData = slot.available ? `data-action="selectSlot" data-start="${slot.start}" data-end="${slot.end}"` : '';
         
         html += `<div class="col-md-3 col-6">
-            <button type="button" class="btn ${btnClass} w-100" onclick="${onClick}">
+            <button type="button" class="btn ${btnClass} w-100" ${onClickData}>
                 ${slot.display}
             </button>
         </div>`;
