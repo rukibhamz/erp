@@ -6,10 +6,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">POS Terminals</h1>
         <div class="d-flex gap-2">
-            <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>
-                <button class="btn btn-dark" onclick="showCreateModal()">
+            <?php if (hasPermission('pos', 'manage')): ?>
+                <a href="javascript:void(0)" class="btn btn-dark" onclick="showCreateModal()">
                     <i class="bi bi-plus-circle"></i> Create Terminal
-                </button>
+                </a>
             <?php endif; ?>
         </div>
     </div>
@@ -28,7 +28,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
     <div class="card-body">
         <?php if (empty($terminals)): ?>
-            <p class="text-muted text-center py-5">No terminals found. Create your first terminal to start using POS.</p>
+            <div class="text-center py-5">
+                <i class="bi bi-cash-register mb-3 text-muted" style="font-size: 3rem; display: block;"></i>
+                <p class="text-muted mb-4">No terminals found. Create your first terminal to start using POS.</p>
+                <?php if (hasPermission('pos', 'manage')): ?>
+                    <a href="javascript:void(0)" class="btn btn-dark" onclick="showCreateModal()">
+                        <i class="bi bi-plus-circle"></i> Create Your First Terminal
+                    </a>
+                <?php endif; ?>
+            </div>
         <?php else: ?>
             <div class="table-responsive">
                 <table class="table table-hover">
@@ -57,7 +65,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <a href="<?= base_url('pos/index?terminal=' . $terminal['id']) ?>" class="btn btn-primary" title="Open POS">
                                             <i class="bi bi-cash-register"></i> Open POS
                                         </a>
-                                        <?php if (in_array($current_user['role'] ?? '', ['super_admin', 'admin'])): ?>
+                                        <?php if (hasPermission('pos', 'manage')): ?>
                                             <a href="<?= base_url('pos/reports?terminal_id=' . $terminal['id']) ?>" class="btn btn-primary" title="View Reports">
                                                 <i class="bi bi-bar-chart"></i> Reports
                                             </a>

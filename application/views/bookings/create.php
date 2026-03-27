@@ -3,17 +3,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
 <style>
-    /* Fix for time slot button visibility and coloring */
+    /* Fix for time slot button visibility and coloring - High Contrast Green */
     #time-slots-container .btn-outline-success {
-        color: #28a745 !important;
-        border-color: #28a745 !important;
-        background-color: transparent !important;
+        color: #198754 !important;
+        border: 2px solid #198754 !important;
+        background-color: #ffffff !important;
+        font-weight: 600 !important;
     }
     #time-slots-container .btn-outline-success:hover,
     #time-slots-container .slot-btn.btn-success {
-        background-color: #28a745 !important;
+        background-color: #198754 !important;
         color: #ffffff !important;
-        border-color: #28a745 !important;
+        border-color: #198754 !important;
+        box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3) !important;
     }
     #time-slots-container .btn-danger.disabled {
         background-color: #dc3545 !important;
@@ -162,7 +164,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     <!-- Legend -->
                     <div class="mb-2" id="time-slot-legend">
-                        <span class="badge bg-success me-2">Available</span>
+                        <span class="badge bg-white border border-success text-success me-2" style="border-width: 2px !important;">Available</span>
                         <span class="badge bg-danger me-2">Occupied</span>
                         <span class="badge bg-warning text-dark">Buffer</span>
                     </div>
