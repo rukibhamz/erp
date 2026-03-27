@@ -266,7 +266,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <script nonce="<?= csp_nonce() ?>">
 (function() {
     // Configuration & State
-    const BASE_URL = window.BASE_URL || '<?= base_url() ?>';
+    let baseUrl = '<?= base_url() ?>';
+    if (!baseUrl.endsWith('/')) baseUrl += '/';
+    const BASE_URL = baseUrl;
+    
     let currentSpaceData = null;
     let spacesData = {}; 
     let selectedDuration = 1;
@@ -297,14 +300,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
     window.selectSlot = function(start, end) {
         console.log('DEBUG: selectSlot called', {start, end, selectedDuration});
-        let [h, m] = start.split(':').map(Number);
-        h += selectedDuration;
-        
-        let endH = h > 23 ? 23 : h; 
-        let endM = m;
-        let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
-        
-        window.setSelection(start, endStr, `${start} - ${endStr}`);
+        try {
+            let [h, m] = start.split(':').map(Number);
+            let dur = parseInt(selectedDuration) || 1;
+            h += dur;
+            
+            let endH = h > 23 ? 23 : h; 
+            let endM = m;
+            let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
+            
+            window.setSelection(start, endStr, `${start} - ${endStr}`);
+        } catch (e) {
+            console.error('selectSlot error:', e);
+            alert('Error selecting slot.');
+        }
     };
 
     function calculatePrice() {
@@ -335,12 +344,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         const days = Math.ceil(hours / 24);
         
         switch(bookingType) {
-            case 'hourly': basePrice = currentSpaceData.hourly_rate * hours; break;
-            case 'daily': basePrice = currentSpaceData.daily_rate * days; break;
-            case 'half_day': basePrice = currentSpaceData.half_day_rate * Math.ceil(days * 2); break;
-            case 'weekly': basePrice = currentSpaceData.weekly_rate * Math.ceil(days / 7); break;
-            case 'multi_day': basePrice = currentSpaceData.daily_rate * days; break;
-            default: basePrice = currentSpaceData.hourly_rate * hours;
+            case 'hourly': basePrice = (currentSpaceData.hourly_rate || 0) * hours; break;
+            case 'daily': 
+            case 'full_day': basePrice = (currentSpaceData.daily_rate || 0) * days; break;
+            case 'half_day': basePrice = (currentSpaceData.half_day_rate || 0) * Math.ceil(days * 2); break;
+            case 'weekly': basePrice = (currentSpaceData.weekly_rate || 0) * Math.ceil(days / 7); break;
+            case 'multi_day': basePrice = (currentSpaceData.daily_rate || 0) * days; break;
+            default: basePrice = (currentSpaceData.hourly_rate || 0) * hours;
         }
         
         const subTotal = Math.max(0, basePrice - discount);
@@ -348,11 +358,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         const total = subTotal + vat;
         const deposit = currentSpaceData.security_deposit || 0;
         
-        document.getElementById('subTotal').textContent = '₦' + subTotal.toLocaleString();
-        document.getElementById('vatAmount').textContent = '₦' + vat.toLocaleString();
-        document.getElementById('tax_amount_input').value = vat.toFixed(2);
-        document.getElementById('estimatedPrice').textContent = '₦' + total.toLocaleString();
-        document.getElementById('securityDeposit').textContent = '₦' + deposit.toLocaleString();
+        const subTotalEl = document.getElementById('subTotal');
+        if (subTotalEl) subTotalEl.textContent = '₦' + subTotal.toLocaleString();
+        
+        const vatAmountEl = document.getElementById('vatAmount');
+        if (vatAmountEl) vatAmountEl.textContent = '₦' + vat.toLocaleString();
+        
+        const taxInput = document.getElementById('tax_amount_input');
+        if (taxInput) taxInput.value = vat.toFixed(2);
+        
+        const estPriceEl = document.getElementById('estimatedPrice');
+        if (estPriceEl) estPriceEl.textContent = '₦' + total.toLocaleString();
+        
+        const secDepEl = document.getElementById('securityDeposit');
+        if (secDepEl) secDepEl.textContent = '₦' + deposit.toLocaleString();
+        
         if (pp) pp.style.display = 'block';
     }
 
@@ -363,6 +383,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         document.getElementById('time-slots-section').style.display = 'none';
         document.getElementById('duration-container').style.display = 'none';
         document.getElementById('end-date-container').style.display = 'none';
+        document.getElementById('spaceDetails').style.display = 'none';
         
         if (!locationId) {
             spaceSelect.innerHTML = '<option value="">Select Location First</option>'; 
@@ -386,6 +407,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     populateSpaces(data.spaces);
                 } else {
                     spaceSelect.innerHTML = '<option value="">No spaces available</option>';
+                    alert('Error: ' + data.error);
                 }
             })
             .catch(e => {
@@ -424,33 +446,40 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     function loadSpaceDetails() {
         const spaceSelect = document.getElementById('space_id');
         const opt = spaceSelect.options[spaceSelect.selectedIndex];
-        if (!opt || !opt.value) return;
+        if (!opt || !opt.value) {
+            document.getElementById('spaceDetails').style.display = 'none';
+            return;
+        }
         
-        document.getElementById('facility_id').value = opt.dataset.facilityId || '';
-        currentSpaceData = {
-            id: opt.value,
-            booking_types: JSON.parse(opt.dataset.bookingTypes || '[]'),
-            hourly_rate: parseFloat(opt.dataset.hourlyRate),
-            daily_rate: parseFloat(opt.dataset.dailyRate),
-            half_day_rate: parseFloat(opt.dataset.halfDayRate),
-            weekly_rate: parseFloat(opt.dataset.weeklyRate),
-            security_deposit: parseFloat(opt.dataset.securityDeposit),
-            capacity: parseInt(opt.dataset.capacity),
-            minimum_duration: parseInt(opt.dataset.minimumDuration)
-        };
-        
-        document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
-        document.getElementById('spaceBookingTypes').textContent = currentSpaceData.booking_types.map(t => t.toUpperCase()).join(', ');
-        document.getElementById('spaceDetails').style.display = 'block';
-        
-        const typeSelect = document.getElementById('booking_type');
-        typeSelect.innerHTML = '<option value="">Select Booking Type</option>';
-        currentSpaceData.booking_types.forEach(t => {
-            const o = document.createElement('option');
-            o.value = t; o.textContent = t.replace('_', ' ').toUpperCase();
-            typeSelect.appendChild(o);
-        });
-        typeSelect.disabled = false;
+        try {
+            document.getElementById('facility_id').value = opt.dataset.facilityId || '';
+            currentSpaceData = {
+                id: opt.value,
+                booking_types: JSON.parse(opt.dataset.bookingTypes || '[]'),
+                hourly_rate: parseFloat(opt.dataset.hourlyRate),
+                daily_rate: parseFloat(opt.dataset.dailyRate),
+                half_day_rate: parseFloat(opt.dataset.halfDayRate),
+                weekly_rate: parseFloat(opt.dataset.weeklyRate),
+                security_deposit: parseFloat(opt.dataset.securityDeposit),
+                capacity: parseInt(opt.dataset.capacity),
+                minimum_duration: parseInt(opt.dataset.minimumDuration)
+            };
+            
+            document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
+            document.getElementById('spaceBookingTypes').textContent = currentSpaceData.booking_types.map(t => t.toUpperCase()).join(', ');
+            document.getElementById('spaceDetails').style.display = 'block';
+            
+            const typeSelect = document.getElementById('booking_type');
+            typeSelect.innerHTML = '<option value="">Select Booking Type</option>';
+            currentSpaceData.booking_types.forEach(t => {
+                const o = document.createElement('option');
+                o.value = t; o.textContent = t.replace('_', ' ').toUpperCase();
+                typeSelect.appendChild(o);
+            });
+            typeSelect.disabled = false;
+        } catch (e) {
+            console.error('loadSpaceDetails error:', e);
+        }
     }
 
     function updateDurationOptions(type) {
@@ -462,26 +491,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         if (type === 'hourly') {
             for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;
             selectedDuration = 1;
-        } else if (type === 'daily') {
+        } else if (type === 'daily' || type === 'full_day') {
             options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
             selectedDuration = 8;
         } else {
             container.style.display = 'none';
-            selectedDuration = (type === 'full_day') ? 24 : 4;
+            selectedDuration = (type === 'half_day') ? 4 : 24;
         }
         durSelect.innerHTML = options;
         durSelect.value = selectedDuration;
     }
 
     function loadTimeSlots(spaceId, date, endDate = null) {
-        if (!spaceId || !date || !document.getElementById('booking_type').value) return;
+        if (!spaceId || !date) return;
+        const type = document.getElementById('booking_type').value;
+        if (!type) return;
         
         const container = document.getElementById('time-slots-container');
         document.getElementById('time-slots-section').style.display = 'block';
         container.innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border text-primary"></div></div>';
         
-        const type = document.getElementById('booking_type').value;
-        if (type === 'full_day') { renderFullDay(); return; }
+        // Special types: Unify daily/full_day behavior if needed, otherwise fetch.
+        // For now, let's allow fetching for all to see availability.
+        
         if (type === 'half_day') { renderHalfDay(); return; }
         
         fetch(`${BASE_URL}bookings/getTimeSlots?space_id=${spaceId}&date=${date}&end_date=${endDate || date}`)
@@ -494,7 +526,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
                 }
             })
-            .catch(e => container.innerHTML = '<div class="alert alert-danger">Error loading slots</div>');
+            .catch(e => {
+                console.error(e);
+                container.innerHTML = '<div class="alert alert-danger">Error loading slots.</div>';
+            });
     }
 
     function renderSlots(slots) {
@@ -536,33 +571,34 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             form: document.getElementById('bookingForm')
         };
 
-        dom.location.addEventListener('change', loadSpaces);
-        dom.space.addEventListener('change', loadSpaceDetails);
+        if (dom.location) dom.location.addEventListener('change', loadSpaces);
+        if (dom.space) dom.space.addEventListener('change', loadSpaceDetails);
         
-        dom.type.addEventListener('change', function() {
+        if (dom.type) dom.type.addEventListener('change', function() {
             updateDurationOptions(this.value);
-            document.getElementById('end-date-container').style.display = (this.value === 'multi_day' || this.value === 'weekly') ? 'block' : 'none';
-            if (dom.date.value) loadTimeSlots(currentSpaceData.id, dom.date.value);
+            const edc = document.getElementById('end-date-container');
+            if (edc) edc.style.display = (this.value === 'multi_day' || this.value === 'weekly') ? 'block' : 'none';
+            if (dom.date.value && currentSpaceData) loadTimeSlots(currentSpaceData.id, dom.date.value);
             calculatePrice();
         });
 
-        dom.duration.addEventListener('change', function() {
-            selectedDuration = parseInt(this.value);
-            if (dom.date.value) loadTimeSlots(currentSpaceData.id, dom.date.value);
+        if (dom.duration) dom.duration.addEventListener('change', function() {
+            selectedDuration = parseInt(this.value) || 1;
+            if (dom.date.value && currentSpaceData) loadTimeSlots(currentSpaceData.id, dom.date.value);
         });
 
-        dom.date.addEventListener('change', function() {
+        if (dom.date) dom.date.addEventListener('change', function() {
             selectedDate = this.value;
-            dom.endDate.min = this.value;
-            loadTimeSlots(currentSpaceData.id, this.value);
+            if (dom.endDate) dom.endDate.min = this.value;
+            if (currentSpaceData) loadTimeSlots(currentSpaceData.id, this.value);
             calculatePrice();
         });
 
-        dom.endDate.addEventListener('change', function() {
-            loadTimeSlots(currentSpaceData.id, dom.date.value, this.value);
+        if (dom.endDate) dom.endDate.addEventListener('change', function() {
+            if (currentSpaceData) loadTimeSlots(currentSpaceData.id, dom.date.value, this.value);
         });
 
-        dom.container.addEventListener('click', function(e) {
+        if (dom.container) dom.container.addEventListener('click', function(e) {
             const btn = e.target.closest('.slot-btn');
             if (btn && !btn.classList.contains('disabled')) {
                 try {
@@ -578,7 +614,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             }
         });
 
-        dom.form.addEventListener('submit', function(e) {
+        if (dom.form) dom.form.addEventListener('submit', function(e) {
             if (!currentSpaceData) { e.preventDefault(); alert('Please select a space.'); return; }
             if (!document.getElementById('start_time').value) { e.preventDefault(); alert('Please select a time slot.'); return; }
         });
