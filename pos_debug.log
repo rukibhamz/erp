@@ -1,6 +1,0 @@
-2026-03-26 16:38:05 - AutoMigration: Starting ensureEssentialPOSAccounts
-2026-03-26 16:38:05 - AutoMigration: Error ensuring POS accounts: SQLSTATE[HY000]: General error: 2014 Cannot execute queries while other unbuffered queries are active.  Consider using PDOStatement::fetchAll().  Alternatively, if your code is only ever going to run against mysql, you may enable query buffering by setting the PDO::MYSQL_ATTR_USE_BUFFERED_QUERY attribute.
-2026-03-26 16:38:42 - AutoMigration: Starting ensureEssentialPOSAccounts
-2026-03-26 16:38:42 - AutoMigration: Error ensuring POS accounts: SQLSTATE[HY000]: General error: 2014 Cannot execute queries while other unbuffered queries are active.  Consider using PDOStatement::fetchAll().  Alternatively, if your code is only ever going to run against mysql, you may enable query buffering by setting the PDO::MYSQL_ATTR_USE_BUFFERED_QUERY attribute.
-2026-03-26 16:38:55 - AutoMigration: Starting ensureEssentialPOSAccounts
-2026-03-26 16:38:55 - AutoMigration: Error ensuring POS accounts: SQLSTATE[HY000]: General error: 2014 Cannot execute queries while other unbuffered queries are active.  Consider using PDOStatement::fetchAll().  Alternatively, if your code is only ever going to run against mysql, you may enable query buffering by setting the PDO::MYSQL_ATTR_USE_BUFFERED_QUERY attribute.
