@@ -1,0 +1,25 @@
+﻿Field	Type	Null	Key	Default	Extra
+id	int(11)	NO	PRI	NULL	auto_increment
+property_id	int(11)	NO	MUL	NULL	
+space_number	varchar(50)	YES		NULL	
+space_name	varchar(255)	NO		NULL	
+parent_space_id	int(11)	YES	MUL	NULL	
+category	enum('event_space','commercial','hospitality','storage','parking','residential','other')	NO	MUL	NULL	
+space_type	varchar(100)	YES		NULL	
+floor	varchar(50)	YES		NULL	
+area	decimal(10,2)	YES		NULL	
+capacity	int(11)	YES		NULL	
+hourly_rate	decimal(15,2)	YES		0.00	
+configuration	varchar(255)	YES		NULL	
+amenities	text	YES		NULL	
+accessibility_features	text	YES		NULL	
+operational_status	enum('active','under_maintenance','under_renovation','temporarily_closed','decommissioned')	YES	MUL	active	
+operational_mode	enum('available_for_booking','leased','owner_operated','reserved','vacant')	YES	MUL	vacant	
+status	enum('active','inactive')	YES	MUL	active	
+is_bookable	tinyint(1)	YES	MUL	0	
+facility_id	int(11)	YES	MUL	NULL	
+description	text	YES		NULL	
+notes	text	YES		NULL	
+created_at	datetime	NO		current_timestamp()	
+updated_at	datetime	YES		NULL	on update current_timestamp()
+video_url	varchar(500)	YES		NULL	

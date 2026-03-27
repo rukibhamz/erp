@@ -7,6 +7,8 @@ class Base_Controller {
     protected $load;
     protected $config;
     protected $session;
+    protected $router;
+    public $input; // Explicitly declared for PHP 8.2 compatibility
     
     public function __construct() {
         $this->loader = new Loader();

@@ -49,9 +49,9 @@ class Space_model extends Base_Model {
                 return [];
             }
 
-            $sql = "SELECT s.*, p.property_name, p.property_code 
+            $sql = "SELECT s.*, l.property_name, l.property_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` s
-                    JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                    JOIN `" . $this->db->getPrefix() . "locations` l ON s.property_id = l.id
                     WHERE s.is_bookable = 1
                     AND s.operational_status NOT IN ('decommissioned','temporarily_closed')";
             $params = [];
@@ -61,15 +61,15 @@ class Space_model extends Base_Model {
                 $params[] = $propertyId;
             }
             
-            $sql .= " ORDER BY p.property_name, s.space_name";
+            $sql .= " ORDER BY l.property_name, s.space_name";
             
             $spaces = $this->db->fetchAll($sql, $params);
 
             // Fallback: if no bookable spaces found for this location, return all non-decommissioned spaces
             if (empty($spaces) && $propertyId) {
-                $sql = "SELECT s.*, p.property_name, p.property_code 
+                $sql = "SELECT s.*, l.property_name, l.property_code 
                         FROM `" . $this->db->getPrefix() . $this->table . "` s
-                        JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                        JOIN `" . $this->db->getPrefix() . "locations` l ON s.property_id = l.id
                         WHERE s.property_id = ?
                         AND s.operational_status NOT IN ('decommissioned')
                         ORDER BY s.space_name";
@@ -82,13 +82,35 @@ class Space_model extends Base_Model {
             return [];
         }
     }
+
+    public function getBookingTypes($spaceId) {
+        try {
+            $space = $this->getById($spaceId);
+            if (!$space) return [];
+            
+            $config = $this->db->fetchOne(
+                "SELECT booking_types FROM `" . $this->db->getPrefix() . "bookable_config` 
+                 WHERE facility_name = ?", 
+                [$space['space_name']]
+            );
+            
+            if ($config && $config['booking_types']) {
+                return json_decode($config['booking_types'], true) ?: [];
+            }
+            
+            return ['hourly', 'daily']; // Default fallback
+        } catch (Exception $e) {
+            error_log('Space_model getBookingTypes error: ' . $e->getMessage());
+            return ['hourly', 'daily'];
+        }
+    }
     
     public function getWithProperty($spaceId) {
         try {
             return $this->db->fetchOne(
-                "SELECT s.*, p.property_name, p.property_code, p.address 
+                "SELECT s.*, l.property_name, l.property_code, l.address 
                  FROM `" . $this->db->getPrefix() . $this->table . "` s
-                 JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                 JOIN `" . $this->db->getPrefix() . "locations` l ON s.property_id = l.id
                  WHERE s.id = ?",
                 [$spaceId]
             );
