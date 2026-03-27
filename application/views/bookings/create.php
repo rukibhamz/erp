@@ -146,13 +146,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <!-- Price Preview -->
                 <div class="alert alert-success" id="pricePreview" style="display: none;">
                     <div class="row">
-                        <div class="col-md-6">
-                            <strong>Estimated Price:</strong> <span id="estimatedPrice">₦0.00</span>
+                        <div class="col-md-3">
+                            <strong>Subtotal:</strong> <span id="subTotal">₦0.00</span>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <strong>VAT (7.5%):</strong> <span id="vatAmount">₦0.00</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Total:</strong> <span id="estimatedPrice">₦0.00</span>
+                        </div>
+                        <div class="col-md-3">
                             <strong>Security Deposit:</strong> <span id="securityDeposit">₦0.00</span>
                         </div>
                     </div>
+                    <input type="hidden" name="tax_amount" id="tax_amount_input" value="0">
                 </div>
 
                 <!-- Customer Information -->
@@ -173,16 +180,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
 
                 <div class="row mb-4">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Phone <span class="text-danger">*</span></label>
                             <input type="text" name="customer_phone" class="form-control" required value="<?= isset($old_input['customer_phone']) ? htmlspecialchars($old_input['customer_phone']) : '' ?>">
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Discount Amount</label>
                             <input type="number" name="discount_amount" id="discount_amount" class="form-control" step="0.01" value="0">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Payment Plan <span class="text-danger">*</span></label>
+                            <select name="payment_plan" id="payment_plan" class="form-select" required>
+                                <option value="full">Full Payment</option>
+                                <option value="part">Part Payment (50% Deposit)</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -448,9 +464,20 @@ function calculatePrice() {
             basePrice = currentSpaceData.hourly_rate * hours;
     }
     
-    const total = basePrice - discount;
+    const subTotal = basePrice - discount;
+    const vat = subTotal * 0.075;
+    const total = subTotal + vat;
     const deposit = currentSpaceData.security_deposit || 0;
     
+    const subTotalEl = document.getElementById('subTotal');
+    if (subTotalEl) subTotalEl.textContent = '₦' + subTotal.toFixed(2);
+
+    const vatEl = document.getElementById('vatAmount');
+    if (vatEl) vatEl.textContent = '₦' + vat.toFixed(2);
+
+    const taxInput = document.getElementById('tax_amount_input');
+    if (taxInput) taxInput.value = vat.toFixed(2);
+
     const estPriceEl = document.getElementById('estimatedPrice');
     if (estPriceEl) estPriceEl.textContent = '₦' + total.toFixed(2);
     

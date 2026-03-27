@@ -81,7 +81,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h5 class="modal-title">Create POS Terminal</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="<?= base_url('pos/create-terminal') ?>">
+            <form method="POST" action="<?= base_url('pos/createTerminal') ?>">
                 <?php echo csrf_field(); ?>
                 <div class="modal-body">
                     <div class="mb-3">

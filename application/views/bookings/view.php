@@ -9,6 +9,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('bookings') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
+            <a href="<?= base_url('bookings/invoice/' . $booking['id']) ?>" class="btn btn-info" target="_blank">
+                <i class="bi bi-printer"></i> Print Invoice
+            </a>
             <?php if (has_permission('bookings', 'update') && !in_array($booking['status'], ['cancelled', 'completed'])): ?>
                 <a href="<?= base_url('bookings/edit/' . $booking['id']) ?>" class="btn btn-primary">
                     <i class="bi bi-pencil"></i> Edit

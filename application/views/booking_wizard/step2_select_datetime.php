@@ -42,7 +42,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
             <div class="text-center mb-4">
                 <h1 class="display-6 fw-bold mb-3">Select Date & Time</h1>
-                <p class="lead text-muted">Choose your booking type, date and time duration</p>
+                <p class="lead text-muted">Choose a location and then select the space you'd like to book</p>
+                <div class="alert alert-warning d-inline-block">
+                    <i class="bi bi-clock-history"></i> <strong>Notice:</strong> Spaces are bookable between <strong>9:00 AM and 8:00 PM</strong> daily.
+                </div>
             </div>
 
             <div class="row">
@@ -161,6 +164,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                 <div class="col-lg-4">
                     <!-- Resource Info Sidebar -->
+                    <div class="alert alert-warning mb-3">
+                        <i class="bi bi-clock-history"></i> <strong>Notice:</strong> Spaces are bookable between <strong>9:00 AM and 8:00 PM</strong> daily.
+                    </div>
                     <div class="card sticky-top" style="top: 20px;">
                         <div class="card-body">
                             <h5 class="card-title">Space Details</h5>
@@ -576,9 +582,9 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        // Auto-set times for full day (00:00 to 23:59)
-        selectedStartTime = '00:00';
-        selectedEndTime = '23:59';
+        // Auto-set times for full day (9:00 AM to 8:00 PM)
+        selectedStartTime = '09:00';
+        selectedEndTime = '20:00';
         
         // For single-day bookings, set end date to same as start date
         if (!selectedEndDate || selectedEndDate < selectedDate) {
@@ -592,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeEl) typeEl.textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex]?.text || 'Full Day';
                 
                 if (selectedDateSpan) selectedDateSpan.textContent = new Date(selectedDate).toLocaleDateString();
-                if (selectedTimeSpan) selectedTimeSpan.textContent = 'Full Day (00:00 - 23:59)';
+                if (selectedTimeSpan) selectedTimeSpan.textContent = 'Full Day (09:00 - 20:00)';
                 
                 // Hide end date for single day booking
                 const endDateContainer = document.getElementById('selected-end-date-container');

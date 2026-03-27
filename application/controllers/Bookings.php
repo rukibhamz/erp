@@ -407,8 +407,17 @@ class Bookings extends Base_Controller {
                 'payment_status' => 'unpaid',
                 'booking_notes' => sanitize_input($_POST['booking_notes'] ?? ''),
                 'special_requests' => sanitize_input($_POST['special_requests'] ?? ''),
+                'payment_plan' => sanitize_input($_POST['payment_plan'] ?? 'full'),
+                'tax_rate' => 7.5,
                 'created_by' => $this->session['user_id']
             ];
+
+            // Set payment deadline for part payment (3 days before event)
+            if ($data['payment_plan'] === 'part') {
+                $deadlineDate = new DateTime($bookingDate);
+                $deadlineDate->modify('-3 days');
+                $data['payment_deadline'] = $deadlineDate->format('Y-m-d');
+            }
             
             // Add space_id and location_id if columns exist (for future use)
             // Check if columns exist before adding
@@ -603,20 +612,85 @@ class Bookings extends Base_Controller {
                 redirect('bookings');
             }
 
-            $payments = $this->paymentModel->getByBooking($id);
+            $data = [
+                'page_title' => 'Booking Details - ' . $booking['booking_number'],
+                'booking' => $booking,
+                'payments' => $this->paymentModel->getByBooking($id),
+                'flash' => $this->getFlashMessage()
+            ];
+
+            $this->loadView('bookings/view', $data);
         } catch (Exception $e) {
-            $booking = null;
-            $payments = [];
+            error_log('Bookings view error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading booking details.');
+            redirect('bookings');
+        }
+    }
+
+    public function invoice($id) {
+        try {
+            $booking = $this->bookingModel->getWithFacility($id);
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('bookings');
+            }
+
+            $data = [
+                'page_title' => 'Invoice - ' . $booking['booking_number'],
+                'booking' => $booking,
+                'payments' => $this->paymentModel->getByBooking($id)
+            ];
+
+            $this->load->view('bookings/invoice', $data);
+        } catch (Exception $e) {
+            error_log('Bookings invoice error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error generating invoice.');
+            redirect('bookings/view/' . $id);
+        }
+    }
+
+    public function send_reminders() {
+        // Only allow from CLI or specific secret key if called via URL
+        if (PHP_SAPI !== 'cli' && ($_GET['key'] ?? '') !== 'REMIND_SECRET_KEY') {
+            http_response_code(404);
+            echo "404 Not Found";
+            exit;
         }
 
-        $data = [
-            'page_title' => 'Booking: ' . ($booking['booking_number'] ?? ''),
-            'booking' => $booking,
-            'payments' => $payments,
-            'flash' => $this->getFlashMessage()
-        ];
+        try {
+            $today = date('Y-m-d');
+            $tomorrow = date('Y-m-d', strtotime('+1 day'));
+            
+            // Find bookings where deadline is today or tomorrow and reminder not sent
+            // AND payment_status is not 'paid'
+            $bookings = $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . "bookings` 
+                 WHERE payment_plan = 'part' 
+                 AND payment_status != 'paid'
+                 AND is_reminder_sent = 0
+                 AND (payment_deadline = ? OR payment_deadline = ?)",
+                [$today, $tomorrow]
+            );
 
-        $this->loadView('bookings/view', $data);
+            $count = 0;
+            foreach ($bookings as $booking) {
+                // Send email logic here (placeholder)
+                // $this->emailService->sendPaymentReminder($booking);
+                
+                // Mark as sent
+                $this->bookingModel->update($booking['id'], ['is_reminder_sent' => 1]);
+                $count++;
+            }
+
+            if (PHP_SAPI === 'cli') {
+                echo "Sent $count reminders.\n";
+            } else {
+                echo "Sent $count reminders.";
+            }
+        } catch (Exception $e) {
+            error_log('Bookings reminders error: ' . $e->getMessage());
+            if (PHP_SAPI === 'cli') echo "Error: " . $e->getMessage() . "\n";
+        }
     }
     
     /**

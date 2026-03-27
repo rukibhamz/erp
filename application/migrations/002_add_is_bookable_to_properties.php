@@ -1,37 +1,29 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Migration_Add_is_bookable_to_properties extends CI_Migration {
+class Migration_Add_is_bookable_to_properties {
+    private $db;
+    
+    public function __construct() {
+        $this->db = Database::getInstance();
+    }
 
     public function up() {
-        $fields = array(
-            'is_bookable' => array(
-                'type' => 'TINYINT',
-                'constraint' => 1,
-                'default' => 0,
-                'after' => 'status'
-            ),
-            'facility_id' => array(
-                'type' => 'INT',
-                'constraint' => 11,
-                'unsigned' => TRUE,
-                'null' => TRUE,
-                'after' => 'is_bookable'
-            )
-        );
+        $prefix = $this->db->getPrefix();
         
-        // Check if column exists before adding to avoid errors
-        if (!$this->db->field_exists('is_bookable', 'properties')) {
-            $this->dbforge->add_column('properties', $fields);
+        // Add is_bookable column if not exists
+        $stmt = $this->db->query("SHOW COLUMNS FROM `{$prefix}properties` LIKE 'is_bookable'");
+        if ($stmt->rowCount() == 0) {
+            $this->db->query("ALTER TABLE `{$prefix}properties` 
+                ADD COLUMN `is_bookable` TINYINT(1) DEFAULT 0 AFTER `status`,
+                ADD COLUMN `facility_id` INT(11) UNSIGNED NULL AFTER `is_bookable` (FOREIGN KEY REFERENCES `{$prefix}facilities`(`id`) ON DELETE SET NULL)");
         }
     }
 
     public function down() {
-        if ($this->db->field_exists('is_bookable', 'properties')) {
-            $this->dbforge->drop_column('properties', 'is_bookable');
-        }
-        if ($this->db->field_exists('facility_id', 'properties')) {
-            $this->dbforge->drop_column('properties', 'facility_id');
-        }
+        $prefix = $this->db->getPrefix();
+        try {
+            $this->db->query("ALTER TABLE `{$prefix}properties` DROP COLUMN `is_bookable`, DROP COLUMN `facility_id`");
+        } catch (Exception $e) {}
     }
 }

@@ -1,9 +1,15 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Migration_Install_default_coa extends CI_Migration {
+class Migration_Install_default_coa {
+    private $db;
+    
+    public function __construct() {
+        $this->db = Database::getInstance();
+    }
 
     public function up() {
+        $prefix = $this->db->getPrefix();
         // Define the default Chart of Accounts
         $accounts = [
             // ASSETS (1000-1999)
@@ -159,29 +165,16 @@ class Migration_Install_default_coa extends CI_Migration {
 
         // Insert accounts if they don't exist
         foreach ($accounts as $account) {
-            // Check if account code already exists
-            $exists = $this->db->where('account_code', $account['account_code'])
-                              ->get('accounts')
-                              ->num_rows() > 0;
-            
-            if (!$exists) {
-                $this->db->insert('accounts', [
-                    'account_code' => $account['account_code'],
-                    'account_name' => $account['account_name'],
-                    'account_type' => $account['account_type'],
-                    'account_category' => $account['account_category'],
-                    'description' => $account['description'],
-                    'is_system_account' => $account['is_system_account'],
-                    'status' => 'active',
-                    'created_at' => date('Y-m-d H:i:s')
-                ]);
+            $stmt = $this->db->query("SELECT id FROM `{$prefix}accounts` WHERE account_code = ?", [$account['account_code']]);
+            if ($stmt->rowCount() == 0) {
+                $account['status'] = 'active';
+                $account['created_at'] = date('Y-m-d H:i:s');
+                $this->db->insert('accounts', $account);
             }
         }
     }
 
     public function down() {
         // We generally don't want to delete accounts in down() as they might have transactions
-        // But for development, we could remove system accounts
-        // $this->db->where('is_system_account', 1)->delete('accounts');
     }
 }

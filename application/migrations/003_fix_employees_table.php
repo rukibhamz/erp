@@ -1,42 +1,46 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Migration_003_fix_employees_table extends Migration {
+class Migration_003_fix_employees_table {
+    private $db;
+    
+    public function __construct() {
+        $this->db = Database::getInstance();
+    }
     
     public function up() {
-        // Check if hire_date column exists
-        $columns = $this->db->fetchAll("SHOW COLUMNS FROM `{$this->db->getPrefix()}employees` LIKE 'hire_date'");
+        $prefix = $this->db->getPrefix();
         
-        if (empty($columns)) {
-            // Add hire_date column
-            $this->db->query("ALTER TABLE `{$this->db->getPrefix()}employees` 
+        // Check and add hire_date column
+        $stmt = $this->db->query("SHOW COLUMNS FROM `{$prefix}employees` LIKE 'hire_date'");
+        if ($stmt->rowCount() == 0) {
+            $this->db->query("ALTER TABLE `{$prefix}employees` 
                 ADD COLUMN `hire_date` DATE NULL AFTER `employment_type`");
         }
         
-        // Check if salary_structure column exists
-        $columns = $this->db->fetchAll("SHOW COLUMNS FROM `{$this->db->getPrefix()}employees` LIKE 'salary_structure'");
-        
-        if (empty($columns)) {
-            // Add salary_structure column
-            $this->db->query("ALTER TABLE `{$this->db->getPrefix()}employees` 
+        // Check and add salary_structure column
+        $stmt = $this->db->query("SHOW COLUMNS FROM `{$prefix}employees` LIKE 'salary_structure'");
+        if ($stmt->rowCount() == 0) {
+            $this->db->query("ALTER TABLE `{$prefix}employees` 
                 ADD COLUMN `salary_structure` TEXT NULL AFTER `status`");
         }
         
-        // Check if address column exists
-        $columns = $this->db->fetchAll("SHOW COLUMNS FROM `{$this->db->getPrefix()}employees` LIKE 'address'");
-        
-        if (empty($columns)) {
-            // Add address column
-            $this->db->query("ALTER TABLE `{$this->db->getPrefix()}employees` 
+        // Check and add address column
+        $stmt = $this->db->query("SHOW COLUMNS FROM `{$prefix}employees` LIKE 'address'");
+        if ($stmt->rowCount() == 0) {
+            $this->db->query("ALTER TABLE `{$prefix}employees` 
                 ADD COLUMN `address` TEXT NULL AFTER `phone`");
         }
     }
     
     public function down() {
+        $prefix = $this->db->getPrefix();
         // Remove added columns
-        $this->db->query("ALTER TABLE `{$this->db->getPrefix()}employees` 
-            DROP COLUMN IF EXISTS `hire_date`,
-            DROP COLUMN IF EXISTS `salary_structure`,
-            DROP COLUMN IF EXISTS `address`");
+        try {
+            $this->db->query("ALTER TABLE `{$prefix}employees` 
+                DROP COLUMN `hire_date`,
+                DROP COLUMN `salary_structure`,
+                DROP COLUMN `address` ");
+        } catch (Exception $e) {}
     }
 }

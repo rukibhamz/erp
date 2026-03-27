@@ -408,8 +408,8 @@ class Facility_model extends Base_Model {
                 $dayOfWeek = $currentDate->format('w');
                 
                 // Determine hours for THIS specific day
-                $startHour = 8;
-                $endHour = 22;
+                $startHour = 9;
+                $endHour = 20;
                 $isDayAvailable = true;
 
                 // 1. Check Global/Config Rules

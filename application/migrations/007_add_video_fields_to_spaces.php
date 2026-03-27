@@ -1,30 +1,29 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Migration_007_add_video_fields_to_spaces extends CI_Migration {
+class Migration_007_add_video_fields_to_spaces {
+    private $db;
+    
+    public function __construct() {
+        $this->db = Database::getInstance();
+    }
 
     public function up() {
-        if (!$this->db->field_exists('video_url', 'spaces')) {
-            $this->dbforge->add_column('spaces', array(
-                'video_url' => array(
-                    'type'       => 'VARCHAR',
-                    'constraint' => 500,
-                    'null'       => TRUE,
-                    'default'    => NULL,
-                    'after'      => 'description'
-                )
-            ));
+        $prefix = $this->db->getPrefix();
+        
+        if (!$this->columnExists($prefix . 'spaces', 'video_url')) {
+            $this->db->query("ALTER TABLE `{$prefix}spaces` 
+                ADD COLUMN `video_url` VARCHAR(500) NULL DEFAULT NULL AFTER `description` ");
         }
 
-        if (!$this->db->field_exists('detailed_description', 'spaces')) {
-            $this->dbforge->add_column('spaces', array(
-                'detailed_description' => array(
-                    'type'    => 'TEXT',
-                    'null'    => TRUE,
-                    'default' => NULL,
-                    'after'   => 'video_url'
-                )
-            ));
+        if (!$this->columnExists($prefix . 'spaces', 'detailed_description')) {
+            $this->db->query("ALTER TABLE `{$prefix}spaces` 
+                ADD COLUMN `detailed_description` TEXT NULL DEFAULT NULL AFTER `video_url` ");
         }
+    }
+    
+    private function columnExists($table, $column) {
+        $stmt = $this->db->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
+        return $stmt->rowCount() > 0;
     }
 }

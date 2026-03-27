@@ -43,6 +43,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="text-center mb-4">
                 <h1 class="display-6 fw-bold mb-3">Select Location & Space</h1>
                 <p class="lead text-muted">Choose a location and then select the space you'd like to book</p>
+                <div class="alert alert-warning d-inline-block">
+                    <i class="bi bi-info-circle"></i> <strong>Note:</strong> Spaces are bookable between <strong>9:00 AM and 8:00 PM</strong> daily.
+                </div>
             </div>
 
             <!-- Location Filter -->
