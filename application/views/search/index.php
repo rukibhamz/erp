@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
+/** @var $this Loader */
 ?>
 
 <div class="page-header mb-4">
@@ -74,22 +75,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card mb-3">
                 <div class="card-header bg-dark text-white">
                     <h6 class="mb-0">
-                        <i class="bi bi-<?= $this->getTypeIcon($type) ?>"></i> 
+                        <i class="bi bi-<?= getTypeIcon($type) ?>"></i> 
                         <?= ucfirst($type) ?> (<?= count($items) ?>)
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="list-group">
                         <?php foreach ($items as $item): ?>
-                            <a href="<?= $this->getItemUrl($type, $item['id']) ?>" 
+                            <a href="<?= getItemUrl($type, $item['id']) ?>" 
                                class="list-group-item list-group-item-action">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <h6 class="mb-1">
-                                            <?= htmlspecialchars($this->getItemTitle($type, $item)) ?>
+                                            <?= htmlspecialchars(getItemTitle($type, $item)) ?>
                                         </h6>
                                         <p class="mb-1 small text-muted">
-                                            <?= $this->getItemSubtitle($type, $item) ?>
+                                            <?= getItemSubtitle($type, $item) ?>
                                         </p>
                                         <?php if (!empty($item['description'])): ?>
                                             <small class="text-muted">

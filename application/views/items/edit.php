@@ -1,4 +1,5 @@
 <?php
+/** @var $this Loader */
 /**
  * Items Edit View - Alias to inventory/items/edit
  */

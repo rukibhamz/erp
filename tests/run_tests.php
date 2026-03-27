@@ -128,7 +128,7 @@ try {
     }
 
     // Test: Pricing
-    $price = $facilityModel->calculatePrice($facilityId, 'hourly', 2);
+    $price = $facilityModel->calculatePrice($facilityId, $testDate, '10:00:00', '12:00:00', 'hourly', 1);
     if ($price == 200) {
         pass("Pricing: Hourly correct (2 * 100 = 200)");
     } else {

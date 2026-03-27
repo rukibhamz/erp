@@ -94,8 +94,11 @@ $page_title = $page_title ?? 'Create User';
                                 </h2>
                                 <div id="collapse<?= ucfirst($module) ?>" class="accordion-collapse collapse" data-bs-parent="#permissionsAccordion">
                                     <div class="accordion-body">
-                                        <?php if (isset($permissions[$module])): ?>
-                                            <?php foreach ($permissions[$module] as $perm): ?>
+                                        <?php 
+                                        $module_permissions = $permissions[$module] ?? [];
+                                        if (is_array($module_permissions)): 
+                                            foreach ($module_permissions as $perm): 
+                                        ?>
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" name="permissions[]" value="<?= $perm['id'] ?>" id="perm_<?= $perm['id'] ?>">
                                                     <label class="form-check-label" for="perm_<?= $perm['id'] ?>">

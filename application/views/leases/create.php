@@ -1,4 +1,5 @@
 <?php
+/** @var $this Loader */
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 

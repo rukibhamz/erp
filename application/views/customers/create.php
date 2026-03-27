@@ -1,4 +1,5 @@
 <?php
+/** @var $this Loader */
 /**
  * Customers Create View - Alias to receivables/create_customer
  */

@@ -1,4 +1,5 @@
 <?php
+/** @var $this Loader */
 /**
  * Items View View - Alias to inventory/items/view
  */

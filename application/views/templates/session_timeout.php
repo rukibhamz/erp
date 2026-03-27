@@ -1,4 +1,7 @@
-<?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
+<?php 
+/** @var $this Loader */
+defined('BASEPATH') OR exit('No direct script access allowed'); 
+?>
 
 <!-- Session Timeout Warning Modal -->
 <div class="modal fade" id="sessionTimeoutModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
@@ -31,7 +34,7 @@
 
 <script nonce="<?= csp_nonce() ?>">
 // Session timeout configuration
-const SESSION_TIMEOUT = <?= $this->config->item('sess_expiration') ?? 3600 ?>; // seconds
+const SESSION_TIMEOUT = <?= $config['sess_expiration'] ?? 1800 ?>; // seconds
 const WARNING_TIME = 300; // Show warning 5 minutes before timeout
 const CHECK_INTERVAL = 60000; // Check every minute
 

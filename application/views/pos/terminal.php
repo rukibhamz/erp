@@ -1,4 +1,5 @@
 <?php
+/** @var $this Loader */
 /**
  * POS Terminal View
  * Redirects to main POS with terminal selection

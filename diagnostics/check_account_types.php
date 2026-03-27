@@ -8,14 +8,16 @@ define('ENVIRONMENT', 'development');
 require_once BASEPATH . 'core/CodeIgniter.php';
 
 // Mock the CI instance to load the model
-/** @var CI_Controller $CI */
+/** @var Base_Controller $CI */
 $CI =& get_instance();
-$CI->load->database();
 $CI->load->model('Account_model');
 
+/** @var Database $db */
+$db = Database::getInstance();
+
 echo "=== DISTINCT ACCOUNT TYPES IN DB ===\n";
-$query = $CI->db->query("SELECT DISTINCT account_type FROM " . $CI->db->dbprefix('accounts'));
-$types = $query->result_array();
+$sql = "SELECT DISTINCT account_type FROM " . $db->getPrefix() . 'accounts';
+$types = $db->fetchAll($sql);
 foreach ($types as $row) {
     echo "- '" . $row['account_type'] . "'\n";
 }

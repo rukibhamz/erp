@@ -137,7 +137,7 @@ include(BASEPATH . 'views/tax/_nav.php');
     <div class="card">
         <div class="card-body text-center py-5">
             <i class="bi bi-building" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="text-muted mt-3">No CIT calculation found for <?= $selected_year ?>.</p>
+            <p class="text-muted mt-3">No CIT calculation found for <?= $selected_year ?? date('Y') ?>.</p>
             <?php if (hasPermission('tax', 'create')): ?>
                 <a href="<?= base_url('tax/cit/calculate') ?>" class="btn btn-dark">
                     <i class="bi bi-calculator"></i> Calculate CIT

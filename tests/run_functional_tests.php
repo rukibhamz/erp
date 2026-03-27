@@ -154,7 +154,7 @@ try {
     
     // Test Hourly Calculation
     // Base 50/hr * 3 hours = 150
-    $priceHourly = $facilityModel->calculatePrice($spaceId, 'hourly', 3);
+    $priceHourly = $facilityModel->calculatePrice($spaceId, $testDate, '10:00:00', '13:00:00', 'hourly', 1);
     if ($priceHourly == 150) {
         pass("Hourly price calculation correct (3 * 50 = 150)");
     } else {
@@ -163,7 +163,7 @@ try {
     
     // Test Daily Calculation
     // Base 400/day
-    $priceDaily = $facilityModel->calculatePrice($spaceId, 'daily', 1); // 1 day
+    $priceDaily = $facilityModel->calculatePrice($spaceId, $testDate, '08:00:00', '18:00:00', 'daily', 1); // 1 day
     if ($priceDaily == 400) {
         pass("Daily price calculation correct (400)");
     } else {
@@ -215,8 +215,8 @@ $db->beginTransaction();
 try {
     $invoiceModel = new Invoice_model();
     // Simple instantiation check and method call
-    if (method_exists($invoiceModel, 'generateInvoiceNumber')) {
-        $num = $invoiceModel->generateInvoiceNumber();
+    if (method_exists($invoiceModel, 'getNextInvoiceNumber')) {
+        $num = $invoiceModel->getNextInvoiceNumber();
         if ($num) {
             pass("Invoice Number Generation: {$num}");
         } else {
