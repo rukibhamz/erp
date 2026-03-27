@@ -49,9 +49,9 @@ class Space_model extends Base_Model {
                 return [];
             }
 
-            $sql = "SELECT s.*, l.property_name, l.property_code 
+            $sql = "SELECT s.*, p.property_name, p.property_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` s
-                    JOIN `" . $this->db->getPrefix() . "locations` l ON s.property_id = l.id
+                    JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                     WHERE s.is_bookable = 1
                     AND s.operational_status NOT IN ('decommissioned','temporarily_closed')";
             $params = [];
@@ -61,15 +61,15 @@ class Space_model extends Base_Model {
                 $params[] = $propertyId;
             }
             
-            $sql .= " ORDER BY l.property_name, s.space_name";
+            $sql .= " ORDER BY p.property_name, s.space_name";
             
             $spaces = $this->db->fetchAll($sql, $params);
 
             // Fallback: if no bookable spaces found for this location, return all non-decommissioned spaces
             if (empty($spaces) && $propertyId) {
-                $sql = "SELECT s.*, l.property_name, l.property_code 
+                $sql = "SELECT s.*, p.property_name, p.property_code 
                         FROM `" . $this->db->getPrefix() . $this->table . "` s
-                        JOIN `" . $this->db->getPrefix() . "locations` l ON s.property_id = l.id
+                        JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                         WHERE s.property_id = ?
                         AND s.operational_status NOT IN ('decommissioned')
                         ORDER BY s.space_name";
@@ -108,9 +108,9 @@ class Space_model extends Base_Model {
     public function getWithProperty($spaceId) {
         try {
             return $this->db->fetchOne(
-                "SELECT s.*, l.property_name, l.property_code, l.address 
+                "SELECT s.*, p.property_name, p.property_code, p.address 
                  FROM `" . $this->db->getPrefix() . $this->table . "` s
-                 JOIN `" . $this->db->getPrefix() . "locations` l ON s.property_id = l.id
+                 JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                  WHERE s.id = ?",
                 [$spaceId]
             );

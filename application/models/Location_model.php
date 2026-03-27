@@ -113,10 +113,10 @@ class Location_model extends Base_Model {
         try {
             // Locations that have bookable spaces under them
             $locations = $this->db->fetchAll(
-                "SELECT DISTINCT l.* FROM `" . $this->db->getPrefix() . $this->table . "` l
-                 INNER JOIN `" . $this->db->getPrefix() . "spaces` s ON s.property_id = l.id
-                 WHERE l.status = 'operational' AND s.is_bookable = 1
-                 ORDER BY l.location_name"
+                "SELECT DISTINCT p.* FROM `" . $this->db->getPrefix() . $this->table . "` p
+                 INNER JOIN `" . $this->db->getPrefix() . "spaces` s ON s.property_id = p.id
+                 WHERE p.status = 'operational' AND s.is_bookable = 1
+                 ORDER BY p.property_name"
             );
 
             // Fallback: all operational locations (so dropdown is never empty)
@@ -124,7 +124,7 @@ class Location_model extends Base_Model {
                 $locations = $this->db->fetchAll(
                     "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
                      WHERE status = 'operational'
-                     ORDER BY location_name"
+                     ORDER BY property_name"
                 );
             }
             
