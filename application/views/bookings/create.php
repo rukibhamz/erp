@@ -348,9 +348,14 @@ function loadSpaceDetails() {
     };
     
     // Show space details
-    document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
-    document.getElementById('spaceBookingTypes').textContent = currentSpaceData.booking_types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'N/A';
-    document.getElementById('spaceDetails').style.display = 'block';
+    const capacityEl = document.getElementById('spaceCapacity');
+    if (capacityEl) capacityEl.textContent = currentSpaceData.capacity || 'N/A';
+    
+    const typesEl = document.getElementById('spaceBookingTypes');
+    if (typesEl) typesEl.textContent = (currentSpaceData.booking_types || []).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ') || 'N/A';
+    
+    const detailsEl = document.getElementById('spaceDetails');
+    if (detailsEl) detailsEl.style.display = 'block';
     
     // Populate booking types
     const bookingTypeSelect = document.getElementById('booking_type');
@@ -447,9 +452,14 @@ function calculatePrice() {
     const total = basePrice - discount;
     const deposit = currentSpaceData.security_deposit || 0;
     
-    document.getElementById('estimatedPrice').textContent = '₦' + total.toFixed(2);
-    document.getElementById('securityDeposit').textContent = '₦' + deposit.toFixed(2);
-    document.getElementById('pricePreview').style.display = 'block';
+    const estPriceEl = document.getElementById('estimatedPrice');
+    if (estPriceEl) estPriceEl.textContent = '₦' + total.toFixed(2);
+    
+    const depEl = document.getElementById('securityDeposit');
+    if (depEl) depEl.textContent = '₦' + deposit.toFixed(2);
+    
+    const previewEl = document.getElementById('pricePreview');
+    if (previewEl) previewEl.style.display = 'block';
 }
 
 // New Smart UI Logic
@@ -644,8 +654,11 @@ window.setSelection = function(start, end, display) {
     document.getElementById('start_time').value = start;
     document.getElementById('end_time').value = end;
     
-    document.getElementById('selected-time-summary').style.display = 'block';
-    document.getElementById('selected-time-display').textContent = display;
+    const sumEl = document.getElementById('selected-time-summary');
+    if (sumEl) sumEl.style.display = 'block';
+    
+    const dispEl = document.getElementById('selected-time-display');
+    if (dispEl) dispEl.textContent = display;
     
     calculatePrice(); // Update price
 }
