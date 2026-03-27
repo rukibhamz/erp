@@ -2,6 +2,40 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 
+<style>
+    /* Fix for time slot button visibility and coloring */
+    #time-slots-container .btn-outline-success {
+        color: #28a745 !important;
+        border-color: #28a745 !important;
+        background-color: transparent !important;
+    }
+    #time-slots-container .btn-outline-success:hover,
+    #time-slots-container .slot-btn.btn-success {
+        background-color: #28a745 !important;
+        color: #ffffff !important;
+        border-color: #28a745 !important;
+    }
+    #time-slots-container .btn-danger.disabled {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: #ffffff !important;
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    #time-slots-container .btn-warning.disabled {
+        background-color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        color: #212529 !important;
+        opacity: 0.8;
+        cursor: not-allowed;
+    }
+    /* Ensure the slot text is bold and readable */
+    .slot-btn, #time-slots-container .btn {
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Create Booking</h1>
