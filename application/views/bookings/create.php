@@ -248,11 +248,9 @@ function loadSpaces() {
     document.getElementById('end-date-container').style.display = 'none';
     
     if (!locationId) {
-        spaceSelect.innerHTML = '<option value="">Select Location First</option>';
-        spaceSelect.disabled = true;
-        bookingTypeSelect.innerHTML = '<option value="">Select Space First</option>';
-        bookingTypeSelect.disabled = true;
-        document.getElementById('spaceDetails').style.display = 'none';
+        const sl = document.getElementById('space_id'); if(sl) { sl.innerHTML = '<option value="">Select Location First</option>'; sl.disabled = true; }
+        const bt = document.getElementById('booking_type'); if(bt) { bt.innerHTML = '<option value="">Select Space First</option>'; bt.disabled = true; }
+        const sd = document.getElementById('spaceDetails'); if(sd) sd.style.display = 'none';
         return;
     }
     
@@ -321,10 +319,9 @@ function loadSpaceDetails() {
     const selectedOption = spaceSelect.options[spaceSelect.selectedIndex];
     
     if (!selectedOption || !selectedOption.value) {
-        document.getElementById('spaceDetails').style.display = 'none';
-        document.getElementById('booking_type').innerHTML = '<option value="">Select Space First</option>';
-        document.getElementById('booking_type').disabled = true;
-        document.getElementById('facility_id').value = '';
+        const sd = document.getElementById('spaceDetails'); if(sd) sd.style.display = 'none';
+        const bt = document.getElementById('booking_type'); if(bt) { bt.innerHTML = '<option value="">Select Space First</option>'; bt.disabled = true; }
+        const f_id = document.getElementById('facility_id'); if(f_id) f_id.value = '';
         currentSpaceData = null;
         return;
     }
@@ -390,6 +387,7 @@ function loadSpaceDetails() {
 function checkCapacity() {
     const guests = parseInt(document.getElementById('number_of_guests').value) || 0;
     const warning = document.getElementById('capacityWarning');
+    if (!warning) return;
     
     if (currentSpaceData && currentSpaceData.capacity > 0 && guests > currentSpaceData.capacity) {
         warning.style.display = 'block';
@@ -399,8 +397,9 @@ function checkCapacity() {
 }
 
 function calculatePrice() {
+    const pp = document.getElementById('pricePreview');
     if (!currentSpaceData) {
-        document.getElementById('pricePreview').style.display = 'none';
+        if(pp) pp.style.display = 'none';
         return;
     }
     
@@ -408,10 +407,10 @@ function calculatePrice() {
     const startTime = document.getElementById('start_time').value;
     const endTime = document.getElementById('end_time').value;
     const bookingType = document.getElementById('booking_type').value;
-    const discount = parseFloat(document.getElementById('discount_amount').value) || 0;
+    const discount = parseFloat(document.getElementById('discount_amount')?.value) || 0;
     
     if (!bookingDate || !startTime || !endTime || !bookingType) {
-        document.getElementById('pricePreview').style.display = 'none';
+        if(pp) pp.style.display = 'none';
         return;
     }
     
