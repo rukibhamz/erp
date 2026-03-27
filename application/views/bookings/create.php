@@ -7,15 +7,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     #time-slots-container .btn-outline-success {
         color: #198754 !important;
         border: 2px solid #198754 !important;
-        background-color: #ffffff !important;
-        font-weight: 600 !important;
+        font-weight: bold !important;
+        background-color: transparent !important;
     }
     #time-slots-container .btn-outline-success:hover,
-    #time-slots-container .slot-btn.btn-success {
+    #time-slots-container .slot-btn.active {
         background-color: #198754 !important;
-        color: #ffffff !important;
-        border-color: #198754 !important;
-        box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3) !important;
+        color: #fff !important;
+    }
+    #time-slots-section {
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+    }
+    .full-day-slot {
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
     }
     #time-slots-container .btn-danger.disabled {
         background-color: #dc3545 !important;
@@ -277,9 +287,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     let selectedEndTime = '';
     let selectedDate = '';
     let selectedEndDate = '';
+    let lastSelectedBtn = null;
 
     // Hoisted Functions (attached to window for cross-scope access)
-    window.setSelection = function(start, end, display) {
+    window.setSelection = function(start, end, display, btn = null) {
         console.log('DEBUG: setSelection called', {start, end, display});
         selectedStartTime = start;
         selectedEndTime = end;
@@ -294,11 +305,27 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         
         const dispEl = document.getElementById('selected-time-display');
         if (dispEl) dispEl.textContent = display;
+
+        // Visual Highlighting
+        if (lastSelectedBtn) lastSelectedBtn.classList.remove('active');
+        if (btn) {
+            btn.classList.add('active');
+            lastSelectedBtn = btn;
+        } else {
+            // Try to find the button if not provided (e.g. from selectSlot)
+            const allBtn = document.querySelectorAll('.slot-btn');
+            allBtn.forEach(b => {
+                if (b.dataset.start === start) {
+                    b.classList.add('active');
+                    lastSelectedBtn = b;
+                }
+            });
+        }
         
         calculatePrice(); 
     };
 
-    window.selectSlot = function(start, end) {
+    window.selectSlot = function(start, end, btn = null) {
         console.log('DEBUG: selectSlot called', {start, end, selectedDuration});
         try {
             let [h, m] = start.split(':').map(Number);
@@ -309,7 +336,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             let endM = m;
             let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
             
-            window.setSelection(start, endStr, `${start} - ${endStr}`);
+            window.setSelection(start, endStr, `${start} - ${endStr}`, btn);
         } catch (e) {
             console.error('selectSlot error:', e);
             alert('Error selecting slot.');
@@ -511,17 +538,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         document.getElementById('time-slots-section').style.display = 'block';
         container.innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border text-primary"></div></div>';
         
-        // Special types: Unify daily/full_day behavior if needed, otherwise fetch.
-        // For now, let's allow fetching for all to see availability.
-        
         if (type === 'half_day') { renderHalfDay(); return; }
         
         fetch(`${BASE_URL}bookings/getTimeSlots?space_id=${spaceId}&date=${date}&end_date=${endDate || date}`)
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    const all = [...(data.slots || []), ...(data.occupied || [])].sort((a,b) => a.start.localeCompare(b.start));
-                    renderSlots(all);
+                    if (type === 'full_day' || (type === 'daily' && selectedDuration == 24)) {
+                        renderFullDay(data);
+                    } else {
+                        const all = [...(data.slots || []), ...(data.occupied || [])].sort((a,b) => a.start.localeCompare(b.start));
+                        renderSlots(all);
+                    }
                 } else {
                     container.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
                 }
@@ -546,9 +574,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         document.getElementById('time-slots-container').innerHTML = html || '<p class="text-center w-100">No slots available</p>';
     }
 
-    function renderFullDay() {
-        window.setSelection('09:00', '20:00', 'Full Day (9am - 8pm)');
-        document.getElementById('time-slots-container').innerHTML = '<div class="col-12"><div class="alert alert-info">Full Day Selected (09:00 - 20:00)</div></div>';
+    function renderFullDay(data) {
+        const container = document.getElementById('time-slots-container');
+        const isOccupied = (data.occupied && data.occupied.length > 0);
+        
+        if (isOccupied) {
+            container.innerHTML = `
+                <div class="col-12">
+                    <button type="button" class="btn btn-danger w-100 full-day-slot disabled" style="height:80px">
+                        <b>Full Day Unavailable</b><br><small>Some hours are already booked</small>
+                    </button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="col-12">
+                    <button type="button" class="btn btn-outline-success w-100 full-day-slot slot-btn" 
+                        data-action="setSelection" data-start="09:00" data-end="20:00" data-display="Full Day (9am - 8pm)" 
+                        style="height:80px">
+                        <b>Full Day Available</b><br><small>Click to select (9am - 8pm)</small>
+                    </button>
+                </div>
+            `;
+        }
     }
 
     function renderHalfDay() {
@@ -604,9 +652,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 try {
                     const action = btn.dataset.action;
                     if (action === 'setSelection') {
-                        window.setSelection(btn.dataset.start, btn.dataset.end, btn.dataset.display);
+                        window.setSelection(btn.dataset.start, btn.dataset.end, btn.dataset.display, btn);
                     } else if (action === 'selectSlot') {
-                        window.selectSlot(btn.dataset.start, btn.dataset.end);
+                        window.selectSlot(btn.dataset.start, btn.dataset.end, btn);
                     }
                 } catch (err) {
                     console.error('Selection Error:', err);
