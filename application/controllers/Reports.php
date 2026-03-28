@@ -8,6 +8,8 @@ class Reports extends Base_Controller {
     private $billModel;
     private $balanceCalculator;
     
+    private $companyModel;
+
     public function __construct() {
         parent::__construct();
         $this->requirePermission('reports', 'read');
@@ -15,6 +17,7 @@ class Reports extends Base_Controller {
         $this->accountModel = $this->loadModel('Account_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->billModel = $this->loadModel('Bill_model');
+        $this->companyModel = $this->loadModel('Company_model');
         
         // Load Balance Calculator
         require_once BASEPATH . 'services/Balance_calculator.php';
@@ -22,6 +25,20 @@ class Reports extends Base_Controller {
         
         // Load export helper
         $this->load->helper('export');
+    }
+
+    /**
+     * Get the business name from the first company record
+     */
+    private function getBusinessName() {
+        try {
+            $company = $this->db->fetchOne(
+                "SELECT name FROM `" . $this->db->getPrefix() . "companies` ORDER BY id ASC LIMIT 1"
+            );
+            return $company['name'] ?? 'Business';
+        } catch (Exception $e) {
+            return 'Business';
+        }
     }
     
     public function index() {
@@ -59,8 +76,9 @@ class Reports extends Base_Controller {
             
             if ($balance['balance'] > 0) {
                 $revenue[] = [
-                    'account' => $account['account_name'],
-                    'amount' => $balance['balance']
+                    'account_code' => $account['account_code'],
+                    'account_name' => $account['account_name'],
+                    'total' => $balance['balance']
                 ];
                 $totalRevenue += $balance['balance'];
             }
@@ -88,8 +106,9 @@ class Reports extends Base_Controller {
             
             if ($balance && ($balance['balance'] ?? 0) > 0) {
                 $cogs[] = [
-                    'account' => $account['account_name'],
-                    'amount' => $balance['balance']
+                    'account_code' => $account['account_code'],
+                    'account_name' => $account['account_name'],
+                    'total' => $balance['balance']
                 ];
                 $totalCOGS += $balance['balance'];
             }
@@ -118,8 +137,9 @@ class Reports extends Base_Controller {
             
             if ($balance['balance'] > 0) {
                 $expenses[] = [
-                    'account' => $account['account_name'],
-                    'amount' => $balance['balance']
+                    'account_code' => $account['account_code'],
+                    'account_name' => $account['account_name'],
+                    'total' => $balance['balance']
                 ];
                 $totalExpenses += $balance['balance'];
             }
@@ -250,7 +270,8 @@ class Reports extends Base_Controller {
         $totalCredits = 0;
         
         foreach ($accounts as $account) {
-            $balance = $this->balanceCalculator->calculateBalance($account['id'], $asOfDate);
+            // Bypass cache to ensure booking payments and recent entries are included
+            $balance = $this->balanceCalculator->calculateBalance($account['id'], $asOfDate, false);
             
             if ($balance != 0) {
                 $debit = 0;
@@ -265,10 +286,11 @@ class Reports extends Base_Controller {
                 }
                 
                 $balances[] = [
-                    'code' => $account['account_code'],
-                    'account' => $account['account_name'],
-                    'debit' => $debit,
-                    'credit' => $credit
+                    'account_code'  => $account['account_code'],
+                    'account_name'  => $account['account_name'],
+                    'account_type'  => $account['account_type'],
+                    'total_debit'   => $debit,
+                    'total_credit'  => $credit
                 ];
                 
                 $totalDebits += $debit;
@@ -279,7 +301,7 @@ class Reports extends Base_Controller {
         $data = [
             'page_title' => 'Trial Balance',
             'as_of_date' => $asOfDate,
-            'balances' => $balances,
+            'trial_balance' => $balances,
             'total_debits' => $totalDebits,
             'total_credits' => $totalCredits,
             'in_balance' => abs($totalDebits - $totalCredits) < 0.01,
@@ -353,7 +375,9 @@ class Reports extends Base_Controller {
     }
     
     private function exportGeneralLedgerPDF($data) {
-        $html = '<h1>General Ledger</h1>';
+        $businessName = $this->getBusinessName();
+        $html = '<h1>' . htmlspecialchars($businessName) . '</h1>';
+        $html .= '<h2>General Ledger</h2>';
         $html .= '<p class="subtitle">Account: ' . htmlspecialchars($data['selected_account']['account_name'] ?? 'All Accounts') . '</p>';
         $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
         
@@ -626,7 +650,9 @@ class Reports extends Base_Controller {
     }
     
     private function exportEquityPDF($data) {
-        $html = '<h1>Statement of Changes in Equity</h1>';
+        $businessName = $this->getBusinessName();
+        $html = '<h1>' . htmlspecialchars($businessName) . '</h1>';
+        $html .= '<h2>Statement of Changes in Equity</h2>';
         $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
         
         $html .= '<table>';
@@ -649,12 +675,14 @@ class Reports extends Base_Controller {
     // ==================== PDF Export Methods ====================
     
     private function exportProfitLossPDF($data) {
-        $html = '<h1>Profit & Loss Statement</h1>';
+        $businessName = $this->getBusinessName();
+        $html = '<h1>' . htmlspecialchars($businessName) . '</h1>';
+        $html .= '<h2>Profit & Loss Statement</h2>';
         $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
         
         $html .= '<h2>Revenue</h2><table>';
         foreach ($data['revenue'] as $item) {
-            $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+            $html .= '<tr><td>' . htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) . '</td><td class="text-right">₦' . number_format($item['total'], 2) . '</td></tr>';
         }
         $html .= '<tr class="total-row"><td>Total Revenue</td><td class="text-right">₦' . number_format($data['total_revenue'], 2) . '</td></tr>';
         $html .= '</table>';
@@ -662,7 +690,7 @@ class Reports extends Base_Controller {
         if (!empty($data['cogs'])) {
             $html .= '<h2>Cost of Goods Sold</h2><table>';
             foreach ($data['cogs'] as $item) {
-                $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+                $html .= '<tr><td>' . htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) . '</td><td class="text-right">₦' . number_format($item['total'], 2) . '</td></tr>';
             }
             $html .= '<tr class="total-row"><td>Total COGS</td><td class="text-right">₦' . number_format($data['total_cogs'], 2) . '</td></tr>';
             $html .= '</table>';
@@ -672,7 +700,7 @@ class Reports extends Base_Controller {
         
         $html .= '<h2>Expenses</h2><table>';
         foreach ($data['expenses'] as $item) {
-            $html .= '<tr><td>' . htmlspecialchars($item['account']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+            $html .= '<tr><td>' . htmlspecialchars($item['account_code'] . ' - ' . $item['account_name']) . '</td><td class="text-right">₦' . number_format($item['total'], 2) . '</td></tr>';
         }
         $html .= '<tr class="total-row"><td>Total Expenses</td><td class="text-right">₦' . number_format($data['total_expenses'], 2) . '</td></tr>';
         $html .= '</table>';
@@ -683,7 +711,9 @@ class Reports extends Base_Controller {
     }
     
     private function exportBalanceSheetPDF($data) {
-        $html = '<h1>Balance Sheet</h1>';
+        $businessName = $this->getBusinessName();
+        $html = '<h1>' . htmlspecialchars($businessName) . '</h1>';
+        $html .= '<h2>Balance Sheet</h2>';
         $html .= '<p class="subtitle">As of: ' . $data['as_of_date'] . '</p>';
         
         $html .= '<h2>Assets</h2><table>';
@@ -711,18 +741,20 @@ class Reports extends Base_Controller {
     }
     
     private function exportTrialBalancePDF($data) {
-        $html = '<h1>Trial Balance</h1>';
+        $businessName = $this->getBusinessName();
+        $html = '<h1>' . htmlspecialchars($businessName) . '</h1>';
+        $html .= '<h2>Trial Balance</h2>';
         $html .= '<p class="subtitle">As of: ' . $data['as_of_date'] . '</p>';
         
         $html .= '<table>';
         $html .= '<tr><th>Account Code</th><th>Account Name</th><th class="text-right">Debit</th><th class="text-right">Credit</th></tr>';
         
-        foreach ($data['balances'] as $item) {
+        foreach ($data['trial_balance'] as $item) {
             $html .= '<tr>';
-            $html .= '<td>' . htmlspecialchars($item['code']) . '</td>';
-            $html .= '<td>' . htmlspecialchars($item['account']) . '</td>';
-            $html .= '<td class="text-right">' . ($item['debit'] > 0 ? '₦' . number_format($item['debit'], 2) : '-') . '</td>';
-            $html .= '<td class="text-right">' . ($item['credit'] > 0 ? '₦' . number_format($item['credit'], 2) : '-') . '</td>';
+            $html .= '<td>' . htmlspecialchars($item['account_code']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($item['account_name']) . '</td>';
+            $html .= '<td class="text-right">' . ($item['total_debit'] > 0 ? '₦' . number_format($item['total_debit'], 2) : '-') . '</td>';
+            $html .= '<td class="text-right">' . ($item['total_credit'] > 0 ? '₦' . number_format($item['total_credit'], 2) : '-') . '</td>';
             $html .= '</tr>';
         }
         
@@ -743,7 +775,9 @@ class Reports extends Base_Controller {
     }
     
     private function exportCashFlowPDF($data) {
-        $html = '<h1>Cash Flow Statement</h1>';
+        $businessName = $this->getBusinessName();
+        $html = '<h1>' . htmlspecialchars($businessName) . '</h1>';
+        $html .= '<h2>Cash Flow Statement</h2>';
         $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
         
         $html .= '<table>';
@@ -775,24 +809,24 @@ class Reports extends Base_Controller {
         
         $csvData[] = ['Revenue'];
         foreach ($data['revenue'] as $item) {
-            $csvData[] = [$item['account'], $item['amount']];
+            $csvData[] = [$item['account_code'], $item['account_name'], $item['total']];
         }
-        $csvData[] = ['Total Revenue', $data['total_revenue']];
+        $csvData[] = ['Total Revenue', '', $data['total_revenue']];
         $csvData[] = [];
         
         if (!empty($data['cogs'])) {
             $csvData[] = ['Cost of Goods Sold'];
             foreach ($data['cogs'] as $item) {
-                $csvData[] = [$item['account'], $item['amount']];
+                $csvData[] = [$item['account_code'], $item['account_name'], $item['total']];
             }
-            $csvData[] = ['Total COGS', $data['total_cogs']];
-            $csvData[] = ['Gross Profit', $data['gross_profit']];
+            $csvData[] = ['Total COGS', '', $data['total_cogs']];
+            $csvData[] = ['Gross Profit', '', $data['gross_profit']];
             $csvData[] = [];
         }
         
         $csvData[] = ['Expenses'];
         foreach ($data['expenses'] as $item) {
-            $csvData[] = [$item['account'], $item['amount']];
+            $csvData[] = [$item['account_code'], $item['account_name'], $item['total']];
         }
         $csvData[] = ['Total Expenses', $data['total_expenses']];
         $csvData[] = [];
@@ -837,8 +871,8 @@ class Reports extends Base_Controller {
         $csvData[] = [];
         
         $csvData[] = ['Account Code', 'Account Name', 'Debit', 'Credit'];
-        foreach ($data['balances'] as $item) {
-            $csvData[] = [$item['code'], $item['account'], $item['debit'], $item['credit']];
+        foreach ($data['trial_balance'] as $item) {
+            $csvData[] = [$item['account_code'], $item['account_name'], $item['total_debit'], $item['total_credit']];
         }
         $csvData[] = ['', 'Total', $data['total_debits'], $data['total_credits']];
         $csvData[] = [];

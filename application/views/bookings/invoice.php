@@ -41,7 +41,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <table>
                         <tr>
                             <td class="title">
-                                <h3>Acropolis Park</h3>
+                                <h3><?= htmlspecialchars($business_name) ?></h3>
                             </td>
                             <td>
                                 Invoice #: <?= $booking['booking_number'] ?><br>
@@ -58,8 +58,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <tr>
                             <td>
                                 <strong>From:</strong><br>
-                                Acropolis Park ERP<br>
-                                booking.acropolispark.com
+                                <?= htmlspecialchars($business_name) ?>
                             </td>
                             <td>
                                 <strong>To:</strong><br>
@@ -77,21 +76,48 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </tr>
             <tr class="item">
                 <td>
-                    Booking of <?= htmlspecialchars($booking['facility_name']) ?><br>
-                    <small><?= date('h:i A', strtotime($booking['start_time'])) ?> - <?= date('h:i A', strtotime($booking['end_time'])) ?> (<?= number_format($booking['duration_hours'], 1) ?> hrs)</small>
+                    <strong>Booking of <?= htmlspecialchars($booking['facility_name']) ?></strong><br>
+                    <small>
+                        <strong>Type:</strong> <?= ucfirst(str_replace('_', ' ', $booking['booking_type'])) ?> | 
+                        <strong>Guests:</strong> <?= $booking['number_of_guests'] ?> people<br>
+                        <strong>Date:</strong> <?= date('M d, Y', strtotime($booking['booking_date'])) ?><br>
+                        <strong>Time:</strong> <?= date('h:i A', strtotime($booking['start_time'])) ?> - <?= date('h:i A', strtotime($booking['end_time'])) ?> (<?= number_format($booking['duration_hours'], 1) ?> hrs)
+                    </small>
                 </td>
                 <td><?= format_currency($booking['base_amount']) ?></td>
             </tr>
+            <?php if (!empty($rentals)): ?>
+                <?php foreach ($rentals as $rental): ?>
+                <tr class="item">
+                    <td>
+                        Rental: <?= htmlspecialchars($rental['item_name']) ?> 
+                        <small>(Qty: <?= $rental['quantity'] ?>)</small>
+                    </td>
+                    <td><?= format_currency($rental['rental_total']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
             <?php if (floatval($booking['discount_amount']) > 0): ?>
             <tr class="item">
                 <td>Discount</td>
                 <td>-<?= format_currency($booking['discount_amount']) ?></td>
             </tr>
             <?php endif; ?>
+            <?php
+                $taxRate   = floatval($booking['tax_rate'] ?? 0);
+                $taxAmount = floatval($booking['tax_amount'] ?? 0);
+                // Recalculate if stored tax_amount is 0 but a rate exists
+                if ($taxAmount == 0 && $taxRate > 0) {
+                    $taxableBase = floatval($booking['base_amount']) - floatval($booking['discount_amount'] ?? 0);
+                    $taxAmount   = round($taxableBase * ($taxRate / 100), 2);
+                }
+            ?>
+            <?php if ($taxAmount > 0): ?>
             <tr class="item">
-                <td>VAT (7.5%)</td>
-                <td><?= format_currency($booking['tax_amount'] ?: ($booking['base_amount'] - $booking['discount_amount']) * 0.075) ?></td>
+                <td>VAT (<?= number_format($taxRate, 1) ?>%)</td>
+                <td><?= format_currency($taxAmount) ?></td>
             </tr>
+            <?php endif; ?>
             <tr class="total">
                 <td></td>
                 <td>Total: <?= format_currency($booking['total_amount']) ?></td>

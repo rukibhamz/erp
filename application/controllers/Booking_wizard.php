@@ -2116,14 +2116,15 @@ class Booking_wizard extends Base_Controller {
                 }
             }
             
-            // Create journal entry + lines
+            // Create journal entry + lines — use today as the entry date (date invoice is raised)
             $journalEntryId = $this->createBookingJournalEntry(
                 'booking_invoice:' . $invoiceId,
                 'Invoice for booking: ' . $bookingRef,
                 $totalAmount,
                 $journalLines,
                 $transactionCreatedBy,
-                'sales'
+                'sales',
+                date('Y-m-d')
             );
             
             // ✅ Create transactions with journal entry reference
@@ -2243,7 +2244,8 @@ class Booking_wizard extends Base_Controller {
                 $amount,
                 $journalLines,
                 $transactionCreatedBy,
-                'cash'
+                'cash',
+                date('Y-m-d')
             );
             
             // ✅ Create transactions
@@ -2336,12 +2338,14 @@ class Booking_wizard extends Base_Controller {
      * @param string $journalType Type: sales, cash, general
      * @return int|null Journal entry ID
      */
-    private function createBookingJournalEntry($reference, $description, $amount, $lines, $createdBy = null, $journalType = 'general') {
+    private function createBookingJournalEntry($reference, $description, $amount, $lines, $createdBy = null, $journalType = 'general', $entryDate = null) {
         try {
             if (!$this->journalEntryModel) {
                 error_log("createBookingJournalEntry: Journal_entry_model not loaded");
                 return null;
             }
+            
+            $entryDate = $entryDate ?? date('Y-m-d');
             
             // Generate entry number
             $entryNumber = $this->journalEntryModel->getNextEntryNumber();
@@ -2349,7 +2353,7 @@ class Booking_wizard extends Base_Controller {
             // Create journal entry - directly as 'posted' for booking transactions
             $entryId = $this->journalEntryModel->create([
                 'entry_number' => $entryNumber,
-                'entry_date' => date('Y-m-d'),
+                'entry_date' => $entryDate,
                 'reference' => $reference,
                 'description' => $description,
                 'amount' => $amount,

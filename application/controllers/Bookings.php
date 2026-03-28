@@ -55,25 +55,41 @@ class Bookings extends Base_Controller {
         $status = $_GET['status'] ?? 'all';
         $date = $_GET['date'] ?? '';
         $hasDateFilter = !empty($_GET['date']); // Only filter by date if user explicitly set one
+
+        // Auto-complete any confirmed/in_progress bookings whose date has passed
+        $this->autoCompleteExpiredBookings();
         
         try {
             if ($hasDateFilter) {
                 // User explicitly selected a date — show that month's bookings
                 $startDate = date('Y-m-01', strtotime($date));
                 $endDate = date('Y-m-t', strtotime($date));
+                $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
+                
+                // Filter by status
                 if ($status !== 'all') {
-                    // Filter by both date and status
-                    $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
                     $bookings = array_filter($bookings, function($b) use ($status) {
-                        return $b['status'] === $status;
+                        return strcasecmp($b['status'], $status) === 0;
+                    });
+                } else {
+                    // Hide cancelled by default in 'all' view
+                    $bookings = array_filter($bookings, function($b) {
+                        return !in_array(strtolower($b['status']), ['cancelled', 'refunded', 'no_show']);
+                    });
+                }
+                $bookings = array_values($bookings);
+            } else {
+                // No date filter — show bookings (optionally filtered by status)
+                $modelStatus = ($status === 'all') ? null : $status;
+                $bookings = $this->bookingModel->getAllBookings($modelStatus);
+                
+                // If 'all' is selected, the model returns everything. Filter out cancelled for cleanliness.
+                if ($status === 'all') {
+                    $bookings = array_filter($bookings, function($b) {
+                        return !in_array(strtolower($b['status']), ['cancelled', 'refunded', 'no_show']);
                     });
                     $bookings = array_values($bookings);
-                } else {
-                    $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
                 }
-            } else {
-                // No date filter — show ALL bookings (optionally filtered by status)
-                $bookings = $this->bookingModel->getAllBookings($status !== 'all' ? $status : null);
             }
         } catch (Exception $e) {
             $bookings = [];
@@ -385,7 +401,27 @@ class Bookings extends Base_Controller {
             
             // Sanitize phone
             $customerPhone = !empty($_POST['customer_phone']) ? sanitize_phone($_POST['customer_phone']) : '';
-            
+
+            // Calculate VAT server-side — never trust client-submitted tax_amount
+            $discountAmount = floatval($_POST['discount_amount'] ?? 0);
+            $taxableAmount  = $baseAmount - $discountAmount;
+            $taxRate        = 0;
+            $taxAmount      = 0;
+            try {
+                $taxModel = $this->loadModel('Tax_type_model');
+                if ($taxModel) {
+                    $vatTax = $taxModel->getByCode('VAT') ?: ($taxModel->getAllActive()[0] ?? null);
+                    if ($vatTax) {
+                        $taxRate   = floatval($vatTax['rate'] ?? 0);
+                        $taxCalc   = $taxModel->calculateTax($taxableAmount, $vatTax['id']);
+                        $taxAmount = $taxCalc['tax_amount'] ?? 0;
+                    }
+                }
+            } catch (Exception $taxEx) {
+                error_log('Bookings create: tax calculation error - ' . $taxEx->getMessage());
+            }
+            $totalAmount = $taxableAmount + $taxAmount;
+
             $data = [
                 'booking_number' => $this->bookingModel->getNextBookingNumber(),
                 'facility_id' => $facilityId,
@@ -401,19 +437,19 @@ class Bookings extends Base_Controller {
                 'booking_type' => $bookingType,
                 'equipment_tier' => $equipmentTier ?: null,
                 'base_amount' => $baseAmount,
-                'discount_amount' => floatval($_POST['discount_amount'] ?? 0),
-                'tax_amount' => floatval($_POST['tax_amount'] ?? 0),
+                'discount_amount' => $discountAmount,
+                'tax_rate' => $taxRate,
+                'tax_amount' => $taxAmount,
                 'security_deposit' => floatval($facility['security_deposit'] ?? 0),
-                'total_amount' => $baseAmount + floatval($_POST['tax_amount'] ?? 0) - floatval($_POST['discount_amount'] ?? 0),
+                'total_amount' => $totalAmount,
                 'paid_amount' => 0,
-                'balance_amount' => $baseAmount + floatval($_POST['tax_amount'] ?? 0) - floatval($_POST['discount_amount'] ?? 0),
+                'balance_amount' => $totalAmount,
                 'currency' => 'NGN',
                 'status' => sanitize_input($_POST['status'] ?? 'pending'),
                 'payment_status' => 'unpaid',
                 'booking_notes' => sanitize_input($_POST['booking_notes'] ?? ''),
                 'special_requests' => sanitize_input($_POST['special_requests'] ?? ''),
                 'payment_plan' => sanitize_input($_POST['payment_plan'] ?? 'full'),
-                'tax_rate' => 7.5,
                 'created_by' => $this->session['user_id']
             ];
 
@@ -442,7 +478,8 @@ class Bookings extends Base_Controller {
 
             try {
                 $pdo = $this->db->getConnection();
-                $pdo->beginTransaction();
+                $isNested = $this->db->inTransaction();
+                if (!$isNested) $pdo->beginTransaction();
 
                 $bookingId = $this->bookingModel->create($data);
                 if (!$bookingId) {
@@ -491,12 +528,12 @@ class Bookings extends Base_Controller {
                     $this->processPayment($bookingId, $paymentAmount, $_POST['payment_method'] ?? 'cash', 'deposit');
                 }
 
-                $pdo->commit();
+                if (!$isNested) $pdo->commit();
                 $this->activityModel->log($this->session['user_id'], 'create', 'Bookings', 'Created booking: ' . $data['booking_number']);
                 $this->setFlashMessage('success', 'Booking created successfully.');
                 redirect('bookings/view/' . $bookingId);
             } catch (Exception $e) {
-                if (isset($pdo) && $this->db->inTransaction()) {
+                if (isset($pdo) && !$isNested && $this->db->inTransaction()) {
                     $pdo->rollBack();
                 }
                 error_log('Bookings create error: ' . $e->getMessage());
@@ -690,10 +727,28 @@ class Bookings extends Base_Controller {
                 redirect('bookings');
             }
 
+            $rentalModel = $this->loadModel('Booking_rental_model');
+            $rentals = $rentalModel->getByBooking($id);
+
+            // Fetch business name from companies table
+            $businessName = 'Business';
+            try {
+                $company = $this->db->fetchOne(
+                    "SELECT name FROM `" . $this->db->getPrefix() . "companies` ORDER BY id ASC LIMIT 1"
+                );
+                if ($company && !empty($company['name'])) {
+                    $businessName = $company['name'];
+                }
+            } catch (Exception $e) {
+                // fall through to default
+            }
+
             $data = [
-                'page_title' => 'Invoice - ' . $booking['booking_number'],
-                'booking' => $booking,
-                'payments' => $this->paymentModel->getByBooking($id)
+                'page_title'    => 'Invoice - ' . $booking['booking_number'],
+                'booking'       => $booking,
+                'payments'      => $this->paymentModel->getByBooking($id),
+                'rentals'       => $rentals,
+                'business_name' => $businessName,
             ];
 
             $this->load->view('bookings/invoice', $data);
@@ -877,6 +932,7 @@ class Bookings extends Base_Controller {
         $amount = floatval($_POST['amount'] ?? 0);
         $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'cash');
         $paymentType = sanitize_input($_POST['payment_type'] ?? 'partial');
+        $paymentDate = sanitize_input($_POST['payment_date'] ?? date('Y-m-d'));
 
         if (!$bookingId || $amount <= 0) {
             $this->setFlashMessage('danger', 'Invalid payment details.');
@@ -884,7 +940,7 @@ class Bookings extends Base_Controller {
         }
 
         try {
-            $this->processPayment($bookingId, $amount, $paymentMethod, $paymentType);
+            $this->processPayment($bookingId, $amount, $paymentMethod, $paymentType, $paymentDate);
             $this->setFlashMessage('success', 'Payment recorded successfully.');
             redirect('bookings/view/' . $bookingId);
         } catch (Exception $e) {
@@ -894,7 +950,9 @@ class Bookings extends Base_Controller {
         }
     }
 
-    private function processPayment($bookingId, $amount, $paymentMethod, $paymentType) {
+    private function processPayment($bookingId, $amount, $paymentMethod, $paymentType, $paymentDate = null) {
+        if (!$paymentDate) $paymentDate = date('Y-m-d');
+        
         $pdo = $this->db->getConnection();
         $isNested = $this->db->inTransaction();
         if (!$isNested) $pdo->beginTransaction();
@@ -910,7 +968,7 @@ class Bookings extends Base_Controller {
             $paymentData = [
                 'booking_id' => $bookingId,
                 'payment_number' => $this->paymentModel->getNextPaymentNumber(),
-                'payment_date' => date('Y-m-d'),
+                'payment_date' => $paymentDate,
                 'payment_type' => $paymentType,
                 'payment_method' => $paymentMethod,
                 'amount' => $amount,
@@ -949,16 +1007,16 @@ class Bookings extends Base_Controller {
                     $defaultCashAccount = !empty($activeCashAccounts) ? $activeCashAccounts[0] : null;
                     if ($defaultCashAccount) {
                         // Debit Cash/Bank (asset increases)
-                        $payTxnBase = 'PAY-' . date('Ymd') . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT);
+                        $payTxnBase = 'PAY-' . date('Ymd', strtotime($paymentDate)) . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT);
                         $this->transactionModel->create([
                             'transaction_number' => $payTxnBase . '-CASH',
                             'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
                             'debit' => $amount,
                             'credit' => 0,
-                            'description' => ucfirst($paymentMethod) . ' payment for booking: ' . ($booking['booking_number'] ?? $bookingId),
+                            'description' => ucfirst($paymentMethod) . ' payment for booking: ' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')',
                             'reference_type' => 'booking_payment',
                             'reference_id' => $paymentId,
-                            'transaction_date' => date('Y-m-d'),
+                            'transaction_date' => $paymentDate,
                             'status' => 'posted',
                             'created_by' => $this->session['user_id']
                         ]);
@@ -975,10 +1033,10 @@ class Bookings extends Base_Controller {
                                     'account_id' => $arAccount['id'],
                                     'debit' => 0,
                                     'credit' => $amount,
-                                    'description' => 'Payment received - booking: ' . ($booking['booking_number'] ?? $bookingId),
+                                    'description' => 'Payment received - booking: ' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')',
                                     'reference_type' => 'booking_payment',
                                     'reference_id' => $paymentId,
-                                    'transaction_date' => date('Y-m-d'),
+                                    'transaction_date' => $paymentDate,
                                     'status' => 'posted',
                                     'created_by' => $this->session['user_id']
                                 ]);
@@ -1155,6 +1213,9 @@ class Bookings extends Base_Controller {
                 }
                 
                 $this->bookingModel->update($id, $updateData);
+                
+                // Delete slots to free up the calendar
+                $this->db->delete('booking_slots', "booking_id = ?", [$id]);
                 
                 // Log modification
                 $this->bookingModificationModel->logModification(
@@ -1537,7 +1598,7 @@ class Bookings extends Base_Controller {
                         'account_id' => $arAccount['id'],
                         'debit' => $balanceAmount,
                         'credit' => 0,
-                        'description' => 'Booking Receivable'
+                        'description' => 'Accounts Receivable - Booking #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')'
                     ];
                 }
             }
@@ -1550,7 +1611,7 @@ class Bookings extends Base_Controller {
                         'account_id' => $unearnedRevenueAccount['id'],
                         'debit' => $paidAmount,
                         'credit' => 0,
-                        'description' => 'Recognize Unearned Revenue'
+                        'description' => 'Recognize Unearned Revenue - Booking #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')'
                     ];
                 } else {
                     // If no unearned revenue account, maybe it was credited to revenue directly? 
@@ -1573,7 +1634,7 @@ class Bookings extends Base_Controller {
                 'account_id' => $bookingRevenueAccount['id'],
                 'debit' => 0,
                 'credit' => $totalAmount,
-                'description' => 'Booking Revenue Recognized'
+                'description' => 'Booking Revenue Recognized - Booking #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')'
             ];
             
             if (!empty($entries)) {
@@ -1581,7 +1642,7 @@ class Bookings extends Base_Controller {
                     'date' => $booking['booking_date'],
                     'reference_type' => 'booking_revenue',
                     'reference_id' => $bookingId,
-                    'description' => 'Booking Revenue Recognition #' . $booking['booking_number'],
+                    'description' => 'Booking Revenue Recognition #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')',
                     'journal_type' => 'sales',
                     'entries' => $entries,
                     'created_by' => $this->session['user_id'] ?? null,

@@ -86,6 +86,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <tr>
                                     <th>Date</th>
                                     <th>Account</th>
+                                    <th>Customer</th>
                                     <th>Description</th>
                                     <th class="text-end">Amount</th>
                                 </tr>
@@ -94,8 +95,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <?php foreach ($recent_transactions as $txn): ?>
                                     <tr>
                                         <td><?= format_date($txn['transaction_date']) ?></td>
-                                        <td><?= htmlspecialchars($txn['account_code'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($txn['description'] ?? '') ?></td>
+                                        <td><small><?= htmlspecialchars($txn['account_code'] ?? '') ?></small></td>
+                                        <td><small><?= htmlspecialchars($txn['customer_name'] ?? '—') ?></small></td>
+                                        <td>
+                                            <small><?= htmlspecialchars($txn['description'] ?? '') ?></small>
+                                            <?php
+                                                $refBadge = ['booking_payment'=>'primary','booking_revenue'=>'success','invoice'=>'info','journal_entry'=>'secondary'];
+                                                $ref = $txn['reference_type'] ?? '';
+                                                $badge = $refBadge[$ref] ?? 'light';
+                                                $label = ucwords(str_replace('_', ' ', $ref));
+                                            ?>
+                                            <?php if ($label): ?><span class="badge bg-<?= $badge ?> ms-1" style="font-size:0.65rem"><?= $label ?></span><?php endif; ?>
+                                        </td>
                                         <td class="text-end">
                                             <?php if ($txn['debit'] > 0): ?>
                                                 <span class="text-danger"><?= format_currency($txn['debit']) ?></span>

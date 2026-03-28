@@ -44,7 +44,7 @@ class Booking_model extends Base_Model {
                 FROM `" . $this->db->getPrefix() . $this->table . "` b
                 LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
                 LEFT JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
-                WHERE b.status NOT IN ('cancelled', 'refunded', 'no_show')";
+                WHERE 1=1";
             
             $params = [];
             if ($status && $status !== 'all') {
@@ -74,8 +74,7 @@ class Booking_model extends Base_Model {
                     WHERE (
                         (b.booking_date >= ? AND b.booking_date <= ?)
                         OR (b.booking_date <= ? AND DATE_ADD(b.booking_date, INTERVAL TIME_TO_SEC(b.end_time) - TIME_TO_SEC(b.start_time) SECOND) >= ?)
-                    )
-                    AND b.status NOT IN ('cancelled', 'refunded', 'no_show')";
+                    )";
             
             $params = [$startDate, $endDate, $startDate, $startDate];
             

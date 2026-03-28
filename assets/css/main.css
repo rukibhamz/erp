@@ -1924,3 +1924,28 @@ select:focus {
     color: var(--gray-900) !important;
 }
 
+
+/* ── btn-outline-secondary: ensure visible on light backgrounds ── */
+.btn-outline-secondary {
+    color: var(--gray-700) !important;
+    border-color: var(--gray-600) !important;
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    color: #ffffff !important;
+    background-color: var(--gray-700) !important;
+    border-color: var(--gray-700) !important;
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+    color: var(--gray-200) !important;
+    border-color: var(--gray-400) !important;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover,
+[data-theme="dark"] .btn-outline-secondary:focus {
+    color: var(--gray-900) !important;
+    background-color: var(--gray-300) !important;
+    border-color: var(--gray-300) !important;
+}

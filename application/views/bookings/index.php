@@ -30,24 +30,48 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <!-- Filters -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" class="row g-3">
+            <form method="GET" action="" class="row g-3 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select" onchange="this.form.submit()">
+                    <label class="form-label fw-semibold">Status</label>
+                    <select name="status" id="filter-status" class="form-select">
                         <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All Statuses</option>
                         <option value="pending" <?= $selected_status === 'pending' ? 'selected' : '' ?>>Pending</option>
                         <option value="confirmed" <?= $selected_status === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
                         <option value="completed" <?= $selected_status === 'completed' ? 'selected' : '' ?>>Completed</option>
                         <option value="cancelled" <?= $selected_status === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                        <option value="in_progress" <?= $selected_status === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Date</label>
-                    <input type="date" name="date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>" onchange="this.form.submit()">
+                    <label class="form-label fw-semibold">Date</label>
+                    <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
                 </div>
+                <div class="col-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-funnel-fill me-1"></i> Apply Filter
+                    </button>
+                    <a href="<?= base_url('bookings') ?>" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i> Clear
+                    </a>
+                </div>
+                <?php if ($selected_status !== 'all' || !empty($selected_date)): ?>
+                <div class="col-12">
+                    <span class="text-muted small">
+                        <i class="bi bi-filter-circle-fill text-primary me-1"></i>
+                        Filtered by:
+                        <?php if ($selected_status !== 'all'): ?>
+                            <span class="badge bg-primary"><?= ucfirst($selected_status) ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($selected_date)): ?>
+                            <span class="badge bg-secondary"><?= date('M Y', strtotime($selected_date)) ?></span>
+                        <?php endif; ?>
+                    </span>
+                </div>
+                <?php endif; ?>
             </form>
         </div>
     </div>
+
 
     <!-- Bookings Table -->
     <div class="card">

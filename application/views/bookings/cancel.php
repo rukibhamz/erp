@@ -74,9 +74,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endif; ?>
                         <?php endif; ?>
 
-                        <form method="POST" action="<?= base_url('bookings/cancel/' . $booking['id']) ?>
-<?php echo csrf_field(); ?>" 
+                        <form method="POST" action="<?= base_url('bookings/cancel/' . $booking['id']) ?>" 
                               onsubmit="return confirm('Are you sure you want to cancel this booking? This action cannot be undone.');">
+                            <?php echo csrf_field(); ?>
                             <div class="mb-3">
                                 <label class="form-label">Cancellation Reason <span class="text-danger">*</span></label>
                                 <textarea name="cancellation_reason" class="form-control" rows="4" required
@@ -95,7 +95,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endif; ?>
 
                             <div class="d-flex justify-content-between">
-                                <a href="<?= base_url('bookings/view/' . $booking['id']) ?>" class="btn btn-outline-secondary">
+                                <a href="<?= base_url('bookings/view/' . $booking['id']) ?>" class="btn btn-outline-dark">
                                     Keep Booking
                                 </a>
                                 <button type="submit" class="btn btn-danger">

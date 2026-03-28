@@ -98,13 +98,13 @@ function wrapPdfHtml($title, $content) {
         }
         h1 {
             font-size: 18px;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
             color: #333;
         }
         h2 {
-            font-size: 14px;
-            margin: 15px 0 10px 0;
-            color: #555;
+            font-size: 15px;
+            margin: 4px 0 10px 0;
+            color: #333;
         }
         table {
             width: 100%;
