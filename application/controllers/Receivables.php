@@ -41,7 +41,20 @@ class Receivables extends Base_Controller {
     // Customers Management
     public function customers() {
         try {
-            $customers = $this->customerModel->getAll();
+            $sourceFilter = isset($_GET['source']) ? sanitize_input($_GET['source']) : null;
+            $validSources = ['invoice', 'booking', 'tenant'];
+
+            if ($sourceFilter && in_array($sourceFilter, $validSources)) {
+                $customers = $this->db->fetchAll(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "customers`
+                     WHERE status = 'active' AND customer_source = ?
+                     ORDER BY company_name",
+                    [$sourceFilter]
+                );
+            } else {
+                $sourceFilter = null;
+                $customers = $this->customerModel->getAll();
+            }
             
             // Add outstanding balance to each customer
             foreach ($customers as &$customer) {
@@ -52,9 +65,10 @@ class Receivables extends Base_Controller {
         }
         
         $data = [
-            'page_title' => 'Customers',
-            'customers' => $customers,
-            'flash' => $this->getFlashMessage()
+            'page_title'    => 'Customers',
+            'customers'     => $customers,
+            'source_filter' => $sourceFilter,
+            'flash'         => $this->getFlashMessage()
         ];
         
         $this->loadView('receivables/customers', $data);
@@ -222,6 +236,50 @@ class Receivables extends Base_Controller {
         }
     }
     
+    public function customerHistory($id) {
+        $this->requirePermission('receivables', 'read');
+
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid customer ID.');
+            redirect('receivables/customers');
+            return;
+        }
+
+        // Load customer
+        $customer = $this->customerModel->getCustomerDetailed($id);
+        if (!$customer) {
+            $this->setFlashMessage('danger', 'Customer not found.');
+            redirect('receivables/customers');
+            return;
+        }
+
+        // Parse optional date range from GET
+        $dateFrom = !empty($_GET['date_from']) ? sanitize_input($_GET['date_from']) : null;
+        $dateTo   = !empty($_GET['date_to'])   ? sanitize_input($_GET['date_to'])   : null;
+
+        // Fetch transaction history
+        $invoices       = $this->customerModel->getInvoicesByCustomer($id, $dateFrom, $dateTo);
+        $payments       = $this->customerModel->getPaymentsByCustomer($id, $dateFrom, $dateTo);
+        $bookingPayments = $this->customerModel->getBookingsByCustomer($id, $dateFrom, $dateTo);
+        $outstanding    = $this->customerModel->getTotalOutstanding($id);
+
+        $data = [
+            'page_title'      => 'Transaction History: ' . ($customer['company_name'] ?? 'N/A'),
+            'customer'        => $customer,
+            'outstanding'     => $outstanding,
+            'invoices'        => $invoices,
+            'payments'        => $payments,
+            'booking_payments' => $bookingPayments,
+            'date_from'       => $dateFrom,
+            'date_to'         => $dateTo,
+            'flash'           => $this->getFlashMessage()
+        ];
+
+        $this->loadView('receivables/customer_history', $data);
+    }
+
     public function editCustomer($id) {
         $this->requirePermission('receivables', 'update');
         

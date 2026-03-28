@@ -296,6 +296,9 @@ class Router {
                 } elseif ($methodPart === 'payments' && $actionPart === 'create') {
                     $this->method = 'createPayment';
                     $this->params = [];
+                } elseif ($methodPart === 'customers' && $actionPart === 'history') {
+                    $this->method = 'customerHistory';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
                 } else {
                     // Generic mapping: receivables/method/param
                     $this->method = $actionPart ?: ($methodPart ?: 'customers');
@@ -391,6 +394,9 @@ class Router {
                     $this->params = [];
                 } elseif ($methodPart === 'bills' && $actionPart === 'delete') {
                     $this->method = 'deleteBill';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'vendors' && $actionPart === 'history') {
+                    $this->method = 'vendorHistory';
                     $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
                 } else {
                     // Generic mapping: payables/method/param

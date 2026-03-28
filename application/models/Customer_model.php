@@ -98,6 +98,79 @@ class Customer_model extends Base_Model {
     }
     
     /**
+     * Get invoices for a customer, optionally filtered by date range.
+     *
+     * @param int         $customerId
+     * @param string|null $dateFrom   Inclusive lower bound (invoice_date >= ?)
+     * @param string|null $dateTo     Inclusive upper bound (invoice_date <= ?)
+     * @return array
+     */
+    public function getInvoicesByCustomer(int $customerId, ?string $dateFrom, ?string $dateTo): array {
+        try {
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT i.id, i.invoice_number, i.invoice_date, i.due_date,
+                           i.total_amount, i.paid_amount, i.balance_amount, i.status
+                    FROM `{$prefix}invoices` i
+                    WHERE i.customer_id = ?";
+            $params = [$customerId];
+
+            if ($dateFrom !== null) {
+                $sql .= " AND i.invoice_date >= ?";
+                $params[] = $dateFrom;
+            }
+            if ($dateTo !== null) {
+                $sql .= " AND i.invoice_date <= ?";
+                $params[] = $dateTo;
+            }
+
+            $sql .= " ORDER BY i.invoice_date DESC, i.id DESC";
+
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Customer_model getInvoicesByCustomer error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get payments for a customer, optionally filtered by date range.
+     * Joins payment_allocations → invoices to aggregate applied invoice numbers.
+     *
+     * @param int         $customerId
+     * @param string|null $dateFrom   Inclusive lower bound (payment_date >= ?)
+     * @param string|null $dateTo     Inclusive upper bound (payment_date <= ?)
+     * @return array
+     */
+    public function getPaymentsByCustomer(int $customerId, ?string $dateFrom, ?string $dateTo): array {
+        try {
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT p.id, p.payment_number, p.payment_date, p.amount, p.payment_method,
+                           GROUP_CONCAT(i.invoice_number ORDER BY i.invoice_number SEPARATOR ', ') AS applied_to
+                    FROM `{$prefix}payments` p
+                    LEFT JOIN `{$prefix}payment_allocations` pa ON pa.payment_id = p.id
+                    LEFT JOIN `{$prefix}invoices` i             ON i.id = pa.invoice_id
+                    WHERE p.customer_id = ?";
+            $params = [$customerId];
+
+            if ($dateFrom !== null) {
+                $sql .= " AND p.payment_date >= ?";
+                $params[] = $dateFrom;
+            }
+            if ($dateTo !== null) {
+                $sql .= " AND p.payment_date <= ?";
+                $params[] = $dateTo;
+            }
+
+            $sql .= " GROUP BY p.id ORDER BY p.payment_date DESC, p.id DESC";
+
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Customer_model getPaymentsByCustomer error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Get customer by email address
      * @param string $email Customer email
      * @return array|false Customer data or false if not found
@@ -114,6 +187,46 @@ class Customer_model extends Base_Model {
         } catch (Exception $e) {
             error_log('Customer_model getByEmail error: ' . $e->getMessage());
             return false;
+        }
+    }
+    /**
+     * Get booking payments for a customer, optionally filtered by date range.
+     * Joins bookings → booking_payments → spaces to return payment rows.
+     *
+     * @param int         $customerId
+     * @param string|null $dateFrom   Inclusive lower bound (payment_date >= ?)
+     * @param string|null $dateTo     Inclusive upper bound (payment_date <= ?)
+     * @return array
+     */
+    public function getBookingsByCustomer(int $customerId, ?string $dateFrom, ?string $dateTo): array {
+        try {
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT bp.id, bp.payment_number, bp.payment_date, bp.amount, bp.payment_method,
+                           bp.status as payment_status,
+                           b.booking_number, b.booking_date,
+                           COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name
+                    FROM `{$prefix}booking_payments` bp
+                    JOIN `{$prefix}bookings` b ON bp.booking_id = b.id
+                    LEFT JOIN `{$prefix}spaces` s ON b.space_id = s.id
+                    LEFT JOIN `{$prefix}facilities` f ON b.facility_id = f.id
+                    WHERE b.customer_id = ?";
+            $params = [$customerId];
+
+            if ($dateFrom !== null) {
+                $sql .= " AND bp.payment_date >= ?";
+                $params[] = $dateFrom;
+            }
+            if ($dateTo !== null) {
+                $sql .= " AND bp.payment_date <= ?";
+                $params[] = $dateTo;
+            }
+
+            $sql .= " ORDER BY bp.payment_date DESC, bp.id DESC";
+
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Customer_model getBookingsByCustomer error: ' . $e->getMessage());
+            return [];
         }
     }
 }

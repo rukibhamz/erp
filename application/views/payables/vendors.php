@@ -41,7 +41,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php foreach ($vendors as $vendor): ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($vendor['vendor_code']) ?></strong></td>
-                                <td><?= htmlspecialchars($vendor['company_name']) ?></td>
+                                <td>
+                                    <a href="<?= base_url('payables/vendors/history/' . intval($vendor['id'])) ?>">
+                                        <?= htmlspecialchars($vendor['company_name']) ?>
+                                    </a>
+                                </td>
                                 <td><?= htmlspecialchars($vendor['contact_name'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($vendor['email'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($vendor['phone'] ?? '-') ?></td>

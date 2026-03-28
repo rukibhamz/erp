@@ -135,7 +135,7 @@
                                         <tr>
                                             <td><?= htmlspecialchars($invoice['invoice_number'] ?? '') ?></td>
                                             <td>
-                                                <a href="<?= site_url('customers/view/' . $invoice['customer_id']) ?>">
+                                                <a href="<?= site_url('receivables/customers/history/' . $invoice['customer_id']) ?>">
                                                     <?= htmlspecialchars($invoice['customer_name'] ?? '') ?>
                                                 </a>
                                             </td>

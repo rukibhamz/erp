@@ -33,6 +33,31 @@ class Booking_model extends Base_Model {
             $data['facility_id'] = $data['space_id'];
             unset($data['space_id']);
         }
+
+        // Resolve customer identity — link or create a customers row via email
+        if (!isset($data['customer_id'])) {
+            $email = trim($data['customer_email'] ?? '');
+            if ($email !== '') {
+                try {
+                    if (!class_exists('Identity_resolver')) {
+                        require_once BASEPATH . 'services/Identity_resolver.php';
+                    }
+                    $resolver = new Identity_resolver();
+                    $data['customer_id'] = $resolver->resolve(
+                        $email,
+                        $data['customer_name'] ?? $email,
+                        $data['customer_phone'] ?? '',
+                        'booking'
+                    );
+                } catch (Exception $e) {
+                    error_log('Booking_model create: Identity_resolver error: ' . $e->getMessage());
+                    $data['customer_id'] = null;
+                }
+            } else {
+                $data['customer_id'] = null;
+            }
+        }
+
         return parent::create($data);
     }
     

@@ -134,7 +134,7 @@
                                     ?>
                                         <tr>
                                             <td>
-                                                <a href="<?= site_url('vendors/view/' . $bill['vendor_id']) ?>">
+                                                <a href="<?= site_url('payables/vendors/history/' . $bill['vendor_id']) ?>">
                                                     <?= htmlspecialchars($bill['vendor_name'] ?? '') ?>
                                                 </a>
                                             </td>

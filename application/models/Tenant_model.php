@@ -60,5 +60,32 @@ class Tenant_model extends Base_Model {
             return false;
         }
     }
+    public function create($data) {
+        // Resolve customer identity — link or create a customers row via email
+        if (!isset($data['customer_id'])) {
+            $email = trim($data['email'] ?? '');
+            if ($email !== '') {
+                try {
+                    if (!class_exists('Identity_resolver')) {
+                        require_once BASEPATH . 'services/Identity_resolver.php';
+                    }
+                    $resolver = new Identity_resolver();
+                    $data['customer_id'] = $resolver->resolve(
+                        $email,
+                        $data['business_name'] ?? $data['contact_person'] ?? $email,
+                        $data['phone'] ?? '',
+                        'tenant'
+                    );
+                } catch (Exception $e) {
+                    error_log('Tenant_model create: Identity_resolver error: ' . $e->getMessage());
+                    $data['customer_id'] = null;
+                }
+            } else {
+                $data['customer_id'] = null;
+            }
+        }
+
+        return parent::create($data);
+    }
 }
 

@@ -1204,4 +1204,46 @@ class Payables extends Base_Controller {
         
         redirect('payables/bills/view/' . $id);
     }
+
+    public function vendorHistory($id) {
+        $this->requirePermission('payables', 'read');
+
+        // Validate ID parameter
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid vendor ID.');
+            redirect('payables/vendors');
+            return;
+        }
+
+        // Load vendor
+        $vendor = $this->vendorModel->getById($id);
+        if (!$vendor) {
+            $this->setFlashMessage('danger', 'Vendor not found.');
+            redirect('payables/vendors');
+            return;
+        }
+
+        // Parse optional date range from GET
+        $dateFrom = !empty($_GET['date_from']) ? sanitize_input($_GET['date_from']) : null;
+        $dateTo   = !empty($_GET['date_to'])   ? sanitize_input($_GET['date_to'])   : null;
+
+        // Fetch transaction history
+        $bills       = $this->vendorModel->getBillsByVendor($id, $dateFrom, $dateTo);
+        $payments    = $this->vendorModel->getPaymentsByVendor($id, $dateFrom, $dateTo);
+        $outstanding = $this->vendorModel->getTotalOutstanding($id);
+
+        $data = [
+            'page_title'  => 'Transaction History: ' . ($vendor['company_name'] ?? 'N/A'),
+            'vendor'      => $vendor,
+            'outstanding' => $outstanding,
+            'bills'       => $bills,
+            'payments'    => $payments,
+            'date_from'   => $dateFrom,
+            'date_to'     => $dateTo,
+            'flash'       => $this->getFlashMessage()
+        ];
+
+        $this->loadView('payables/vendor_history', $data);
+    }
 }

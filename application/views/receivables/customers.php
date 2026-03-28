@@ -26,6 +26,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center py-2">
+        <span class="fw-semibold">Customer List</span>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Source filter">
+            <?php
+                $sources = [null => 'All', 'invoice' => 'Invoice', 'booking' => 'Booking', 'tenant' => 'Tenant'];
+                foreach ($sources as $val => $label):
+                    $active = ($source_filter === $val) ? 'btn-primary' : 'btn-outline-primary';
+                    $href  = $val ? base_url('receivables/customers?source=' . $val) : base_url('receivables/customers');
+            ?>
+            <a href="<?= $href ?>" class="btn <?= $active ?>"><?= $label ?></a>
+            <?php endforeach; ?>
+        </div>
+    </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -46,7 +59,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php foreach ($customers as $customer): ?>
                             <tr>
                                 <td><strong><?= htmlspecialchars($customer['customer_code']) ?></strong></td>
-                                <td><?= htmlspecialchars($customer['company_name']) ?></td>
+                                <td>
+                                    <a href="<?= base_url('receivables/customers/history/' . intval($customer['id'])) ?>">
+                                        <?= htmlspecialchars($customer['company_name']) ?>
+                                    </a>
+                                </td>
                                 <td><?= htmlspecialchars($customer['contact_name'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($customer['email'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($customer['phone'] ?? '-') ?></td>

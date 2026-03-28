@@ -28,6 +28,79 @@ class Vendor_model extends Base_Model {
         }
     }
     
+    /**
+     * Get bills for a vendor, optionally filtered by date range.
+     *
+     * @param int         $vendorId
+     * @param string|null $dateFrom  Inclusive lower bound (bill_date >= ?)
+     * @param string|null $dateTo    Inclusive upper bound (bill_date <= ?)
+     * @return array
+     */
+    public function getBillsByVendor(int $vendorId, ?string $dateFrom, ?string $dateTo): array {
+        try {
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT b.id, b.bill_number, b.bill_date, b.due_date,
+                           b.total_amount, b.paid_amount, b.balance_amount, b.status
+                    FROM `{$prefix}bills` b
+                    WHERE b.vendor_id = ?";
+            $params = [$vendorId];
+
+            if ($dateFrom !== null) {
+                $sql .= " AND b.bill_date >= ?";
+                $params[] = $dateFrom;
+            }
+            if ($dateTo !== null) {
+                $sql .= " AND b.bill_date <= ?";
+                $params[] = $dateTo;
+            }
+
+            $sql .= " ORDER BY b.bill_date DESC, b.id DESC";
+
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Vendor_model getBillsByVendor error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get payments for a vendor, optionally filtered by date range.
+     * Joins payment_allocations → bills to aggregate applied bill numbers.
+     *
+     * @param int         $vendorId
+     * @param string|null $dateFrom  Inclusive lower bound (payment_date >= ?)
+     * @param string|null $dateTo    Inclusive upper bound (payment_date <= ?)
+     * @return array
+     */
+    public function getPaymentsByVendor(int $vendorId, ?string $dateFrom, ?string $dateTo): array {
+        try {
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT p.id, p.payment_number, p.payment_date, p.amount, p.payment_method,
+                           GROUP_CONCAT(b.bill_number ORDER BY b.bill_number SEPARATOR ', ') AS applied_to
+                    FROM `{$prefix}payments` p
+                    LEFT JOIN `{$prefix}payment_allocations` pa ON pa.payment_id = p.id
+                    LEFT JOIN `{$prefix}bills` b                ON b.id = pa.bill_id
+                    WHERE p.vendor_id = ?";
+            $params = [$vendorId];
+
+            if ($dateFrom !== null) {
+                $sql .= " AND p.payment_date >= ?";
+                $params[] = $dateFrom;
+            }
+            if ($dateTo !== null) {
+                $sql .= " AND p.payment_date <= ?";
+                $params[] = $dateTo;
+            }
+
+            $sql .= " GROUP BY p.id ORDER BY p.payment_date DESC, p.id DESC";
+
+            return $this->db->fetchAll($sql, $params);
+        } catch (Exception $e) {
+            error_log('Vendor_model getPaymentsByVendor error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
     public function getAgingReport($vendorId = null) {
         try {
             $sql = "SELECT 
