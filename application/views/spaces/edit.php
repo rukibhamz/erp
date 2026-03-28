@@ -253,6 +253,70 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <input type="number" step="0.01" class="form-control" id="weekly_rate" name="weekly_rate" value="<?= $pricingRules['weekly'] ?? '' ?>">
                         </div>
                         
+                        <!-- Specialized Rates Section -->
+                        <div class="col-12 mt-3">
+                            <h6 class="border-bottom pb-2 text-primary">Specialized Rates (Optional)</h6>
+                        </div>
+                        <?php
+                            $ppRates = $pricingRules['per_person_rates'] ?? [];
+                            $wsRates = $pricingRules['workspace_rates'] ?? [];
+                            $picnic = $ppRates['picnic'] ?? [];
+                            $photo = $ppRates['photoshoot'] ?? [];
+                            $video = $ppRates['videoshoot'] ?? [];
+                        ?>
+                        <div class="col-md-4">
+                            <label for="pp_picnic_base" class="form-label">Picnic Base (Per Person)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_picnic_base" name="pp_picnic_base" value="<?= $picnic['base_per_person'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_picnic_tier_standard" class="form-label">Picnic Standard Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_picnic_tier_standard" name="pp_picnic_tier_standard" value="<?= $picnic['equipment_tiers']['standard']['surcharge'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_picnic_tier_premium" class="form-label">Picnic Premium Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_picnic_tier_premium" name="pp_picnic_tier_premium" value="<?= $picnic['equipment_tiers']['premium']['surcharge'] ?? '' ?>">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="pp_photo_base" class="form-label">Photo Base (Per Person)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_photo_base" name="pp_photo_base" value="<?= $photo['base_per_person'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_photo_tier_standard" class="form-label">Photo Standard Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_photo_tier_standard" name="pp_photo_tier_standard" value="<?= $photo['equipment_tiers']['standard']['surcharge'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_photo_tier_premium" class="form-label">Photo Premium Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_photo_tier_premium" name="pp_photo_tier_premium" value="<?= $photo['equipment_tiers']['premium']['surcharge'] ?? '' ?>">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="pp_video_base" class="form-label">Video Base (Per Person)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_video_base" name="pp_video_base" value="<?= $video['base_per_person'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_video_tier_standard" class="form-label">Video Standard Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_video_tier_standard" name="pp_video_tier_standard" value="<?= $video['equipment_tiers']['standard']['surcharge'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_video_tier_premium" class="form-label">Video Premium Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_video_tier_premium" name="pp_video_tier_premium" value="<?= $video['equipment_tiers']['premium']['surcharge'] ?? '' ?>">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="ws_daily" class="form-label">Workspace Daily</label>
+                            <input type="number" step="0.01" class="form-control" id="ws_daily" name="ws_daily" value="<?= $wsRates['per_person_daily'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ws_weekly" class="form-label">Workspace Weekly</label>
+                            <input type="number" step="0.01" class="form-control" id="ws_weekly" name="ws_weekly" value="<?= $wsRates['per_person_weekly'] ?? '' ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ws_monthly" class="form-label">Workspace Monthly</label>
+                            <input type="number" step="0.01" class="form-control" id="ws_monthly" name="ws_monthly" value="<?= $wsRates['per_person_monthly'] ?? '' ?>">
+                        </div>
+                        <div class="col-12 mt-3"><hr></div>
+                        
                         <div class="col-md-4">
                             <label for="minimum_duration" class="form-label">Minimum Duration (hours)</label>
                             <input type="number" class="form-control" id="minimum_duration" name="minimum_duration" value="<?= $space['bookable_config']['minimum_duration'] ?? 1 ?>">
@@ -310,6 +374,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="bt_multi_day" name="booking_types[]" value="multi_day" <?= in_array('multi_day', $bookingTypes) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="bt_multi_day">Multi-Day</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_picnic" name="booking_types[]" value="picnic" <?= in_array('picnic', $bookingTypes) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="bt_picnic">Picnic</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_photoshoot" name="booking_types[]" value="photoshoot" <?= in_array('photoshoot', $bookingTypes) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="bt_photoshoot">Photoshoot</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_videoshoot" name="booking_types[]" value="videoshoot" <?= in_array('videoshoot', $bookingTypes) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="bt_videoshoot">Videoshoot</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_workspace" name="booking_types[]" value="workspace" <?= in_array('workspace', $bookingTypes) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="bt_workspace">Workspace</label>
                             </div>
                         </div>
                         

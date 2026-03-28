@@ -290,6 +290,13 @@ class AutoMigration {
             error_log("AutoMigration: Error ensuring bookings table columns: " . $e->getMessage());
         }
         
+        // ALWAYS ensure booking rentals table and per-person booking columns
+        try {
+            $this->ensureBookingRentalsAndPerPersonColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring booking rentals/per-person columns: " . $e->getMessage());
+        }
+        
         // ALWAYS ensure payment_transactions table exists for payment gateway integration
         try {
             $this->ensurePaymentTransactionsTable();
@@ -384,6 +391,25 @@ class AutoMigration {
             $this->ensureSpacesVideoColumns();
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring spaces video columns: " . $e->getMessage());
+        }
+
+        // Ensure booking rentals and per-person columns
+        try {
+            $this->ensureBookingRentalsAndPerPersonColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring booking rentals/per-person columns: " . $e->getMessage());
+        }
+
+        // Ensure payment and resource tables
+        try {
+            $this->ensurePaymentTransactionsTable();
+            $this->ensurePaymentGatewaysTable();
+            $this->ensureBookingResourcesTable();
+            $this->ensureBookingSlotsTable();
+            $this->ensureBookingPaymentsTable();
+            $this->ensureCustomerRole();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring multi-module tables: " . $e->getMessage());
         }
             
         // Check if admin locations fix is needed
@@ -1704,7 +1730,7 @@ class AutoMigration {
                 'invoice_id' => "INT(11) NULL AFTER `customer_address`",
                 'duration_hours' => "DECIMAL(10,2) DEFAULT 0 AFTER `end_time`",
                 'number_of_guests' => "INT(11) DEFAULT 0 AFTER `duration_hours`",
-                'booking_type' => "ENUM('hourly','half_day','full_day','daily','multi_day','weekly') DEFAULT 'hourly' AFTER `number_of_guests`",
+                'booking_type' => "ENUM('hourly','half_day','full_day','daily','multi_day','weekly','monthly','custom','picnic','photoshoot','videoshoot','workspace') DEFAULT 'hourly' AFTER `number_of_guests`",
                 'base_amount' => "DECIMAL(15,2) DEFAULT 0 AFTER `booking_type`",
                 'subtotal' => "DECIMAL(15,2) DEFAULT 0 AFTER `base_amount`",
                 'tax_rate' => "DECIMAL(15,2) DEFAULT 0 AFTER `subtotal`",
@@ -2566,6 +2592,97 @@ class AutoMigration {
             }
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring spaces video columns: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Ensure booking_rentals table exists and items table has rental columns
+     * Also ensures bookings.equipment_tier and expanded booking_type ENUM
+     */
+    private function ensureBookingRentalsAndPerPersonColumns() {
+        try {
+            // 1. Create booking_rentals table if missing
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_rentals'");
+            if ($stmt && count($stmt->fetchAll()) == 0) {
+                $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_rentals` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `booking_id` INT(11) NOT NULL,
+                    `item_id` INT(11) NOT NULL,
+                    `quantity` INT(11) NOT NULL DEFAULT 1,
+                    `rental_rate` DECIMAL(15,2) NOT NULL DEFAULT 0,
+                    `rental_total` DECIMAL(15,2) NOT NULL DEFAULT 0,
+                    `checked_out_at` DATETIME DEFAULT NULL,
+                    `returned_at` DATETIME DEFAULT NULL,
+                    `return_condition` TEXT DEFAULT NULL,
+                    `status` ENUM('reserved','checked_out','returned','damaged','lost') DEFAULT 'reserved',
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_booking_id` (`booking_id`),
+                    KEY `idx_item_id` (`item_id`),
+                    KEY `idx_status` (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                error_log("AutoMigration: Created booking_rentals table");
+            }
+            
+            // 2. Ensure bookings.equipment_tier column
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}bookings` LIKE 'equipment_tier'");
+            if ($stmt && count($stmt->fetchAll()) == 0) {
+                try {
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}bookings` ADD COLUMN `equipment_tier` VARCHAR(50) DEFAULT NULL AFTER `booking_type`");
+                    error_log("AutoMigration: Added equipment_tier column to bookings table");
+                } catch (Exception $e) {
+                    // Try without AFTER clause
+                    try {
+                        $this->pdo->exec("ALTER TABLE `{$this->prefix}bookings` ADD COLUMN `equipment_tier` VARCHAR(50) DEFAULT NULL");
+                        error_log("AutoMigration: Added equipment_tier column (no position) to bookings");
+                    } catch (Exception $e2) {
+                        error_log("AutoMigration: Could not add equipment_tier: " . $e2->getMessage());
+                    }
+                }
+            }
+            
+            // 3. Ensure items rental columns
+            $rentalColumns = [
+                'is_rentable' => "TINYINT(1) DEFAULT 0",
+                'rental_rate' => "DECIMAL(15,2) DEFAULT 0",
+                'rental_rate_type' => "ENUM('per_event','per_day','per_hour') DEFAULT 'per_event'"
+            ];
+            
+            foreach ($rentalColumns as $colName => $colDef) {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}items` LIKE '{$colName}'");
+                if ($stmt && count($stmt->fetchAll()) == 0) {
+                    try {
+                        $this->pdo->exec("ALTER TABLE `{$this->prefix}items` ADD COLUMN `{$colName}` {$colDef}");
+                        error_log("AutoMigration: Added {$colName} column to items table");
+                    } catch (Exception $e) {
+                        error_log("AutoMigration: Could not add {$colName} to items: " . $e->getMessage());
+                    }
+                }
+            }
+            
+            // 4. Expand booking_type ENUM if it doesn't contain the new values
+            try {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}bookings` LIKE 'booking_type'");
+                if ($stmt) {
+                    $col = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($col && isset($col['Type']) && (stripos($col['Type'], 'picnic') === false || stripos($col['Type'], 'videoshoot') === false)) {
+                        $this->pdo->exec("ALTER TABLE `{$this->prefix}bookings` MODIFY `booking_type` ENUM('hourly','half_day','full_day','daily','multi_day','weekly','monthly','custom','picnic','photoshoot','videoshoot','workspace') DEFAULT 'hourly'");
+                        error_log("AutoMigration: Expanded booking_type ENUM with picnic/photoshoot/videoshoot/workspace");
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("AutoMigration: Could not expand booking_type ENUM: " . $e->getMessage());
+            }
+            
+            // 5. Add rentable index if missing
+            try {
+                $this->pdo->exec("CREATE INDEX `idx_items_rentable` ON `{$this->prefix}items` (`is_rentable`, `item_status`)");
+            } catch (Exception $e) {
+                // Index might already exist
+            }
+            
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error in ensureBookingRentalsAndPerPersonColumns: " . $e->getMessage());
         }
     }
 }

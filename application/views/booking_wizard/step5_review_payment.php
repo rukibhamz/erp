@@ -84,6 +84,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <strong>Guests:</strong> <?= $booking_data['guests'] ?? 1 ?>
                                 </div>
                             </div>
+                            <?php if (!empty($booking_data['equipment_tier'])): ?>
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <strong>Equipment Tier:</strong> <?= ucfirst($booking_data['equipment_tier']) ?> Equipment
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                             <?php if (!empty($booking_data['special_requests'])): ?>
                                 <div class="mb-3">
                                     <strong>Special Requests:</strong><br>
@@ -158,6 +165,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <span>Add-ons:</span>
                                 <strong id="summary-addons"><?= format_currency($booking_data['addons_total'] ?? 0) ?></strong>
                             </div>
+                            <?php if (!empty($booking_data['rentals_total']) && $booking_data['rentals_total'] > 0): ?>
+                            <div class="d-flex justify-content-between mb-2 text-success">
+                                <span>Equipment Rentals:</span>
+                                <strong id="summary-rentals"><?= format_currency($booking_data['rentals_total']) ?></strong>
+                            </div>
+                            <?php if (!empty($booking_data['rental_items_list'])): ?>
+                                <div class="ps-3 mb-2 small text-muted">
+                                    <?php foreach ($booking_data['rental_items_list'] as $rItem): ?>
+                                        <div class="d-flex justify-content-between">
+                                            <span><?= $rItem['quantity'] ?>x <?= htmlspecialchars($rItem['name']) ?></span>
+                                            <span><?= format_currency($rItem['subtotal']) ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php endif; ?>
                             <?php if (($booking_data['discount_amount'] ?? 0) > 0): ?>
                                 <div class="d-flex justify-content-between mb-2 text-success">
                                     <span>Discount:</span>

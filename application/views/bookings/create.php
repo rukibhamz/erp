@@ -154,8 +154,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Number of Guests</label>
-                        <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0">
+                        <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="<?= isset($old_input['number_of_guests']) ? (int)$old_input['number_of_guests'] : 0 ?>">
                         <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
+                    </div>
+
+                    <div class="col-md-4 mb-3" id="equipment-tier-container" style="display: none;">
+                        <label class="form-label">Equipment Tier <i class="bi bi-info-circle text-muted" title="Surcharge based on equipment quantity"></i></label>
+                        <select name="equipment_tier" id="equipment_tier" class="form-select">
+                            <option value="">No Additional Equipment (Base Rate)</option>
+                            <option value="light" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'light') ? 'selected' : '' ?>>Light Equipment</option>
+                            <option value="medium" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'medium') ? 'selected' : '' ?>>Medium Equipment</option>
+                            <option value="heavy" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'heavy') ? 'selected' : '' ?>>Heavy Equipment</option>
+                        </select>
                     </div>
                 </div>
 
@@ -188,6 +198,42 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                     </div>
                 </div>
+
+                <!-- Rental Items Section -->
+                <?php if (!empty($rentable_items)): ?>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Equipment Rentals</label>
+                    <div class="border rounded p-3 bg-light">
+                        <div class="row g-3" id="rental-items-container">
+                            <?php foreach($rentable_items as $index => $item): ?>
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card h-100 shadow-sm border-0">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title mb-0 text-truncate" title="<?= htmlspecialchars($item['name']) ?>">
+                                                <?= htmlspecialchars($item['name']) ?>
+                                            </h6>
+                                            <span class="badge bg-primary rounded-pill">₦<?= number_format($item['rental_rate'], 2) ?>/<?= $item['rental_rate_type'] ?></span>
+                                        </div>
+                                        <div class="d-flex align-items-center justify-content-between mt-3">
+                                            <small class="text-muted">Available: <span class="fw-bold"><?= $item['current_stock'] ?></span></small>
+                                            <div class="input-group input-group-sm" style="width: 110px;">
+                                                <input type="hidden" name="rental_items[<?= $index ?>][item_id]" value="<?= $item['id'] ?>">
+                                                <input type="hidden" name="rental_items[<?= $index ?>][rental_rate]" value="<?= $item['rental_rate'] ?>">
+                                                <button class="btn btn-outline-secondary btn-rental-minus" type="button">-</button>
+                                                <input type="number" name="rental_items[<?= $index ?>][quantity]" class="form-control text-center rental-qty" 
+                                                       value="0" min="0" max="<?= $item['current_stock'] ?>" data-price="<?= $item['rental_rate'] ?>">
+                                                <button class="btn btn-outline-secondary btn-rental-plus" type="button">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <!-- Price Preview -->
                 <div class="alert alert-success" id="pricePreview" style="display: none;">
@@ -370,17 +416,62 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         let basePrice = 0;
         const days = Math.ceil(hours / 24);
         
-        switch(bookingType) {
-            case 'hourly': basePrice = (currentSpaceData.hourly_rate || 0) * hours; break;
-            case 'daily': 
-            case 'full_day': basePrice = (currentSpaceData.daily_rate || 0) * days; break;
-            case 'half_day': basePrice = (currentSpaceData.half_day_rate || 0) * Math.ceil(days * 2); break;
-            case 'weekly': basePrice = (currentSpaceData.weekly_rate || 0) * Math.ceil(days / 7); break;
-            case 'multi_day': basePrice = (currentSpaceData.daily_rate || 0) * days; break;
-            default: basePrice = (currentSpaceData.hourly_rate || 0) * hours;
+        let basePrice = 0;
+        const days = Math.ceil(hours / 24);
+        
+        let guests = parseInt(document.getElementById('number_of_guests').value) || 1;
+        let equipmentTier = document.getElementById('equipment_tier').value;
+        
+        if (bookingType === 'picnic' || bookingType === 'photoshoot' || bookingType === 'videoshoot' || bookingType === 'workspace') {
+            // Per-person pricing logic
+            let pRules = currentSpaceData.per_person_rates || {};
+            let wRules = currentSpaceData.workspace_rates || {};
+            
+            if (bookingType === 'workspace') {
+                let ppRate = wRules.per_person_daily || currentSpaceData.daily_rate || 0;
+                if (days >= 7 && wRules.per_person_weekly) {
+                    let weeks = Math.ceil(days / 7);
+                    basePrice = parseFloat(wRules.per_person_weekly) * Math.max(1, guests) * weeks;
+                } else if (days >= 28 && wRules.per_person_monthly) {
+                    let months = Math.ceil(days / 28);
+                    basePrice = parseFloat(wRules.per_person_monthly) * Math.max(1, guests) * months;
+                } else {
+                    basePrice = parseFloat(ppRate) * Math.max(1, guests) * Math.max(1, days);
+                }
+            } else {
+                // Picnic/Photoshoot/Videoshoot
+                let typeRates = pRules[bookingType] || {};
+                let basePp = parseFloat(typeRates.base_per_person || currentSpaceData.hourly_rate || 0);
+                let surcharge = 0;
+                
+                if (equipmentTier && typeRates.equipment_tiers && typeRates.equipment_tiers[equipmentTier]) {
+                    surcharge = parseFloat(typeRates.equipment_tiers[equipmentTier].surcharge || 0);
+                }
+                
+                basePrice = (basePp + surcharge) * Math.max(1, guests);
+            }
+        } else {
+            // Time-based pricing logic
+            switch(bookingType) {
+                case 'hourly': basePrice = (currentSpaceData.hourly_rate || 0) * hours; break;
+                case 'daily': 
+                case 'full_day': basePrice = (currentSpaceData.daily_rate || 0) * days; break;
+                case 'half_day': basePrice = (currentSpaceData.half_day_rate || 0) * Math.ceil(days * 2); break;
+                case 'weekly': basePrice = (currentSpaceData.weekly_rate || 0) * Math.ceil(days / 7); break;
+                case 'multi_day': basePrice = (currentSpaceData.daily_rate || 0) * days; break;
+                default: basePrice = (currentSpaceData.hourly_rate || 0) * hours;
+            }
         }
         
-        const subTotal = Math.max(0, basePrice - discount);
+        // Calculate Rentals
+        let rentalTotal = 0;
+        document.querySelectorAll('.rental-qty').forEach(input => {
+            let qty = parseInt(input.value) || 0;
+            let price = parseFloat(input.dataset.price) || 0;
+            rentalTotal += (qty * price);
+        });
+        
+        const subTotal = Math.max(0, basePrice - discount) + rentalTotal;
         const vat = subTotal * 0.075;
         const total = subTotal + vat;
         const deposit = currentSpaceData.security_deposit || 0;
@@ -464,7 +555,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 data-security-deposit="${space.security_deposit || 0}"
                 data-capacity="${space.capacity || 0}"
                 data-minimum-duration="${space.minimum_duration || 1}"
-                data-maximum-duration="${space.maximum_duration || ''}">${space.space_name} (${space.space_number || 'N/A'})</option>`;
+                data-maximum-duration="${space.maximum_duration || ''}"
+                data-per-person-rates='${JSON.stringify(space.per_person_rates || {})}'
+                data-workspace-rates='${JSON.stringify(space.workspace_rates || {})}'
+                >${space.space_name} (${space.space_number || 'N/A'})</option>`;
         });
         spaceSelect.innerHTML = html;
         spaceSelect.disabled = false;
@@ -489,7 +583,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 weekly_rate: parseFloat(opt.dataset.weeklyRate),
                 security_deposit: parseFloat(opt.dataset.securityDeposit),
                 capacity: parseInt(opt.dataset.capacity),
-                minimum_duration: parseInt(opt.dataset.minimumDuration)
+                minimum_duration: parseInt(opt.dataset.minimumDuration),
+                per_person_rates: JSON.parse(opt.dataset.perPersonRates || '{}'),
+                workspace_rates: JSON.parse(opt.dataset.workspaceRates || '{}')
             };
             
             document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
@@ -625,9 +721,54 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         if (dom.type) dom.type.addEventListener('change', function() {
             updateDurationOptions(this.value);
             const edc = document.getElementById('end-date-container');
+            const etc = document.getElementById('equipment-tier-container');
+            
             if (edc) edc.style.display = (this.value === 'multi_day' || this.value === 'weekly') ? 'block' : 'none';
+            if (etc) etc.style.display = (this.value === 'picnic' || this.value === 'photoshoot' || this.value === 'videoshoot') ? 'block' : 'none';
+            
             if (dom.date.value && currentSpaceData) loadTimeSlots(currentSpaceData.id, dom.date.value);
             calculatePrice();
+        });
+
+        // Add listeners for per-person triggers
+        const guestsInput = document.getElementById('number_of_guests');
+        const equipmentTier = document.getElementById('equipment_tier');
+        const discountInput = document.getElementById('discount_amount');
+        
+        if (guestsInput) guestsInput.addEventListener('input', calculatePrice);
+        if (equipmentTier) equipmentTier.addEventListener('change', calculatePrice);
+        if (discountInput) discountInput.addEventListener('input', calculatePrice);
+        
+        // Rental items +/- buttons
+        document.querySelectorAll('.btn-rental-plus').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const input = this.previousElementSibling;
+                const max = parseInt(input.getAttribute('max')) || 999;
+                if (parseInt(input.value) < max) {
+                    input.value = parseInt(input.value) + 1;
+                    calculatePrice();
+                }
+            });
+        });
+        
+        document.querySelectorAll('.btn-rental-minus').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const input = this.nextElementSibling;
+                if (parseInt(input.value) > 0) {
+                    input.value = parseInt(input.value) - 1;
+                    calculatePrice();
+                }
+            });
+        });
+        
+        document.querySelectorAll('.rental-qty').forEach(input => {
+            input.addEventListener('change', function() {
+                const max = parseInt(this.getAttribute('max')) || 999;
+                const val = parseInt(this.value) || 0;
+                if (val < 0) this.value = 0;
+                if (val > max) this.value = max;
+                calculatePrice();
+            });
         });
 
         if (dom.duration) dom.duration.addEventListener('change', function() {

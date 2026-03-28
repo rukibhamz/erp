@@ -601,9 +601,10 @@ class Booking_wizard extends Base_Controller {
                     $bookingData['start_time'],
                     $bookingData['end_time'],
                     $bookingData['booking_type'] ?? 'hourly',
-                    1, // quantity
+                    in_array($bookingData['booking_type'] ?? 'hourly', ['picnic', 'photoshoot', 'videoshoot', 'workspace']) ? max(1, $bookingData['guests']) : 1, // quantity matches guests for per-person
                     false, // isMember
-                    $bookingData['end_date'] ?? null
+                    $bookingData['end_date'] ?? null,
+                    $bookingData['equipment_tier'] ?? null
                 );
             }
             
@@ -621,10 +622,22 @@ class Booking_wizard extends Base_Controller {
             redirect('booking-wizard/step1');
         }
 
+        $rentalModel = null;
+        $rentableItems = [];
+        try {
+            $rentalModel = $this->loadModel('Booking_rental_model');
+            if ($rentalModel) {
+                $rentableItems = $rentalModel->getRentableItems();
+            }
+        } catch (Exception $e) {
+            error_log('Wizard step3 load rentals error: ' . $e->getMessage());
+        }
+
         $data = [
             'page_title' => 'Add Extras',
             'resource' => $resource,
             'addons' => $addons,
+            'rentable_items' => $rentableItems,
             'booking_data' => $bookingData,
             'resource_cost' => $resourceCost,
             'flash' => $this->getFlashMessage()
@@ -699,9 +712,10 @@ class Booking_wizard extends Base_Controller {
                 $bookingData['start_time'],
                 $bookingData['end_time'],
                 $bookingData['booking_type'] ?? 'hourly',
-                $bookingData['quantity'] ?? 1,
+                in_array($bookingData['booking_type'] ?? 'hourly', ['picnic', 'photoshoot', 'videoshoot', 'workspace']) ? max(1, $bookingData['guests']) : ($bookingData['quantity'] ?? 1),
                 false, // isMember - would check customer membership status
-                $bookingData['end_date'] ?? null // Pass end_date for multiday pricing
+                $bookingData['end_date'] ?? null, // Pass end_date for multiday pricing
+                $bookingData['equipment_tier'] ?? null
             );
             
             // Calculate addons total
@@ -723,6 +737,36 @@ class Booking_wizard extends Base_Controller {
                 }
             }
             
+            // Calculate rental items total
+            $rentalsTotal = 0;
+            $rentalItemsList = [];
+            $rentalItemsData = $bookingData['rental_items'] ?? [];
+            if (is_string($rentalItemsData)) {
+                $rentalItemsData = json_decode($rentalItemsData, true) ?: [];
+            }
+            if (is_array($rentalItemsData) && !empty($rentalItemsData)) {
+                $rentalModel = $this->loadModel('Booking_rental_model');
+                if ($rentalModel) {
+                    foreach ($rentalItemsData as $itemId => $qty) {
+                        $item = $this->db->fetchOne("SELECT name, rental_rate FROM `" . $this->db->getPrefix() . "items` WHERE id = ?", [intval($itemId)]);
+                        if ($item) {
+                            $rate = floatval($item['rental_rate']);
+                            $q = intval($qty);
+                            $rentalsTotal += $rate * $q;
+                            $rentalItemsList[] = [
+                                'id' => $itemId,
+                                'name' => $item['name'],
+                                'quantity' => $q,
+                                'rate' => $rate,
+                                'subtotal' => $rate * $q
+                            ];
+                        }
+                    }
+                }
+            }
+            $bookingData['rental_items_list'] = $rentalItemsList;
+            $bookingData['rentals_total'] = $rentalsTotal;
+            
             // Apply promo code if provided
             $discountAmount = 0;
             if (!empty($bookingData['promo_code'])) {
@@ -738,7 +782,7 @@ class Booking_wizard extends Base_Controller {
                 }
             }
             
-            $subtotal = $baseAmount + $addonsTotal;
+            $subtotal = $baseAmount + $addonsTotal + $rentalsTotal;
             
             // Calculate tax (VAT) if applicable
             $taxAmount = 0;
@@ -1031,9 +1075,10 @@ class Booking_wizard extends Base_Controller {
                 $bookingData['start_time'],
                 $bookingData['end_time'],
                 $bookingData['booking_type'] ?? 'hourly',
-                $bookingData['quantity'] ?? 1,
+                in_array($bookingData['booking_type'] ?? 'hourly', ['picnic', 'photoshoot', 'videoshoot', 'workspace']) ? max(1, intval($bookingData['guests'] ?? 1)) : ($bookingData['quantity'] ?? 1),
                 false, // isMember - would check customer membership status
-                $bookingData['end_date'] ?? null // Pass end_date for multiday pricing
+                $bookingData['end_date'] ?? null, // Pass end_date for multiday pricing
+                $bookingData['equipment_tier'] ?? null
             );
             
             // Recalculate addons total
@@ -1051,13 +1096,31 @@ class Booking_wizard extends Base_Controller {
                 }
             }
             
+            // Recalculate rental items total
+            $rentalsTotal = 0;
+            $rentalItemsData = $bookingData['rental_items'] ?? [];
+            if (is_string($rentalItemsData)) {
+                $rentalItemsData = json_decode($rentalItemsData, true) ?: [];
+            }
+            if (is_array($rentalItemsData) && !empty($rentalItemsData)) {
+                $rentalModel = $this->loadModel('Booking_rental_model');
+                if ($rentalModel) {
+                    foreach ($rentalItemsData as $itemId => $qty) {
+                        $item = $this->db->fetchOne("SELECT rental_rate FROM `" . $this->db->getPrefix() . "items` WHERE id = ?", [intval($itemId)]);
+                        if ($item) {
+                            $rentalsTotal += floatval($item['rental_rate']) * intval($qty);
+                        }
+                    }
+                }
+            }
+            
             // Recalculate discount amount (re-validate promo code)
             $discountAmount = 0;
             $promoCode = $bookingData['promo_code'] ?? null;
             if (!empty($promoCode)) {
                 $promoValidation = $this->promoCodeModel->validateCode(
                     $promoCode,
-                    $baseAmount + $addonsTotal,
+                    $baseAmount + $addonsTotal + $rentalsTotal,
                     [$bookingData['resource_id']],
                     array_keys($bookingData['addons'] ?? [])
                 );
@@ -1072,7 +1135,7 @@ class Booking_wizard extends Base_Controller {
             }
             
             // Calculate final totals
-            $subtotal = $baseAmount + $addonsTotal;
+            $subtotal = $baseAmount + $addonsTotal + $rentalsTotal;
             $securityDeposit = floatval($resource['security_deposit'] ?? 0);
             
             // Calculate tax (VAT) if applicable
@@ -1146,6 +1209,7 @@ class Booking_wizard extends Base_Controller {
                 'duration_hours' => $durationHours,
                 'number_of_guests' => intval($bookingData['guests'] ?? 0),
                 'booking_type' => $bookingData['booking_type'] ?? 'hourly',
+                'equipment_tier' => !empty($bookingData['equipment_tier']) ? sanitize_input($bookingData['equipment_tier']) : null,
                 'base_amount' => $baseAmount,
                 'subtotal' => $subtotal,
                 'tax_rate' => $taxRate,
@@ -1236,6 +1300,26 @@ class Booking_wizard extends Base_Controller {
                 }
             } catch (Exception $e) {
                 error_log('Booking wizard: Failed to create booking addons - ' . $e->getMessage());
+                // Continue anyway
+            }
+            
+            // Create booking rentals (optional)
+            try {
+                if (is_array($rentalItemsData) && !empty($rentalItemsData) && isset($rentalModel) && $rentalModel) {
+                    foreach ($rentalItemsData as $itemId => $quantity) {
+                        $item = $this->db->fetchOne("SELECT rental_rate FROM `" . $this->db->getPrefix() . "items` WHERE id = ?", [intval($itemId)]);
+                        if ($item) {
+                            $rentalModel->addRental(
+                                $bookingId,
+                                intval($itemId),
+                                intval($quantity),
+                                floatval($item['rental_rate'])
+                            );
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('Booking wizard: Failed to create booking rentals - ' . $e->getMessage());
                 // Continue anyway
             }
             

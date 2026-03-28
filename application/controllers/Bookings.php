@@ -285,6 +285,8 @@ class Bookings extends Base_Controller {
             $endTime = sanitize_input($_POST['end_time'] ?? '');
             $endDate = sanitize_input($_POST['end_date'] ?? $bookingDate);
             $bookingType = sanitize_input($_POST['booking_type'] ?? 'hourly');
+            $equipmentTier = sanitize_input($_POST['equipment_tier'] ?? '');
+            $numberOfGuests = intval($_POST['number_of_guests'] ?? 1);
 
             // Validate location and space
             if (!$locationId || !$spaceId) {
@@ -344,8 +346,10 @@ class Bookings extends Base_Controller {
                 redirect('bookings/create');
             }
 
-            // Calculate price based on space's booking type
-            $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, 1, false, $endDate);
+            // Calculate price based on booking type
+            // For per-person types, quantity = number of guests
+            $priceQuantity = in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace']) ? $numberOfGuests : 1;
+            $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, $priceQuantity, false, $endDate, $equipmentTier ?: null);
             
             // Calculate duration
             if ($bookingType === 'multi_day' && $endDate !== $bookingDate) {
@@ -393,8 +397,9 @@ class Bookings extends Base_Controller {
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'duration_hours' => $hours,
-                'number_of_guests' => intval($_POST['number_of_guests'] ?? 0),
+                'number_of_guests' => $numberOfGuests,
                 'booking_type' => $bookingType,
+                'equipment_tier' => $equipmentTier ?: null,
                 'base_amount' => $baseAmount,
                 'discount_amount' => floatval($_POST['discount_amount'] ?? 0),
                 'tax_amount' => floatval($_POST['tax_amount'] ?? 0),
@@ -446,6 +451,34 @@ class Bookings extends Base_Controller {
 
                 // Create booking slots
                 $this->bookingModel->createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endDate, $endTime);
+
+                // Process rental items if any were selected
+                $rentalItems = $_POST['rental_items'] ?? [];
+                if (!empty($rentalItems) && is_array($rentalItems)) {
+                    $rentalModel = $this->loadModel('Booking_rental_model');
+                    $rentalTotal = 0;
+                    
+                    foreach ($rentalItems as $rentalItem) {
+                        $rItemId = intval($rentalItem['item_id'] ?? 0);
+                        $rQuantity = intval($rentalItem['quantity'] ?? 0);
+                        $rRate = floatval($rentalItem['rental_rate'] ?? 0);
+                        
+                        if ($rItemId > 0 && $rQuantity > 0 && $rRate > 0) {
+                            $rentalModel->addRental($bookingId, $rItemId, $rQuantity, $rRate);
+                            $rentalTotal += ($rRate * $rQuantity);
+                        }
+                    }
+                    
+                    // Update booking total with rental costs
+                    if ($rentalTotal > 0) {
+                        $newTotal = $data['total_amount'] + $rentalTotal;
+                        $newBalance = $newTotal - $data['paid_amount'];
+                        $this->bookingModel->update($bookingId, [
+                            'total_amount' => $newTotal,
+                            'balance_amount' => $newBalance
+                        ]);
+                    }
+                }
 
                 // If confirmed, recognize revenue (or create unearned revenue entry)
                 if ($data['status'] === 'confirmed') {
@@ -519,10 +552,20 @@ class Bookings extends Base_Controller {
             $spacesByLocation = [];
         }
 
+        // Load rentable items for the rental section
+        $rentableItems = [];
+        try {
+            $rentalModel = $this->loadModel('Booking_rental_model');
+            $rentableItems = $rentalModel->getRentableItems();
+        } catch (Exception $e) {
+            error_log('Bookings create: could not load rentable items: ' . $e->getMessage());
+        }
+
         $data = [
             'page_title' => 'Create Booking',
             'locations' => $locations,
             'spaces_by_location' => $spacesByLocation,
+            'rentable_items' => $rentableItems,
             'flash' => $this->getFlashMessage(),
             'old_input' => $_SESSION['_old_input'] ?? []
         ];
@@ -592,7 +635,9 @@ class Bookings extends Base_Controller {
                     'weekly_rate' => floatval($pricingRules['weekly'] ?? 0),
                     'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
                     'minimum_duration' => intval($config['minimum_duration'] ?? 1),
-                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null
+                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null,
+                    'per_person_rates' => $pricingRules['per_person_rates'] ?? null,
+                    'workspace_rates' => $pricingRules['workspace_rates'] ?? null
                 ];
             }
             
@@ -612,10 +657,20 @@ class Bookings extends Base_Controller {
                 redirect('bookings');
             }
 
+            // Load rental items for this booking
+            $rentalItems = [];
+            try {
+                $rentalModel = $this->loadModel('Booking_rental_model');
+                $rentalItems = $rentalModel->getByBooking($id);
+            } catch (Exception $e) {
+                error_log('Bookings view: could not load rental items: ' . $e->getMessage());
+            }
+
             $data = [
                 'page_title' => 'Booking Details - ' . $booking['booking_number'],
                 'booking' => $booking,
                 'payments' => $this->paymentModel->getByBooking($id),
+                'rental_items' => $rentalItems,
                 'flash' => $this->getFlashMessage()
             ];
 
@@ -1697,5 +1752,61 @@ class Bookings extends Base_Controller {
             }
         }
     }
-}
+    
+    /**
+     * Check out a rental item for a booking
+     */
+    public function checkoutRental($rentalId) {
+        $this->requirePermission('bookings', 'update');
+        
+        try {
+            $rentalModel = $this->loadModel('Booking_rental_model');
+            $rental = $rentalModel->getById($rentalId);
+            
+            if (!$rental) {
+                $this->setFlashMessage('danger', 'Rental item not found.');
+                redirect('bookings');
+            }
+            
+            $rentalModel->checkout($rentalId);
+            $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Checked out rental item for booking ID: ' . $rental['booking_id']);
+            $this->setFlashMessage('success', 'Equipment marked as checked out.');
+            
+            redirect('bookings/view/' . $rental['booking_id']);
+        } catch (Exception $e) {
+            error_log('Bookings checkoutRental error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to check out equipment: ' . $e->getMessage());
+            redirect('bookings');
+        }
+    }
 
+    /**
+     * Return a rental item for a booking
+     */
+    public function returnRental($rentalId) {
+        $this->requirePermission('bookings', 'update');
+        
+        try {
+            $rentalModel = $this->loadModel('Booking_rental_model');
+            $rental = $rentalModel->getById($rentalId);
+            
+            if (!$rental) {
+                $this->setFlashMessage('danger', 'Rental item not found.');
+                redirect('bookings');
+            }
+            
+            $condition = $_POST['condition'] ?? 'good';
+            $notes = sanitize_input($_POST['notes'] ?? '');
+            
+            $rentalModel->returnItem($rentalId, $condition, $notes);
+            $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Returned rental item for booking ID: ' . $rental['booking_id']);
+            $this->setFlashMessage('success', 'Equipment marked as returned.');
+            
+            redirect('bookings/view/' . $rental['booking_id']);
+        } catch (Exception $e) {
+            error_log('Bookings returnRental error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to return equipment: ' . $e->getMessage());
+            redirect('bookings');
+        }
+    }
+}

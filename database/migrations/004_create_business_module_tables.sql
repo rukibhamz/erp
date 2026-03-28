@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS `erp_spaces` (
     `is_bookable` TINYINT(1) DEFAULT 0,
     `facility_id` INT(11) DEFAULT NULL COMMENT 'Link to facilities table when bookable',
     `description` TEXT DEFAULT NULL,
+    `detailed_description` TEXT DEFAULT NULL,
     `notes` TEXT DEFAULT NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,

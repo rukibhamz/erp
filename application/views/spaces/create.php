@@ -212,6 +212,64 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <input type="number" step="0.01" class="form-control" id="weekly_rate" name="weekly_rate">
                         </div>
                         
+                        <!-- Specialized Rates Section -->
+                        <div class="col-12 mt-3">
+                            <h6 class="border-bottom pb-2 text-primary">Specialized Rates (Optional)</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_picnic_base" class="form-label">Picnic Base (Per Person)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_picnic_base" name="pp_picnic_base">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_picnic_tier_standard" class="form-label">Picnic Standard Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_picnic_tier_standard" name="pp_picnic_tier_standard">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_picnic_tier_premium" class="form-label">Picnic Premium Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_picnic_tier_premium" name="pp_picnic_tier_premium">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="pp_photo_base" class="form-label">Photo Base (Per Person)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_photo_base" name="pp_photo_base">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_photo_tier_standard" class="form-label">Photo Standard Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_photo_tier_standard" name="pp_photo_tier_standard">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_photo_tier_premium" class="form-label">Photo Premium Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_photo_tier_premium" name="pp_photo_tier_premium">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="pp_video_base" class="form-label">Video Base (Per Person)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_video_base" name="pp_video_base">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_video_tier_standard" class="form-label">Video Standard Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_video_tier_standard" name="pp_video_tier_standard">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pp_video_tier_premium" class="form-label">Video Premium Tier (+)</label>
+                            <input type="number" step="0.01" class="form-control" id="pp_video_tier_premium" name="pp_video_tier_premium">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="ws_daily" class="form-label">Workspace Daily</label>
+                            <input type="number" step="0.01" class="form-control" id="ws_daily" name="ws_daily">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ws_weekly" class="form-label">Workspace Weekly</label>
+                            <input type="number" step="0.01" class="form-control" id="ws_weekly" name="ws_weekly">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ws_monthly" class="form-label">Workspace Monthly</label>
+                            <input type="number" step="0.01" class="form-control" id="ws_monthly" name="ws_monthly">
+                        </div>
+                        <div class="col-12 mt-3"><hr></div>
+                        
+                        
                         <div class="col-md-4">
                             <label for="minimum_duration" class="form-label">Minimum Duration (hours)</label>
                             <input type="number" class="form-control" id="minimum_duration" name="minimum_duration" value="1">
@@ -269,6 +327,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="bt_multi_day" name="booking_types[]" value="multi_day">
                                 <label class="form-check-label" for="bt_multi_day">Multi-Day</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_picnic" name="booking_types[]" value="picnic">
+                                <label class="form-check-label" for="bt_picnic">Picnic</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_photoshoot" name="booking_types[]" value="photoshoot">
+                                <label class="form-check-label" for="bt_photoshoot">Photoshoot</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_videoshoot" name="booking_types[]" value="videoshoot">
+                                <label class="form-check-label" for="bt_videoshoot">Videoshoot</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bt_workspace" name="booking_types[]" value="workspace">
+                                <label class="form-check-label" for="bt_workspace">Workspace</label>
                             </div>
                         </div>
                         

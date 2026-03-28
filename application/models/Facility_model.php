@@ -272,7 +272,8 @@ class Facility_model extends Base_Model {
                     'resource_type' => $this->mapSpaceCategoryToResourceType($space['category'] ?? 'other'),
                     'category' => $space['category'] ?? '',
                     'status' => 'available',
-                    'source_type' => 'space'
+                    'source_type' => 'space',
+                    'pricing_rules' => $space['pricing_rules'] ?? null
                 ];
             }
         } catch (Exception $e) {
@@ -598,7 +599,7 @@ class Facility_model extends Base_Model {
         }
     }
     
-    public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly', $quantity = 1, $isMember = false, $endDate = null) {
+    public function calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType = 'hourly', $quantity = 1, $isMember = false, $endDate = null, $equipmentTier = null) {
         try {
             // getById now handles both facilities and spaces
 
@@ -683,21 +684,75 @@ class Facility_model extends Base_Model {
             
             // Apply duration-based calculation
             $totalPrice = 0;
-            if ($bookingType === 'hourly') {
-                $totalPrice = $baseRate * $hours;
-            } elseif ($bookingType === 'half_day') {
-                $totalPrice = $baseRate;
-            } elseif ($bookingType === 'daily' || $bookingType === 'full_day') {
-                $totalPrice = $baseRate * max(1, $days); // At least 1 day
-            } elseif ($bookingType === 'multi_day') {
-                // Hourly rate × hours per day × number of days
-                $totalPrice = $baseRate * ($hoursPerDay ?? $hours) * max(1, $days);
-            } elseif ($bookingType === 'weekly') {
-                $totalPrice = $baseRate;
-            }
             
-            // Apply quantity
-            $totalPrice *= $quantity;
+            // Per-person booking types — use pricing_rules JSON
+            if (in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace'])) {
+                // Load pricing_rules from bookable_config
+                $pricingRules = [];
+                if (!empty($facility['pricing_rules'])) {
+                    $pricingRules = is_array($facility['pricing_rules']) 
+                        ? $facility['pricing_rules'] 
+                        : (json_decode($facility['pricing_rules'], true) ?: []);
+                }
+                
+                if ($bookingType === 'picnic' || $bookingType === 'photoshoot' || $bookingType === 'videoshoot') {
+                    // Per-person pricing with equipment tier surcharge
+                    $perPersonRates = $pricingRules['per_person_rates'][$bookingType] ?? [];
+                    $basePerPerson = floatval($perPersonRates['base_per_person'] ?? 0);
+                    
+                    // Get equipment tier surcharge
+                    $surcharge = 0;
+                    if ($equipmentTier && !empty($perPersonRates['equipment_tiers'][$equipmentTier])) {
+                        $surcharge = floatval($perPersonRates['equipment_tiers'][$equipmentTier]['surcharge'] ?? 0);
+                    }
+                    
+                    // Fallback: if no per_person_rates configured, use hourly rate as base
+                    if ($basePerPerson <= 0) {
+                        $basePerPerson = $baseRate > 0 ? $baseRate : floatval($facility['hourly_rate'] ?? 0);
+                    }
+                    
+                    $totalPrice = ($basePerPerson + $surcharge) * max(1, $quantity);
+                    
+                } elseif ($bookingType === 'workspace') {
+                    // Workspace: per-person × duration
+                    $wsRates = $pricingRules['workspace_rates'] ?? [];
+                    $perPersonRate = floatval($wsRates['per_person_daily'] ?? 0);
+                    
+                    // Determine duration type for workspace
+                    if ($days >= 7 && !empty($wsRates['per_person_weekly'])) {
+                        $weeks = ceil($days / 7);
+                        $perPersonRate = floatval($wsRates['per_person_weekly']);
+                        $totalPrice = $perPersonRate * max(1, $quantity) * $weeks;
+                    } elseif ($days >= 28 && !empty($wsRates['per_person_monthly'])) {
+                        $months = ceil($days / 28);
+                        $perPersonRate = floatval($wsRates['per_person_monthly']);
+                        $totalPrice = $perPersonRate * max(1, $quantity) * $months;
+                    } else {
+                        // Daily rate
+                        if ($perPersonRate <= 0) {
+                            $perPersonRate = $baseRate > 0 ? $baseRate : floatval($facility['daily_rate'] ?? 0);
+                        }
+                        $totalPrice = $perPersonRate * max(1, $quantity) * max(1, $days);
+                    }
+                }
+            } else {
+                // Standard time-based booking types
+                if ($bookingType === 'hourly') {
+                    $totalPrice = $baseRate * $hours;
+                } elseif ($bookingType === 'half_day') {
+                    $totalPrice = $baseRate;
+                } elseif ($bookingType === 'daily' || $bookingType === 'full_day') {
+                    $totalPrice = $baseRate * max(1, $days); // At least 1 day
+                } elseif ($bookingType === 'multi_day') {
+                    // Hourly rate × hours per day × number of days
+                    $totalPrice = $baseRate * ($hoursPerDay ?? $hours) * max(1, $days);
+                } elseif ($bookingType === 'weekly') {
+                    $totalPrice = $baseRate;
+                }
+                
+                // Apply quantity for standard types
+                $totalPrice *= $quantity;
+            }
             
             // Apply duration discounts if applicable
             if ($customPrice && $customPrice['duration_discount']) {

@@ -85,6 +85,43 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <i class="bi bi-info-circle"></i> No add-ons available for this resource.
                         </div>
                     <?php endif; ?>
+
+                    <?php if (!empty($rentable_items)): ?>
+                        <h4 class="mt-5 mb-4">Equipment Rentals</h4>
+                        <div class="row g-4">
+                            <?php foreach ($rentable_items as $item): ?>
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-success">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><?= htmlspecialchars($item['name']) ?></h5>
+                                            <p class="text-muted small"><?= htmlspecialchars($item['description'] ?? '') ?></p>
+                                            <div class="mb-3">
+                                                <span class="badge bg-success">Rental Item</span>
+                                                <span class="badge bg-light text-dark border"><i class="bi bi-box"></i> <?= $item['current_stock'] ?> Available</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong class="h5 text-success">₦<?= number_format($item['rental_rate'], 2) ?></strong>
+                                                    <small class="text-muted">/<?= $item['rental_rate_type'] ?></small>
+                                                </div>
+                                                <div>
+                                                    <div class="input-group" style="width: 120px;">
+                                                        <button class="btn btn-outline-success btn-sm minus-rental-btn" type="button" data-item-id="<?= $item['id'] ?>">-</button>
+                                                        <input type="number" class="form-control form-control-sm text-center rental-qty-input" 
+                                                               data-item-id="<?= $item['id'] ?>" 
+                                                               data-price="<?= $item['rental_rate'] ?>"
+                                                               data-name="<?= htmlspecialchars($item['name']) ?>"
+                                                               value="0" min="0" max="<?= $item['current_stock'] ?>">
+                                                        <button class="btn btn-outline-success btn-sm plus-rental-btn" type="button" data-item-id="<?= $item['id'] ?>">+</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="col-lg-4">
@@ -140,6 +177,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <span id="addons-total">₦0.00</span>
                                 </div>
                             </div>
+                            <div class="mb-2" id="rentals-summary-row" style="display: none;">
+                                <div class="d-flex justify-content-between text-success">
+                                    <span>Rentals:</span>
+                                    <span id="rentals-total">₦0.00</span>
+                                </div>
+                            </div>
                             <hr>
                             <div class="d-flex justify-content-between">
                                 <strong>Subtotal:</strong>
@@ -171,22 +214,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const plusBtns = document.querySelectorAll('.plus-btn');
     const minusBtns = document.querySelectorAll('.minus-btn');
     const addonsTotalEl = document.getElementById('addons-total');
+    
+    // Rentals
+    const rentalQtyInputs = document.querySelectorAll('.rental-qty-input');
+    const plusRentalBtns = document.querySelectorAll('.plus-rental-btn');
+    const minusRentalBtns = document.querySelectorAll('.minus-rental-btn');
+    const rentalsTotalEl = document.getElementById('rentals-total');
+    const rentalsSummaryRow = document.getElementById('rentals-summary-row');
+    
     const subtotalEl = document.getElementById('subtotal');
     
     let selectedAddons = {};
+    let selectedRentals = {};
 
-    // Plus button handler
+    // Plus Addon
     plusBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             const addonId = this.dataset.addonId;
             const input = document.querySelector(`.qty-input[data-addon-id="${addonId}"]`);
             const currentValue = parseInt(input.value) || 0;
-            input.value = currentValue + 1;
-            updateAddon(addonId, input);
+            const max = parseInt(input.getAttribute('max')) || 99;
+            if (currentValue < max) {
+                input.value = currentValue + 1;
+                updateAddon(addonId, input);
+            }
         });
     });
 
-    // Minus button handler
+    // Minus Addon
     minusBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             const addonId = this.dataset.addonId;
@@ -199,10 +254,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Quantity input handler
     qtyInputs.forEach(input => {
         input.addEventListener('change', function() {
             const addonId = this.dataset.addonId;
+            const max = parseInt(this.getAttribute('max')) || 99;
+            if (parseInt(this.value) > max) this.value = max;
+            if (parseInt(this.value) < 0) this.value = 0;
             updateAddon(addonId, this);
         });
     });
@@ -220,6 +277,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         updateSummary();
     }
+    
+    // Plus Rental
+    plusRentalBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector(`.rental-qty-input[data-item-id="${itemId}"]`);
+            const currentValue = parseInt(input.value) || 0;
+            const max = parseInt(input.getAttribute('max')) || 999;
+            if (currentValue < max) {
+                input.value = currentValue + 1;
+                updateRental(itemId, input);
+            }
+        });
+    });
+
+    // Minus Rental
+    minusRentalBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector(`.rental-qty-input[data-item-id="${itemId}"]`);
+            const currentValue = parseInt(input.value) || 0;
+            if (currentValue > 0) {
+                input.value = currentValue - 1;
+                updateRental(itemId, input);
+            }
+        });
+    });
+
+    rentalQtyInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const itemId = this.dataset.itemId;
+            const max = parseInt(this.getAttribute('max')) || 999;
+            if (parseInt(this.value) > max) this.value = max;
+            if (parseInt(this.value) < 0) this.value = 0;
+            updateRental(itemId, this);
+        });
+    });
+
+    function updateRental(itemId, input) {
+        const qty = parseInt(input.value) || 0;
+        if (qty > 0) {
+            selectedRentals[itemId] = {
+                quantity: qty,
+                price: parseFloat(input.dataset.price),
+                name: input.dataset.name
+            };
+        } else {
+            delete selectedRentals[itemId];
+        }
+        updateSummary();
+    }
 
     function updateSummary() {
         let addonsTotal = 0;
@@ -227,28 +335,75 @@ document.addEventListener('DOMContentLoaded', function() {
             addonsTotal += addon.price * addon.quantity;
         });
         
-        addonsTotalEl.textContent = '₦' + addonsTotal.toFixed(2);
+        let rentalsTotal = 0;
+        Object.values(selectedRentals).forEach(item => {
+            rentalsTotal += item.price * item.quantity;
+        });
+        
+        addonsTotalEl.textContent = '₦' + addonsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        if (rentalsTotal > 0) {
+            rentalsTotalEl.textContent = '₦' + rentalsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            rentalsSummaryRow.style.display = 'block';
+        } else {
+            rentalsSummaryRow.style.display = 'none';
+        }
+        
         // Resource cost from PHP
         const resourceCost = <?= isset($resource_cost) ? floatval($resource_cost) : 0 ?>;
-        subtotalEl.textContent = '₦' + (resourceCost + addonsTotal).toFixed(2);
+        subtotalEl.textContent = '₦' + (resourceCost + addonsTotal + rentalsTotal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     // Continue button handler
     document.getElementById('continue-btn').addEventListener('click', function() {
-        // Save addons to session
+        // Save addons and rentals to session
+        let bodyPayload = `step=3&data[addons]=${encodeURIComponent(JSON.stringify(selectedAddons))}`;
+        
+        // Also save rentals mapping format expects direct value like: rental_items[ID]=QTY
+        // But for consistency we can also pass it as a JSON string, then backend decodes it
+        // Or we pass object with quantity since that's what the controller expects for addons?
+        // Let's look at controller: $rentalItemsData = $bookingData['rental_items'] ?? [];
+        // The wizard controller expects an array of item_id => qty, same as addons
+        const rentalDataClean = {};
+        for(let id in selectedRentals) {
+            rentalDataClean[id] = selectedRentals[id].quantity;
+        }
+        bodyPayload += `&data[rental_items]=${encodeURIComponent(JSON.stringify(rentalDataClean))}`;
+        
+        // Also clean addons format to what backend expects if needed?
+        // Wait, step 3 controller expects addons like: array key => quantity
+        const addonDataClean = {};
+        for(let id in selectedAddons) {
+            addonDataClean[id] = selectedAddons[id].quantity;
+        }
+        // Actually modify payload to format backend expects
+        bodyPayload = `step=3&data[addons]=${encodeURIComponent(JSON.stringify(addonDataClean))}&data[rental_items]=${encodeURIComponent(JSON.stringify(rentalDataClean))}`;
+        
         fetch('<?= base_url('booking-wizard/save-step') ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `step=3&data[addons]=${JSON.stringify(selectedAddons)}`
+            body: bodyPayload
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = '<?= base_url('booking-wizard/step4') ?>';
-            } else {
-                alert('Error saving data. Please try again.');
+        .then(response => {
+            const status = response.status;
+            return response.text().then(text => ({ text, status }));
+        })
+        .then(({ text, status }) => {
+            if (status >= 500) {
+                alert('Server error (' + status + '). Please try again later.');
+                return;
+            }
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    window.location.href = '<?= base_url('booking-wizard/step4') ?>';
+                } else {
+                    alert('Error saving data. Please try again.');
+                }
+            } catch (e) {
+                alert('Invalid server response.');
             }
         });
     });

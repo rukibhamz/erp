@@ -334,6 +334,45 @@ class Spaces extends Base_Controller {
                 'peak_rate_multiplier' => floatval($postData['peak_rate_multiplier'] ?? 1.0)
             ];
             
+            // Per Person & Workspace rates
+            if (isset($postData['pp_picnic_base'])) {
+                $pricingRules['per_person_rates']['picnic'] = [
+                    'base_per_person' => floatval($postData['pp_picnic_base'] ?? 0),
+                    'equipment_tiers' => [
+                        'basic' => ['surcharge' => floatval($postData['pp_picnic_tier_basic'] ?? 0)],
+                        'standard' => ['surcharge' => floatval($postData['pp_picnic_tier_standard'] ?? 0)],
+                        'premium' => ['surcharge' => floatval($postData['pp_picnic_tier_premium'] ?? 0)],
+                    ]
+                ];
+            }
+            if (isset($postData['pp_photo_base'])) {
+                $pricingRules['per_person_rates']['photoshoot'] = [
+                    'base_per_person' => floatval($postData['pp_photo_base'] ?? 0),
+                    'equipment_tiers' => [
+                        'basic' => ['surcharge' => floatval($postData['pp_photo_tier_basic'] ?? 0)],
+                        'standard' => ['surcharge' => floatval($postData['pp_photo_tier_standard'] ?? 0)],
+                        'premium' => ['surcharge' => floatval($postData['pp_photo_tier_premium'] ?? 0)],
+                    ]
+                ];
+            }
+            if (isset($postData['pp_video_base'])) {
+                $pricingRules['per_person_rates']['videoshoot'] = [
+                    'base_per_person' => floatval($postData['pp_video_base'] ?? 0),
+                    'equipment_tiers' => [
+                        'basic' => ['surcharge' => floatval($postData['pp_video_tier_basic'] ?? 0)],
+                        'standard' => ['surcharge' => floatval($postData['pp_video_tier_standard'] ?? 0)],
+                        'premium' => ['surcharge' => floatval($postData['pp_video_tier_premium'] ?? 0)],
+                    ]
+                ];
+            }
+            if (isset($postData['ws_daily'])) {
+                $pricingRules['workspace_rates'] = [
+                    'per_person_daily' => floatval($postData['ws_daily'] ?? 0),
+                    'per_person_weekly' => floatval($postData['ws_weekly'] ?? 0),
+                    'per_person_monthly' => floatval($postData['ws_monthly'] ?? 0)
+                ];
+            }
+            
             error_log('Spaces createBookableConfig: Pricing rules = ' . json_encode($pricingRules));
             
             $availabilityRules = [
@@ -418,6 +457,46 @@ class Spaces extends Base_Controller {
             if (isset($postData['security_deposit']) && $postData['security_deposit'] !== '' && $postData['security_deposit'] !== null) {
                 $pricingRules['deposit'] = floatval($postData['security_deposit']);
             }
+            
+            // Per Person & Workspace rates for Update
+            if (isset($postData['pp_picnic_base'])) {
+                $pricingRules['per_person_rates']['picnic'] = [
+                    'base_per_person' => floatval($postData['pp_picnic_base']),
+                    'equipment_tiers' => [
+                        'basic' => ['surcharge' => floatval($postData['pp_picnic_tier_basic'] ?? 0)],
+                        'standard' => ['surcharge' => floatval($postData['pp_picnic_tier_standard'] ?? 0)],
+                        'premium' => ['surcharge' => floatval($postData['pp_picnic_tier_premium'] ?? 0)],
+                    ]
+                ];
+            }
+            if (isset($postData['pp_photo_base'])) {
+                $pricingRules['per_person_rates']['photoshoot'] = [
+                    'base_per_person' => floatval($postData['pp_photo_base']),
+                    'equipment_tiers' => [
+                        'basic' => ['surcharge' => floatval($postData['pp_photo_tier_basic'] ?? 0)],
+                        'standard' => ['surcharge' => floatval($postData['pp_photo_tier_standard'] ?? 0)],
+                        'premium' => ['surcharge' => floatval($postData['pp_photo_tier_premium'] ?? 0)],
+                    ]
+                ];
+            }
+            if (isset($postData['pp_video_base'])) {
+                $pricingRules['per_person_rates']['videoshoot'] = [
+                    'base_per_person' => floatval($postData['pp_video_base']),
+                    'equipment_tiers' => [
+                        'basic' => ['surcharge' => floatval($postData['pp_video_tier_basic'] ?? 0)],
+                        'standard' => ['surcharge' => floatval($postData['pp_video_tier_standard'] ?? 0)],
+                        'premium' => ['surcharge' => floatval($postData['pp_video_tier_premium'] ?? 0)],
+                    ]
+                ];
+            }
+            if (isset($postData['ws_daily'])) {
+                $pricingRules['workspace_rates'] = [
+                    'per_person_daily' => floatval($postData['ws_daily'] ?? 0),
+                    'per_person_weekly' => floatval($postData['ws_weekly'] ?? 0),
+                    'per_person_monthly' => floatval($postData['ws_monthly'] ?? 0)
+                ];
+            }
+
             // Preserve peak_rate_multiplier if it exists
             if (!isset($pricingRules['peak_rate_multiplier']) && isset($existingPricingRules['peak_rate_multiplier'])) {
                 $pricingRules['peak_rate_multiplier'] = $existingPricingRules['peak_rate_multiplier'];

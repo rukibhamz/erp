@@ -125,6 +125,59 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
             </div>
 
+            <!-- Equipment Rentals -->
+            <?php if (!empty($rental_items)): ?>
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Equipment Rentals</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Rate</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($rental_items as $item): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($item['item_name'] ?? 'Unknown Item') ?></td>
+                                        <td><?= intval($item['quantity']) ?></td>
+                                        <td><?= format_currency($item['rental_rate']) ?></td>
+                                        <td><?= format_currency($item['total_price']) ?></td>
+                                        <td>
+                                            <?php
+                                            $badgeClass = 'secondary';
+                                            if ($item['status'] === 'reserved') $badgeClass = 'warning';
+                                            else if ($item['status'] === 'checked_out') $badgeClass = 'primary';
+                                            else if ($item['status'] === 'returned') $badgeClass = 'success';
+                                            ?>
+                                            <span class="badge bg-<?= $badgeClass ?>"><?= ucfirst(str_replace('_', ' ', $item['status'])) ?></span>
+                                        </td>
+                                        <td>
+                                            <?php if (has_permission('bookings', 'update') && $booking['status'] !== 'cancelled'): ?>
+                                                <?php if ($item['status'] === 'reserved'): ?>
+                                                    <a href="<?= base_url('bookings/checkout-rental/' . $item['id']) ?>" class="btn btn-sm btn-outline-primary py-0" onclick="return confirm('Confirm check out of this equipment?')">Check Out</a>
+                                                <?php elseif ($item['status'] === 'checked_out'): ?>
+                                                    <a href="<?= base_url('bookings/return-rental/' . $item['id']) ?>" class="btn btn-sm btn-outline-success py-0" onclick="return confirm('Confirm return of this equipment?')">Return</a>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Payment History -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">

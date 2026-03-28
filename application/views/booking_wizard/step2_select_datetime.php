@@ -88,6 +88,23 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </select>
                             </div>
                             
+                            <!-- Per-Person & Equipment Tiers (Hidden by default) -->
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3 mb-md-0" id="guests-container" style="display: none;">
+                                    <label class="form-label fw-bold">Number of Guests <span class="text-danger">*</span></label>
+                                    <input type="number" id="guests" class="form-select form-select-lg" min="1" value="1">
+                                </div>
+                                <div class="col-md-6" id="equipment-tier-container" style="display: none;">
+                                    <label class="form-label fw-bold">Equipment Tier <i class="bi bi-info-circle text-muted" title="Surcharge based on amount of equipment"></i></label>
+                                    <select id="equipment_tier" class="form-select form-select-lg">
+                                        <option value="">No Additional Equipment</option>
+                                        <option value="light">Light Equipment</option>
+                                        <option value="medium">Medium Equipment</option>
+                                        <option value="heavy">Heavy Equipment</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
                             <!-- Recurring Booking Option -->
                             <div class="mb-4" id="recurring-option" style="display: none;">
                                 <div class="form-check">
@@ -285,24 +302,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const recurringPatternSelect = document.getElementById('recurring_pattern');
     const recurringEndDateInput = document.getElementById('recurring_end_date');
     
+    const guestsContainer = document.getElementById('guests-container');
+    const guestsInput = document.getElementById('guests');
+    const equipmentTierContainer = document.getElementById('equipment-tier-container');
+    const equipmentTierSelect = document.getElementById('equipment_tier');
+    
     // Initially disable date input until booking type is selected
     if (bookingDate) {
         bookingDate.disabled = true;
     }
 
-    // Show/hide end date and duration based on booking type
-    bookingTypeSelect.addEventListener('change', function() {
-        selectedBookingType = this.value;
-        const isMultiDay = this.value === 'multi_day' || this.value === 'weekly';
-        
-        // Reset state when changing booking type
-        resetBookingState();
-        
-        endDateContainer.style.display = isMultiDay ? 'block' : 'none';
-        recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
-        
-        // Handle Duration Logic
-        updateDurationOptions(selectedBookingType);
+        // Show/hide end date and duration based on booking type
+        bookingTypeSelect.addEventListener('change', function() {
+            selectedBookingType = this.value;
+            const isMultiDay = this.value === 'multi_day' || this.value === 'weekly';
+            
+            // Reset state when changing booking type
+            resetBookingState();
+            
+            endDateContainer.style.display = isMultiDay ? 'block' : 'none';
+            recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
+            
+            // Show per-person fields for specific types
+            if (this.value === 'picnic' || this.value === 'photoshoot' || this.value === 'videoshoot' || this.value === 'workspace') {
+                guestsContainer.style.display = 'block';
+                if (this.value === 'picnic' || this.value === 'photoshoot' || this.value === 'videoshoot') {
+                    equipmentTierContainer.style.display = 'block';
+                } else {
+                    equipmentTierContainer.style.display = 'none';
+                }
+            } else {
+                guestsContainer.style.display = 'none';
+                equipmentTierContainer.style.display = 'none';
+            }
+            
+            // Handle Duration Logic
+            updateDurationOptions(selectedBookingType);
         
         // Enable date input
         if (selectedBookingType) {
@@ -1045,7 +1080,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 duration: selectedDuration, // Optional: useful for backend
                 is_recurring: isRecurring ? 1 : 0,
                 recurring_pattern: recurringPattern || '',
-                recurring_end_date: recurringEndDate || ''
+                recurring_end_date: recurringEndDate || '',
+                guests: guestsInput ? guestsInput.value : 1,
+                equipment_tier: equipmentTierSelect ? equipmentTierSelect.value : ''
             }
         };
         

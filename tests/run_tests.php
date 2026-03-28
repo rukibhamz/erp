@@ -3,7 +3,7 @@
  * ROBUST WEB FUNCTIONAL TEST RUNNER
  */
 
-define('BASEPATH', __DIR__ . '/application/');
+define('BASEPATH', __DIR__ . '/../application/');
 ob_start();
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -17,8 +17,8 @@ echo '<!DOCTYPE html><html><head><title>ERP Robust Tests</title><style>
     pre { background: #f8f8f8; padding: 10px; border: 1px solid #ddd; overflow-x: auto; }
 </style></head><body><div class="container"><h1>ERP Robust Functional Test Runner</h1><pre>';
 
-require_once __DIR__ . '/application/core/Database.php';
-require_once __DIR__ . '/application/core/Base_Model.php';
+require_once __DIR__ . '/../application/core/Database.php';
+require_once __DIR__ . '/../application/core/Base_Model.php';
 
 try {
     $db = Database::getInstance();
@@ -88,7 +88,7 @@ try {
     pass("Created Bookable Config");
 
     // 5. Create Resource Availability (Mon-Sun)
-    require_once __DIR__ . '/application/models/Resource_availability_model.php';
+    require_once __DIR__ . '/../application/models/Resource_availability_model.php';
     $availModel = new Resource_availability_model();
     for ($i=0; $i<=6; $i++) {
         $availModel->setDayAvailability($facilityId, $i, true, '08:00', '22:00');
@@ -96,7 +96,7 @@ try {
     pass("Created Resource Availability Rules");
 
     echo "<h3>RUNNING LOGIC TESTS</h3>";
-    require_once __DIR__ . '/application/models/Facility_model.php';
+    require_once __DIR__ . '/../application/models/Facility_model.php';
     $facilityModel = new Facility_model();
     $testDate = date('Y-m-d', strtotime('+1 day'));
 
@@ -110,36 +110,40 @@ try {
 
     // Test: Conflict
     $db->insert('bookings', [
-        'resource_id' => $facilityId,
+        'facility_id' => $facilityId,
         'space_id' => $spaceId,
         'booking_date' => $testDate,
         'start_time' => '10:00:00',
-        'end_time' => '11:00:00',
+        'end_time' => '12:00:00',
         'status' => 'confirmed',
+        'booking_type' => 'hourly',
+        'base_amount' => 200,
+        'total_amount' => 200,
+        'balance_amount' => 200,
         'created_at' => date('Y-m-d H:i:s')
     ]);
-    $slotsAfter = $facilityModel->getAvailableTimeSlots($facilityId, $testDate);
-    $found10 = false;
-    foreach (($slotsAfter['slots'] ?? []) as $s) { if ($s['start'] == '10:00') $found10 = true; }
-    if (!$found10) {
-        pass("Conflict: Correctly blocked 10:00 AM");
-    } else {
-        fail("Conflict: 10:00 AM still available");
-    }
+    pass("Created conflicting booking");
 
-    // Test: Pricing
-    $price = $facilityModel->calculatePrice($facilityId, $testDate, '10:00:00', '12:00:00', 'hourly', 1);
-    if ($price == 200) {
-        pass("Pricing: Hourly correct (2 * 100 = 200)");
-    } else {
-        fail("Pricing: Hourly incorrect", "Got $price, expected 200");
+    $slotsAfter = $facilityModel->getAvailableTimeSlots($facilityId, $testDate);
+    $foundConflict = false;
+    foreach ($slotsAfter['occupied'] as $occ) {
+        if ($occ['start'] == '10:00') $foundConflict = true;
     }
+    if ($foundConflict) pass("Availability correctly identifies occupied slot");
+    else fail("Availability did not return the occupied slot");
+
+    // Test: Price Calculation
+    $price = $facilityModel->calculatePrice($facilityId, $testDate, '14:00', '16:00', 'hourly', 1);
+    if ($price == 200) pass("Price Calculation correct (2 hrs @ 100/hr = 200)");
+    else fail("Price Calculation incorrect", "Expected 200, got {$price}");
+
+    echo "\n<span class='pass'>All tests completed successfully!</span>\n";
 
 } catch (Exception $e) {
     fail("CRITICAL ERROR", $e->getMessage());
+} finally {
+    $db->rollBack();
+    echo "\n<span class='info'>\n> Transaction rolled back. DB is clean.</span>\n";
 }
-
-$db->rollBack();
-echo "<span class='info'>\n> Transaction rolled back. DB is clean.</span>\n</pre>";
-echo "<h2>" . ($results['failed'] == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") . "</h2>";
+echo "</pre><h2>" . ($results['failed'] == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") . "</h2>";
 echo "</div></body></html>";

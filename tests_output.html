@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><title>ERP Robust Tests</title><style>
+    body { font-family: monospace; line-height: 1.5; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .pass { color: green; } .fail { color: red; font-weight: bold; } .info { color: #0066cc; }
+    h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    h3 { margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    pre { background: #f8f8f8; padding: 10px; border: 1px solid #ddd; overflow-x: auto; }
+</style></head><body><div class="container"><h1>ERP Robust Functional Test Runner</h1><pre><span class='pass'>✓ Database Connected</span>
+<h3>SETTING UP TEST ENVIRONMENT</h3>  > Creating Test Property...
+<span class='pass'>  [PASS] Created Test Property</span>
+  > Creating Test Facility...
+<span class='pass'>  [PASS] Created Test Facility</span>
+  > Creating Test Space...
+<span class='pass'>  [PASS] Created Test Space</span>
+  > Creating Bookable Config...
+<span class='pass'>  [PASS] Created Bookable Config</span>
+<span class='pass'>  [PASS] Created Resource Availability Rules</span>
+<h3>RUNNING LOGIC TESTS</h3><span class='pass'>  [PASS] Availability: Found 14 slots</span>
+<span class='pass'>  [PASS] Created conflicting booking</span>
+<span class='pass'>  [PASS] Availability correctly identifies occupied slot</span>
+<span class='pass'>  [PASS] Price Calculation correct (2 hrs @ 100/hr = 200)</span>
+
+<span class='pass'>All tests completed successfully!</span>
+
+<span class='info'>
+> Transaction rolled back. DB is clean.</span>
+</pre><h2>ALL TESTS PASSED</h2></div></body></html>
