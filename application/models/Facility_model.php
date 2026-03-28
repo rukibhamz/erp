@@ -695,6 +695,18 @@ class Facility_model extends Base_Model {
                         : (json_decode($facility['pricing_rules'], true) ?: []);
                 }
                 
+                // Fallback: If facility pricing rules are empty, check bookable_config table for spaces
+                if (empty($pricingRules)) {
+                    // Try to find if this facility is linked to a space
+                    $sql = "SELECT pricing_rules FROM `" . $this->db->getPrefix() . "bookable_config` 
+                            WHERE space_id = (SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ?)
+                            LIMIT 1";
+                    $config = $this->db->fetchOne($sql, [$facilityId]);
+                    if ($config && !empty($config['pricing_rules'])) {
+                        $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+                    }
+                }
+                
                 if ($bookingType === 'picnic' || $bookingType === 'photoshoot' || $bookingType === 'videoshoot') {
                     // Per-person pricing with equipment tier surcharge
                     $perPersonRates = $pricingRules['per_person_rates'][$bookingType] ?? [];

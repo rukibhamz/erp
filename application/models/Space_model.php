@@ -90,8 +90,8 @@ class Space_model extends Base_Model {
             
             $config = $this->db->fetchOne(
                 "SELECT booking_types FROM `" . $this->db->getPrefix() . "bookable_config` 
-                 WHERE facility_name = ?", 
-                [$space['space_name']]
+                 WHERE space_id = ?", 
+                [$spaceId]
             );
             
             if ($config && $config['booking_types']) {

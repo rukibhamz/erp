@@ -122,7 +122,8 @@ class Journal_entry_model extends Base_Model {
                 return false;
             }
             
-            $this->db->beginTransaction();
+            $isNested = $this->db->inTransaction();
+            if (!$isNested) $this->db->beginTransaction();
             
             // Create reversed entry
             $reversedData = [
@@ -165,10 +166,12 @@ class Journal_entry_model extends Base_Model {
             // Update original entry
             $this->update($entryId, ['reversed_entry_id' => $reversedId]);
             
-            $this->db->commit();
+            if (!$isNested) $this->db->commit();
             return $reversedId;
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if (!$isNested && $this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             error_log('Journal_entry_model reverse error: ' . $e->getMessage());
             return false;
         }

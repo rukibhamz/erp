@@ -334,6 +334,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     let selectedDate = '';
     let selectedEndDate = '';
     let lastSelectedBtn = null;
+    
+    // Helper for safe element access
+    function safeStyle(id, prop, val) {
+        const el = document.getElementById(id);
+        if (el) el.style[prop] = val;
+    }
+    
+    function safeText(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    }
 
     // Hoisted Functions (attached to window for cross-scope access)
     window.setSelection = function(start, end, display, btn = null) {
@@ -416,9 +427,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         let basePrice = 0;
         const days = Math.ceil(hours / 24);
         
-        let basePrice = 0;
-        const days = Math.ceil(hours / 24);
-        
         let guests = parseInt(document.getElementById('number_of_guests').value) || 1;
         let equipmentTier = document.getElementById('equipment_tier').value;
         
@@ -497,11 +505,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     function loadSpaces() {
         const locationId = document.getElementById('location_id').value;
         const spaceSelect = document.getElementById('space_id');
+        if (!spaceSelect) return;
         
-        document.getElementById('time-slots-section').style.display = 'none';
-        document.getElementById('duration-container').style.display = 'none';
-        document.getElementById('end-date-container').style.display = 'none';
-        document.getElementById('spaceDetails').style.display = 'none';
+        safeStyle('time-slots-section', 'display', 'none');
+        safeStyle('duration-container', 'display', 'none');
+        safeStyle('end-date-container', 'display', 'none');
+        safeStyle('spaceDetails', 'display', 'none');
+        safeStyle('equipment-tier-container', 'display', 'none');
         
         if (!locationId) {
             spaceSelect.innerHTML = '<option value="">Select Location First</option>'; 
@@ -568,7 +578,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         const spaceSelect = document.getElementById('space_id');
         const opt = spaceSelect.options[spaceSelect.selectedIndex];
         if (!opt || !opt.value) {
-            document.getElementById('spaceDetails').style.display = 'none';
+            safeStyle('spaceDetails', 'display', 'none');
             return;
         }
         
@@ -588,9 +598,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 workspace_rates: JSON.parse(opt.dataset.workspaceRates || '{}')
             };
             
-            document.getElementById('spaceCapacity').textContent = currentSpaceData.capacity || 'N/A';
-            document.getElementById('spaceBookingTypes').textContent = currentSpaceData.booking_types.map(t => t.toUpperCase()).join(', ');
-            document.getElementById('spaceDetails').style.display = 'block';
+            safeText('spaceCapacity', currentSpaceData.capacity || '0');
+            safeText('spaceBookingTypes', currentSpaceData.booking_types.map(t => t.toUpperCase()).join(', '));
+            safeStyle('spaceDetails', 'display', 'block');
             
             const typeSelect = document.getElementById('booking_type');
             typeSelect.innerHTML = '<option value="">Select Booking Type</option>';
@@ -609,7 +619,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         const durSelect = document.getElementById('duration');
         const container = document.getElementById('duration-container');
         let options = '';
-        container.style.display = 'block';
+        if (container) container.style.display = 'block';
         
         if (type === 'hourly') {
             for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;
@@ -618,7 +628,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
             selectedDuration = 8;
         } else {
-            container.style.display = 'none';
+            if (container) container.style.display = 'none';
             selectedDuration = (type === 'half_day') ? 4 : 24;
         }
         durSelect.innerHTML = options;
@@ -631,7 +641,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         if (!type) return;
         
         const container = document.getElementById('time-slots-container');
-        document.getElementById('time-slots-section').style.display = 'block';
+        safeStyle('time-slots-section', 'display', 'block');
         container.innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border text-primary"></div></div>';
         
         if (type === 'half_day') { renderHalfDay(); return; }

@@ -78,7 +78,8 @@ class Transaction_service {
                 $totalDebit += floatval($entry['debit'] ?? 0);
             }
             
-            $this->db->beginTransaction();
+            $isNested = $this->db->inTransaction();
+            if (!$isNested) $this->db->beginTransaction();
             
             // Create journal entry header
             $entryData = [
@@ -132,7 +133,7 @@ class Transaction_service {
                 }
             }
             
-            $this->db->commit();
+            if (!$isNested) $this->db->commit();
             
             // Log activity
             if (isset($data['reference_type']) && isset($data['reference_id'])) {
@@ -147,7 +148,7 @@ class Transaction_service {
             return $entryId;
             
         } catch (Exception $e) {
-            if ($this->db->inTransaction()) {
+            if (!$isNested && $this->db->inTransaction()) {
                 $this->db->rollBack();
             }
             error_log('Transaction_service postJournalEntry error: ' . $e->getMessage());

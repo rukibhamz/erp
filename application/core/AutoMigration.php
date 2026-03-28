@@ -407,6 +407,7 @@ class AutoMigration {
             $this->ensureBookingResourcesTable();
             $this->ensureBookingSlotsTable();
             $this->ensureBookingPaymentsTable();
+            $this->ensureBookableConfigTable();
             $this->ensureCustomerRole();
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring multi-module tables: " . $e->getMessage());
@@ -2683,6 +2684,63 @@ class AutoMigration {
             
         } catch (Exception $e) {
             error_log("AutoMigration: Error in ensureBookingRentalsAndPerPersonColumns: " . $e->getMessage());
+        }
+    }
+    /**
+     * Ensure bookable_config table exists with all required columns
+     */
+    private function ensureBookableConfigTable() {
+        try {
+            $tableName = "{$this->prefix}bookable_config";
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$tableName}'");
+            
+            if ($stmt && count($stmt->fetchAll()) == 0) {
+                $sql = "CREATE TABLE IF NOT EXISTS `{$tableName}` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `space_id` INT(11) NULL,
+                    `facility_name` VARCHAR(255) NULL,
+                    `is_bookable` TINYINT(1) DEFAULT 1,
+                    `booking_types` TEXT NULL,
+                    `minimum_duration` INT(11) DEFAULT 1,
+                    `maximum_duration` INT(11) DEFAULT NULL,
+                    `advance_booking_days` INT(11) DEFAULT 365,
+                    `pricing_rules` TEXT NULL,
+                    `availability_rules` TEXT NULL,
+                    `setup_time_buffer` INT(11) DEFAULT 0,
+                    `cleanup_time_buffer` INT(11) DEFAULT 0,
+                    `simultaneous_limit` INT(11) DEFAULT 1,
+                    `last_synced_at` DATETIME DEFAULT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_space_id` (`space_id`),
+                    KEY `idx_facility_name` (`facility_name`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created bookable_config table");
+            } else {
+                // Ensure columns exist (for existing tables)
+                $columnsToAdd = [
+                    'space_id' => "INT(11) NULL AFTER `id`"
+                ];
+                
+                foreach ($columnsToAdd as $colName => $colDef) {
+                    try {
+                        $colCheck = $this->pdo->query("SHOW COLUMNS FROM `{$tableName}` LIKE '{$colName}'");
+                        if ($colCheck && count($colCheck->fetchAll()) == 0) {
+                            $this->pdo->exec("ALTER TABLE `{$tableName}` ADD COLUMN `{$colName}` {$colDef}");
+                            error_log("AutoMigration: Added {$colName} column to bookable_config");
+                        }
+                    } catch (Exception $colEx) {
+                        // Table or column issue
+                    }
+                }
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring bookable_config table: " . $e->getMessage());
+            return false;
         }
     }
 }

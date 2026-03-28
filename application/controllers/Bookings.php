@@ -496,7 +496,7 @@ class Bookings extends Base_Controller {
                 $this->setFlashMessage('success', 'Booking created successfully.');
                 redirect('bookings/view/' . $bookingId);
             } catch (Exception $e) {
-                if (isset($pdo)) {
+                if (isset($pdo) && $this->db->inTransaction()) {
                     $pdo->rollBack();
                 }
                 error_log('Bookings create error: ' . $e->getMessage());
@@ -634,8 +634,8 @@ class Bookings extends Base_Controller {
                     'half_day_rate' => floatval($pricingRules['half_day'] ?? 0),
                     'weekly_rate' => floatval($pricingRules['weekly'] ?? 0),
                     'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
-                    'minimum_duration' => intval($config['minimum_duration'] ?? 1),
-                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null,
+                    'minimum_duration' => ($config && isset($config['minimum_duration'])) ? intval($config['minimum_duration']) : 1,
+                    'maximum_duration' => ($config && !empty($config['maximum_duration'])) ? intval($config['maximum_duration']) : null,
                     'per_person_rates' => $pricingRules['per_person_rates'] ?? null,
                     'workspace_rates' => $pricingRules['workspace_rates'] ?? null
                 ];
@@ -896,7 +896,8 @@ class Bookings extends Base_Controller {
 
     private function processPayment($bookingId, $amount, $paymentMethod, $paymentType) {
         $pdo = $this->db->getConnection();
-        $pdo->beginTransaction();
+        $isNested = $this->db->inTransaction();
+        if (!$isNested) $pdo->beginTransaction();
 
         try {
             // Get booking details
@@ -944,7 +945,8 @@ class Bookings extends Base_Controller {
             // Create double-entry accounting entries for ALL payment methods
             if ($this->cashAccountModel && $this->transactionModel) {
                 try {
-                    $defaultCashAccount = $this->cashAccountModel->getDefault();
+                    $activeCashAccounts = $this->cashAccountModel->getActive();
+                    $defaultCashAccount = !empty($activeCashAccounts) ? $activeCashAccounts[0] : null;
                     if ($defaultCashAccount) {
                         // Debit Cash/Bank (asset increases)
                         $payTxnBase = 'PAY-' . date('Ymd') . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT);
@@ -989,7 +991,7 @@ class Bookings extends Base_Controller {
                 }
             }
 
-            $pdo->commit();
+            if (!$isNested) $pdo->commit();
             
             // Log activity
             $this->activityModel->log(
@@ -1002,7 +1004,9 @@ class Bookings extends Base_Controller {
             return $paymentId;
             
         } catch (Exception $e) {
-            $pdo->rollBack();
+            if (isset($pdo) && !$isNested && $this->db->inTransaction()) {
+                $pdo->rollBack();
+            }
             throw $e;
         }
     }

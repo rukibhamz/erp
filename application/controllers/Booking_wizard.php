@@ -304,8 +304,13 @@ class Booking_wizard extends Base_Controller {
             if ($config) {
                 $space['booking_types'] = json_decode($config['booking_types'], true) ?: ['hourly', 'daily'];
                 $pricingRules = json_decode($config['pricing_rules'] ?? '{}', true) ?: [];
+                $space['pricing_rules'] = $pricingRules; // Pass the whole ruleset
                 $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
                 $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+                $space['half_day_rate'] = $pricingRules['half_day'] ?? 0;
+                $space['weekly_rate'] = $pricingRules['weekly'] ?? 0;
+                $space['per_person_rates'] = $pricingRules['per_person_rates'] ?? null;
+                $space['workspace_rates'] = $pricingRules['workspace_rates'] ?? null;
             } else {
                 $space['booking_types'] = ['hourly', 'daily'];
             }
@@ -396,8 +401,8 @@ class Booking_wizard extends Base_Controller {
                     'half_day_rate' => floatval($pricingRules['half_day'] ?? 0),
                     'weekly_rate' => floatval($pricingRules['weekly'] ?? 0),
                     'security_deposit' => floatval($pricingRules['deposit'] ?? 0),
-                    'minimum_duration' => intval($config['minimum_duration'] ?? 1),
-                    'maximum_duration' => !empty($config['maximum_duration']) ? intval($config['maximum_duration']) : null,
+                    'minimum_duration' => ($config && isset($config['minimum_duration'])) ? intval($config['minimum_duration']) : 1,
+                    'maximum_duration' => ($config && !empty($config['maximum_duration'])) ? intval($config['maximum_duration']) : null,
                     'photos' => $photos
                 ];
             }

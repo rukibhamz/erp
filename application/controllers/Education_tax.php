@@ -91,7 +91,8 @@ class Education_tax extends Base_Controller {
                             $taxExpenseAccount = $this->accountModel->getByCode('5200');
                         }
                         
-                        $defaultCashAccount = $this->cashAccountModel->getDefault();
+                        $activeCashAccounts = $this->cashAccountModel->getActive();
+                        $defaultCashAccount = !empty($activeCashAccounts) ? $activeCashAccounts[0] : null;
                         
                         if ($taxExpenseAccount && $defaultCashAccount) {
                             $cashAccountId = $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'];

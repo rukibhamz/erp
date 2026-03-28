@@ -84,16 +84,80 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <hr>
 
                 <div class="mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Hourly Rate:</span>
-                        <span class="fw-bold text-primary fs-4"><?= format_currency($space['hourly_rate'] ?? 0) ?></span>
-                    </div>
-                    <?php if (!empty($space['daily_rate']) && $space['daily_rate'] > 0): ?>
-                        <div class="d-flex justify-content-between">
-                            <span>Daily Rate:</span>
-                            <span class="fw-bold"><?= format_currency($space['daily_rate']) ?></span>
+                    <h5 class="h6 fw-bold mb-3"><i class="bi bi-tags"></i> Price List</h5>
+                    <div class="price-list-container bg-light rounded p-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Hourly Rate:</span>
+                            <span class="fw-bold text-primary"><?= format_currency($space['hourly_rate'] ?? 0) ?></span>
                         </div>
-                    <?php endif; ?>
+                        <?php if (!empty($space['daily_rate']) && $space['daily_rate'] > 0): ?>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Daily Rate:</span>
+                                <span class="fw-bold"><?= format_currency($space['daily_rate']) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($space['half_day_rate']) && $space['half_day_rate'] > 0): ?>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Half Day Rate:</span>
+                                <span class="fw-bold"><?= format_currency($space['half_day_rate']) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php 
+                        // Per-person rates (Picnic, Photoshoot, Videoshoot)
+                        if (!empty($space['per_person_rates'])): 
+                            foreach ($space['per_person_rates'] as $type => $rates):
+                                if (empty($rates['base_per_person'])) continue;
+                        ?>
+                                <div class="border-top mt-2 pt-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-capitalize"><?= str_replace('_', ' ', $type) ?>:</span>
+                                        <span class="fw-bold"><?= format_currency($rates['base_per_person']) ?> <small class="text-muted">/person</small></span>
+                                    </div>
+                                    <?php if (!empty($rates['equipment_tiers'])): ?>
+                                        <div class="mt-1">
+                                            <?php foreach ($rates['equipment_tiers'] as $tier => $tierData): ?>
+                                                <div class="d-flex justify-content-between small text-muted">
+                                                    <span class="ps-2">- <?= ucfirst($tier) ?> Tier:</span>
+                                                    <span>+<?= format_currency($tierData['surcharge'] ?? 0) ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                        <?php 
+                            endforeach;
+                        endif; 
+                        ?>
+
+                        <?php 
+                        // Workspace rates
+                        if (!empty($space['workspace_rates'])): 
+                            $ws = $space['workspace_rates'];
+                        ?>
+                            <div class="border-top mt-2 pt-2">
+                                <div class="fw-bold small mb-1 text-primary">Workspace Rates:</div>
+                                <?php if (!empty($ws['per_person_daily'])): ?>
+                                    <div class="d-flex justify-content-between small">
+                                        <span>Daily:</span>
+                                        <span><?= format_currency($ws['per_person_daily']) ?> <small>/person</small></span>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($ws['per_person_weekly'])): ?>
+                                    <div class="d-flex justify-content-between small">
+                                        <span>Weekly:</span>
+                                        <span><?= format_currency($ws['per_person_weekly']) ?> <small>/person</small></span>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($ws['per_person_monthly'])): ?>
+                                    <div class="d-flex justify-content-between small">
+                                        <span>Monthly:</span>
+                                        <span><?= format_currency($ws['per_person_monthly']) ?> <small>/person</small></span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
 
                 <div class="mb-4">

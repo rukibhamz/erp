@@ -149,14 +149,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     </div>
                                                 <?php endif; ?>
                                                 
-                                                <div class="mb-3">
-                                                    <strong>Starting from:</strong><br>
-                                                    <span class="h5 text-primary"><?= format_currency($space['hourly_rate'] ?? 0) ?></span>
-                                                    <small class="text-muted">/hour</small>
-                                                    <?php if (!empty($space['daily_rate']) && $space['daily_rate'] > 0): ?>
-                                                        <br><small>or <?= format_currency($space['daily_rate']) ?>/day</small>
-                                                    <?php endif; ?>
-                                                </div>
+                                                <!-- Pricing removed from card as per request -->
                                                 
                                                 <div class="d-grid gap-2">
                                                     <a href="<?= base_url('booking-wizard/space/details/' . $space['id']) ?>" class="btn btn-outline-primary">
