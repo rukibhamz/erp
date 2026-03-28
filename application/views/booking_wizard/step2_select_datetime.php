@@ -252,7 +252,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <!-- Navigation Buttons -->
             <div class="row mt-4">
                 <div class="col-12">
-                    <a href="<?= base_url('booking-wizard') ?>" class="btn btn-outline-secondary">
+                    <a href="<?= base_url('booking-wizard') ?>" class="btn btn-outline-dark">
                         <i class="bi bi-arrow-left"></i> Back
                     </a>
                     <button type="button" id="continue-btn" class="btn btn-primary float-end" disabled>

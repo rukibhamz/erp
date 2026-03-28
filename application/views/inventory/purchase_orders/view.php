@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('inventory/goods-receipts/create?po_id=' . $po['id']) ?>" class="btn btn-success">
                 <i class="bi bi-box-arrow-in-down"></i> Receive Goods
             </a>
-            <a href="<?= base_url('inventory/purchase-orders') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('inventory/purchase-orders') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

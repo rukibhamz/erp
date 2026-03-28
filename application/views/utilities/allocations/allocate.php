@@ -135,7 +135,7 @@
                                             <button type="button" class="btn btn-outline-info btn-sm ms-2" id="auto-allocate">
                                                 <i class="fas fa-magic me-1"></i> Auto-Allocate
                                             </button>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="equal-split">
+                                            <button type="button" class="btn btn-outline-dark btn-sm ms-2" id="equal-split">
                                                 <i class="fas fa-divide me-1"></i> Equal Split
                                             </button>
                                         </td>

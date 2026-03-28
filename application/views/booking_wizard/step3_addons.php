@@ -65,13 +65,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 </div>
                                                 <div>
                                                     <div class="input-group" style="width: 120px;">
-                                                        <button class="btn btn-outline-secondary btn-sm minus-btn" type="button" data-addon-id="<?= $addon['id'] ?>">-</button>
+                                                        <button class="btn btn-outline-dark btn-sm minus-btn" type="button" data-addon-id="<?= $addon['id'] ?>">-</button>
                                                         <input type="number" class="form-control form-control-sm text-center qty-input" 
                                                                data-addon-id="<?= $addon['id'] ?>" 
                                                                data-price="<?= $addon['price'] ?>"
                                                                data-name="<?= htmlspecialchars($addon['name']) ?>"
                                                                value="0" min="0" max="99">
-                                                        <button class="btn btn-outline-secondary btn-sm plus-btn" type="button" data-addon-id="<?= $addon['id'] ?>">+</button>
+                                                        <button class="btn btn-outline-dark btn-sm plus-btn" type="button" data-addon-id="<?= $addon['id'] ?>">+</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -196,7 +196,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <!-- Navigation Buttons -->
             <div class="row mt-4">
                 <div class="col-12">
-                    <a href="<?= base_url('booking-wizard/step2/' . $resource['id']) ?>" class="btn btn-outline-secondary">
+                    <a href="<?= base_url('booking-wizard/step2/' . $resource['id']) ?>" class="btn btn-outline-dark">
                         <i class="bi bi-arrow-left"></i> Back
                     </a>
                     <button type="button" id="continue-btn" class="btn btn-primary float-end">

@@ -12,7 +12,7 @@ include(BASEPATH . 'views/tax/_nav.php');
                     <i class="bi bi-pencil"></i> Edit
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('tax/config') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('tax/config') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

@@ -4,7 +4,7 @@
         <h1 class="h3 mb-0">
             <i class="bi bi-calendar-month"></i> Periods — <?= htmlspecialchars($financial_year['name'] ?? '') ?>
         </h1>
-        <a href="<?= base_url('financial-years') ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('financial-years') ?>" class="btn btn-outline-dark">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>

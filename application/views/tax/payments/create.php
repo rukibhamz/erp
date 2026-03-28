@@ -95,7 +95,7 @@ include(BASEPATH . 'views/tax/_nav.php');
             </div>
             
             <div class="d-flex justify-content-end gap-2 mt-4">
-                <a href="<?= base_url('tax/payments') ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('tax/payments') ?>" class="btn btn-outline-dark">Cancel</a>
                 <button type="submit" class="btn btn-dark">Record Payment</button>
             </div>
         </form>

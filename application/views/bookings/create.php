@@ -220,10 +220,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <div class="input-group input-group-sm" style="width: 110px;">
                                                 <input type="hidden" name="rental_items[<?= $index ?>][item_id]" value="<?= $item['id'] ?>">
                                                 <input type="hidden" name="rental_items[<?= $index ?>][rental_rate]" value="<?= $item['rental_rate'] ?>">
-                                                <button class="btn btn-outline-secondary btn-rental-minus" type="button">-</button>
+                                                <button class="btn btn-outline-dark btn-rental-minus" type="button">-</button>
                                                 <input type="number" name="rental_items[<?= $index ?>][quantity]" class="form-control text-center rental-qty" 
                                                        value="0" min="0" max="<?= $item['current_stock'] ?>" data-price="<?= $item['rental_rate'] ?>">
-                                                <button class="btn btn-outline-secondary btn-rental-plus" type="button">+</button>
+                                                <button class="btn btn-outline-dark btn-rental-plus" type="button">+</button>
                                             </div>
                                         </div>
                                     </div>
@@ -669,7 +669,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     function renderSlots(slots) {
         let html = '';
         slots.forEach(s => {
-            let cls = 'btn-outline-secondary disabled';
+            let cls = 'btn-outline-dark disabled';
             if (s.available) cls = 'btn-outline-success slot-btn';
             else if (s.is_buffer) cls = 'btn-warning disabled opacity-75';
             else cls = 'btn-danger disabled opacity-50';

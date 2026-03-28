@@ -12,7 +12,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('utilities/meters/edit/' . $meter['id']) ?>" class="btn btn-primary">
                 <i class="bi bi-pencil"></i> Edit
             </a>
-            <a href="<?= base_url('utilities/meters') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('utilities/meters') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

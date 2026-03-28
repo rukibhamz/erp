@@ -16,7 +16,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <i class="bi bi-check-circle"></i> Complete
                 </a>
             <?php endif; ?>
-            <a href="<?= base_url('inventory/stock-takes') ?>" class="btn btn-outline-secondary">
+            <a href="<?= base_url('inventory/stock-takes') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

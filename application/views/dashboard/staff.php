@@ -271,7 +271,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <a href="<?= base_url('bookings/view/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-primary">
                                         <i class="bi bi-eye"></i> View
                                     </a>
-                                    <a href="<?= base_url('bookings/edit/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-outline-secondary">
+                                    <a href="<?= base_url('bookings/edit/' . ($booking['id'] ?? '')) ?>" class="btn btn-sm btn-outline-dark">
                                         <i class="bi bi-pencil"></i> Edit
                                     </a>
                                 </div>

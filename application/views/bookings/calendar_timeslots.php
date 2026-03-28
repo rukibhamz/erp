@@ -24,21 +24,21 @@
                 <div class="calendar-header">
                     <div class="view-controls">
                         <a href="<?= base_url('bookings/calendar?view=month&date=' . $selected_date . '&facility_id=' . $selected_facility_id) ?>" 
-                           class="btn btn-sm <?= $view_type === 'month' ? 'btn-primary' : 'btn-outline-secondary' ?>">
+                           class="btn btn-sm <?= $view_type === 'month' ? 'btn-primary' : 'btn-outline-dark' ?>">
                             <i class="fas fa-calendar-alt"></i> Month
                         </a>
                         <a href="<?= base_url('bookings/calendar?view=day&date=' . $selected_date . '&facility_id=' . $selected_facility_id) ?>" 
-                           class="btn btn-sm <?= $view_type === 'day' ? 'btn-primary' : 'btn-outline-secondary' ?>">
+                           class="btn btn-sm <?= $view_type === 'day' ? 'btn-primary' : 'btn-outline-dark' ?>">
                             <i class="fas fa-clock"></i> Day
                         </a>
                     </div>
                     
                     <div class="date-navigation">
-                        <button class="btn btn-sm btn-outline-secondary" id="prev-date">
+                        <button class="btn btn-sm btn-outline-dark" id="prev-date">
                             <i class="fas fa-chevron-left"></i>
                         </button>
                         <input type="date" class="form-control form-control-sm" id="selected-date" value="<?= $selected_date ?>">
-                        <button class="btn btn-sm btn-outline-secondary" id="next-date">
+                        <button class="btn btn-sm btn-outline-dark" id="next-date">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-primary" id="today-btn">Today</button>

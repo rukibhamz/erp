@@ -143,7 +143,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <h5 class="mb-3">Promo Code</h5>
                             <div class="input-group">
                                 <input type="text" id="promo_code" class="form-control" placeholder="Enter promo code">
-                                <button class="btn btn-outline-secondary" type="button" id="apply-promo-btn">Apply</button>
+                                <button class="btn btn-outline-dark" type="button" id="apply-promo-btn">Apply</button>
                             </div>
                             <div id="promo-message" class="mt-2"></div>
                         </div>

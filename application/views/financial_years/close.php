@@ -2,7 +2,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><i class="bi bi-lock"></i> Close Financial Year</h1>
-        <a href="<?= base_url('financial-years') ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('financial-years') ?>" class="btn btn-outline-dark">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
@@ -53,7 +53,7 @@
                 <button type="submit" class="btn btn-warning">
                     <i class="bi bi-lock-fill"></i> Close Financial Year
                 </button>
-                <a href="<?= base_url('financial-years') ?>" class="btn btn-outline-secondary ms-2">Cancel</a>
+                <a href="<?= base_url('financial-years') ?>" class="btn btn-outline-dark ms-2">Cancel</a>
             </form>
         </div>
     </div>

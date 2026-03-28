@@ -50,7 +50,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-funnel-fill me-1"></i> Apply Filter
                     </button>
-                    <a href="<?= base_url('bookings') ?>" class="btn btn-outline-secondary">
+                    <a href="<?= base_url('bookings') ?>" class="btn btn-outline-dark">
                         <i class="bi bi-x-circle me-1"></i> Clear
                     </a>
                 </div>

@@ -54,7 +54,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </button>
             </div>
             <div class="col-md-2">
-                <a href="<?= base_url('payables/bills') ?>" class="btn btn-outline-secondary w-100">
+                <a href="<?= base_url('payables/bills') ?>" class="btn btn-outline-dark w-100">
                     <i class="bi bi-arrow-clockwise"></i> Reset
                 </a>
             </div>

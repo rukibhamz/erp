@@ -62,7 +62,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-save"></i> Save Permissions
                                 </button>
-                                <a href="<?= base_url('settings/roles') ?>" class="btn btn-outline-secondary">
+                                <a href="<?= base_url('settings/roles') ?>" class="btn btn-outline-dark">
                                     Cancel
                                 </a>
                             </div>
@@ -86,7 +86,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <button type="button" class="btn btn-sm btn-success" onclick="selectAll()">
                                         <i class="bi bi-check-all"></i> Select All
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAll()">
+                                    <button type="button" class="btn btn-sm btn-outline-dark" onclick="clearAll()">
                                         <i class="bi bi-x-lg"></i> Clear All
                                     </button>
                                 </div>

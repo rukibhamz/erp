@@ -18,7 +18,7 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex justify-content-between align-items-center bg-light">
             <h6 class="m-0 font-weight-bold text-primary">Annual Summary (Nigeria Education Tax - 2.5%)</h6>
-            <a href="<?= base_url('education_tax/config') ?>" class="btn btn-sm btn-outline-secondary">
+            <a href="<?= base_url('education_tax/config') ?>" class="btn btn-sm btn-outline-dark">
                 <i class="bi bi-gear"></i> Configure Rates
             </a>
         </div>
@@ -64,7 +64,7 @@
                             </td>
                             <td>
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <button class="btn btn-sm btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                         Options
                                     </button>
                                     <ul class="dropdown-menu">

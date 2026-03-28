@@ -5,7 +5,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Create Goods Receipt</h1>
-        <a href="<?= base_url('inventory/goods-receipts') ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('inventory/goods-receipts') ?>" class="btn btn-outline-dark">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
@@ -142,7 +142,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             
             <div class="d-flex justify-content-end gap-2">
-                <a href="<?= base_url('inventory/goods-receipts') ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('inventory/goods-receipts') ?>" class="btn btn-outline-dark">Cancel</a>
                 <button type="submit" class="btn btn-success">
                     <i class="bi bi-check-circle"></i> Create Goods Receipt
                 </button>

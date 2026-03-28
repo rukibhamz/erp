@@ -751,7 +751,7 @@ function renderSlots(slots) {
     let html = '';
     
     slots.forEach(slot => {
-        let btnClass = slot.available ? 'btn-outline-success' : 'btn-outline-secondary disabled';
+        let btnClass = slot.available ? 'btn-outline-success' : 'btn-outline-dark disabled';
         let onClick = slot.available ? `selectSlot('${slot.start}', '${slot.end}')` : '';
         
         html += `<div class="col-md-3 col-6">

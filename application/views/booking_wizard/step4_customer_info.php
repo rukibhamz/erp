@@ -99,7 +99,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <hr>
 
                         <div class="d-flex justify-content-between">
-                            <a href="<?= base_url('booking-wizard/step3/' . ($booking_data['resource_id'] ?? '')) ?>" class="btn btn-outline-secondary">
+                            <a href="<?= base_url('booking-wizard/step3/' . ($booking_data['resource_id'] ?? '')) ?>" class="btn btn-outline-dark">
                                 <i class="bi bi-arrow-left"></i> Back
                             </a>
                             <button type="submit" class="btn btn-primary">

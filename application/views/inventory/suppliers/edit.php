@@ -5,7 +5,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Edit Supplier</h1>
-        <a href="<?= base_url('inventory/suppliers/view/' . $supplier['id']) ?>" class="btn btn-outline-secondary">
+        <a href="<?= base_url('inventory/suppliers/view/' . $supplier['id']) ?>" class="btn btn-outline-dark">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>
@@ -89,7 +89,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
 
             <div class="d-flex justify-content-between">
-                <a href="<?= base_url('inventory/suppliers/view/' . $supplier['id']) ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= base_url('inventory/suppliers/view/' . $supplier['id']) ?>" class="btn btn-outline-dark">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle"></i> Update Supplier
                 </button>
