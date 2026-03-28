@@ -1658,6 +1658,43 @@ class Bookings extends Base_Controller {
     }
 
     /**
+     * Auto-complete bookings whose booking_date has passed and are still confirmed/in_progress
+     */
+    private function autoCompleteExpiredBookings() {
+        try {
+            $today = date('Y-m-d');
+
+            // Find all bookings that should be auto-completed
+            $expired = $this->db->fetchAll(
+                "SELECT id, booking_number FROM `" . $this->db->getPrefix() . "bookings`
+                 WHERE status IN ('confirmed', 'in_progress')
+                 AND booking_date < ?",
+                [$today]
+            );
+
+            if (empty($expired)) {
+                return;
+            }
+
+            $ids = array_column($expired, 'id');
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+            $this->db->query(
+                "UPDATE `" . $this->db->getPrefix() . "bookings`
+                 SET status = 'completed', completed_at = NOW()
+                 WHERE id IN ({$placeholders})",
+                $ids
+            );
+
+            foreach ($expired as $booking) {
+                $this->finalizeBookingRevenue($booking['id']);
+            }
+        } catch (Exception $e) {
+            error_log('Bookings autoCompleteExpiredBookings error: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Finalize booking revenue when booking is completed
      */
     private function finalizeBookingRevenue($bookingId, $booking = null) {
