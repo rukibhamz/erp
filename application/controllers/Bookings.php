@@ -1639,7 +1639,7 @@ class Bookings extends Base_Controller {
             
             if (!empty($entries)) {
                 $journalData = [
-                    'date' => $booking['booking_date'],
+                    'date' => date('Y-m-d'),
                     'reference_type' => 'booking_revenue',
                     'reference_id' => $bookingId,
                     'description' => 'Booking Revenue Recognition #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')',

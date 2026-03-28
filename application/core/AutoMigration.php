@@ -437,6 +437,13 @@ class AutoMigration {
                 error_log("AutoMigration: Error checking admin locations permissions: " . $e->getMessage());
             }
         }
+
+        // Run PHP-based migrations from application/migrations/
+        try {
+            $this->runPhpMigrations($executed);
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error running PHP migrations: " . $e->getMessage());
+        }
     }
     
 
@@ -1619,6 +1626,59 @@ class AutoMigration {
 
 
     /**
+     * Run PHP-based migration classes from application/migrations/
+     * Files must be named NNN_description.php and contain a class with an up() method.
+     */
+    private function runPhpMigrations($executedMigrations) {
+        $dir = __DIR__ . '/../migrations/';
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        $files = glob($dir . '[0-9][0-9][0-9]_*.php');
+        if (empty($files)) {
+            return;
+        }
+
+        sort($files);
+
+        foreach ($files as $file) {
+            $filename = basename($file);
+            $migrationKey = 'php:' . $filename;
+
+            if (in_array($migrationKey, $executedMigrations)) {
+                continue;
+            }
+
+            try {
+                // Derive class name: 008_unique_account_code.php -> Migration_Unique_account_code
+                $base   = pathinfo($filename, PATHINFO_FILENAME);
+                $parts  = explode('_', $base, 2);
+                $suffix = $parts[1] ?? $base;
+                $className = 'Migration_' . str_replace(' ', '_', ucwords(str_replace('_', ' ', $suffix)));
+
+                if (!class_exists($className)) {
+                    require_once $file;
+                }
+
+                if (!class_exists($className)) {
+                    error_log("AutoMigration: PHP migration class {$className} not found in {$filename}");
+                    continue;
+                }
+
+                $instance = new $className();
+                if (method_exists($instance, 'up')) {
+                    $instance->up();
+                    $this->recordMigration($migrationKey);
+                    error_log("AutoMigration: Ran PHP migration {$filename}");
+                }
+            } catch (Exception $e) {
+                error_log("AutoMigration: Error running PHP migration {$filename}: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
      * Run all numbered migrations from the migrations directory
      * 
      * Scans for files like 001_name.sql, 002_name.sql etc.
@@ -2530,14 +2590,14 @@ class AutoMigration {
             
             file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Checking Revenue Account...\n", FILE_APPEND);
 
-            // Ensure Sales Revenue Account
-            $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE account_type = 'Revenue' OR account_type = 'revenue' OR account_type = 'Income' OR account_type = 'income'");
+            // Ensure Sales Revenue Account — only insert if NO revenue account exists at all
+            $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE LOWER(account_type) IN ('revenue', 'income')");
             if ($stmt && $stmt->fetchColumn() == 0) {
                 try {
-                $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
-                    (account_code, account_name, account_type, status, created_at)
-                    VALUES ('4001', 'Sales Revenue', 'revenue', 'active', NOW())");
-                file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Revenue account (4001)\n", FILE_APPEND);
+                    $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
+                        (account_code, account_name, account_type, status, created_at)
+                        VALUES ('4001', 'Sales Revenue', 'Revenue', 'active', NOW())");
+                    file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Revenue account (4001)\n", FILE_APPEND);
                 } catch (\Throwable $e) {
                      file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Revenue account: " . $e->getMessage() . "\n", FILE_APPEND);
                 }
@@ -2545,14 +2605,14 @@ class AutoMigration {
                  file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Revenue query failed\n", FILE_APPEND);
             }
             
-            // Ensure VAT Liability Account
-            $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE account_type = 'Liabilities' OR account_type = 'part_liability' OR account_type = 'liability'");
+            // Ensure VAT Liability Account — only insert if NO liability account exists at all
+            $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE LOWER(account_type) IN ('liabilities', 'liability')");
             if ($stmt && $stmt->fetchColumn() == 0) {
                 try {
-                $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
-                    (account_code, account_name, account_type, status, created_at)
-                    VALUES ('2001', 'VAT Liability', 'liability', 'active', NOW())");
-                file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Liability account (2001)\n", FILE_APPEND);
+                    $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
+                        (account_code, account_name, account_type, status, created_at)
+                        VALUES ('2001', 'VAT Liability', 'Liabilities', 'active', NOW())");
+                    file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Liability account (2001)\n", FILE_APPEND);
                 } catch (\Throwable $e) {
                      file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Liability account: " . $e->getMessage() . "\n", FILE_APPEND);
                 }

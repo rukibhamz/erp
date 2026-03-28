@@ -6,16 +6,18 @@ class Booking_payment_model extends Base_Model {
     
     public function getNextPaymentNumber() {
         try {
+            // Only consider records where payment_number looks like BPAY-{digits}
+            // to avoid corrupt/scientific notation values being picked up by MAX()
             $result = $this->db->fetchOne(
-                "SELECT MAX(CAST(SUBSTRING(payment_number, 5) AS UNSIGNED)) as max_num 
+                "SELECT MAX(CAST(SUBSTRING(payment_number, 6) AS UNSIGNED)) as max_num 
                  FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE payment_number LIKE 'BPAY-%'"
+                 WHERE payment_number REGEXP '^BPAY-[0-9]+$'"
             );
-            $nextNum = ($result['max_num'] ?? 0) + 1;
+            $nextNum = intval($result['max_num'] ?? 0) + 1;
             return 'BPAY-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
         } catch (Exception $e) {
             error_log('Booking_payment_model getNextPaymentNumber error: ' . $e->getMessage());
-            return 'BPAY-' . date('Ymd') . '-00001';
+            return 'BPAY-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
         }
     }
     
