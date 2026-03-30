@@ -1,4 +1,8 @@
 <?php
+/** @var string[] $modules */
+/** @var array<string, array> $permissions */
+/** @var array $user */
+/** @var array $userPermissions */
 $page_title = $page_title ?? 'Manage Permissions';
 $userPermissions = $userPermissions ?? [];
 ?>
@@ -37,12 +41,12 @@ $userPermissions = $userPermissions ?? [];
                                 <tbody>
                                     <?php foreach ($modules as $module): ?>
                                         <tr>
-                                            <td><strong><?= ucfirst($module) ?></strong></td>
+                                            <td><strong><?= ucfirst((string)$module) ?></strong></td>
                                             <?php
                                             $actions = ['create', 'read', 'update', 'delete'];
                                             foreach ($actions as $action):
                                                 $permission = null;
-                                                foreach ($permissions[$module] ?? [] as $perm) {
+                                                foreach ($permissions[(string)$module] ?? [] as $perm) {
                                                     if ($perm['permission'] === $action) {
                                                         $permission = $perm;
                                                         break;
@@ -64,7 +68,7 @@ $userPermissions = $userPermissions ?? [];
                                                 <td class="text-center">-</td>
                                             <?php endif; endforeach; ?>
                                             <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-primary" onclick="selectModule('<?= $module ?>')">
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="selectModule('<?= (string)$module ?>')">
                                                     All
                                                 </button>
                                             </td>

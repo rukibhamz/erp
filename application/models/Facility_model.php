@@ -714,8 +714,17 @@ class Facility_model extends Base_Model {
                     
                     // Get equipment tier surcharge
                     $surcharge = 0;
-                    if ($equipmentTier && !empty($perPersonRates['equipment_tiers'][$equipmentTier])) {
-                        $surcharge = floatval($perPersonRates['equipment_tiers'][$equipmentTier]['surcharge'] ?? 0);
+                    
+                    // Unified Tier Mapping (New UI -> Legacy DB)
+                    $tierMap = [
+                        'basic' => 'light',
+                        'standard' => 'medium',
+                        'premium' => 'heavy'
+                    ];
+                    $lookupTier = $tierMap[$equipmentTier] ?? $equipmentTier;
+                    
+                    if ($lookupTier && !empty($perPersonRates['equipment_tiers'][$lookupTier])) {
+                        $surcharge = floatval($perPersonRates['equipment_tiers'][$lookupTier]['surcharge'] ?? 0);
                     }
                     
                     // Fallback: if no per_person_rates configured, use hourly rate as base

@@ -51,129 +51,139 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="row">
                 <div class="col-lg-8">
                     <div class="card mb-4">
-                        <div class="card-body">
-                            <h4 class="card-title mb-4">
-                                <?= htmlspecialchars($space['space_name'] ?? 'Space') ?>
-                                <?php if ($location): ?>
-                                    <small class="text-muted">at <?= htmlspecialchars($location['Location_name'] ?? $location['property_name'] ?? '') ?></small>
-                                <?php endif; ?>
-                            </h4>
-                            
-                            <!-- Booking Type Selection -->
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Booking Type <span class="text-danger">*</span></label>
-                                <select id="booking_type" class="form-select form-select-lg" required>
-                                    <option value="">Select Booking Type</option>
-                                    <?php 
-                                    $typeLabels = [
-                                        'hourly' => 'Hourly',
-                                        'daily' => 'Daily',
-                                        'half_day' => 'Half Day',
-                                        'weekly' => 'Weekly',
-                                        'multi_day' => 'Multi-Day'
-                                    ];
-                                    foreach ($booking_types ?? [] as $type): ?>
-                                        <option value="<?= htmlspecialchars($type) ?>">
-                                            <?= $typeLabels[$type] ?? ucfirst(str_replace('_', ' ', $type)) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            
-                            <!-- Duration Selection (Hidden by default) -->
-                            <div class="mb-4" id="duration-container" style="display: none;">
-                                <label class="form-label fw-bold">Duration</label>
-                                <select id="duration" class="form-select form-select-lg">
-                                    <!-- Options populated by JS -->
-                                </select>
-                            </div>
-                            
-                            <!-- Per-Person & Equipment Tiers (Hidden by default) -->
-                            <div class="row mb-4">
-                                <div class="col-md-6 mb-3 mb-md-0" id="guests-container" style="display: none;">
-                                    <label class="form-label fw-bold">Number of Guests <span class="text-danger">*</span></label>
-                                    <input type="number" id="guests" class="form-select form-select-lg" min="1" value="1">
-                                </div>
-                                <div class="col-md-6" id="equipment-tier-container" style="display: none;">
-                                    <label class="form-label fw-bold">Equipment Tier <i class="bi bi-info-circle text-muted" title="Surcharge based on amount of equipment"></i></label>
-                                    <select id="equipment_tier" class="form-select form-select-lg">
-                                        <option value="">No Additional Equipment</option>
-                                        <option value="light">Light Equipment</option>
-                                        <option value="medium">Medium Equipment</option>
-                                        <option value="heavy">Heavy Equipment</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <!-- Recurring Booking Option -->
-                            <div class="mb-4" id="recurring-option" style="display: none;">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="is_recurring">
-                                    <label class="form-check-label" for="is_recurring">
-                                        Make this a recurring booking (lease)
-                                    </label>
-                                </div>
-                                <div id="recurring-details" style="display: none;" class="mt-3">
-                                    <label class="form-label">Recurring Pattern</label>
-                                    <select id="recurring_pattern" class="form-select">
-                                        <option value="weekly">Weekly (Same day each week)</option>
-                                        <option value="daily">Daily</option>
-                                        <option value="monthly">Monthly (Same date each month)</option>
-                                    </select>
-                                    <label class="form-label mt-2">End Date (Optional)</label>
-                                    <input type="date" id="recurring_end_date" class="form-control" 
-                                           min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
-                                    <small class="text-muted">Leave blank for ongoing lease</small>
-                                </div>
-                            </div>
-                            
-                            <!-- Date Pickers -->
-                            <div class="row mb-4">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Start Date <span class="text-danger">*</span></label>
-                                    <input type="date" id="booking_date" class="form-control form-control-lg" 
-                                           min="<?= date('Y-m-d') ?>" 
-                                           value="<?= date('Y-m-d') ?>" disabled>
-                                    <small class="text-muted d-block mt-1">Select booking type first</small>
-                                </div>
-                                <div class="col-md-6" id="end-date-container" style="display: none;">
-                                    <label class="form-label fw-bold">End Date <span class="text-danger">*</span></label>
-                                    <input type="date" id="booking_end_date" class="form-control form-control-lg" 
-                                           min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
-                                </div>
-                            </div>
-
-                            <!-- Time Slot Selection -->
-                            <div class="mb-4" id="time-slots-section">
-                                <label class="form-label fw-bold">Time Slots</label>
-                                <div class="mb-2" id="time-slot-legend">
-                                    <span class="badge bg-success me-2">Available</span>
-                                    <span class="badge bg-danger me-2">Occupied</span>
-                                    <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
-                                </div>
-                                <div id="time-slots-container" class="row g-2">
-                                    <div class="col-12">
-                                        <div class="alert alert-info">
-                                            <i class="bi bi-info-circle"></i> Please select a date and booking type to see available time slots
-                                        </div>
+                        <div class="card-body p-4">
+                            <div id="booking-notices" class="mb-4" style="display: none;">
+                                <div class="alert alert-info d-flex align-items-center mb-0">
+                                    <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                                    <div>
+                                        <strong>Notice:</strong> For Weddings and Birthdays, a <strong>Full Day</strong> booking is required.
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Selected Time Summary -->
-                            <div id="selected-time-summary" class="alert alert-success" style="display: none;">
-                                <h6><i class="bi bi-check-circle"></i> Selected Booking Details</h6>
-                                <p class="mb-0">
-                                    <strong>Type:</strong> <span id="selected-type"></span><br>
-                                    <strong>Start Date:</strong> <span id="selected-date"></span><br>
-                                    <span id="selected-end-date-container" style="display: none;">
-                                        <strong>End Date:</strong> <span id="selected-end-date"></span><br>
-                                    </span>
-                                    <strong>Time:</strong> <span id="selected-time"></span><br>
-                                    <span id="selected-recurring-container" style="display: none;">
-                                        <strong>Recurring:</strong> <span id="selected-recurring"></span>
-                                    </span>
-                                </p>
+                            <div class="row g-4">
+                                <h4 class="card-title mb-4">
+                                    <?= htmlspecialchars($space['space_name'] ?? 'Space') ?>
+                                    <?php if ($location): ?>
+                                        <small class="text-muted">at <?= htmlspecialchars($location['Location_name'] ?? $location['property_name'] ?? '') ?></small>
+                                    <?php endif; ?>
+                                </h4>
+                                
+                                <!-- Booking Type Selection -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Booking Type <span class="text-danger">*</span></label>
+                                    <select id="booking_type" class="form-select form-select-lg" required>
+                                        <option value="">Select Booking Type</option>
+                                        <?php 
+                                        $typeLabels = [
+                                            'hourly' => 'Hourly',
+                                            'daily' => 'Daily',
+                                            'half_day' => 'Half Day',
+                                            'weekly' => 'Weekly',
+                                            'multi_day' => 'Multi-Day'
+                                        ];
+                                        foreach ($booking_types ?? [] as $type): ?>
+                                            <option value="<?= htmlspecialchars($type) ?>">
+                                                <?= $typeLabels[$type] ?? ucfirst(str_replace('_', ' ', $type)) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                
+                                <!-- Duration Selection (Hidden by default) -->
+                                <div class="mb-4" id="duration-container" style="display: none;">
+                                    <label class="form-label fw-bold">Duration</label>
+                                    <select id="duration" class="form-select form-select-lg">
+                                        <!-- Options populated by JS -->
+                                    </select>
+                                </div>
+                                
+                                <!-- Per-Person & Equipment Tiers (Hidden by default) -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6 mb-3 mb-md-0" id="guests-container" style="display: none;">
+                                        <label class="form-label fw-bold">Number of Guests <span class="text-danger">*</span></label>
+                                        <input type="number" id="guests" class="form-select form-select-lg" min="1" value="1">
+                                    </div>
+                                    <div class="col-md-6" id="equipment-tier-container" style="display: none;">
+                                    <label class="form-label fw-bold">Type <i class="bi bi-info-circle text-muted" title="Surcharge based on equipment/service level"></i></label>
+                                    <select id="equipment_tier" class="form-select form-select-lg">
+                                        <option value="basic" selected>Basic</option>
+                                        <option value="standard">Standard</option>
+                                        <option value="premium">Premium</option>
+                                    </select>
+                                </div>
+                                </div>
+                                
+                                <!-- Recurring Booking Option -->
+                                <div class="mb-4" id="recurring-option" style="display: none;">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_recurring">
+                                        <label class="form-check-label" for="is_recurring">
+                                            Make this a recurring booking (lease)
+                                        </label>
+                                    </div>
+                                    <div id="recurring-details" style="display: none;" class="mt-3">
+                                        <label class="form-label">Recurring Pattern</label>
+                                        <select id="recurring_pattern" class="form-select">
+                                            <option value="weekly">Weekly (Same day each week)</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="monthly">Monthly (Same date each month)</option>
+                                        </select>
+                                        <label class="form-label mt-2">End Date (Optional)</label>
+                                        <input type="date" id="recurring_end_date" class="form-control" 
+                                               min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                                        <small class="text-muted">Leave blank for ongoing lease</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Date Pickers -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Start Date <span class="text-danger">*</span></label>
+                                        <input type="date" id="booking_date" class="form-control form-control-lg" 
+                                               min="<?= date('Y-m-d') ?>" 
+                                               value="<?= date('Y-m-d') ?>" disabled>
+                                        <small class="text-muted d-block mt-1">Select booking type first</small>
+                                    </div>
+                                    <div class="col-md-6" id="end-date-container" style="display: none;">
+                                        <label class="form-label fw-bold">End Date <span class="text-danger">*</span></label>
+                                        <input type="date" id="booking_end_date" class="form-control form-control-lg" 
+                                               min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+                                    </div>
+                                </div>
+
+                                <!-- Time Slot Selection -->
+                                <div class="mb-4" id="time-slots-section">
+                                    <label class="form-label fw-bold">Time Slots</label>
+                                    <div class="mb-2" id="time-slot-legend">
+                                        <span class="badge bg-success me-2">Available</span>
+                                        <span class="badge bg-danger me-2">Occupied</span>
+                                        <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
+                                    </div>
+                                    <div id="time-slots-container" class="row g-2">
+                                        <div class="col-12">
+                                            <div class="alert alert-info">
+                                                <i class="bi bi-info-circle"></i> Please select a date and booking type to see available time slots
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Selected Time Summary -->
+                                <div id="selected-time-summary" class="alert alert-success" style="display: none;">
+                                    <h6><i class="bi bi-check-circle"></i> Selected Booking Details</h6>
+                                    <p class="mb-0">
+                                        <strong>Type:</strong> <span id="selected-type"></span><br>
+                                        <strong>Start Date:</strong> <span id="selected-date"></span><br>
+                                        <span id="selected-end-date-container" style="display: none;">
+                                            <strong>End Date:</strong> <span id="selected-end-date"></span><br>
+                                        </span>
+                                        <strong>Time:</strong> <span id="selected-time"></span><br>
+                                        <span id="selected-recurring-container" style="display: none;">
+                                            <strong>Recurring:</strong> <span id="selected-recurring"></span>
+                                        </span>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -314,6 +324,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Show/hide end date and duration based on booking type
         bookingTypeSelect.addEventListener('change', function() {
+            const selectedType = this.value;
+            
+            // Show/hide Wedding/Birthday notice
+            const bookingNotices = document.getElementById('booking-notices');
+            if (bookingNotices) {
+                bookingNotices.style.display = 'block';
+            }
+            
+            // Clear current selections
             selectedBookingType = this.value;
             const isMultiDay = this.value === 'multi_day' || this.value === 'weekly';
             
@@ -323,10 +342,13 @@ document.addEventListener('DOMContentLoaded', function() {
             endDateContainer.style.display = isMultiDay ? 'block' : 'none';
             recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
             
-            // Show per-person fields for specific types
-            if (this.value === 'picnic' || this.value === 'photoshoot' || this.value === 'videoshoot' || this.value === 'workspace') {
+            // Per-Person & Equipment Tiers Visibility
+            const perPersonTypes = ['picnic', 'photoshoot', 'videoshoot', 'workspace'];
+            const equipmentTypes = ['picnic', 'photoshoot', 'videoshoot'];
+            
+            if (perPersonTypes.includes(selectedType)) {
                 guestsContainer.style.display = 'block';
-                if (this.value === 'picnic' || this.value === 'photoshoot' || this.value === 'videoshoot') {
+                if (equipmentTypes.includes(selectedType)) {
                     equipmentTierContainer.style.display = 'block';
                 } else {
                     equipmentTierContainer.style.display = 'none';

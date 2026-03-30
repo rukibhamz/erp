@@ -1,6 +1,9 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
-/** @var $this Loader */
+/** @var Loader $this */
+/** @var array<int, array> $results */
+/** @var string $query */
+/** @var string $module */
 ?>
 
 <div class="page-header mb-4">
