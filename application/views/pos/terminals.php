@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">POS Terminals</h1>
         <div class="d-flex gap-2">
-            <?php if (hasPermission('pos', 'manage')): ?>
+            <?php if (hasPermission('pos', 'write')): ?>
                 <a href="javascript:void(0)" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#createTerminalModal">
                     <i class="bi bi-plus-circle"></i> Create Terminal
                 </a>
@@ -31,7 +31,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="text-center py-5">
                 <i class="bi bi-cash-register mb-3 text-muted" style="font-size: 3rem; display: block;"></i>
                 <p class="text-muted mb-4">No terminals found. Create your first terminal to start using POS.</p>
-                <?php if (hasPermission('pos', 'manage')): ?>
+                <?php if (hasPermission('pos', 'write')): ?>
                     <a href="javascript:void(0)" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#createTerminalModal">
                         <i class="bi bi-plus-circle"></i> Create Your First Terminal
                     </a>
@@ -65,7 +65,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <a href="<?= base_url('pos/index?terminal=' . $terminal['id']) ?>" class="btn btn-primary" title="Open POS">
                                             <i class="bi bi-cash-register"></i> Open POS
                                         </a>
-                                        <?php if (hasPermission('pos', 'manage')): ?>
+                                        <?php if (hasPermission('pos', 'write')): ?>
                                             <a href="<?= base_url('pos/reports?terminal_id=' . $terminal['id']) ?>" class="btn btn-primary" title="View Reports">
                                                 <i class="bi bi-bar-chart"></i> Reports
                                             </a>
