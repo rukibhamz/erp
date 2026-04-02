@@ -165,6 +165,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <option value="standard" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'standard') ? 'selected' : '' ?>>Standard</option>
                             <option value="premium" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'premium') ? 'selected' : '' ?>>Premium</option>
                         </select>
+                        <div id="tier-disclaimer" class="mt-2 small text-primary fw-medium" style="display:none;">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            <span id="tier-disclaimer-text"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -396,6 +400,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         window.setSelection(start, end, `${startDisplay} - ${endDisplay}`, btn);
     };
 
+    function updateTierDisclaimer() {
+        const tierSelect = document.getElementById('equipment_tier');
+        if (!tierSelect) return;
+        
+        const tierDisclaimer = document.getElementById('tier-disclaimer');
+        const tierText = document.getElementById('tier-disclaimer-text');
+        const val = tierSelect.value;
+        
+        const disclaimers = {
+            'basic': 'This tier covers the use of a mobile phone only.',
+            'standard': 'This tier covers the use of a professional camera.',
+            'premium': 'This tier covers the use of production-grade equipment.'
+        };
+        
+        const container = document.getElementById('equipment-tier-container');
+        if (val && disclaimers[val] && container && container.style.display !== 'none') {
+            tierText.textContent = disclaimers[val];
+            tierDisclaimer.style.display = 'block';
+        } else {
+            tierDisclaimer.style.display = 'none';
+        }
+    }
+
     function parseTime(t) {
         if (!t) return 0;
         const [h, m] = t.split(':').map(Number);
@@ -445,8 +472,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         const days = Math.ceil(hours / 24);
         
         let guests = parseInt(document.getElementById('number_of_guests').value) || 1;
-        let equipmentTier = document.getElementById('equipment_tier').value;
-        
         if (bookingType === 'picnic' || bookingType === 'photoshoot' || bookingType === 'videoshoot' || bookingType === 'workspace') {
             // Per-person pricing logic
             let pRules = currentSpaceData.per_person_rates || {};
@@ -815,6 +840,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             if (gtc) gtc.style.display = (this.value === 'picnic' || this.value === 'workspace') ? 'block' : 'none';
             if (etc) etc.style.display = (this.value === 'photoshoot' || this.value === 'videoshoot') ? 'block' : 'none';
             
+            updateTierDisclaimer();
+            
             if (dom.date.value && currentSpaceData) loadTimeSlots(currentSpaceData.id, dom.date.value);
             calculatePrice();
         });
@@ -825,7 +852,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         const discountInput = document.getElementById('discount_amount');
         
         if (guestsInput) guestsInput.addEventListener('input', calculatePrice);
-        if (equipmentTier) equipmentTier.addEventListener('change', calculatePrice);
+        if (equipmentTier) {
+            equipmentTier.addEventListener('change', function() {
+                updateTierDisclaimer();
+                calculatePrice();
+            });
+        }
         if (discountInput) discountInput.addEventListener('input', calculatePrice);
         
         // Rental items +/- buttons

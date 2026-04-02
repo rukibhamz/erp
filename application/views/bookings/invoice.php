@@ -78,7 +78,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <td>
                     <strong>Booking of <?= htmlspecialchars($booking['facility_name']) ?></strong><br>
                     <small>
-                        <strong>Type:</strong> <?= ucfirst(str_replace('_', ' ', $booking['booking_type'])) ?> | 
+                        <strong>Type:</strong> <?= ucfirst(str_replace('_', ' ', $booking['booking_type'])) ?>
+                        <?php if (!empty($booking['equipment_tier'])): ?>
+                            | <strong>Tier:</strong> <?= ucfirst($booking['equipment_tier']) ?>
+                            <?php 
+                                $disclaimers = [
+                                    'basic' => 'This tier covers the use of a mobile phone only.',
+                                    'standard' => 'This tier covers the use of a professional camera.',
+                                    'premium' => 'This tier covers the use of production-grade equipment.'
+                                ];
+                                if (isset($disclaimers[strtolower($booking['equipment_tier'])])) {
+                                    echo " <br><small class='text-muted'>({$disclaimers[strtolower($booking['equipment_tier'])]})</small>";
+                                }
+                            ?>
+                        <?php endif; ?> | 
                         <strong>Guests:</strong> <?= $booking['number_of_guests'] ?> people<br>
                         <strong>Date:</strong> <?= date('M d, Y', strtotime($booking['booking_date'])) ?><br>
                         <strong>Time:</strong> <?= date('h:i A', strtotime($booking['start_time'])) ?> - <?= date('h:i A', strtotime($booking['end_time'])) ?> (<?= number_format($booking['duration_hours'], 1) ?> hrs)

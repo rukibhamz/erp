@@ -111,6 +111,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <option value="standard">Standard</option>
                                         <option value="premium">Premium</option>
                                     </select>
+                                    <div id="tier-disclaimer" class="mt-2 small text-primary fw-medium" style="display:none;">
+                                        <i class="bi bi-info-circle-fill me-1"></i>
+                                        <span id="tier-disclaimer-text"></span>
+                                    </div>
                                 </div>
                                 </div>
                                 
@@ -316,6 +320,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const guestsInput = document.getElementById('guests');
     const equipmentTierContainer = document.getElementById('equipment-tier-container');
     const equipmentTierSelect = document.getElementById('equipment_tier');
+
+    // Disclaimer Logic
+    function updateTierDisclaimer() {
+        const tierDisclaimer = document.getElementById('tier-disclaimer');
+        const tierText = document.getElementById('tier-disclaimer-text');
+        const val = equipmentTierSelect.value;
+        const disclaimers = {
+            'basic': 'This tier covers the use of a mobile phone only.',
+            'standard': 'This tier covers the use of a professional camera.',
+            'premium': 'This tier covers the use of production-grade equipment.'
+        };
+        
+        if (val && disclaimers[val] && equipmentTierContainer.style.display !== 'none') {
+            tierText.textContent = disclaimers[val];
+            tierDisclaimer.style.display = 'block';
+        } else {
+            tierDisclaimer.style.display = 'none';
+        }
+    }
+
+    if (equipmentTierSelect) {
+        equipmentTierSelect.addEventListener('change', updateTierDisclaimer);
+    }
     
     // Initially disable date input until booking type is selected
     if (bookingDate) {
@@ -348,6 +375,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             guestsContainer.style.display = guestRequiredTypes.includes(selectedType) ? 'block' : 'none';
             equipmentTierContainer.style.display = typeRequiredTypes.includes(selectedType) ? 'block' : 'none';
+            
+            // Trigger disclaimer update
+            updateTierDisclaimer();
             
             // Handle Duration Logic
             updateDurationOptions(selectedBookingType);
