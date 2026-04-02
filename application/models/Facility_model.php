@@ -712,19 +712,10 @@ class Facility_model extends Base_Model {
                     $perPersonRates = $pricingRules['per_person_rates'][$bookingType] ?? [];
                     $basePerPerson = floatval($perPersonRates['base_per_person'] ?? 0);
                     
-                    // Get equipment tier surcharge
+                    // Get tier surcharge (Standardized values: basic, standard, premium)
                     $surcharge = 0;
-                    
-                    // Unified Tier Mapping (New UI -> Legacy DB)
-                    $tierMap = [
-                        'basic' => 'light',
-                        'standard' => 'medium',
-                        'premium' => 'heavy'
-                    ];
-                    $lookupTier = $tierMap[$equipmentTier] ?? $equipmentTier;
-                    
-                    if ($lookupTier && !empty($perPersonRates['equipment_tiers'][$lookupTier])) {
-                        $surcharge = floatval($perPersonRates['equipment_tiers'][$lookupTier]['surcharge'] ?? 0);
+                    if ($equipmentTier && !empty($perPersonRates['equipment_tiers'][$equipmentTier])) {
+                        $surcharge = floatval($perPersonRates['equipment_tiers'][$equipmentTier]['surcharge'] ?? 0);
                     }
                     
                     // Fallback: if no per_person_rates configured, use hourly rate as base
@@ -732,7 +723,13 @@ class Facility_model extends Base_Model {
                         $basePerPerson = $baseRate > 0 ? $baseRate : floatval($facility['hourly_rate'] ?? 0);
                     }
                     
-                    $totalPrice = ($basePerPerson + $surcharge) * max(1, $quantity);
+                    // Calculation logic: Picnic is per-guest, Photo/Video are per-project
+                    if ($bookingType === 'picnic') {
+                        $totalPrice = ($basePerPerson + $surcharge) * max(1, $quantity);
+                    } else {
+                        // Photoshoot / Videoshoot: charge per project (quantity = 1)
+                        $totalPrice = ($basePerPerson + $surcharge);
+                    }
                     
                 } elseif ($bookingType === 'workspace') {
                     // Workspace: per-person × duration

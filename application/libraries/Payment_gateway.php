@@ -71,7 +71,6 @@ class Payment_gateway {
         
         $response = curl_exec($ch);
         $error = curl_error($ch);
-        curl_close($ch);
         
         if ($error) {
             throw new Exception("Paystack API error: " . $error);
@@ -113,7 +112,6 @@ class Payment_gateway {
         $response = curl_exec($ch);
         $curlError = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
         
         // DIAGNOSTIC: Log raw API response
         file_put_contents($logFile, "[$timestamp] verify_paystack: HTTP=$httpCode, cURL_error='$curlError', response_length=" . strlen($response ?: '') . "\\n", FILE_APPEND);
@@ -188,7 +186,6 @@ class Payment_gateway {
         ]);
         
         $response = curl_exec($ch);
-        curl_close($ch);
         
         $result = json_decode($response, true);
         
@@ -215,7 +212,6 @@ class Payment_gateway {
         ]);
         
         $response = curl_exec($ch);
-        curl_close($ch);
         
         $result = json_decode($response, true);
         
@@ -258,7 +254,6 @@ class Payment_gateway {
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         
         $tokenResponse = curl_exec($ch);
-        curl_close($ch);
         
         $tokenData = json_decode($tokenResponse, true);
         $accessToken = $tokenData['responseBody']['accessToken'] ?? '';
@@ -296,7 +291,6 @@ class Payment_gateway {
         ]);
         
         $response = curl_exec($ch);
-        curl_close($ch);
         
         $result = json_decode($response, true);
         
@@ -329,7 +323,6 @@ class Payment_gateway {
         
         $tokenResponse = curl_exec($ch);
         $tokenHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
         
         if ($tokenHttpCode !== 200) {
             return ['success' => false, 'message' => 'Monnify auth failed (HTTP ' . $tokenHttpCode . ')'];
@@ -358,7 +351,6 @@ class Payment_gateway {
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
         
         if ($httpCode === 200) {
             $result = json_decode($response, true);
@@ -396,7 +388,6 @@ class Payment_gateway {
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         
         $response = curl_exec($ch);
-        curl_close($ch);
         
         $result = json_decode($response, true);
         

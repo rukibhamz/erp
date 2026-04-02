@@ -147,9 +147,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="row mb-4">
                     <div class="col-md-4">
                         <div class="mb-3">
+                        <div class="col-md-4 mb-3" id="guests-container">
                             <label class="form-label">Number of Guests</label>
-                            <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="0" onchange="checkCapacity()">
+                            <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="1" value="1" onchange="checkCapacity(); calculatePrice();">
                             <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
+                        </div>
+                        <div class="col-md-4 mb-3" id="equipment-tier-container" style="display: none;">
+                            <label class="form-label">Type <i class="bi bi-info-circle text-muted" title="Surcharge based on equipment/service level"></i></label>
+                            <select name="equipment_tier" id="equipment_tier" class="form-select" onchange="calculatePrice()">
+                                <option value="basic">Basic (Base Rate)</option>
+                                <option value="standard">Standard</option>
+                                <option value="premium">Premium</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -491,6 +500,13 @@ function updateDurationOptions(type) {
         options += '<option value="8">8 Hours</option>';
         options += '<option value="12">12 Hours</option>';
         options += '<option value="24">Full Day (24 Hours)</option>';
+    } else if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') {
+        durationContainer.style.display = 'block';
+        options += '<option value="4">4 Hours</option>';
+        options += '<option value="5">5 Hours</option>';
+        options += '<option value="6">6 Hours</option>';
+        options += '<option value="7">7 Hours</option>';
+        options += '<option value="8">8 Hours</option>';
     } else {
         durationContainer.style.display = 'none';
     }
@@ -620,18 +636,47 @@ function calculatePrice() {
     }
 
     let basePrice = 0;
+    let guests = parseInt(document.getElementById('number_of_guests').value) || 1;
+    let equipmentTier = document.getElementById('equipment_tier').value;
     
     // Calculate price based on type
-    if (bookingType === 'hourly') {
+    if (bookingType === 'picnic' || bookingType === 'photoshoot' || bookingType === 'videoshoot' || bookingType === 'workspace') {
+        // Per-person pricing logic (Matches Facility_model and main bookings/create)
+        let pRules = currentSpaceData.per_person_rates || {};
+        let wRules = currentSpaceData.workspace_rates || {};
+        
+        if (bookingType === 'workspace') {
+            const days = Math.ceil(duration / 24);
+            let ppRate = wRules.per_person_daily || currentSpaceData.daily_rate || 0;
+            if (days >= 7 && wRules.per_person_weekly) {
+                let weeks = Math.ceil(days / 7);
+                basePrice = parseFloat(wRules.per_person_weekly) * Math.max(1, guests) * weeks;
+            } else if (days >= 28 && wRules.per_person_monthly) {
+                let months = Math.ceil(days / 28);
+                basePrice = parseFloat(wRules.per_person_monthly) * Math.max(1, guests) * months;
+            } else {
+                basePrice = parseFloat(ppRate) * Math.max(1, guests) * Math.max(1, days);
+            }
+        } else {
+            // Picnic/Photoshoot/Videoshoot
+            let typeRates = pRules[bookingType] || {};
+            let basePP = parseFloat(typeRates.base_per_person) || (currentSpaceData.hourly_rate || 0);
+            let tierSurcharge = 0;
+            if (equipmentTier && typeRates.equipment_tiers && typeRates.equipment_tiers[equipmentTier]) {
+                tierSurcharge = parseFloat(typeRates.equipment_tiers[equipmentTier].surcharge) || 0;
+            }
+            
+            if (bookingType === 'picnic') {
+                basePrice = (basePP + tierSurcharge) * Math.max(1, guests);
+            } else {
+                // Photo/Video are per-project
+                basePrice = (basePP + tierSurcharge);
+            }
+        }
+    } else if (bookingType === 'hourly') {
         basePrice = (currentSpaceData.hourly_rate || 0) * duration;
     } else if (bookingType === 'daily') {
         basePrice = (currentSpaceData.daily_rate || 0);
-        // ... (rest of logic same)
-        if(duration > 0 && duration < 24) {
-             basePrice = (currentSpaceData.daily_rate || 0);
-        } else {
-             basePrice = (currentSpaceData.daily_rate || 0);
-        }
     } else if (bookingType === 'half_day') {
         basePrice = (currentSpaceData.half_day_rate || 0);
     } else if (bookingType === 'weekly') {
@@ -660,6 +705,14 @@ function updateDurationOptions(type) {
     
     container.style.display = 'block'; // Default show
     
+    const gtc = document.getElementById('guests-container');
+    const etc = document.getElementById('equipment-tier-container');
+    const edc = document.getElementById('end-date-container');
+
+    if (gtc) gtc.style.display = (type === 'picnic' || type === 'workspace') ? 'block' : 'none';
+    if (etc) etc.style.display = (type === 'photoshoot' || type === 'videoshoot') ? 'block' : 'none';
+    if (edc) edc.style.display = (type === 'multi_day' || type === 'weekly') ? 'block' : 'none';
+
     if (type === 'hourly') {
         for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;
         selectedDuration = 1;
@@ -667,6 +720,10 @@ function updateDurationOptions(type) {
     } else if (type === 'daily') {
         options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
         selectedDuration = 8;
+        if(endDateContainer) endDateContainer.style.display = 'none';
+    } else if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') {
+        options = '<option value="4">4 Hours</option><option value="5">5 Hours</option><option value="6">6 Hours</option><option value="7">7 Hours</option><option value="8">8 Hours</option>';
+        selectedDuration = 4;
         if(endDateContainer) endDateContainer.style.display = 'none';
     } else if (type === 'half_day' || type === 'full_day') {
         container.style.display = 'none';

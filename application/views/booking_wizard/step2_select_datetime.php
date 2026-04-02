@@ -342,21 +342,12 @@ document.addEventListener('DOMContentLoaded', function() {
             endDateContainer.style.display = isMultiDay ? 'block' : 'none';
             recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
             
-            // Per-Person & Equipment Tiers Visibility
-            const perPersonTypes = ['picnic', 'photoshoot', 'videoshoot', 'workspace'];
-            const equipmentTypes = ['picnic', 'photoshoot', 'videoshoot'];
+            // Per-Person & Type (Equipment Tiers) Visibility
+            const guestRequiredTypes = ['picnic', 'workspace'];
+            const typeRequiredTypes = ['photoshoot', 'videoshoot'];
             
-            if (perPersonTypes.includes(selectedType)) {
-                guestsContainer.style.display = 'block';
-                if (equipmentTypes.includes(selectedType)) {
-                    equipmentTierContainer.style.display = 'block';
-                } else {
-                    equipmentTierContainer.style.display = 'none';
-                }
-            } else {
-                guestsContainer.style.display = 'none';
-                equipmentTierContainer.style.display = 'none';
-            }
+            guestsContainer.style.display = guestRequiredTypes.includes(selectedType) ? 'block' : 'none';
+            equipmentTierContainer.style.display = typeRequiredTypes.includes(selectedType) ? 'block' : 'none';
             
             // Handle Duration Logic
             updateDurationOptions(selectedBookingType);
@@ -486,6 +477,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Half day booking type - hide duration, it's 4 hours
             durationContainer.style.display = 'none';
             selectedDuration = 4;
+        } else if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') {
+            durationContainer.style.display = 'block';
+            options += '<option value="4">4 Hours</option>';
+            options += '<option value="5">5 Hours</option>';
+            options += '<option value="6">6 Hours</option>';
+            options += '<option value="7">7 Hours</option>';
+            options += '<option value="8">8 Hours</option>';
         } else {
             durationContainer.style.display = 'none';
             selectedDuration = 1; // Default to 1 hour instead of 0
@@ -496,6 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (type === 'hourly') selectedDuration = 1;
         if (type === 'daily') selectedDuration = 8;
         if (type === 'multi_day' || type === 'weekly') selectedDuration = 8;
+        if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') selectedDuration = 4;
         durationSelect.value = selectedDuration;
     }
 
@@ -540,6 +539,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (selectedBookingType === 'daily' || selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
             selectedDuration = 8;
             durationSelect.value = '8';
+        } else if (selectedBookingType === 'picnic' || selectedBookingType === 'photoshoot' || selectedBookingType === 'videoshoot') {
+            selectedDuration = 4;
+            durationSelect.value = '4';
         }
         
         // Handle different booking types

@@ -168,7 +168,6 @@ function validateFileUpload($file, $allowedTypes = [
     }
     
     $detectedMimeType = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
     
     if (!$detectedMimeType) {
         return ['valid' => false, 'error' => 'File validation failed - cannot detect MIME type'];

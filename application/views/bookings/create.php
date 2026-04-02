@@ -152,19 +152,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
                     </div>
 
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-4 mb-3" id="guests-container">
                         <label class="form-label">Number of Guests</label>
-                        <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="0" value="<?= isset($old_input['number_of_guests']) ? (int)$old_input['number_of_guests'] : 0 ?>">
+                        <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="1" value="<?= isset($old_input['number_of_guests']) ? max(1, (int)$old_input['number_of_guests']) : 1 ?>">
                         <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
                     </div>
 
                     <div class="col-md-4 mb-3" id="equipment-tier-container" style="display: none;">
-                        <label class="form-label">Equipment Tier <i class="bi bi-info-circle text-muted" title="Surcharge based on equipment quantity"></i></label>
+                        <label class="form-label">Type <i class="bi bi-info-circle text-muted" title="Surcharge based on equipment/service level"></i></label>
                         <select name="equipment_tier" id="equipment_tier" class="form-select">
-                            <option value="">No Additional Equipment (Base Rate)</option>
-                            <option value="light" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'light') ? 'selected' : '' ?>>Light Equipment</option>
-                            <option value="medium" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'medium') ? 'selected' : '' ?>>Medium Equipment</option>
-                            <option value="heavy" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'heavy') ? 'selected' : '' ?>>Heavy Equipment</option>
+                            <option value="basic" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'basic') ? 'selected' : '' ?>>Basic</option>
+                            <option value="standard" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'standard') ? 'selected' : '' ?>>Standard</option>
+                            <option value="premium" <?= (isset($old_input['equipment_tier']) && $old_input['equipment_tier'] == 'premium') ? 'selected' : '' ?>>Premium</option>
                         </select>
                     </div>
                 </div>
@@ -627,6 +626,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         } else if (type === 'daily' || type === 'full_day') {
             options = '<option value="8">8 Hours</option><option value="12">12 Hours</option><option value="24">Full Day (24h)</option>';
             selectedDuration = 8;
+        } else if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') {
+            options = '<option value="4">4 Hours</option><option value="5">5 Hours</option><option value="6">6 Hours</option><option value="7">7 Hours</option><option value="8">8 Hours</option>';
+            selectedDuration = 4;
         } else {
             if (container) container.style.display = 'none';
             selectedDuration = (type === 'half_day') ? 4 : 24;
@@ -732,9 +734,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             updateDurationOptions(this.value);
             const edc = document.getElementById('end-date-container');
             const etc = document.getElementById('equipment-tier-container');
+            const gtc = document.getElementById('guests-container');
             
             if (edc) edc.style.display = (this.value === 'multi_day' || this.value === 'weekly') ? 'block' : 'none';
-            if (etc) etc.style.display = (this.value === 'picnic' || this.value === 'photoshoot' || this.value === 'videoshoot') ? 'block' : 'none';
+            if (gtc) gtc.style.display = (this.value === 'picnic' || this.value === 'workspace') ? 'block' : 'none';
+            if (etc) etc.style.display = (this.value === 'photoshoot' || this.value === 'videoshoot') ? 'block' : 'none';
             
             if (dom.date.value && currentSpaceData) loadTimeSlots(currentSpaceData.id, dom.date.value);
             calculatePrice();

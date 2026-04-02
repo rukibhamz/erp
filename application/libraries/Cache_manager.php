@@ -17,7 +17,7 @@ class Cache_manager {
     private $default_ttl = 3600; // 1 hour
     
     public function __construct() {
-        $this->CI =& get_instance();
+        $this->CI = get_instance();
         
         // Set cache directory
         $this->cache_path = APPPATH . 'cache/';
