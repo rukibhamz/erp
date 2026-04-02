@@ -231,7 +231,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </button>
                             
                             <small class="text-muted d-block mt-2 text-center">
-                                By completing this booking, you agree to our terms and conditions
+                                By completing this booking, you agree to our terms and conditions.
+                                <br><strong class="text-danger">Notice: No refunds after payment.</strong>
                             </small>
                         </div>
                     </div>

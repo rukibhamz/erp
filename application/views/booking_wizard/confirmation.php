@@ -173,7 +173,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <li>A confirmation email will be sent to <strong><?= htmlspecialchars($booking['customer_email'] ?? '') ?></strong></li>
                     <li>Please complete payment as per the payment schedule</li>
                     <li>You will receive reminders before your booking date</li>
-                    <li>Contact us if you need to modify or cancel your booking</li>
+                    <li>Contact us if you need to modify your booking</li>
+                    <li class="text-danger"><strong>Note: No refunds after payment</strong></li>
                 </ul>
             </div>
 

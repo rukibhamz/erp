@@ -45,6 +45,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <p class="lead text-muted">Choose a location and then select the space you'd like to book</p>
                 <div class="alert alert-warning d-inline-block">
                     <i class="bi bi-clock-history"></i> <strong>Notice:</strong> Spaces are bookable between <strong>9:00 AM and 8:00 PM</strong> daily.
+                    <br><i class="bi bi-exclamation-triangle"></i> <strong>Policy:</strong> No refunds after payment.
                 </div>
             </div>
 
