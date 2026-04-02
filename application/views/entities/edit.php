@@ -1,5 +1,9 @@
 <?php
 $page_title = $page_title ?? 'Edit Entity';
+if (empty($entity)) {
+    echo '<div class="alert alert-danger">Entity not found.</div>';
+    return;
+}
 ?>
 
 <div class="page-header">

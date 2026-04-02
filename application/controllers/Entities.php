@@ -101,8 +101,13 @@ class Entities extends Base_Controller {
     public function edit($id) {
         $this->requirePermission('entities', 'update');
         
-        $entity = $this->entityModel->getById($id);
-        
+        $entity = null;
+        try {
+            $entity = $this->entityModel->getById($id);
+        } catch (Exception $e) {
+            error_log('Entity edit load error: ' . $e->getMessage());
+        }
+
         if (!$entity) {
             $this->setFlashMessage('danger', 'Entity not found.');
             redirect('entities');
