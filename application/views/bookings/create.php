@@ -363,16 +363,24 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         if (dispEl) dispEl.textContent = display;
 
         // Visual Highlighting
-        if (lastSelectedBtn) lastSelectedBtn.classList.remove('active');
+        document.querySelectorAll('.slot-btn').forEach(b => {
+             b.classList.remove('active', 'btn-success');
+             if (b.classList.contains('available-slot')) {
+                 b.classList.add('btn-outline-success');
+             }
+        });
+
         if (btn) {
-            btn.classList.add('active');
+            btn.classList.add('active', 'btn-success');
+            btn.classList.remove('btn-outline-success');
             lastSelectedBtn = btn;
         } else {
-            // Try to find the button if not provided (e.g. from selectSlot)
+            // Try to find the button if not provided
             const allBtn = document.querySelectorAll('.slot-btn');
             allBtn.forEach(b => {
                 if (b.dataset.start === start) {
-                    b.classList.add('active');
+                    b.classList.add('active', 'btn-success');
+                    b.classList.remove('btn-outline-success');
                     lastSelectedBtn = b;
                 }
             });
@@ -382,22 +390,32 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     };
 
     window.selectSlot = function(start, end, btn = null) {
-        console.log('DEBUG: selectSlot called', {start, end, selectedDuration});
-        try {
-            let [h, m] = start.split(':').map(Number);
-            let dur = parseInt(selectedDuration) || 1;
-            h += dur;
-            
-            let endH = h > 23 ? 23 : h; 
-            let endM = m;
-            let endStr = `${String(endH).padStart(2,'0')}:${String(endM).padStart(2,'0')}`;
-            
-            window.setSelection(start, endStr, `${start} - ${endStr}`, btn);
-        } catch (e) {
-            console.error('selectSlot error:', e);
-            alert('Error selecting slot.');
-        }
+        // Simplified for pre-calculated blocks
+        const startDisplay = formatDisplayTime(parseTime(start));
+        const endDisplay = formatDisplayTime(parseTime(end));
+        window.setSelection(start, end, `${startDisplay} - ${endDisplay}`, btn);
     };
+
+    function parseTime(t) {
+        if (!t) return 0;
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    }
+
+    function formatTime(minutes) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    function formatDisplayTime(minutes) {
+        let h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12;
+        return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+    }
 
     function calculatePrice() {
         const pp = document.getElementById('pricePreview');
@@ -669,17 +687,74 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     }
 
     function renderSlots(slots) {
-        let html = '';
-        slots.forEach(s => {
-            let cls = 'btn-outline-dark disabled';
-            if (s.available) cls = 'btn-outline-success slot-btn';
-            else if (s.is_buffer) cls = 'btn-warning disabled opacity-75';
-            else cls = 'btn-danger disabled opacity-50';
+        const container = document.getElementById('time-slots-container');
+        let renderedBoxes = [];
+        
+        // Filter available slots
+        const availableSlots = slots.filter(s => s.available);
+        const occupiedSlots = slots.filter(s => !s.available);
+
+        availableSlots.forEach(slot => {
+            const startMin = parseTime(slot.start);
+            const targetEndMin = startMin + (selectedDuration * 60);
             
-            const action = s.available ? `data-action="selectSlot" data-start="${s.start}" data-end="${s.end}"` : '';
-            html += `<div class="col-md-3 col-6"><button type="button" class="btn ${cls} w-100 shadow-sm mb-2" ${action}>${s.display}</button></div>`;
+            let isFeasible = true;
+            if (selectedDuration > 1) {
+                for (let i = 1; i < selectedDuration; i++) {
+                    const requiredStart = formatTime(startMin + (i * 60));
+                    const foundNext = availableSlots.find(s => s.start === requiredStart);
+                    if (!foundNext) {
+                        isFeasible = false;
+                        break;
+                    }
+                }
+            }
+
+            if (isFeasible && targetEndMin <= 24 * 60) {
+                const endDisplay = formatDisplayTime(targetEndMin);
+                const endDbStr = formatTime(targetEndMin);
+                
+                renderedBoxes.push({
+                    startMin: startMin,
+                    html: `
+                    <div class="col-md-4 col-lg-3">
+                        <button type="button" class="btn btn-outline-success w-100 slot-btn available-slot h-100 py-3 mb-2" 
+                                data-action="selectSlot"
+                                data-start="${slot.start}" 
+                                data-end="${endDbStr}">
+                            <div class="fw-bold">${formatDisplayTime(startMin)} - ${endDisplay}</div>
+                            <div class="small">${selectedDuration} Hour${selectedDuration > 1 ? 's' : ''}</div>
+                        </button>
+                    </div>`
+                });
+            }
         });
-        document.getElementById('time-slots-container').innerHTML = html || '<p class="text-center w-100">No slots available</p>';
+
+        occupiedSlots.forEach(slot => {
+            const startMin = parseTime(slot.start);
+            let btnClass = slot.is_buffer ? 'btn-warning' : 'btn-danger';
+            let label = slot.is_buffer ? 'Buffer' : 'Occupied';
+            
+            renderedBoxes.push({
+                startMin: startMin,
+                html: `
+                <div class="col-md-4 col-lg-3">
+                    <button type="button" class="btn ${btnClass} w-100 slot-btn occupied disabled h-100 py-3 mb-2" disabled>
+                        <div class="fw-bold">${slot.display}</div>
+                        <div class="small">${label}</div>
+                    </button>
+                </div>`
+            });
+        });
+
+        // Sort boxes by start time
+        renderedBoxes.sort((a, b) => a.startMin - b.startMin);
+        
+        if (renderedBoxes.length === 0) {
+            container.innerHTML = '<div class="col-12"><div class="alert alert-info">No available slots for the selected duration.</div></div>';
+        } else {
+            container.innerHTML = renderedBoxes.map(b => b.html).join('');
+        }
     }
 
     function renderFullDay(data) {

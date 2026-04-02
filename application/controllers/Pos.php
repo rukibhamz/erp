@@ -475,10 +475,10 @@ class Pos extends Base_Controller {
     
     public function terminals() {
         // Allow admin and super_admin to manage terminals (they have all permissions)
-        // For other roles, require 'pos.manage' permission
+        // For other roles, require 'pos.write' permission (manager has it, staff does not)
         $userRole = $this->session['role'] ?? '';
         if (!in_array($userRole, ['super_admin', 'admin'])) {
-            $this->requirePermission('pos', 'manage');
+            $this->requirePermission('pos', 'write');
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['terminal_code'])) {
