@@ -19,6 +19,8 @@ class Bookings extends Base_Controller {
     private $spaceModel;
     private $locationModel;
     private $transactionService;
+    private $invoiceModel;
+    private $journalModel;
 
     public function __construct() {
         parent::__construct();
@@ -39,6 +41,8 @@ class Bookings extends Base_Controller {
         $this->bookingModificationModel = $this->loadModel('Booking_modification_model');
         $this->locationModel = $this->loadModel('Location_model');
         $this->spaceModel = $this->loadModel('Space_model');
+        $this->invoiceModel = $this->loadModel('Invoice_model');
+        $this->journalModel = $this->loadModel('Journal_entry_model');
         
         // Load Transaction Service
         $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
@@ -1910,5 +1914,97 @@ class Bookings extends Base_Controller {
             $this->setFlashMessage('danger', 'Failed to return equipment: ' . $e->getMessage());
             redirect('bookings');
         }
+    }
+
+    /**
+     * Delete a booking - Super Admin only
+     * Exhaustive cleanup of all related records
+     */
+    public function delete($id) {
+        if (($this->session['role'] ?? '') !== 'super_admin') {
+            $this->setFlashMessage('danger', 'Access denied. Super Admin only.');
+            redirect('bookings');
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('bookings');
+            return;
+        }
+
+        check_csrf();
+        $id = intval($id);
+        
+        try {
+            $booking = $this->bookingModel->getById($id);
+            if (!$booking) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('bookings');
+                return;
+            }
+
+            $this->db->beginTransaction();
+
+            // 1. Handle Invoices and related accounting
+            $invoiceId = $booking['invoice_id'] ?? null;
+            if (!$invoiceId) {
+                // Try finding by reference if invoice_id is null
+                $invoice = $this->db->fetchOne(
+                    "SELECT id FROM `" . $this->db->getPrefix() . "invoices` WHERE reference = ?",
+                    ['BKG-' . $id]
+                );
+                $invoiceId = $invoice ? $invoice['id'] : null;
+            }
+
+            if ($invoiceId) {
+                // Delete Invoice Items
+                $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "invoice_items` WHERE invoice_id = ?", [$invoiceId]);
+                
+                // Delete Transactions linked to invoice
+                $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "transactions` WHERE reference_type = 'invoice' AND reference_id = ?", [$invoiceId]);
+                
+                // Delete Journal Entries linked to invoice
+                $journals = $this->db->fetchAll("SELECT id FROM `" . $this->db->getPrefix() . "journal_entries` WHERE reference = ?", ['booking_invoice:' . $invoiceId]);
+                foreach ($journals as $j) {
+                    $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entries` WHERE id = ?", [$j['id']]);
+                }
+                
+                // Finally delete invoice
+                $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "invoices` WHERE id = ?", [$invoiceId]);
+            }
+
+            // 2. Handle Booking Payments and related accounting
+            $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "transactions` WHERE reference_type = 'booking_payment' AND reference_id = ?", [$id]);
+            
+            $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_payments` WHERE booking_id = ?", [$id]);
+
+            // 3. Delete Metadata
+            $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_slots` WHERE booking_id = ?", [$id]);
+            $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_resources` WHERE booking_id = ?", [$id]);
+            $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_addons` WHERE booking_id = ?", [$id]);
+            $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "payment_schedule` WHERE booking_id = ?", [$id]);
+            $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_rentals` WHERE booking_id = ?", [$id]);
+
+            // 4. Delete Booking
+            if ($this->bookingModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Bookings', 'Exhaustive delete for booking: ' . $booking['booking_number']);
+                $this->db->commit();
+                $this->setFlashMessage('success', 'Booking and all associated records deleted successfully.');
+            } else {
+                $this->db->rollBack();
+                $this->setFlashMessage('danger', 'Failed to delete booking record.');
+            }
+
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log('Bookings delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting booking: ' . $e->getMessage());
+        }
+
+        redirect('bookings');
     }
 }

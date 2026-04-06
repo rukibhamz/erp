@@ -132,10 +132,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                             <?php endif; ?>
-                                            <?php if (($invoice['balance_amount'] ?? 0) > 0): ?>
                                                 <a href="<?= base_url('receivables/invoices/payment/' . intval($invoice['id'])) ?>" class="btn btn-outline-success" title="Record Payment">
                                                     <i class="bi bi-cash-coin"></i>
                                                 </a>
+                                            <?php if (isSuperAdmin()): ?>
+                                                <form method="POST" action="<?= base_url('receivables/deleteInvoice/' . intval($invoice['id'])) ?>" 
+                                                      style="display: inline;" 
+                                                      onsubmit="return confirm('Are you sure you want to delete this invoice? This will also delete associated transactions and journal entries!');">
+                                                    <?php echo csrf_field(); ?>
+                                                    <button type="submit" class="btn btn-danger" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
                                             <?php endif; ?>
                                         <?php else: ?>
                                             <span class="text-muted">N/A</span>

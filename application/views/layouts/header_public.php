@@ -57,3 +57,10 @@
         </div>
     <?php endif; ?>
 
+    <?php if (!empty($maintenance_mode) && intval($maintenance_mode) === 1 && empty($is_super_admin)): ?>
+        <div class="alert alert-warning border-0 rounded-0 text-center py-3" role="alert" style="margin-bottom: 0; background-color: #fff3cd; color: #856404;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>System Maintenance in Progress:</strong> You can browse spaces and check availability, but online bookings are temporarily disabled.
+        </div>
+    <?php endif; ?>
+

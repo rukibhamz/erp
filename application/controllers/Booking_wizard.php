@@ -419,6 +419,15 @@ class Booking_wizard extends Base_Controller {
      * Step 2: Choose Date, Time, and Booking Type
      */
     public function step2($spaceId) {
+        // --- MAINTENANCE MODE CHECK ---
+        $maintenanceMode = $this->getSetting('maintenance_mode');
+        $isSuperAdmin = isset($this->session['role']) && $this->session['role'] === 'super_admin';
+        if ($maintenanceMode && intval($maintenanceMode) === 1 && !$isSuperAdmin) {
+            $this->setFlashMessage('warning', 'Booking is temporarily disabled for maintenance. You can only view and browse spaces at this time.');
+            redirect('booking-wizard/step1');
+            return;
+        }
+
         try {
             // Get space with location info
             $space = $this->spaceModel->getWithProperty($spaceId);
@@ -889,6 +898,15 @@ class Booking_wizard extends Base_Controller {
                 exit;
             }
 
+            // --- MAINTENANCE MODE CHECK ---
+            $maintenanceMode = $this->getSetting('maintenance_mode');
+            $isSuperAdmin = isset($this->session['role']) && $this->session['role'] === 'super_admin';
+            if ($maintenanceMode && intval($maintenanceMode) === 1 && !$isSuperAdmin) {
+                // Allow browsing but block step progression
+                echo json_encode(['success' => false, 'message' => 'Online booking is temporarily disabled for maintenance.']);
+                exit;
+            }
+
             $step = intval($_POST['step'] ?? 0);
             $rawData = $_POST['data'] ?? '';
             
@@ -1017,6 +1035,15 @@ class Booking_wizard extends Base_Controller {
         }
         
         $bookingData = $_SESSION['booking_data'] ?? [];
+        
+        // --- MAINTENANCE MODE CHECK ---
+        $maintenanceMode = $this->getSetting('maintenance_mode');
+        $isSuperAdmin = isset($this->session['role']) && $this->session['role'] === 'super_admin';
+        if ($maintenanceMode && intval($maintenanceMode) === 1 && !$isSuperAdmin) {
+            $this->setFlashMessage('warning', 'Booking is temporarily disabled for maintenance. We apologize for any inconvenience.');
+            redirect('booking-wizard/step5');
+            return;
+        }
         
         if (empty($bookingData['resource_id']) || empty($bookingData['customer_email'])) {
             error_log("FINALIZE: Missing data - resource_id: " . ($bookingData['resource_id'] ?? 'null') . " email: " . ($bookingData['customer_email'] ?? 'null'));

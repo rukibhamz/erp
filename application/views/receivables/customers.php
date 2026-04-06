@@ -91,6 +91,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <a href="<?= base_url('receivables/invoices/create?customer_id=' . intval($customer['id'])) ?>" class="btn btn-success" title="Create Invoice">
                                             <i class="bi bi-plus-circle"></i>
                                         </a>
+                                        <?php if (isSuperAdmin()): ?>
+                                            <form method="POST" action="<?= base_url('receivables/deleteCustomer/' . intval($customer['id'])) ?>" 
+                                                  style="display: inline;" 
+                                                  onsubmit="return confirm('Are you sure you want to delete this customer?');">
+                                                <?php echo csrf_field(); ?>
+                                                <button type="submit" class="btn btn-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

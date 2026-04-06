@@ -152,7 +152,7 @@ class Space_model extends Base_Model {
             );
             
             if ($photo && !empty($photo['photo_url'])) {
-                $filePath = FCPATH . $photo['photo_url'];
+                $filePath = ROOTPATH . $photo['photo_url'];
                 if (file_exists($filePath)) {
                     unlink($filePath);
                 }

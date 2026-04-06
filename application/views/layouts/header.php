@@ -352,3 +352,14 @@
             </div>
         <?php endif; ?>
 
+        <?php if (!empty($maintenance_mode) && intval($maintenance_mode) === 1): ?>
+            <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+                <i class="bi bi-info-circle-fill me-3 fs-4 text-info"></i>
+                <div>
+                    <strong>System Maintenance Mode:</strong> The application is currently in maintenance mode. 
+                    Administrators have full access, but general users are redirected and public bookings are disabled.
+                    <a href="<?= base_url('settings/system?tab=preferences') ?>" class="alert-link ms-2 text-decoration-underline">Manage Settings</a>
+                </div>
+            </div>
+        <?php endif; ?>
+

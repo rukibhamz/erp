@@ -1674,5 +1674,174 @@ class Receivables extends Base_Controller {
         
         $this->loadView('receivables/create_payment', $data);
     }
+
+    /**
+     * Permanent Exhaustive Customer Deletion - Super Admin only
+     */
+    public function deleteCustomer($id) {
+        $this->requireRole('super_admin');
+        check_csrf();
+        
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid customer ID.');
+            redirect('receivables/customers');
+            return;
+        }
+        
+        try {
+            $customer = $this->customerModel->getById($id);
+            if (!$customer) {
+                $this->setFlashMessage('danger', 'Customer not found.');
+                redirect('receivables/customers');
+                return;
+            }
+            
+            error_log("Receivables deleteCustomer: Starting cascading delete for customer ID: {$id} ({$customer['company_name']})");
+            $this->db->beginTransaction();
+            $prefix = $this->db->getPrefix();
+            
+            // 1. Get all customer invoices, payments, and bookings 
+            $invoices = $this->db->fetchAll("SELECT id FROM `{$prefix}invoices` WHERE customer_id = ?", [$id]);
+            $payments = $this->db->fetchAll("SELECT id FROM `{$prefix}payments` WHERE customer_id = ?", [$id]);
+            $bookings = $this->db->fetchAll("SELECT id FROM `{$prefix}bookings` WHERE customer_id = ?", [$id]);
+            
+            // 2. Cascade delete for each invoice (Items, Journal Entries, Transactions)
+            foreach ($invoices as $invoice) {
+                $invId = $invoice['id'];
+                $this->db->query("DELETE FROM `{$prefix}invoice_items` WHERE invoice_id = ?", [$invId]);
+                $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE invoice_id = ?", [$invId]);
+                $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'invoice' AND reference_id = ?", [$invId]);
+                
+                $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'invoice' AND reference_id = ?", [$invId]);
+                foreach ($journals as $j) {
+                    $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
+                }
+            }
+            
+            // 3. Cascade delete for each payment
+            foreach ($payments as $payment) {
+                $payId = $payment['id'];
+                $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE payment_id = ?", [$payId]);
+                $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'payment' AND reference_id = ?", [$payId]);
+                
+                $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'payment' AND reference_id = ?", [$payId]);
+                foreach ($journals as $j) {
+                    $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
+                }
+            }
+
+            // 4. Cascade delete for each booking
+            foreach ($bookings as $booking) {
+                $bId = $booking['id'];
+                $this->db->query("DELETE FROM `{$prefix}booking_payments` WHERE booking_id = ?", [$bId]);
+                $this->db->query("DELETE FROM `{$prefix}booking_slots` WHERE booking_id = ?", [$bId]);
+                $this->db->query("DELETE FROM `{$prefix}booking_resources` WHERE booking_id = ?", [$bId]);
+                $this->db->query("DELETE FROM `{$prefix}booking_addons` WHERE booking_id = ?", [$bId]);
+                $this->db->query("DELETE FROM `{$prefix}payment_schedule` WHERE booking_id = ?", [$bId]);
+                $this->db->query("DELETE FROM `{$prefix}booking_rentals` WHERE booking_id = ?", [$bId]);
+                
+                // Transactions for booking payments
+                $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'booking_payment' AND reference_id IN (SELECT id FROM `{$prefix}booking_payments` WHERE booking_id = ?)", [$bId]);
+            }
+            
+            $this->db->query("DELETE FROM `{$prefix}payments` WHERE customer_id = ?", [$id]);
+            $this->db->query("DELETE FROM `{$prefix}invoices` WHERE customer_id = ?", [$id]);
+            $this->db->query("DELETE FROM `{$prefix}bookings` WHERE customer_id = ?", [$id]);
+
+            // 5. Delete Customer Portal User
+            if (!empty($customer['email'])) {
+                $this->db->query("DELETE FROM `{$prefix}customer_portal_users` WHERE email = ?", [$customer['email']]);
+            }
+            
+            // 6. Delete Ledger Account (1200-XXXX)
+            $accountCode = '1200-' . str_pad($id, 4, '0', STR_PAD_LEFT);
+            $account = $this->db->fetchOne("SELECT id FROM `{$prefix}accounts` WHERE account_code = ?", [$accountCode]);
+            if ($account) {
+                $this->db->query("DELETE FROM `{$prefix}transactions` WHERE account_id = ?", [$account['id']]);
+                $this->db->query("DELETE FROM `{$prefix}accounts` WHERE id = ?", [$account['id']]);
+            }
+            
+            // 7. Delete the customer Record
+            if ($this->customerModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Receivables', 'Exhaustive delete for customer: ' . $customer['company_name']);
+                $this->db->commit();
+                $this->setFlashMessage('success', 'Customer and all associated records permanently deleted.');
+            } else {
+                $this->db->rollBack();
+                $this->setFlashMessage('danger', 'Failed to delete customer record.');
+            }
+            
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log('Receivables deleteCustomer error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting customer: ' . $e->getMessage());
+        }
+        
+        redirect('receivables/customers');
+    }
+
+    /**
+     * Exhaustive Invoice Deletion - Super Admin only
+     */
+    public function deleteInvoice($id) {
+        $this->requireRole('super_admin');
+        check_csrf();
+        
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid invoice ID.');
+            redirect('receivables/invoices');
+            return;
+        }
+        
+        try {
+            $invoice = $this->invoiceModel->getById($id);
+            if (!$invoice) {
+                $this->setFlashMessage('danger', 'Invoice not found.');
+                redirect('receivables/invoices');
+                return;
+            }
+
+            $this->db->beginTransaction();
+            $prefix = $this->db->getPrefix();
+
+            // 1. Delete items and allocations
+            $this->db->query("DELETE FROM `{$prefix}invoice_items` WHERE invoice_id = ?", [$id]);
+            $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE invoice_id = ?", [$id]);
+
+            // 2. Delete transactions
+            $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'invoice' AND reference_id = ?", [$id]);
+
+            // 3. Delete journal entries
+            $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'invoice' AND reference_id = ?", [$id]);
+            foreach ($journals as $j) {
+                $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
+            }
+
+            // 4. Delete invoice record
+            if ($this->invoiceModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Receivables', 'Deleted invoice: ' . $invoice['invoice_number']);
+                $this->db->commit();
+                $this->setFlashMessage('success', 'Invoice and all associated records deleted successfully.');
+            } else {
+                $this->db->rollBack();
+                $this->setFlashMessage('danger', 'Failed to delete invoice.');
+            }
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log('Receivables deleteInvoice error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting invoice: ' . $e->getMessage());
+        }
+
+        redirect('receivables/invoices');
+    }
 }
 

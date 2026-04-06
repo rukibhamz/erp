@@ -119,9 +119,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 <i class="bi bi-pencil"></i>
                                             </a>
                                         <?php endif; ?>
-                                        <?php if (hasPermission('accounting', 'delete') && ($txn['status'] ?? '') !== 'posted'): ?>
-                                            <form method="POST" action="<?= base_url('transactions/delete/' . intval($txn['id'])) ?>
-<?php echo csrf_field(); ?>" 
+                                        <?php if (hasPermission('accounting', 'delete') && (($txn['status'] ?? '') !== 'posted' || isSuperAdmin())): ?>
+                                            <form method="POST" action="<?= base_url('transactions/delete/' . intval($txn['id'])) ?>" 
+
                                                   style="display: inline;" 
                                                   onsubmit="return confirm('Are you sure you want to delete this transaction?');">
                                                 <?php echo csrf_field(); ?>

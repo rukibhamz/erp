@@ -96,8 +96,12 @@ class Base_Controller {
         // Check authentication for protected pages
         $this->checkAuth();
         
+        
         // Run authorization checks (before filter)
         $this->checkAuthorization();
+        
+        // Final check: Maintenance Mode enforcement
+        $this->checkMaintenanceMode();
     }
     
     protected function checkModuleAccess() {
@@ -177,6 +181,11 @@ class Base_Controller {
     protected function loadView($view, $data = []) {
         $data['config'] = $this->config;
         $data['session'] = $this->session;
+        
+        // Pass maintenance mode to all views
+        $data['maintenance_mode'] = $this->getSetting('maintenance_mode');
+        $data['is_super_admin'] = isset($this->session['role']) && $this->session['role'] === 'super_admin';
+        
         $data['current_user'] = $this->getCurrentUser();
         
         // Load notifications for logged-in users
@@ -373,6 +382,70 @@ class Base_Controller {
         // For example, checking module access is already done in checkModuleAccess()
     }
     
+    /**
+     * Check if maintenance mode is enabled and enforce restrictions
+     */
+    protected function checkMaintenanceMode() {
+        // Super Admin bypasses maintenance mode
+        if (isset($this->session['role']) && $this->session['role'] === 'super_admin') {
+            return;
+        }
+
+        $maintenanceMode = $this->getSetting('maintenance_mode');
+        
+        if ($maintenanceMode && intval($maintenanceMode) === 1) {
+            $currentClass = strtolower(get_class($this));
+            
+            // Exemptions: Auth (so admins can login) and Booking_wizard (per request)
+            $exemptions = ['auth', 'booking_wizard', 'error404'];
+            
+            if (!in_array($currentClass, $exemptions)) {
+                // If not exempt, redirect to the maintenance page
+                // Note: We don't have a 'maintenance' controller yet, so we'll use a direct view or a special route
+                // For now, let's load a dedicated Maintenance View and exit
+                $this->showMaintenanceView();
+            }
+        }
+    }
+
+    /**
+     * Get a setting value from the database
+     */
+    protected function getSetting($key) {
+        if (!$this->db) {
+            return null;
+        }
+        
+        try {
+            $prefix = $this->db->getPrefix();
+            $result = $this->db->fetchOne(
+                "SELECT setting_value FROM `{$prefix}settings` WHERE setting_key = ?",
+                [$key]
+            );
+            return $result ? $result['setting_value'] : null;
+        } catch (Exception $e) {
+            error_log("Base_Controller getSetting error ($key): " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Show the dedicated maintenance view and terminate
+     */
+    protected function showMaintenanceView() {
+        $data = [
+            'page_title' => 'System Maintenance',
+            'config' => $this->config,
+            'session' => $this->session
+        ];
+        
+        // We'll use a simple standalone layout for maintenance
+        $this->loader->view('layouts/header_public', $data);
+        $this->loader->view('errors/html/maintenance', $data);
+        $this->loader->view('layouts/footer_public', $data);
+        exit;
+    }
+
     /**
      * Check if a column exists in a table
      * SECURITY: Uses parameterized query to prevent SQL injection

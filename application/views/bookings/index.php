@@ -125,9 +125,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         </span>
                                     </td>
                                     <td>
-                                        <a href="<?= base_url('bookings/view/' . $booking['id']) ?>" class="btn btn-sm btn-primary">
+                                        <a href="<?= base_url('bookings/view/' . $booking['id']) ?>" class="btn btn-sm btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        <?php if (isSuperAdmin()): ?>
+                                            <form method="POST" action="<?= base_url('bookings/delete/' . intval($booking['id'])) ?>" 
+                                                  style="display: inline;" 
+                                                  onsubmit="return confirm('Are you sure you want to delete this booking? This will also delete associated invoices and transactions!');">
+                                                <?php echo csrf_field(); ?>
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

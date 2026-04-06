@@ -336,6 +336,12 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring booking_payments table: " . $e->getMessage());
         }
+
+        try {
+            $this->ensurePaymentScheduleTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring payment_schedule table: " . $e->getMessage());
+        }
         
         // ALWAYS ensure space_bookings has payment verification columns
         try {
@@ -2137,8 +2143,8 @@ class AutoMigration {
                     `booking_id` INT(11) NOT NULL,
                     `resource_id` INT(11) NULL,
                     `resource_type` VARCHAR(50) DEFAULT 'facility',
-                    `start_time` TIME NULL,
-                    `end_time` TIME NULL,
+                    `start_time` DATETIME NULL,
+                    `end_time` DATETIME NULL,
                     `quantity` INT(11) DEFAULT 1,
                     `rate` DECIMAL(15,2) DEFAULT 0.00,
                     `rate_type` VARCHAR(20) DEFAULT 'hourly',
@@ -2799,7 +2805,43 @@ class AutoMigration {
             }
             return true;
         } catch (Exception $e) {
-            error_log("AutoMigration: ERROR ensuring bookable_config table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure payment_schedule table exists
+     */
+    private function ensurePaymentScheduleTable() {
+        try {
+            $tableName = "{$this->prefix}payment_schedule";
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$tableName}'");
+            
+            if ($stmt && count($stmt->fetchAll()) == 0) {
+                $sql = "CREATE TABLE IF NOT EXISTS `{$tableName}` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `booking_id` INT(11) NOT NULL,
+                    `payment_number` INT(11) NOT NULL,
+                    `due_date` DATE NOT NULL,
+                    `amount` DECIMAL(15,2) NOT NULL,
+                    `paid_amount` DECIMAL(15,2) DEFAULT 0.00,
+                    `status` ENUM('pending', 'partial', 'paid', 'overdue') DEFAULT 'pending',
+                    `paid_at` DATETIME DEFAULT NULL,
+                    `reminder_sent` TINYINT(1) DEFAULT 0,
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_booking_id` (`booking_id`),
+                    KEY `idx_due_date` (`due_date`),
+                    KEY `idx_status` (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created payment_schedule table");
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring payment_schedule table: " . $e->getMessage());
             return false;
         }
     }

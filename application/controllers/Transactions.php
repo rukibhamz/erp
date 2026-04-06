@@ -323,11 +323,25 @@ class Transactions extends Base_Controller {
                 return;
             }
             
-            // Don't allow deleting posted transactions
+            // Only allow super_admin to delete posted transactions
             if ($transaction['status'] === 'posted') {
-                $this->setFlashMessage('danger', 'Cannot delete posted transactions.');
-                redirect('transactions');
-                return;
+                if (($this->session['role'] ?? '') !== 'super_admin') {
+                    $this->setFlashMessage('danger', 'Cannot delete posted transactions.');
+                    redirect('transactions');
+                    return;
+                }
+                
+                // Reverse account balance before deleting posted transaction
+                try {
+                    $this->accountModel->updateBalance(
+                        $transaction['account_id'], 
+                        $transaction['debit'] > 0 ? $transaction['debit'] : $transaction['credit'], 
+                        $transaction['debit'] > 0 ? 'credit' : 'debit' // Reverse direction
+                    );
+                } catch (Exception $accEx) {
+                    error_log('Transactions delete balance reversal error: ' . $accEx->getMessage());
+                    // Continue with deletion anyway if user is super_admin
+                }
             }
             
             if ($this->transactionModel->delete($id)) {
