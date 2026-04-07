@@ -389,6 +389,9 @@ class Router {
                 if ($methodPart === 'vendors' && $actionPart === 'edit') {
                     $this->method = 'editVendor';
                     $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'vendors' && $actionPart === 'view') {
+                    $this->method = 'viewVendor';
+                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
                 } elseif ($methodPart === 'vendors' && $actionPart === 'delete') {
                     $this->method = 'deleteVendor';
                     $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];

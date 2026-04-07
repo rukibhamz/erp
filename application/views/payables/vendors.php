@@ -70,6 +70,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <a href="<?= base_url('payables/bills/create?vendor_id=' . intval($vendor['id'])) ?>" class="btn btn-success" title="Create Bill">
                                             <i class="bi bi-plus-circle"></i>
                                         </a>
+                                        <?php $role = $_SESSION['role'] ?? ''; if (in_array($role, ['super_admin', 'admin'])): ?>
+                                            <form method="POST" action="<?= base_url('payables/deleteVendor/' . intval($vendor['id'])) ?>" style="display:inline" onsubmit="return confirm('Permanently delete this vendor and all associated records? This cannot be undone.')">
+                                                <?php echo csrf_field(); ?>
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Delete Vendor">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

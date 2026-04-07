@@ -203,7 +203,38 @@ class Payables extends Base_Controller {
         
         $this->loadView('payables/edit_vendor', $data);
     }
-    
+
+    public function viewVendor($id) {
+        $this->requirePermission('payables', 'read');
+
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid vendor ID.');
+            redirect('payables/vendors');
+            return;
+        }
+
+        $vendor = $this->vendorModel->getById($id);
+        if (!$vendor) {
+            $this->setFlashMessage('danger', 'Vendor not found.');
+            redirect('payables/vendors');
+            return;
+        }
+
+        $bills = $this->billModel->getByVendor($id);
+        $outstanding = $this->vendorModel->getTotalOutstanding($id);
+
+        $data = [
+            'page_title' => 'Vendor: ' . ($vendor['company_name'] ?? 'N/A'),
+            'vendor'      => $vendor,
+            'bills'       => $bills,
+            'outstanding' => $outstanding,
+            'flash'       => $this->getFlashMessage()
+        ];
+
+        $this->loadView('payables/view_vendor', $data);
+    }
+
     public function bills() {
         $status = $_GET['status'] ?? null;
         $vendorId = $_GET['vendor_id'] ?? null;
