@@ -1085,13 +1085,13 @@ class Payables extends Base_Controller {
             }
             $this->db->query("DELETE FROM `{$prefix}bills` WHERE vendor_id = ?", [$id]);
 
-            // Delete vendor payments
-            $vendorPayments = $this->db->fetchAll("SELECT id FROM `{$prefix}vendor_payments` WHERE vendor_id = ?", [$id]);
+            // Delete vendor payments (stored in erp_payments with vendor_id)
+            $vendorPayments = $this->db->fetchAll("SELECT id FROM `{$prefix}payments` WHERE vendor_id = ?", [$id]);
             foreach ($vendorPayments as $vp) {
-                $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE vendor_payment_id = ?", [$vp['id']]);
+                $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE payment_id = ?", [$vp['id']]);
                 $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'vendor_payment' AND reference_id = ?", [$vp['id']]);
             }
-            $this->db->query("DELETE FROM `{$prefix}vendor_payments` WHERE vendor_id = ?", [$id]);
+            $this->db->query("DELETE FROM `{$prefix}payments` WHERE vendor_id = ?", [$id]);
 
             // Free up vendor code so it can be reassigned
             $this->db->query("UPDATE `{$prefix}vendors` SET vendor_code = NULL WHERE id = ?", [$id]);
