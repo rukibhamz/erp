@@ -392,6 +392,7 @@ class Base_Controller {
         }
 
         $maintenanceMode = $this->getSetting('maintenance_mode');
+        // DEBUG: error_log("Maintenance Mode Debug: value=" . var_export($maintenanceMode, true));
         
         if ($maintenanceMode && intval($maintenanceMode) === 1) {
             $currentClass = strtolower(get_class($this));
@@ -401,8 +402,6 @@ class Base_Controller {
             
             if (!in_array($currentClass, $exemptions)) {
                 // If not exempt, redirect to the maintenance page
-                // Note: We don't have a 'maintenance' controller yet, so we'll use a direct view or a special route
-                // For now, let's load a dedicated Maintenance View and exit
                 $this->showMaintenanceView();
             }
         }

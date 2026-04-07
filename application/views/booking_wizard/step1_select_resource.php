@@ -155,9 +155,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <a href="<?= base_url('booking-wizard/space/details/' . $space['id']) ?>" class="btn btn-outline-primary">
                                                         <i class="bi bi-info-circle"></i> View More
                                                     </a>
-                                                    <a href="<?= base_url('booking-wizard/step2/' . $space['id']) ?>" class="btn btn-primary">
-                                                        <i class="bi bi-calendar-check"></i> Select & Continue
-                                                    </a>
+                                                    <?php if (!empty($maintenance_mode) && intval($maintenance_mode) === 1 && empty($is_super_admin)): ?>
+                                                        <button class="btn btn-secondary" disabled title="Booking is temporarily disabled for maintenance">
+                                                            <i class="bi bi-tools"></i> Booking Disabled
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <a href="<?= base_url('booking-wizard/step2/' . $space['id']) ?>" class="btn btn-primary">
+                                                            <i class="bi bi-calendar-check"></i> Select & Continue
+                                                        </a>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </div>

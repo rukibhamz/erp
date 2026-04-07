@@ -208,6 +208,10 @@ class Booking_wizard extends Base_Controller {
         $data['config'] = $this->config;
         $data['session'] = $this->session;
         
+        // Pass maintenance mode to all views (Fix: Booking_wizard overrides parent::loadView)
+        $data['maintenance_mode'] = $this->getSetting('maintenance_mode');
+        $data['is_super_admin'] = isset($this->session['role']) && $this->session['role'] === 'super_admin';
+        
         $this->loader->view('layouts/header_public', $data);
         $this->loader->view($view, $data);
         $this->loader->view('layouts/footer_public', $data);
