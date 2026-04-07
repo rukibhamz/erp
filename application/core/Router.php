@@ -299,6 +299,18 @@ class Router {
                 } elseif ($methodPart === 'customers' && $actionPart === 'history') {
                     $this->method = 'customerHistory';
                     $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'deleteCustomer') {
+                    $this->method = 'deleteCustomer';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
+                } elseif ($methodPart === 'editCustomer') {
+                    $this->method = 'editCustomer';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
+                } elseif ($methodPart === 'viewCustomer') {
+                    $this->method = 'viewCustomer';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
+                } elseif ($methodPart === 'customerHistory') {
+                    $this->method = 'customerHistory';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
                 } else {
                     // Generic mapping: receivables/method/param
                     $this->method = $actionPart ?: ($methodPart ?: 'customers');
