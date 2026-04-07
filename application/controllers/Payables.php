@@ -1009,41 +1009,79 @@ class Payables extends Base_Controller {
     }
     
     /**
-     * Delete vendor
+     * Delete vendor - Admin and Super Admin only
      */
     public function deleteVendor($id) {
-        $this->requirePermission('payables', 'delete');
-        
+        $userRole = $this->session['role'] ?? '';
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
+            $this->setFlashMessage('danger', 'You do not have permission to delete vendors.');
+            redirect('payables/vendors');
+            return;
+        }
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->setFlashMessage('danger', 'Invalid request method.');
             redirect('payables/vendors');
             return;
         }
-        
+
         check_csrf(); // CSRF Protection
-        
+
+        $id = intval($id);
         $vendor = $this->vendorModel->getById($id);
         if (!$vendor) {
             $this->setFlashMessage('danger', 'Vendor not found.');
             redirect('payables/vendors');
             return;
         }
-        
-        // Check if vendor has outstanding bills
-        $outstanding = $this->vendorModel->getTotalOutstanding($id);
-        if ($outstanding > 0) {
-            $this->setFlashMessage('danger', 'Cannot delete vendor with outstanding balance. Please settle all bills first.');
-            redirect('payables/vendors');
-            return;
+
+        try {
+            $this->db->beginTransaction();
+            $prefix = $this->db->getPrefix();
+
+            // Cascade delete bills and related records
+            $bills = $this->db->fetchAll("SELECT id FROM `{$prefix}bills` WHERE vendor_id = ?", [$id]);
+            foreach ($bills as $bill) {
+                $bId = $bill['id'];
+                $this->db->query("DELETE FROM `{$prefix}bill_items` WHERE bill_id = ?", [$bId]);
+                $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE bill_id = ?", [$bId]);
+                $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'bill' AND reference_id = ?", [$bId]);
+                $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'bill' AND reference_id = ?", [$bId]);
+                foreach ($journals as $j) {
+                    $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
+                }
+            }
+            $this->db->query("DELETE FROM `{$prefix}bills` WHERE vendor_id = ?", [$id]);
+
+            // Delete vendor payments
+            $vendorPayments = $this->db->fetchAll("SELECT id FROM `{$prefix}vendor_payments` WHERE vendor_id = ?", [$id]);
+            foreach ($vendorPayments as $vp) {
+                $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE vendor_payment_id = ?", [$vp['id']]);
+                $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'vendor_payment' AND reference_id = ?", [$vp['id']]);
+            }
+            $this->db->query("DELETE FROM `{$prefix}vendor_payments` WHERE vendor_id = ?", [$id]);
+
+            // Free up vendor code so it can be reassigned
+            $this->db->query("UPDATE `{$prefix}vendors` SET vendor_code = NULL WHERE id = ?", [$id]);
+
+            // Delete the vendor record
+            if ($this->vendorModel->delete($id)) {
+                $this->activityModel->log($this->session['user_id'], 'delete', 'Payables', 'Deleted vendor: ' . $vendor['company_name']);
+                $this->db->commit();
+                $this->setFlashMessage('success', 'Vendor and all associated records permanently deleted.');
+            } else {
+                $this->db->rollBack();
+                $this->setFlashMessage('danger', 'Failed to delete vendor record.');
+            }
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log('Payables deleteVendor error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting vendor: ' . $e->getMessage());
         }
-        
-        if ($this->vendorModel->delete($id)) {
-            $this->activityModel->log($this->session['user_id'], 'delete', 'Payables', 'Deleted vendor: ' . $vendor['company_name']);
-            $this->setFlashMessage('success', 'Vendor deleted successfully.');
-        } else {
-            $this->setFlashMessage('danger', 'Failed to delete vendor.');
-        }
-        
+
         redirect('payables/vendors');
     }
     

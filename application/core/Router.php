@@ -410,6 +410,18 @@ class Router {
                 } elseif ($methodPart === 'vendors' && $actionPart === 'history') {
                     $this->method = 'vendorHistory';
                     $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
+                } elseif ($methodPart === 'deleteVendor') {
+                    $this->method = 'deleteVendor';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
+                } elseif ($methodPart === 'editVendor') {
+                    $this->method = 'editVendor';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
+                } elseif ($methodPart === 'viewVendor') {
+                    $this->method = 'viewVendor';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
+                } elseif ($methodPart === 'vendorHistory') {
+                    $this->method = 'vendorHistory';
+                    $this->params = $actionPart ? [intval($actionPart)] : [];
                 } else {
                     // Generic mapping: payables/method/param
                     $this->method = $actionPart ?: ($methodPart ?: 'vendors');

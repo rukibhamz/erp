@@ -1676,10 +1676,15 @@ class Receivables extends Base_Controller {
     }
 
     /**
-     * Permanent Exhaustive Customer Deletion - Super Admin only
+     * Permanent Exhaustive Customer Deletion - Admin and Super Admin only
      */
     public function deleteCustomer($id) {
-        $this->requireRole('super_admin');
+        $userRole = $this->session['role'] ?? '';
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
+            $this->setFlashMessage('danger', 'You do not have permission to delete customers.');
+            redirect('receivables/customers');
+            return;
+        }
         check_csrf();
         
         $id = intval($id);
@@ -1764,7 +1769,13 @@ class Receivables extends Base_Controller {
                 $this->db->query("DELETE FROM `{$prefix}accounts` WHERE id = ?", [$account['id']]);
             }
             
-            // 7. Delete the customer Record
+            // 7. Free up the customer code so it can be reassigned, then delete
+            $this->db->query(
+                "UPDATE `{$prefix}customers` SET customer_code = NULL WHERE id = ?",
+                [$id]
+            );
+
+            // 8. Delete the customer Record
             if ($this->customerModel->delete($id)) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Receivables', 'Exhaustive delete for customer: ' . $customer['company_name']);
                 $this->db->commit();
