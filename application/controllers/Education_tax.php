@@ -79,8 +79,7 @@ class Education_tax extends Base_Controller {
                 'payment_reference' => sanitize_input($_POST['reference']),
                 'created_by' => $this->session['user_id']
             ];
-            if ($this->db->insert('education_tax_payments', $data)) {
-                $paymentId = $this->db->lastInsertId();
+            if ($paymentId = $this->db->insert('education_tax_payments', $data)) {
                 
                 // Create journal entry: Dr Tax Expense, Cr Cash/Bank
                 if ($this->transactionService) {

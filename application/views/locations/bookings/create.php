@@ -150,6 +150,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="col-md-4 mb-3" id="guests-container">
                             <label class="form-label">Number of Guests</label>
                             <input type="number" name="number_of_guests" id="number_of_guests" class="form-control" min="1" value="1" onchange="checkCapacity(); calculatePrice();">
+                            <div id="guests-hint" class="form-text text-muted" style="display:none;">
+                                <i class="bi bi-info-circle"></i> Minimum 5 guests required for Picnic bookings.
+                            </div>
                             <small class="text-muted" id="capacityWarning" style="display: none; color: red !important;">Exceeds space capacity!</small>
                         </div>
                         <div class="col-md-4 mb-3" id="equipment-tier-container" style="display: none;">
@@ -712,6 +715,18 @@ function updateDurationOptions(type) {
     if (gtc) gtc.style.display = (type === 'picnic' || type === 'workspace') ? 'block' : 'none';
     if (etc) etc.style.display = (type === 'photoshoot' || type === 'videoshoot') ? 'block' : 'none';
     if (edc) edc.style.display = (type === 'multi_day' || type === 'weekly') ? 'block' : 'none';
+
+    // Enforce minimum 5 guests for picnic
+    const guestsInputEl = document.getElementById('guests') || document.getElementById('number_of_guests');
+    const guestsHintEl = document.getElementById('guests-hint');
+    if (type === 'picnic' && guestsInputEl) {
+        guestsInputEl.min = 5;
+        if (parseInt(guestsInputEl.value) < 5) guestsInputEl.value = 5;
+        if (guestsHintEl) guestsHintEl.style.display = 'block';
+    } else if (guestsInputEl) {
+        guestsInputEl.min = 1;
+        if (guestsHintEl) guestsHintEl.style.display = 'none';
+    }
 
     if (type === 'hourly') {
         for(let i=1; i<=8; i++) options += `<option value="${i}">${i} Hour${i>1?'s':''}</option>`;

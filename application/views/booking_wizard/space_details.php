@@ -108,11 +108,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         if (!empty($space['per_person_rates'])): 
                             foreach ($space['per_person_rates'] as $type => $rates):
                                 if (empty($rates['base_per_person'])) continue;
+                                $isPerPerson = !in_array($type, ['photoshoot', 'videoshoot']);
                         ?>
                                 <div class="border-top mt-2 pt-2">
                                     <div class="d-flex justify-content-between">
                                         <span class="text-capitalize"><?= str_replace('_', ' ', $type) ?>:</span>
-                                        <span class="fw-bold"><?= format_currency($rates['base_per_person']) ?> <small class="text-muted">/person</small></span>
+                                        <span class="fw-bold">
+                                            <?= format_currency($rates['base_per_person']) ?>
+                                            <?php if ($isPerPerson): ?>
+                                                <small class="text-muted">/person</small>
+                                            <?php endif; ?>
+                                        </span>
                                     </div>
                                     <?php if (!empty($rates['equipment_tiers'])): ?>
                                         <div class="mt-1">

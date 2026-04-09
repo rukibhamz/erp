@@ -183,7 +183,7 @@ class Location_model extends Base_Model {
                 $facilityId = $existing['id'];
             } else {
                 // Create new facility
-                $this->db->insert('facilities', [
+                $facilityId = $this->db->insert('facilities', [
                     'facility_code' => $location['Location_code'],
                     'facility_name' => $location['Location_name'],
                     'description' => 'Auto-generated from Location',
@@ -192,7 +192,6 @@ class Location_model extends Base_Model {
                     'is_bookable' => 1,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
-                $facilityId = $this->db->lastInsertId();
             }
 
             // Update location with facility_id

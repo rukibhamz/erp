@@ -217,7 +217,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <h6 class="border-bottom pb-2 text-primary">Specialized Rates (Optional)</h6>
                         </div>
                         <div class="col-md-4">
-                            <label for="pp_picnic_base" class="form-label">Picnic Base (Per Person)</label>
+                            <label for="pp_picnic_base" class="form-label">Picnic Base</label>
                             <input type="number" step="0.01" class="form-control" id="pp_picnic_base" name="pp_picnic_base">
                         </div>
                         <div class="col-md-4">
@@ -230,7 +230,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                         
                         <div class="col-md-4">
-                            <label for="pp_photo_base" class="form-label">Photo Base (Per Person)</label>
+                            <label for="pp_photo_base" class="form-label">Photo Base</label>
                             <input type="number" step="0.01" class="form-control" id="pp_photo_base" name="pp_photo_base">
                         </div>
                         <div class="col-md-4">
@@ -243,7 +243,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </div>
                         
                         <div class="col-md-4">
-                            <label for="pp_video_base" class="form-label">Video Base (Per Person)</label>
+                            <label for="pp_video_base" class="form-label">Video Base</label>
                             <input type="number" step="0.01" class="form-control" id="pp_video_base" name="pp_video_base">
                         </div>
                         <div class="col-md-4">

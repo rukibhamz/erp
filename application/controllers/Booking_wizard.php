@@ -926,13 +926,20 @@ class Booking_wizard extends Base_Controller {
                 $data = $rawData;
             }
             
-            // Validate that data is an array
             if (!is_array($data)) {
                 error_log('Booking wizard saveStep: Data is not an array - received: ' . gettype($data));
                 echo json_encode(['success' => false, 'message' => 'Invalid data structure']);
                 exit;
             }
             
+            if (isset($data['booking_type']) && $data['booking_type'] === 'picnic') {
+                $guests = isset($data['guests']) ? intval($data['guests']) : 1;
+                if ($guests < 5) {
+                    echo json_encode(['success' => false, 'message' => 'A minimum of 5 guests is required for Picnic bookings.']);
+                    exit;
+                }
+            }
+
             if (!isset($_SESSION['booking_data'])) {
                 $_SESSION['booking_data'] = [];
             }

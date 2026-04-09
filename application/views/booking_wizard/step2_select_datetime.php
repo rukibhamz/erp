@@ -104,6 +104,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <div class="col-md-6 mb-3 mb-md-0" id="guests-container" style="display: none;">
                                         <label class="form-label fw-bold">Number of Guests <span class="text-danger">*</span></label>
                                         <input type="number" id="guests" class="form-select form-select-lg" min="1" value="1">
+                                        <div id="guests-hint" class="form-text text-muted" style="display:none;">
+                                            <i class="bi bi-info-circle"></i> Minimum 5 guests required for Picnic bookings.
+                                        </div>
                                     </div>
                                     <div class="col-md-6" id="equipment-tier-container" style="display: none;">
                                     <label class="form-label fw-bold">Type <i class="bi bi-info-circle text-muted" title="Surcharge based on equipment/service level"></i></label>
@@ -375,6 +378,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const typeRequiredTypes = ['photoshoot', 'videoshoot'];
             
             guestsContainer.style.display = guestRequiredTypes.includes(selectedType) ? 'block' : 'none';
+            if (selectedType === 'picnic') {
+                guestsInput.min = 5;
+                if (parseInt(guestsInput.value) < 5) {
+                    guestsInput.value = 5;
+                }
+                const guestsHint = document.getElementById('guests-hint');
+                if (guestsHint) guestsHint.style.display = 'block';
+            } else {
+                guestsInput.min = 1;
+                const guestsHint = document.getElementById('guests-hint');
+                if (guestsHint) guestsHint.style.display = 'none';
+            }
             equipmentTierContainer.style.display = typeRequiredTypes.includes(selectedType) ? 'block' : 'none';
             
             // Trigger disclaimer update
