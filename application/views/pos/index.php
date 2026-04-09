@@ -78,7 +78,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card">
                 <div class="card-header bg-dark text-white d-flex justify-content-between">
                     <h6 class="mb-0">Cart</h6>
-                    <button class="btn btn-sm btn-primary" onclick="clearCart()">Clear</button>
+                    <button class="btn btn-sm btn-primary" id="clearCartBtn">Clear</button>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -155,7 +155,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="h5 mb-0 text-success" id="changeAmount"><?= format_currency(0) ?></div>
                     </div>
                     
-                    <button class="btn btn-dark btn-lg w-100" onclick="processSale()" id="processBtn" disabled>
+                    <button class="btn btn-dark btn-lg w-100" id="processBtn" disabled>
                         <i class="bi bi-check-circle"></i> Complete Sale
                     </button>
                 </div>
@@ -253,15 +253,15 @@ function updateCart() {
                 <tr>
                     <td>${item.item_name}</td>
                     <td>
-                        <input type="number" class="form-control form-control-sm" 
+                        <input type="number" class="form-control form-control-sm cart-qty-input" 
                                value="${item.quantity}" min="1" 
-                               onchange="updateQuantity(${index}, parseInt(this.value))" 
+                               data-index="${index}"
                                style="width: 70px;">
                     </td>
                     <td>${formatCurrency(item.price)}</td>
                     <td>${formatCurrency(lineTotal)}</td>
                     <td>
-                        <button class="btn btn-sm btn-danger" onclick="removeFromCart(${index})">
+                        <button class="btn btn-sm btn-danger cart-remove-btn" data-index="${index}">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -377,6 +377,31 @@ document.getElementById('discountAmount')?.addEventListener('input', function() 
 
 document.getElementById('discountType')?.addEventListener('change', function() {
     updateCart();
+});
+
+// Clear cart button
+document.getElementById('clearCartBtn')?.addEventListener('click', function() {
+    clearCart();
+});
+
+// Process sale button
+document.getElementById('processBtn')?.addEventListener('click', function() {
+    processSale();
+});
+
+// Event delegation for cart remove buttons and qty inputs
+document.getElementById('cartTable')?.addEventListener('click', function(e) {
+    const removeBtn = e.target.closest('.cart-remove-btn');
+    if (removeBtn) {
+        removeFromCart(parseInt(removeBtn.dataset.index));
+    }
+});
+
+document.getElementById('cartTable')?.addEventListener('change', function(e) {
+    const qtyInput = e.target.closest('.cart-qty-input');
+    if (qtyInput) {
+        updateQuantity(parseInt(qtyInput.dataset.index), parseInt(qtyInput.value));
+    }
 });
 
 function switchTerminal(terminalId) {
