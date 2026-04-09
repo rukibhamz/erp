@@ -115,12 +115,27 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <span class="text-capitalize"><?= str_replace('_', ' ', $type) ?>:</span>
                                         <span class="fw-bold">
                                             <?= format_currency($rates['base_per_person']) ?>
-                                            <?php if ($isPerPerson): ?>
+                                            <?php if ($isPerPerson && $type !== 'picnic'): ?>
                                                 <small class="text-muted">/person</small>
                                             <?php endif; ?>
                                         </span>
                                     </div>
-                                    <?php if (!empty($rates['equipment_tiers'])): ?>
+                                    <?php if ($type === 'picnic' && !empty($rates['equipment_tiers'])): ?>
+                                        <div class="mt-1 small text-muted">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="ps-2">- Basic (5–20 guests):</span>
+                                                <span><?= format_currency($rates['base_per_person'] + ($rates['equipment_tiers']['basic']['surcharge'] ?? 0)) ?>/person</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="ps-2">- Standard (21–40 guests):</span>
+                                                <span><?= format_currency($rates['base_per_person'] + ($rates['equipment_tiers']['standard']['surcharge'] ?? 0)) ?>/person</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="ps-2">- Premium (41+ guests):</span>
+                                                <span><?= format_currency($rates['base_per_person'] + ($rates['equipment_tiers']['premium']['surcharge'] ?? 0)) ?>/person</span>
+                                            </div>
+                                        </div>
+                                    <?php elseif (!empty($rates['equipment_tiers'])): ?>
                                         <div class="mt-1">
                                             <?php foreach ($rates['equipment_tiers'] as $tier => $tierData): ?>
                                                 <div class="d-flex justify-content-between small text-muted">

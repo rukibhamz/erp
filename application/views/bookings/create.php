@@ -496,12 +496,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 let typeRates = pRules[bookingType] || {};
                 let basePp = parseFloat(typeRates.base_per_person || currentSpaceData.hourly_rate || 0);
                 let surcharge = 0;
-                
-                if (equipmentTier && typeRates.equipment_tiers && typeRates.equipment_tiers[equipmentTier]) {
-                    surcharge = parseFloat(typeRates.equipment_tiers[equipmentTier].surcharge || 0);
+
+                if (bookingType === 'picnic') {
+                    // Tier auto-determined by guest count
+                    let picnicTier = guests <= 20 ? 'basic' : (guests <= 40 ? 'standard' : 'premium');
+                    if (typeRates.equipment_tiers && typeRates.equipment_tiers[picnicTier]) {
+                        surcharge = parseFloat(typeRates.equipment_tiers[picnicTier].surcharge || 0);
+                    }
+                    basePrice = (basePp + surcharge) * Math.max(5, guests);
+                } else {
+                    // Photoshoot/Videoshoot: equipment tier surcharge, per-project
+                    if (equipmentTier && typeRates.equipment_tiers && typeRates.equipment_tiers[equipmentTier]) {
+                        surcharge = parseFloat(typeRates.equipment_tiers[equipmentTier].surcharge || 0);
+                    }
+                    basePrice = (basePp + surcharge) * Math.max(1, guests);
                 }
-                
-                basePrice = (basePp + surcharge) * Math.max(1, guests);
             }
         } else {
             // Time-based pricing logic

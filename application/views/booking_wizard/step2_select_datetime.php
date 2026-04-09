@@ -62,6 +62,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </div>
                             </div>
 
+                            <div id="picnic-notice" class="mb-4 alert alert-success d-flex align-items-start" style="display: none !important;">
+                                <i class="bi bi-gift-fill me-2 fs-5 mt-1"></i>
+                                <div>
+                                    <strong>Picnic Pricing Notice:</strong> Groups of fewer than 5 people enjoy the space for free — no booking charge applies.
+                                    A minimum of <strong>5 guests</strong> is required to make a paid picnic booking.
+                                </div>
+                            </div>
+
                             <div class="row g-4">
                                 <h4 class="card-title mb-4">
                                     <?= htmlspecialchars($space['space_name'] ?? 'Space') ?>
@@ -106,6 +114,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <input type="number" id="guests" class="form-select form-select-lg" min="1" value="1">
                                         <div id="guests-hint" class="form-text text-muted" style="display:none;">
                                             <i class="bi bi-info-circle"></i> Minimum 5 guests required for Picnic bookings.
+                                        </div>
+                                        <div id="picnic-tier-badge" class="mt-2" style="display:none;">
+                                            <span class="badge bg-secondary" id="picnic-tier-label">Basic (5–20 guests)</span>
+                                            <small class="text-muted ms-1">tier auto-selected by guest count</small>
                                         </div>
                                     </div>
                                     <div class="col-md-6" id="equipment-tier-container" style="display: none;">
@@ -325,6 +337,32 @@ document.addEventListener('DOMContentLoaded', function() {
     const equipmentTierContainer = document.getElementById('equipment-tier-container');
     const equipmentTierSelect = document.getElementById('equipment_tier');
 
+    // Picnic tier badge — auto-determined by guest count
+    function updatePicnicTierBadge(guests) {
+        const label = document.getElementById('picnic-tier-label');
+        if (!label) return;
+        if (guests <= 20) {
+            label.textContent = 'Basic (5–20 guests)';
+            label.className = 'badge bg-secondary';
+        } else if (guests <= 40) {
+            label.textContent = 'Standard (21–40 guests)';
+            label.className = 'badge bg-primary';
+        } else {
+            label.textContent = 'Premium (41+ guests)';
+            label.className = 'badge bg-warning text-dark';
+        }
+    }
+
+    // Update tier badge when guest count changes
+    if (guestsInput) {
+        guestsInput.addEventListener('input', function() {
+            const bookingType = document.getElementById('booking_type').value;
+            if (bookingType === 'picnic') {
+                updatePicnicTierBadge(parseInt(this.value) || 5);
+            }
+        });
+    }
+
     // Disclaimer Logic
     function updateTierDisclaimer() {
         const tierDisclaimer = document.getElementById('tier-disclaimer');
@@ -378,19 +416,28 @@ document.addEventListener('DOMContentLoaded', function() {
             const typeRequiredTypes = ['photoshoot', 'videoshoot'];
             
             guestsContainer.style.display = guestRequiredTypes.includes(selectedType) ? 'block' : 'none';
+            // Picnic: tier is auto-determined by guest count — hide equipment tier selector
+            equipmentTierContainer.style.display = typeRequiredTypes.includes(selectedType) ? 'block' : 'none';
+
             if (selectedType === 'picnic') {
                 guestsInput.min = 5;
-                if (parseInt(guestsInput.value) < 5) {
-                    guestsInput.value = 5;
-                }
+                if (parseInt(guestsInput.value) < 5) guestsInput.value = 5;
                 const guestsHint = document.getElementById('guests-hint');
                 if (guestsHint) guestsHint.style.display = 'block';
+                const picnicTierBadge = document.getElementById('picnic-tier-badge');
+                if (picnicTierBadge) picnicTierBadge.style.display = 'block';
+                updatePicnicTierBadge(parseInt(guestsInput.value));
+                const picnicNotice = document.getElementById('picnic-notice');
+                if (picnicNotice) picnicNotice.style.display = 'flex';
             } else {
                 guestsInput.min = 1;
                 const guestsHint = document.getElementById('guests-hint');
                 if (guestsHint) guestsHint.style.display = 'none';
+                const picnicTierBadge = document.getElementById('picnic-tier-badge');
+                if (picnicTierBadge) picnicTierBadge.style.display = 'none';
+                const picnicNotice = document.getElementById('picnic-notice');
+                if (picnicNotice) picnicNotice.style.display = 'none';
             }
-            equipmentTierContainer.style.display = typeRequiredTypes.includes(selectedType) ? 'block' : 'none';
             
             // Trigger disclaimer update
             updateTierDisclaimer();

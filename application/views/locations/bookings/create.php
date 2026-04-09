@@ -664,15 +664,21 @@ function calculatePrice() {
             // Picnic/Photoshoot/Videoshoot
             let typeRates = pRules[bookingType] || {};
             let basePP = parseFloat(typeRates.base_per_person) || (currentSpaceData.hourly_rate || 0);
-            let tierSurcharge = 0;
-            if (equipmentTier && typeRates.equipment_tiers && typeRates.equipment_tiers[equipmentTier]) {
-                tierSurcharge = parseFloat(typeRates.equipment_tiers[equipmentTier].surcharge) || 0;
-            }
             
             if (bookingType === 'picnic') {
-                basePrice = (basePP + tierSurcharge) * Math.max(1, guests);
+                // Tier auto-determined by guest count
+                let picnicTier = guests <= 20 ? 'basic' : (guests <= 40 ? 'standard' : 'premium');
+                let tierSurcharge = 0;
+                if (typeRates.equipment_tiers && typeRates.equipment_tiers[picnicTier]) {
+                    tierSurcharge = parseFloat(typeRates.equipment_tiers[picnicTier].surcharge) || 0;
+                }
+                basePrice = (basePP + tierSurcharge) * Math.max(5, guests);
             } else {
-                // Photo/Video are per-project
+                // Photo/Video are per-project with equipment tier
+                let tierSurcharge = 0;
+                if (equipmentTier && typeRates.equipment_tiers && typeRates.equipment_tiers[equipmentTier]) {
+                    tierSurcharge = parseFloat(typeRates.equipment_tiers[equipmentTier].surcharge) || 0;
+                }
                 basePrice = (basePP + tierSurcharge);
             }
         }
