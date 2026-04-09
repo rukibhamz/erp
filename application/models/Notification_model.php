@@ -233,7 +233,73 @@ class Notification_model extends Base_Model {
             return false;
         }
     }
-    
+
+    /**
+     * Send new booking notification to admin, super_admin, and manager users
+     */
+    public function sendNewBookingStaffNotification($bookingId, $booking) {
+        try {
+            $prefix = $this->db->getPrefix();
+
+            // Get all active admin, super_admin, and manager users with emails
+            $staffUsers = $this->db->fetchAll(
+                "SELECT id, email, username FROM `{$prefix}users`
+                 WHERE role IN ('super_admin', 'admin', 'manager')
+                   AND status = 'active'
+                   AND email IS NOT NULL
+                   AND email != ''",
+                []
+            );
+
+            if (empty($staffUsers)) {
+                return true;
+            }
+
+            $spaceName    = $booking['facility_name'] ?? $booking['space_name'] ?? 'Reserved Space';
+            $bookingDate  = isset($booking['booking_date']) ? date('M d, Y', strtotime($booking['booking_date'])) : 'N/A';
+            $customerName = $booking['customer_name'] ?? 'Guest';
+            $bookingNum   = $booking['booking_number'] ?? "#{$bookingId}";
+            $startTime    = $booking['start_time'] ?? '';
+            $endTime      = $booking['end_time'] ?? '';
+            $amount       = isset($booking['total_amount']) ? '₦' . number_format($booking['total_amount'], 2) : 'N/A';
+
+            $subject = "New Booking: {$bookingNum} — {$customerName}";
+
+            $bodyHtml = "
+                <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto'>
+                    <h2 style='color:#1a1a2e'>New Booking Received</h2>
+                    <table style='width:100%;border-collapse:collapse'>
+                        <tr><td style='padding:8px;font-weight:bold'>Booking #</td><td style='padding:8px'>{$bookingNum}</td></tr>
+                        <tr style='background:#f8f9fa'><td style='padding:8px;font-weight:bold'>Customer</td><td style='padding:8px'>" . htmlspecialchars($customerName) . "</td></tr>
+                        <tr><td style='padding:8px;font-weight:bold'>Space</td><td style='padding:8px'>" . htmlspecialchars($spaceName) . "</td></tr>
+                        <tr style='background:#f8f9fa'><td style='padding:8px;font-weight:bold'>Date</td><td style='padding:8px'>{$bookingDate}</td></tr>
+                        <tr><td style='padding:8px;font-weight:bold'>Time</td><td style='padding:8px'>" . htmlspecialchars("{$startTime} – {$endTime}") . "</td></tr>
+                        <tr style='background:#f8f9fa'><td style='padding:8px;font-weight:bold'>Amount</td><td style='padding:8px'>{$amount}</td></tr>
+                    </table>
+                    <p style='margin-top:20px'>
+                        <a href='" . base_url("bookings") . "' style='background:#1a1a2e;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px'>View Bookings</a>
+                    </p>
+                </div>";
+
+            $bodyText = "New Booking: {$bookingNum}\nCustomer: {$customerName}\nSpace: {$spaceName}\nDate: {$bookingDate}\nTime: {$startTime} – {$endTime}\nAmount: {$amount}";
+
+            foreach ($staffUsers as $user) {
+                $this->queueEmail([
+                    'to_email'  => $user['email'],
+                    'to_name'   => $user['username'],
+                    'subject'   => $subject,
+                    'body'      => $bodyText,
+                    'body_html' => $bodyHtml
+                ]);
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log('Notification_model sendNewBookingStaffNotification error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Queue email for sending
      */

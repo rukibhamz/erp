@@ -110,7 +110,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <option value="0.00">None (0%)</option>
                                             <?php if (!empty($tax_types)): ?>
                                                 <?php foreach ($tax_types as $name => $rate): ?>
-                                                    <option value="<?= $rate ?>"><?= $name ?> (<?= $rate ?>%)</option>
+                                                    <option value="<?= $rate ?>" <?= $name === 'VAT' ? 'selected' : '' ?>><?= $name ?> (<?= $rate ?>%)</option>
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
                                         </select>
@@ -186,7 +186,7 @@ const taxOptions = `
     <option value="0.00">None (0%)</option>
     <?php if (!empty($tax_types)): ?>
         <?php foreach ($tax_types as $name => $rate): ?>
-            <option value="<?= $rate ?>"><?= $name ?> (<?= $rate ?>%)</option>
+            <option value="<?= $rate ?>" <?= $name === 'VAT' ? 'selected' : '' ?>><?= $name ?> (<?= $rate ?>%)</option>
         <?php endforeach; ?>
     <?php endif; ?>
 `;

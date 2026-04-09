@@ -1546,7 +1546,22 @@ class Booking_wizard extends Base_Controller {
                 $pdo->commit();
                 file_put_contents($logFile, "[$timestamp] TRANSACTION COMMITTED\n", FILE_APPEND);
             }
-            
+
+            // Notify staff (admin, super_admin, manager) of new booking
+            try {
+                $notificationModel = $notificationModel ?? $this->loadModel('Notification_model');
+                if ($notificationModel) {
+                    $staffBooking = $bookingRecord;
+                    $staffBooking['id'] = $bookingId;
+                    $staffBooking['facility_name'] = $resource['space_name'] ?? $resource['name'] ?? 'Reserved Space';
+                    $notificationModel->sendNewBookingStaffNotification($bookingId, $staffBooking);
+                    file_put_contents($logFile, "[$timestamp] STAFF NOTIFICATION SENT for booking: {$bookingNumber}\n", FILE_APPEND);
+                }
+            } catch (Exception $notifyEx) {
+                error_log("Booking_wizard: Failed to send staff notification - " . $notifyEx->getMessage());
+                // Non-critical — don't fail the booking
+            }
+
             // Clear booking data from session
             unset($_SESSION['booking_data']);
             
