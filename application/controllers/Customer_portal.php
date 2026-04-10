@@ -529,6 +529,7 @@ class Customer_portal extends Base_Controller {
             if ($password !== $confirmPassword) {
                 $this->setFlashMessage('danger', 'Passwords do not match.');
                 redirect('customer-portal/reset-password?token=' . urlencode($token));
+                return;
             }
             
             // Validate password strength
@@ -536,6 +537,7 @@ class Customer_portal extends Base_Controller {
             if (!$passwordValidation['valid']) {
                 $this->setFlashMessage('danger', implode(' ', $passwordValidation['errors']));
                 redirect('customer-portal/reset-password?token=' . urlencode($token));
+                return;
             }
             
             // Reset password
@@ -546,6 +548,7 @@ class Customer_portal extends Base_Controller {
                 $this->setFlashMessage('danger', 'Invalid or expired reset link. Please request a new one.');
                 redirect('customer-portal/forgot-password');
             }
+            return;
         }
         
         $data = [
