@@ -247,6 +247,13 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['customer_types/edit/(:num)'] = 'Customer_types/edit/$1';
         $route['customer_types/delete/(:num)'] = 'Customer_types/delete/$1';
         
+        // Promo Codes
+        $route['promo-codes'] = 'Promo_codes/index';
+        $route['promo-codes/create'] = 'Promo_codes/create';
+        $route['promo-codes/edit/(:num)'] = 'Promo_codes/edit/$1';
+        $route['promo-codes/toggle/(:num)'] = 'Promo_codes/toggle/$1';
+        $route['promo-codes/delete/(:num)'] = 'Promo_codes/delete/$1';
+
         // POS System
         $route['pos'] = 'Pos/terminals';
         $route['pos/index'] = 'Pos/index';
