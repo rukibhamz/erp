@@ -439,6 +439,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring bookable_config sync column: " . $e->getMessage());
         }
+
+        // ALWAYS ensure users table has password reset and remember me columns
+        try {
+            $this->ensureUsersAuthColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring users auth columns: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2916,6 +2923,47 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring facilities pricing columns: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure users table has password_reset_token, password_reset_expires,
+     * remember_token, failed_login_attempts, and locked_until columns.
+     */
+    private function ensureUsersAuthColumns() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}users'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return true;
+            }
+
+            $columns = [
+                'password_reset_token'  => "VARCHAR(100) NULL DEFAULT NULL AFTER `password`",
+                'password_reset_expires'=> "DATETIME NULL DEFAULT NULL AFTER `password_reset_token`",
+                'remember_token'        => "VARCHAR(100) NULL DEFAULT NULL AFTER `password_reset_expires`",
+                'failed_login_attempts' => "INT(11) NOT NULL DEFAULT 0 AFTER `remember_token`",
+                'locked_until'          => "DATETIME NULL DEFAULT NULL AFTER `failed_login_attempts`",
+            ];
+
+            foreach ($columns as $col => $def) {
+                $check = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}users` LIKE '{$col}'");
+                if (!$check || count($check->fetchAll()) === 0) {
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}users` ADD COLUMN `{$col}` {$def}");
+                    error_log("AutoMigration: Added column '{$col}' to users table");
+                }
+            }
+
+            // Add index on password_reset_token if missing
+            try {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}users` ADD INDEX `idx_password_reset_token` (`password_reset_token`)");
+            } catch (\Throwable $e) {
+                // Index may already exist — ignore
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring users auth columns: " . $e->getMessage());
             return false;
         }
     }
