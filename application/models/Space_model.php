@@ -302,7 +302,7 @@ class Space_model extends Base_Model {
             
             error_log('Space_model syncToBookingModule: Extracted rates - hourly=' . $hourlyRate . ', daily=' . $dailyRate . ', half_day=' . $halfDayRate . ', weekly=' . $weeklyRate);
             
-            $facilityData = [
+            $facilityDataFull = [
                 'facility_code' => $facilityCode,
                 'facility_name' => $space['space_name'],
                 'description' => $space['description'] ?? '',
@@ -321,9 +321,24 @@ class Space_model extends Base_Model {
                 'is_bookable' => 1,
                 'pricing_rules' => json_encode($pricingRules)
             ];
-            
+
+            // Filter to only columns that actually exist in the facilities table
+            // This prevents INSERT/UPDATE failures on older production schemas
+            $existingColumns = [];
+            try {
+                $cols = $this->db->fetchAll(
+                    "SHOW COLUMNS FROM `" . $this->db->getPrefix() . "facilities`"
+                );
+                foreach ($cols as $col) {
+                    $existingColumns[] = $col['Field'];
+                }
+            } catch (Exception $e) {
+                // If we can't check columns, use all data and let DB handle it
+                $existingColumns = array_keys($facilityDataFull);
+            }
+            $facilityData = array_intersect_key($facilityDataFull, array_flip($existingColumns));
+
             error_log('Space_model syncToBookingModule: Pricing rules from config: ' . json_encode($pricingRules));
-            error_log('Space_model syncToBookingModule: Facility data to sync: ' . json_encode($facilityData));
             
             if ($existingFacility) {
                 // Update existing facility
