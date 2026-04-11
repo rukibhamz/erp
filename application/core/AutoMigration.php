@@ -425,6 +425,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring facilities pricing columns: " . $e->getMessage());
         }
+
+        // ALWAYS ensure bookable_config has last_synced_at column
+        try {
+            $this->ensureBookableConfigSyncColumn();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring bookable_config sync column: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2867,6 +2874,30 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring facilities pricing columns: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure bookable_config table has last_synced_at column.
+     */
+    private function ensureBookableConfigSyncColumn() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}bookable_config'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return true; // Table doesn't exist yet
+            }
+
+            $check = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}bookable_config` LIKE 'last_synced_at'");
+            if (!$check || count($check->fetchAll()) === 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}bookable_config`
+                    ADD COLUMN `last_synced_at` DATETIME NULL DEFAULT NULL");
+                error_log("AutoMigration: Added last_synced_at column to bookable_config table");
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring bookable_config sync column: " . $e->getMessage());
             return false;
         }
     }

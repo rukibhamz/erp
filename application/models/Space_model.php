@@ -364,13 +364,18 @@ class Space_model extends Base_Model {
                 error_log('Space_model syncToBookingModule: Created facility ID ' . $facilityId);
             }
             
-            // Update last synced time
-            $this->db->update(
-                'bookable_config',
-                ['last_synced_at' => date('Y-m-d H:i:s')],
-                "space_id = ?",
-                [$spaceId]
-            );
+            // Update last synced time (wrapped separately so a missing column doesn't break sync)
+            try {
+                $this->db->update(
+                    'bookable_config',
+                    ['last_synced_at' => date('Y-m-d H:i:s')],
+                    "space_id = ?",
+                    [$spaceId]
+                );
+            } catch (Exception $e) {
+                error_log('Space_model syncToBookingModule: Could not update last_synced_at - ' . $e->getMessage());
+                // Non-fatal — continue
+            }
             
             // Sync availability rules to Resource_availability table
             $this->syncAvailabilityRules($facilityId, $config);
