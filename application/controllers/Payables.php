@@ -363,8 +363,8 @@ class Payables extends Base_Controller {
                 // Post to accounting if status is not draft
                 if ($billData['status'] !== 'draft') {
                     try {
-                        // Get Accounts Payable account (2100)
-                        $apAccount = $this->accountModel->getByCode('2100');
+                        // Get Accounts Payable account (2000)
+                        $apAccount = $this->accountModel->getByCode('2000'); // Accounts Payable
                         
                         if ($apAccount) {
                             $journalData = [
@@ -676,8 +676,8 @@ class Payables extends Base_Controller {
                 
                 // Create journal entry using Transaction Service
                 try {
-                    // Get Accounts Payable account (2100)
-                    $apAccount = $this->accountModel->getByCode('2100');
+                    // Get Accounts Payable account (2000)
+                    $apAccount = $this->accountModel->getByCode('2000'); // Accounts Payable
                     
                     if ($apAccount) {
                         $journalData = [

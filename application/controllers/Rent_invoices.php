@@ -373,17 +373,7 @@ class Rent_invoices extends Base_Controller {
     private function postRentPaymentToAccounting($paymentId, $paymentData, $invoice, $lease) {
         try {
             // Find Cash account (1000)
-            $cashAccount = $this->accountModel->getByCode('1000'); // Cash on Hand
-            if (!$cashAccount) {
-                // Fallback
-                $assetAccounts = $this->accountModel->getByType('Assets');
-                foreach ($assetAccounts as $acc) {
-                    if (stripos($acc['account_name'], 'cash') !== false) {
-                        $cashAccount = $acc;
-                        break;
-                    }
-                }
-            }
+            $cashAccount = $this->accountModel->getByPaymentMethod($paymentData['payment_method'] ?? 'bank_transfer');
             
             // Find AR account (1200)
             $arAccount = $this->accountModel->getByCode('1200');

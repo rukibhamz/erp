@@ -269,17 +269,7 @@ class Leases extends Base_Controller {
             }
             
             // Get Cash Account (1000)
-            $cashAccount = $this->accountModel->getByCode('1000');
-            if (!$cashAccount) {
-                $assetAccounts = $this->accountModel->getByType('Assets');
-                foreach ($assetAccounts as $acc) {
-                    if (stripos($acc['account_name'], 'cash') !== false || 
-                        stripos($acc['account_name'], 'bank') !== false) {
-                        $cashAccount = $acc;
-                        break;
-                    }
-                }
-            }
+            $cashAccount = $this->accountModel->getByPaymentMethod('bank_transfer'); // Lease deposits typically via bank
             
             // Get Security Deposits Liability Account (2210)
             $depositAccount = $this->accountModel->getByCode('2210');

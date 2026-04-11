@@ -851,11 +851,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                                 // Credit Accounts Receivable (clearing the customer's debt)
                                 if ($this->accountModel) {
                                     try {
-                                        // Find Accounts Receivable account (code 1100, fallback to 1200)
-                                        $arAccount = $this->accountModel->getByCode('1100');
-                                        if (!$arAccount) {
-                                            $arAccount = $this->accountModel->getByCode('1200');
-                                        }
+                                        // Find Accounts Receivable account (code 1200)
+                                        $arAccount = $this->accountModel->getByCode('1200'); // Accounts Receivable
                                         if (!$arAccount) {
                                             // Try to find any AR account by name
                                             $assetAccounts = $this->accountModel->getByType('Asset');

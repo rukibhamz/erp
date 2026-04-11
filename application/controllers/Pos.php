@@ -316,7 +316,7 @@ class Pos extends Base_Controller {
             
             if (!$cashAccountId) {
                 // Get default cash account
-                $cashAccount = $this->accountModel->getByCode('1001'); // Default Cash Account
+                $cashAccount = $this->accountModel->getByPaymentMethod($paymentMethod ?? 'cash'); // Route cash vs bank
                 $cashAccountId = $cashAccount['id'] ?? null;
             }
             

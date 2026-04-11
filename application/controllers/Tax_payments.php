@@ -148,11 +148,7 @@ class Tax_payments extends Base_Controller {
             }
             
             // Find Cash Account (1000)
-            $cashAccount = $this->accountModel->getByCode('1000');
-            if (!$cashAccount) {
-                $assetAccounts = $this->accountModel->getByType('Assets');
-                $cashAccount = !empty($assetAccounts) ? $assetAccounts[0] : null;
-            }
+            $cashAccount = $this->accountModel->getByPaymentMethod($paymentData['payment_method'] ?? 'bank_transfer');
             
             if ($liabilityAccount && $cashAccount) {
                 $journalData = [

@@ -460,6 +460,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring VAT Payable account: " . $e->getMessage());
         }
+
+        // ALWAYS ensure clean Chart of Accounts (rename/merge/fix duplicates)
+        try {
+            $this->ensureCleanCOA();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring clean COA: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -1178,15 +1185,15 @@ class AutoMigration {
                 ],
                 [
                     'account_code' => '1200',
-                    'account_name' => 'Inventory Asset',
+                    'account_name' => 'Accounts Receivable',
                     'account_type' => 'Assets',
-                    'account_category' => 'Inventory',
-                    'description' => 'Value of goods held for sale',
+                    'account_category' => 'Accounts Receivable',
+                    'description' => 'Amounts owed by customers',
                     'is_system_account' => 1
                 ],
                 [
                     'account_code' => '1500',
-                    'account_name' => 'Furniture & Equipment',
+                    'account_name' => 'Fixed Assets',
                     'account_type' => 'Assets',
                     'account_category' => 'Fixed Assets',
                     'description' => 'Office furniture and equipment',
@@ -1204,10 +1211,10 @@ class AutoMigration {
                 ],
                 [
                     'account_code' => '2100',
-                    'account_name' => 'VAT Payable',
+                    'account_name' => 'Accounts Payable — Trade',
                     'account_type' => 'Liabilities',
-                    'account_category' => 'Tax Payable',
-                    'description' => 'VAT collected on sales',
+                    'account_category' => 'Accounts Payable',
+                    'description' => 'Trade payables to suppliers',
                     'is_system_account' => 1
                 ],
                 [
@@ -2679,7 +2686,7 @@ class AutoMigration {
                 try {
                     $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
                         (account_code, account_name, account_type, status, created_at)
-                        VALUES ('2001', 'VAT Liability', 'Liabilities', 'active', NOW())");
+                        VALUES ('2300', 'VAT Payable', 'Liabilities', 'active', NOW())");
                 } catch (\Throwable $e) {
                     error_log('AutoMigration: Failed to create Liability account: ' . $e->getMessage());
                 }
@@ -3085,6 +3092,169 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring bookable_config sync column: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure a clean, consistent Chart of Accounts:
+     * - Rename misnamed accounts to their correct names/categories
+     * - Fix account code conflicts (2210, 7000)
+     * - Merge duplicate account codes into canonical ones
+     * - Ensure required accounts (1205, 4005, 6300, 2211) exist
+     */
+    private function ensureCleanCOA() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return true;
+            }
+
+            // 1. Rename 1010 -> Cash in Bank - Main
+            try {
+                $this->pdo->prepare(
+                    "UPDATE `{$this->prefix}accounts` SET account_name = 'Cash in Bank \xe2\x80\x94 Main', account_category = 'Cash & Bank' WHERE account_code = '1010'"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error renaming 1010: " . $e->getMessage());
+            }
+
+            // 2. Rename 1200 -> Accounts Receivable
+            try {
+                $this->pdo->prepare(
+                    "UPDATE `{$this->prefix}accounts` SET account_name = 'Accounts Receivable', account_category = 'Accounts Receivable', description = 'Amounts owed by customers' WHERE account_code = '1200'"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error renaming 1200: " . $e->getMessage());
+            }
+
+            // 3. Rename 1500 -> Fixed Assets
+            try {
+                $this->pdo->prepare(
+                    "UPDATE `{$this->prefix}accounts` SET account_name = 'Fixed Assets', account_category = 'Fixed Assets' WHERE account_code = '1500'"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error renaming 1500: " . $e->getMessage());
+            }
+
+            // 4. Rename 2100 -> Accounts Payable - Trade
+            try {
+                $this->pdo->prepare(
+                    "UPDATE `{$this->prefix}accounts` SET account_name = 'Accounts Payable \xe2\x80\x94 Trade', account_category = 'Accounts Payable' WHERE account_code = '2100'"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error renaming 2100: " . $e->getMessage());
+            }
+
+            // 5. Fix 2210 conflict -> rename to Security Deposits Payable
+            try {
+                $this->pdo->prepare(
+                    "UPDATE `{$this->prefix}accounts` SET account_name = 'Security Deposits Payable' WHERE account_code = '2210'"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error renaming 2210: " . $e->getMessage());
+            }
+
+            // 6. Ensure 2211 = PAYE Payable exists
+            try {
+                $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = '2211' LIMIT 1");
+                $stmt->execute();
+                if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $this->pdo->prepare(
+                        "INSERT IGNORE INTO `{$this->prefix}accounts`
+                         (account_code, account_name, account_type, account_category, description, opening_balance, balance, status, created_at)
+                         VALUES ('2211', 'PAYE Payable', 'Liabilities', 'Tax Payable', 'Employee income tax withheld (PAYE)', 0, 0, 'active', NOW())"
+                    )->execute();
+                    error_log("AutoMigration ensureCleanCOA: Created PAYE Payable account (2211)");
+                }
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error ensuring 2211: " . $e->getMessage());
+            }
+
+            // 7. Fix 7000 conflict -> rename to Loss on Asset Disposal
+            try {
+                $this->pdo->prepare(
+                    "UPDATE `{$this->prefix}accounts` SET account_name = 'Loss on Asset Disposal' WHERE account_code = '7000'"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error renaming 7000: " . $e->getMessage());
+            }
+
+            // 8. Ensure 6300 = Payroll Expense exists
+            try {
+                $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = '6300' LIMIT 1");
+                $stmt->execute();
+                if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $this->pdo->prepare(
+                        "INSERT IGNORE INTO `{$this->prefix}accounts`
+                         (account_code, account_name, account_type, account_category, description, opening_balance, balance, status, created_at)
+                         VALUES ('6300', 'Payroll Expense', 'Expenses', 'Payroll Expenses', 'Gross payroll expense', 0, 0, 'active', NOW())"
+                    )->execute();
+                    error_log("AutoMigration ensureCleanCOA: Created Payroll Expense account (6300)");
+                }
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error ensuring 6300: " . $e->getMessage());
+            }
+
+            // 9. Merge duplicates using UPDATE + DELETE pattern
+            $merges = [
+                ['source' => '1001', 'target' => '1000'],
+                ['source' => '1100', 'target' => '1200'],
+                ['source' => '2001', 'target' => '2300'],
+                ['source' => '4001', 'target' => '4000'],
+                ['source' => '6100', 'target' => '6010'],
+            ];
+
+            foreach ($merges as $merge) {
+                try {
+                    $sourceStmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = ? LIMIT 1");
+                    $sourceStmt->execute([$merge['source']]);
+                    $source = $sourceStmt->fetch(PDO::FETCH_ASSOC);
+
+                    $targetStmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = ? LIMIT 1");
+                    $targetStmt->execute([$merge['target']]);
+                    $target = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($source && $target && $source['id'] !== $target['id']) {
+                        // Migrate all transactions
+                        $this->pdo->prepare("UPDATE `{$this->prefix}transactions` SET account_id = ? WHERE account_id = ?")->execute([$target['id'], $source['id']]);
+                        // Migrate journal entry lines
+                        $this->pdo->prepare("UPDATE `{$this->prefix}journal_entry_lines` SET account_id = ? WHERE account_id = ?")->execute([$target['id'], $source['id']]);
+                        // Delete the duplicate
+                        $this->pdo->prepare("DELETE FROM `{$this->prefix}accounts` WHERE id = ?")->execute([$source['id']]);
+                        error_log("AutoMigration ensureCleanCOA: Merged account {$merge['source']} into {$merge['target']}");
+                    }
+                } catch (Exception $e) {
+                    error_log("AutoMigration ensureCleanCOA: Error merging {$merge['source']} to {$merge['target']}: " . $e->getMessage());
+                }
+            }
+
+            // 10. Ensure 1205 = Inventory Asset exists
+            try {
+                $this->pdo->prepare(
+                    "INSERT IGNORE INTO `{$this->prefix}accounts`
+                     (account_code, account_name, account_type, account_category, description, opening_balance, balance, status, created_at)
+                     VALUES ('1205', 'Inventory Asset', 'Assets', 'Inventory', 'Value of goods held for sale', 0, 0, 'active', NOW())"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error ensuring 1205: " . $e->getMessage());
+            }
+
+            // 11. Ensure 4005 = Rental Income exists
+            try {
+                $this->pdo->prepare(
+                    "INSERT IGNORE INTO `{$this->prefix}accounts`
+                     (account_code, account_name, account_type, account_category, description, opening_balance, balance, status, created_at)
+                     VALUES ('4005', 'Rental Income', 'Revenue', 'Rental Income', 'Income from property rentals', 0, 0, 'active', NOW())"
+                )->execute();
+            } catch (Exception $e) {
+                error_log("AutoMigration ensureCleanCOA: Error ensuring 4005: " . $e->getMessage());
+            }
+
+            error_log("AutoMigration: ensureCleanCOA completed successfully");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR in ensureCleanCOA: " . $e->getMessage());
             return false;
         }
     }

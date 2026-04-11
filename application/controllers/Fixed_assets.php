@@ -286,7 +286,7 @@ class Fixed_assets extends Base_Controller {
             $paymentAccount = null;
             if ($assetData['payment_status'] === 'paid') {
                 // Cash payment
-                $paymentAccount = $this->accountModel->getByCode('1000');
+                $paymentAccount = $this->accountModel->getByPaymentMethod($assetData['payment_method'] ?? 'cash');
                 if (!$paymentAccount) {
                     $assetAccounts = $this->accountModel->getByType('Assets');
                     foreach ($assetAccounts as $acc) {
@@ -298,7 +298,7 @@ class Fixed_assets extends Base_Controller {
                 }
             } else {
                 // On credit - Accounts Payable
-                $paymentAccount = $this->accountModel->getByCode('2100');
+                $paymentAccount = $this->accountModel->getByCode('2000'); // Accounts Payable
                 if (!$paymentAccount) {
                     $liabilityAccounts = $this->accountModel->getByType('Liabilities');
                     foreach ($liabilityAccounts as $acc) {

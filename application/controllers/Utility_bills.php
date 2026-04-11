@@ -230,7 +230,7 @@ class Utility_bills extends Base_Controller {
     private function postBillToAccounting($billId, $billData, $meter) {
         try {
             // Find Utility Expense account (6100)
-            $utilityExpenseAccount = $this->accountModel->getByCode('6100');
+            $utilityExpenseAccount = $this->accountModel->getByCode('6010'); // Utilities Expense
             if (!$utilityExpenseAccount) {
                 // Fallback search
                 $expenseAccounts = $this->accountModel->getByType('Expenses');

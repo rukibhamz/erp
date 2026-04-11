@@ -129,7 +129,7 @@ class Utility_payments extends Base_Controller {
     private function postPaymentToAccounting($paymentId, $paymentData, $bill) {
         try {
             // Find Cash/Bank account (1000)
-            $cashAccount = $this->accountModel->getByCode('1000');
+            $cashAccount = $this->accountModel->getByPaymentMethod($paymentData['payment_method'] ?? 'cash');
             if (!$cashAccount) {
                 // Fallback search
                 $assetAccounts = $this->accountModel->getByType('Assets');

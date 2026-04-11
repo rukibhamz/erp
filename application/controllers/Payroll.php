@@ -353,7 +353,7 @@ class Payroll extends Base_Controller {
             }
 
             // Get expense account for payroll
-            $expenseAccount = $this->accountModel->getByCode('7000'); // Payroll Expense
+            $expenseAccount = $this->accountModel->getByCode('6300'); // Payroll Expense
             if (!$expenseAccount) {
                 $expenseAccounts = $this->accountModel->getByType('Expenses');
                 $expenseAccount = !empty($expenseAccounts) ? $expenseAccounts[0] : null;
@@ -394,7 +394,7 @@ class Payroll extends Base_Controller {
             }
             
             // Get liability accounts (create if they don't exist)
-            $payeAccount = $this->accountModel->getByCode('2210'); // PAYE Payable
+            $payeAccount = $this->accountModel->getByCode('2211'); // PAYE Payable
             $pensionAccount = $this->accountModel->getByCode('2220'); // Pension Payable
             $nhfAccount = $this->accountModel->getByCode('2230'); // NHF Payable
             

@@ -434,6 +434,22 @@ class Account_model extends Base_Model {
     }
 
     /**
+     * Get the appropriate cash/bank account based on payment method.
+     * Cash payments → 1000 (Cash on Hand)
+     * Bank/card/online/transfer payments → 1010 (Cash in Bank)
+     */
+    public function getByPaymentMethod($paymentMethod) {
+        $bankMethods = ['bank_transfer', 'bank transfer', 'transfer', 'online', 'card', 'paystack', 'flutterwave', 'pos_card'];
+        $code = in_array(strtolower(trim($paymentMethod ?? '')), $bankMethods) ? '1010' : '1000';
+        $account = $this->getByCode($code);
+        if (!$account) {
+            // Fallback: find any cash/bank asset account
+            $account = $this->getByCode($code === '1010' ? '1000' : '1010');
+        }
+        return $account;
+    }
+
+    /**
      * Get the VAT Payable account, or create it if it doesn't exist.
      * Uses account code 2300 (VAT Payable) as the canonical VAT liability account.
      * Falls back to any existing account named VAT/Tax in Liabilities.
