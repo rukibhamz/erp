@@ -58,9 +58,7 @@ class Accounts extends Base_Controller {
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'opening_balance' => floatval($_POST['opening_balance'] ?? 0),
                 'balance' => floatval($_POST['opening_balance'] ?? 0),
-                'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
-                'status' => sanitize_input($_POST['status'] ?? 'active'),
-                'created_by' => $this->session['user_id']
+                'currency' => sanitize_input($_POST['currency'] ?? 'NGN'),
             ];
             
             if ($this->accountNumberEnabled) {
@@ -128,7 +126,7 @@ class Accounts extends Base_Controller {
             $account['parent_id'] = $account['parent_account_id'] ?? null;
             $account['opening_balance'] = $account['opening_balance'] ?? 0;
             $account['balance'] = $account['balance'] ?? 0;
-            $account['currency'] = $account['currency'] ?? 'USD';
+            $account['currency'] = $account['currency'] ?? 'NGN';
             if ($this->accountNumberEnabled) {
                 $account['account_number'] = $account['account_number'] ?? '';
             }
@@ -151,7 +149,7 @@ class Accounts extends Base_Controller {
                 'account_name' => sanitize_input($_POST['account_name'] ?? ''),
                 'account_type' => sanitize_input($_POST['account_type'] ?? 'Assets'),
                 'parent_account_id' => !empty($_POST['parent_id']) ? intval($_POST['parent_id']) : null,
-                'currency' => sanitize_input($_POST['currency'] ?? 'USD'),
+                'currency' => sanitize_input($_POST['currency'] ?? 'NGN'),
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'status' => sanitize_input($_POST['status'] ?? 'active'),
                 'updated_at' => date('Y-m-d H:i:s')

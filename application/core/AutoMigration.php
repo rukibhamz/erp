@@ -446,6 +446,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring users auth columns: " . $e->getMessage());
         }
+
+        // ALWAYS backfill accounts currency to NGN
+        try {
+            $this->backfillAccountsCurrencyNGN();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error backfilling accounts currency: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2923,6 +2930,34 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring facilities pricing columns: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Backfill all accounts with NULL or non-NGN currency to NGN,
+     * and set the column default to NGN.
+     */
+    private function backfillAccountsCurrencyNGN() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return true;
+            }
+
+            // Set column default to NGN
+            $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts`
+                MODIFY COLUMN `currency` VARCHAR(10) NOT NULL DEFAULT 'NGN'");
+
+            // Backfill all rows that are NULL or not NGN
+            $this->pdo->exec("UPDATE `{$this->prefix}accounts`
+                SET `currency` = 'NGN'
+                WHERE `currency` IS NULL OR `currency` = '' OR `currency` != 'NGN'");
+
+            error_log("AutoMigration: Backfilled accounts currency to NGN");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR backfilling accounts currency: " . $e->getMessage());
             return false;
         }
     }
