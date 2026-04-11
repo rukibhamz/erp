@@ -324,7 +324,8 @@ class Space_model extends Base_Model {
                 'security_deposit' => $deposit,
                 'resource_type' => $this->mapCategoryToResourceType($space['category']),
                 'status' => $space['operational_status'] === 'active' ? 'available' : 'under_maintenance',
-                'is_bookable' => 1
+                'is_bookable' => 1,
+                'pricing_rules' => json_encode($pricingRules)
             ];
             
             error_log('Space_model syncToBookingModule: Pricing rules from config: ' . json_encode($pricingRules));

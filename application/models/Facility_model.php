@@ -723,19 +723,10 @@ class Facility_model extends Base_Model {
                         $basePerPerson = $baseRate > 0 ? $baseRate : floatval($facility['hourly_rate'] ?? 0);
                     }
                     
-                    // Calculation logic: Picnic uses guest-count tiers, Photo/Video are per-project
+                    // Calculation logic: Picnic uses selected equipment tier (same as Photo/Video)
                     if ($bookingType === 'picnic') {
-                        // Tier is determined by guest count, not equipment selection
-                        // 5–20 guests = basic, 21–40 = standard, 41+ = premium
+                        // Use $surcharge already derived from $equipmentTier above
                         $guests = max(5, intval($quantity));
-                        if ($guests <= 20) {
-                            $picnicTier = 'basic';
-                        } elseif ($guests <= 40) {
-                            $picnicTier = 'standard';
-                        } else {
-                            $picnicTier = 'premium';
-                        }
-                        $surcharge = floatval($perPersonRates['equipment_tiers'][$picnicTier]['surcharge'] ?? 0);
                         $totalPrice = ($basePerPerson + $surcharge) * $guests;
                     } else {
                         // Photoshoot / Videoshoot: charge per project (quantity = 1)
