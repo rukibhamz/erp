@@ -146,6 +146,8 @@ class Users extends Base_Controller {
         // Define role hierarchy (higher number = higher privilege)
         $roleHierarchy = [
             'user' => 1,
+            'staff' => 1,
+            'accountant' => 2,
             'manager' => 2,
             'admin' => 3,
             'super_admin' => 4
@@ -294,9 +296,52 @@ class Users extends Base_Controller {
             $managerPermissions = $this->getManagerPermissions();
             $permissionIds = array_column($managerPermissions, 'id');
             $this->userPermissionModel->assignPermissions($userId, $permissionIds);
+        } elseif ($role === 'accountant') {
+            // For accountant role, assign full access to financial modules
+            $accountantPermissions = $this->getAccountantPermissions();
+            $permissionIds = array_column($accountantPermissions, 'id');
+            $this->userPermissionModel->assignPermissions($userId, $permissionIds);
         }
     }
     
+    /**
+     * Get accountant permissions - full access to financial modules, read-only on others
+     */
+    private function getAccountantPermissions() {
+        $allPermissions = $this->permissionModel->getAllPermissions();
+        $accountantPermissions = [];
+
+        // Full access to these financial modules
+        $financialModules = [
+            'accounting', 'accounts', 'cash', 'receivables', 'payables',
+            'ledger', 'estimates', 'tax', 'financial_years', 'bank_reconciliation',
+            'invoices', 'credit_notes', 'bills', 'budget', 'reports'
+        ];
+
+        // Read-only modules
+        $readOnlyModules = ['dashboard', 'notifications', 'employees', 'customers'];
+
+        // Excluded modules
+        $excludedModules = ['users', 'settings', 'companies', 'modules', 'pos'];
+
+        foreach ($allPermissions as $permission) {
+            $module = $permission['module'];
+            $action = $permission['permission'];
+
+            if (in_array($module, $excludedModules)) {
+                continue;
+            }
+
+            if (in_array($module, $financialModules) && in_array($action, ['create', 'read', 'update'])) {
+                $accountantPermissions[] = $permission;
+            } elseif (in_array($module, $readOnlyModules) && $action === 'read') {
+                $accountantPermissions[] = $permission;
+            }
+        }
+
+        return $accountantPermissions;
+    }
+
     /**
      * Get manager permissions - create, read, update for all modules except tax
      */

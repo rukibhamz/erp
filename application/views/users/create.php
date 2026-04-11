@@ -52,6 +52,7 @@ $page_title = $page_title ?? 'Create User';
                             <select class="form-select" id="role" name="role">
                                 <option value="user">User</option>
                                 <option value="staff">Staff</option>
+                                <option value="accountant">Accountant</option>
                                 <option value="manager">Manager</option>
                                 <option value="admin">Admin</option>
                                 <option value="super_admin">Super Admin</option>

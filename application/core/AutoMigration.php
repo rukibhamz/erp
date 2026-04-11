@@ -356,6 +356,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring customer role: " . $e->getMessage());
         }
+
+        // Ensure accountant role exists
+        try {
+            $this->ensureAccountantRole();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring accountant role: " . $e->getMessage());
+        }
         
         // Apply best-practice manager permissions
         try {
@@ -2333,6 +2340,41 @@ class AutoMigration {
         }
     }
     
+    /**
+     * Ensure accountant role exists in the roles table.
+     */
+    private function ensureAccountantRole() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}roles'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return false;
+            }
+
+            $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}roles` WHERE role_code = ?");
+            $stmt->execute(['accountant']);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$existing) {
+                $sql = "INSERT INTO `{$this->prefix}roles`
+                        (`role_name`, `role_code`, `description`, `is_system`, `is_active`, `created_at`)
+                        VALUES (?, ?, ?, ?, ?, NOW())";
+                $this->pdo->prepare($sql)->execute([
+                    'Accountant',
+                    'accountant',
+                    'Accountant role — full access to financial modules, read-only on operational modules',
+                    1,
+                    1
+                ]);
+                error_log("AutoMigration: Created accountant role");
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring accountant role: " . $e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Apply best-practice permissions for manager role
      * Based on separation of duties - managers handle operations, not system config

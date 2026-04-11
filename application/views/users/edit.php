@@ -53,6 +53,7 @@ $userPermissions = $userPermissions ?? [];
                             <select class="form-select" id="role" name="role">
                                 <option value="user" <?= $user['role'] === 'user' ? 'selected' : '' ?>>User</option>
                                 <option value="staff" <?= $user['role'] === 'staff' ? 'selected' : '' ?>>Staff</option>
+                                <option value="accountant" <?= $user['role'] === 'accountant' ? 'selected' : '' ?>>Accountant</option>
                                 <option value="manager" <?= $user['role'] === 'manager' ? 'selected' : '' ?>>Manager</option>
                                 <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
                                 <option value="super_admin" <?= $user['role'] === 'super_admin' ? 'selected' : '' ?>>Super Admin</option>
