@@ -609,22 +609,18 @@ document.addEventListener('DOMContentLoaded', function() {
         recurringEndDate = this.value;
     });
 
-    // Load time slots when date changes
-    bookingDate.addEventListener('change', function() {
-        const date = this.value;
+    // Load time slots when date changes (change = calendar pick, input = manual typing)
+    function onBookingDateChange(date) {
         if (!date) return;
-        
         selectedDate = date;
         if (bookingEndDate.value) {
             selectedEndDate = bookingEndDate.value;
         }
-        
         // Reset time selection when date changes (but keep booking type)
         selectedStartTime = '';
         selectedEndTime = '';
         selectedTimeSummary.style.display = 'none';
         continueBtn.disabled = true;
-        
         // Reset duration to default when date changes (prevents stale duration issues)
         if (selectedBookingType === 'hourly') {
             selectedDuration = 1;
@@ -636,7 +632,6 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedDuration = 4;
             durationSelect.value = '4';
         }
-        
         // Handle different booking types
         if (selectedBookingType === 'full_day') {
             handleFullDayBooking();
@@ -648,7 +643,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('time-slot-legend').style.display = 'block';
             loadTimeSlots(spaceId, date, selectedEndDate || date);
         }
-        
         // Update end date minimum
         if (bookingEndDate) {
             bookingEndDate.min = date;
@@ -657,13 +651,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedEndDate = date;
             }
         }
+    }
+
+    let bookingDateDebounce = null;
+    bookingDate.addEventListener('change', function() {
+        onBookingDateChange(this.value);
+    });
+    bookingDate.addEventListener('input', function() {
+        const val = this.value;
+        // Only fire when a complete YYYY-MM-DD date has been typed
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+        clearTimeout(bookingDateDebounce);
+        bookingDateDebounce = setTimeout(() => onBookingDateChange(val), 400);
+    });
+    // Open date picker on click anywhere in the input box
+    bookingDate.addEventListener('click', function() {
+        if (typeof this.showPicker === 'function') this.showPicker();
     });
 
-    bookingEndDate.addEventListener('change', function() {
-        selectedEndDate = this.value;
+    function onBookingEndDateChange(val) {
+        selectedEndDate = val;
         if (selectedBookingType && selectedDate) {
             loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
         }
+    }
+
+    let endDateDebounce = null;
+    bookingEndDate.addEventListener('change', function() {
+        onBookingEndDateChange(this.value);
+    });
+    bookingEndDate.addEventListener('input', function() {
+        const val = this.value;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+        clearTimeout(endDateDebounce);
+        endDateDebounce = setTimeout(() => onBookingEndDateChange(val), 400);
+    });
+    // Open date picker on click anywhere in the input box
+    bookingEndDate.addEventListener('click', function() {
+        if (typeof this.showPicker === 'function') this.showPicker();
     });
 
     // Load initial slots if date and booking type are selected
@@ -1241,6 +1266,21 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+/* Make the entire date input box clickable / show pointer cursor */
+input[type="date"].form-control {
+    cursor: pointer;
+}
+input[type="date"].form-control::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    width: 100%;
+    position: absolute;
+    left: 0;
+    opacity: 0;
+}
+input[type="date"].form-control {
+    position: relative;
+}
+
 /* Responsive Wizard Navigation */
 .nav-wizard {
     display: flex;

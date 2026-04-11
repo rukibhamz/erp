@@ -2935,7 +2935,7 @@ class AutoMigration {
     }
 
     /**
-     * Backfill all accounts with NULL or non-NGN currency to NGN,
+     * Backfill all accounts with NULL or non-system currency to the system currency,
      * and set the column default to NGN.
      */
     private function backfillAccountsCurrencyNGN() {
@@ -2945,16 +2945,31 @@ class AutoMigration {
                 return true;
             }
 
-            // Set column default to NGN
+            // Get system currency from settings table (fallback to NGN)
+            $currency = 'NGN';
+            try {
+                $settingStmt = $this->pdo->prepare(
+                    "SELECT setting_value FROM `{$this->prefix}settings` WHERE setting_key = 'currency_code' LIMIT 1"
+                );
+                $settingStmt->execute();
+                $row = $settingStmt->fetch(PDO::FETCH_ASSOC);
+                if ($row && !empty($row['setting_value'])) {
+                    $currency = $row['setting_value'];
+                }
+            } catch (\Throwable $e) {
+                // Settings table may not exist yet — use NGN
+            }
+
+            // Set column default to system currency
             $this->pdo->exec("ALTER TABLE `{$this->prefix}accounts`
-                MODIFY COLUMN `currency` VARCHAR(10) NOT NULL DEFAULT 'NGN'");
+                MODIFY COLUMN `currency` VARCHAR(10) NOT NULL DEFAULT '{$currency}'");
 
-            // Backfill all rows that are NULL or not NGN
+            // Backfill all rows that are NULL or empty
             $this->pdo->exec("UPDATE `{$this->prefix}accounts`
-                SET `currency` = 'NGN'
-                WHERE `currency` IS NULL OR `currency` = '' OR `currency` != 'NGN'");
+                SET `currency` = '{$currency}'
+                WHERE `currency` IS NULL OR `currency` = ''");
 
-            error_log("AutoMigration: Backfilled accounts currency to NGN");
+            error_log("AutoMigration: Backfilled accounts currency to {$currency}");
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR backfilling accounts currency: " . $e->getMessage());
