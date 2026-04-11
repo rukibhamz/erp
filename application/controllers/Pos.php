@@ -327,11 +327,11 @@ class Pos extends Base_Controller {
                 $salesAccountId = $salesAccount[0]['id'] ?? null;
             }
             
-            // Get tax account (Terminal setting > Default)
+            // Get VAT Payable account (2300) — creates it if missing
             $taxAccountId = $terminal['tax_account_id'] ?? null;
             if (!$taxAccountId) {
-                $taxAccount = $this->accountModel->getByType('Liabilities');
-                $taxAccountId = $taxAccount[0]['id'] ?? null;
+                $vatAccount = $this->accountModel->getOrCreateVatAccount();
+                $taxAccountId = $vatAccount['id'] ?? null;
             }
             
             // Log account IDs for debugging removed (production mode)

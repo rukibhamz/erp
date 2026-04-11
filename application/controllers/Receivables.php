@@ -525,8 +525,8 @@ class Receivables extends Base_Controller {
                         $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
                     }
                     
-                    // Get VAT Payable account (2100)
-                    $vatAccount = $this->accountModel->getByCode('2100');
+                    // Get VAT Payable account (2300) — creates it if missing
+                    $vatAccount = $this->accountModel->getOrCreateVatAccount();
                     
                     if ($arAccount && $revenueAccount) {
                         $entries = [
@@ -736,8 +736,8 @@ class Receivables extends Base_Controller {
                             $revenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
                         }
                         
-                        // Get VAT Payable account (2100)
-                        $vatAccount = $this->accountModel->getByCode('2100');
+                        // Get VAT Payable account (2300) — creates it if missing
+                        $vatAccount = $this->accountModel->getOrCreateVatAccount();
                         
                         if ($arAccount && $revenueAccount) {
                             $entries = [
@@ -765,9 +765,6 @@ class Receivables extends Base_Controller {
                                     'credit' => $totalTax,
                                     'description' => 'VAT Payable - ' . $invoice['invoice_number']
                                 ];
-                            } elseif ($totalTax > 0) {
-                                // If no VAT account, add to revenue (fallback)
-                                $entries[1]['credit'] += $totalTax;
                             }
                             
                             $journalData = [

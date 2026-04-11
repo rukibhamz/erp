@@ -432,5 +432,72 @@ class Account_model extends Base_Model {
         
         return parent::update($id, $data, $where, $params);
     }
-}
 
+    /**
+     * Get the VAT Payable account, or create it if it doesn't exist.
+     * Uses account code 2300 (VAT Payable) as the canonical VAT liability account.
+     * Falls back to any existing account named VAT/Tax in Liabilities.
+     *
+     * @return array|false Account row or false on failure
+     */
+    public function getOrCreateVatAccount() {
+        try {
+            // 1. Try canonical VAT Payable account (2300)
+            $account = $this->getByCode('2300');
+            if ($account) return $account;
+
+            // 2. Try legacy code 2100 if it's named VAT-related
+            $legacy = $this->getByCode('2100');
+            if ($legacy && (
+                stripos($legacy['account_name'] ?? '', 'vat') !== false ||
+                stripos($legacy['account_name'] ?? '', 'tax') !== false
+            )) {
+                return $legacy;
+            }
+
+            // 3. Search all liability accounts for one named VAT/Tax
+            $liabilities = $this->getByType('Liabilities');
+            if (is_array($liabilities)) {
+                foreach ($liabilities as $acc) {
+                    if (stripos($acc['account_name'] ?? '', 'vat') !== false ||
+                        stripos($acc['account_name'] ?? '', 'tax payable') !== false) {
+                        return $acc;
+                    }
+                }
+            }
+
+            // 4. Create the VAT Payable account
+            $currency = 'NGN';
+            try {
+                $setting = $this->db->fetchOne(
+                    "SELECT setting_value FROM `" . $this->db->getPrefix() . "settings` WHERE setting_key = 'currency_code' LIMIT 1"
+                );
+                if ($setting && !empty($setting['setting_value'])) {
+                    $currency = $setting['setting_value'];
+                }
+            } catch (Exception $e) {}
+
+            $id = parent::create([
+                'account_code'    => '2300',
+                'account_name'    => 'VAT Payable',
+                'account_type'    => 'Liabilities',
+                'account_category'=> 'Tax Payable',
+                'description'     => 'VAT collected from customers, payable to tax authority',
+                'currency'        => $currency,
+                'opening_balance' => 0,
+                'balance'         => 0,
+                'status'          => 'active',
+            ]);
+
+            if ($id) {
+                error_log("Account_model: Created VAT Payable account (2300) with ID {$id}");
+                return $this->getById($id);
+            }
+
+            return false;
+        } catch (Exception $e) {
+            error_log('Account_model getOrCreateVatAccount error: ' . $e->getMessage());
+            return false;
+        }
+    }
+}

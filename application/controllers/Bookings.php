@@ -1633,13 +1633,29 @@ class Bookings extends Base_Controller {
                 }
             }
             
-            // 3. Credit Booking Revenue for Total Amount
+            // 3. Credit Net Revenue (excluding VAT) to Booking Revenue account
+            $taxAmount = floatval($booking['tax_amount'] ?? 0);
+            $netRevenue = $totalAmount - $taxAmount;
+
             $entries[] = [
                 'account_id' => $bookingRevenueAccount['id'],
                 'debit' => 0,
-                'credit' => $totalAmount,
+                'credit' => $netRevenue,
                 'description' => 'Booking Revenue Recognized - Booking #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')'
             ];
+
+            // 4. Credit VAT Payable separately for proper VAT tracking
+            if ($taxAmount > 0) {
+                $vatAccount = $this->accountModel->getOrCreateVatAccount();
+                if ($vatAccount) {
+                    $entries[] = [
+                        'account_id' => $vatAccount['id'],
+                        'debit' => 0,
+                        'credit' => $taxAmount,
+                        'description' => 'VAT Payable - Booking #' . ($booking['booking_number'] ?? $bookingId)
+                    ];
+                }
+            }
             
             if (!empty($entries)) {
                 $journalData = [

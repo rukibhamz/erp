@@ -2151,19 +2151,7 @@ class Booking_wizard extends Base_Controller {
             // Add VAT line if applicable
             $vatAccount = null;
             if ($taxAmount > 0) {
-                $vatAccount = $this->accountModel->getByCode('2100');
-                if (!$vatAccount) {
-                    $liabilityAccounts = $this->accountModel->getByType('Liabilities');
-                    if (is_array($liabilityAccounts)) {
-                        foreach ($liabilityAccounts as $acc) {
-                            if (stripos($acc['account_name'] ?? '', 'vat') !== false || 
-                                stripos($acc['account_name'] ?? '', 'tax') !== false) {
-                                $vatAccount = $acc;
-                                break;
-                            }
-                        }
-                    }
-                }
+                $vatAccount = $this->accountModel->getOrCreateVatAccount();
                 if ($vatAccount) {
                     $journalLines[] = ['account_id' => $vatAccount['id'], 'description' => 'VAT Liability - ' . $bookingRef, 'debit' => 0, 'credit' => $taxAmount];
                 }

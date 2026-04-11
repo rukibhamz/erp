@@ -453,6 +453,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error backfilling accounts currency: " . $e->getMessage());
         }
+
+        // ALWAYS ensure VAT Payable account (2300) exists
+        try {
+            $this->ensureVatPayableAccount();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring VAT Payable account: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2930,6 +2937,46 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring facilities pricing columns: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure VAT Payable account (code 2300) exists for proper VAT tracking.
+     */
+    private function ensureVatPayableAccount() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return true;
+            }
+
+            // Check if 2300 already exists
+            $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}accounts` WHERE account_code = '2300' LIMIT 1");
+            $stmt->execute();
+            if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+                return true; // Already exists
+            }
+
+            // Get system currency
+            $currency = 'NGN';
+            try {
+                $s = $this->pdo->prepare("SELECT setting_value FROM `{$this->prefix}settings` WHERE setting_key = 'currency_code' LIMIT 1");
+                $s->execute();
+                $row = $s->fetch(PDO::FETCH_ASSOC);
+                if ($row && !empty($row['setting_value'])) $currency = $row['setting_value'];
+            } catch (\Throwable $e) {}
+
+            $this->pdo->prepare(
+                "INSERT IGNORE INTO `{$this->prefix}accounts`
+                 (account_code, account_name, account_type, description, currency, opening_balance, balance, status, created_at)
+                 VALUES ('2300', 'VAT Payable', 'Liabilities', 'VAT collected from customers, payable to tax authority', ?, 0, 0, 'active', NOW())"
+            )->execute([$currency]);
+
+            error_log("AutoMigration: Ensured VAT Payable account (2300)");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring VAT Payable account: " . $e->getMessage());
             return false;
         }
     }
