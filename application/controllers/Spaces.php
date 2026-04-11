@@ -217,15 +217,15 @@ class Spaces extends Base_Controller {
                 // Update bookable config if checkbox is checked OR if rates were updated
                 error_log("Spaces Edit: POST is_bookable=" . ($_POST['is_bookable']??'null') . ", hasRateUpdates=" . ($hasRateUpdates?'yes':'no') . ", hasConfig=" . ($hasBookableConfig?'yes':'no'));
                 
-                if (!empty($_POST['is_bookable']) || ($hasRateUpdates && $hasBookableConfig)) {
+                if (!empty($_POST['is_bookable']) || $hasRateUpdates) {
                     error_log("Spaces Edit: Calling updateBookableConfig");
                     $this->updateBookableConfig($id, $_POST);
                 } else {
                     error_log("Spaces Edit: NOT calling updateBookableConfig");
                 }
                 
-                // Always sync if space is bookable or has bookable config
-                if ($isCurrentlyBookable || $hasBookableConfig) {
+                // Always sync when prices are submitted or space is bookable
+                if ($hasRateUpdates || $isCurrentlyBookable || $hasBookableConfig) {
                     try {
                         $this->spaceModel->syncToBookingModule($id);
                     } catch (Exception $e) {

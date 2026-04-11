@@ -687,24 +687,22 @@ class Facility_model extends Base_Model {
             
             // Per-person booking types — use pricing_rules JSON
             if (in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace'])) {
-                // Load pricing_rules from bookable_config
+                // Always read pricing_rules from bookable_config (source of truth for prices)
+                // This ensures updated prices are always reflected without needing a manual sync
                 $pricingRules = [];
-                if (!empty($facility['pricing_rules'])) {
-                    $pricingRules = is_array($facility['pricing_rules']) 
-                        ? $facility['pricing_rules'] 
-                        : (json_decode($facility['pricing_rules'], true) ?: []);
+                $configSql = "SELECT pricing_rules FROM `" . $this->db->getPrefix() . "bookable_config` 
+                              WHERE space_id = (SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ?)
+                              LIMIT 1";
+                $configRow = $this->db->fetchOne($configSql, [$facilityId]);
+                if ($configRow && !empty($configRow['pricing_rules'])) {
+                    $pricingRules = json_decode($configRow['pricing_rules'], true) ?: [];
                 }
-                
-                // Fallback: If facility pricing rules are empty, check bookable_config table for spaces
-                if (empty($pricingRules)) {
-                    // Try to find if this facility is linked to a space
-                    $sql = "SELECT pricing_rules FROM `" . $this->db->getPrefix() . "bookable_config` 
-                            WHERE space_id = (SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ?)
-                            LIMIT 1";
-                    $config = $this->db->fetchOne($sql, [$facilityId]);
-                    if ($config && !empty($config['pricing_rules'])) {
-                        $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
-                    }
+
+                // Fallback: use pricing_rules already on the facility record (covers non-space facilities)
+                if (empty($pricingRules) && !empty($facility['pricing_rules'])) {
+                    $pricingRules = is_array($facility['pricing_rules'])
+                        ? $facility['pricing_rules']
+                        : (json_decode($facility['pricing_rules'], true) ?: []);
                 }
                 
                 if ($bookingType === 'picnic' || $bookingType === 'photoshoot' || $bookingType === 'videoshoot') {
@@ -723,13 +721,24 @@ class Facility_model extends Base_Model {
                         $basePerPerson = $baseRate > 0 ? $baseRate : floatval($facility['hourly_rate'] ?? 0);
                     }
                     
-                    // Calculation logic: Picnic uses selected equipment tier (same as Photo/Video)
+                    // Picnic: guest count auto-selects the tier, tier price is a flat total (no multiplication)
+                    // 5–20 guests → basic tier price, 21–40 → standard tier price, 41+ → premium tier price
                     if ($bookingType === 'picnic') {
-                        // Use $surcharge already derived from $equipmentTier above
                         $guests = max(5, intval($quantity));
-                        $totalPrice = ($basePerPerson + $surcharge) * $guests;
+                        $tiers = $perPersonRates['equipment_tiers'] ?? [];
+
+                        if ($guests <= 20) {
+                            $autoTier = 'basic';
+                        } elseif ($guests <= 40) {
+                            $autoTier = 'standard';
+                        } else {
+                            $autoTier = 'premium';
+                        }
+
+                        // Flat tier price — no multiplication by guest count
+                        $totalPrice = floatval($tiers[$autoTier]['surcharge'] ?? $basePerPerson);
                     } else {
-                        // Photoshoot / Videoshoot: charge per project (quantity = 1)
+                        // Photoshoot / Videoshoot: flat tier price (base + surcharge, quantity = 1)
                         $totalPrice = ($basePerPerson + $surcharge);
                     }
                     

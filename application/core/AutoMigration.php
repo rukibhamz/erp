@@ -418,6 +418,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring multi-module tables: " . $e->getMessage());
         }
+
+        // ALWAYS ensure facilities table has pricing_rules and booking columns
+        try {
+            $this->ensureFacilitiesPricingColumns();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring facilities pricing columns: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -2842,6 +2849,42 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring payment_schedule table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure facilities table has pricing_rules, is_bookable, half_day_rate, weekly_rate,
+     * max_duration, and resource_type columns required by syncToBookingModule.
+     * Safe to run on production — uses ADD COLUMN IF NOT EXISTS pattern.
+     */
+    private function ensureFacilitiesPricingColumns() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}facilities'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                return true; // Table doesn't exist yet, skip
+            }
+
+            $columnsToAdd = [
+                'pricing_rules'  => "TEXT NULL COMMENT 'JSON pricing rules including per_person_rates and equipment tier surcharges' AFTER `security_deposit`",
+                'is_bookable'    => "TINYINT(1) NOT NULL DEFAULT 1 AFTER `status`",
+                'half_day_rate'  => "DECIMAL(15,2) DEFAULT 0.00 AFTER `daily_rate`",
+                'weekly_rate'    => "DECIMAL(15,2) DEFAULT 0.00 AFTER `half_day_rate`",
+                'max_duration'   => "INT(11) NULL AFTER `minimum_duration`",
+                'resource_type'  => "VARCHAR(50) DEFAULT 'other' AFTER `capacity`",
+            ];
+
+            foreach ($columnsToAdd as $column => $definition) {
+                $check = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}facilities` LIKE '{$column}'");
+                if (!$check || count($check->fetchAll()) === 0) {
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}facilities` ADD COLUMN `{$column}` {$definition}");
+                    error_log("AutoMigration: Added column '{$column}' to facilities table");
+                }
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring facilities pricing columns: " . $e->getMessage());
             return false;
         }
     }

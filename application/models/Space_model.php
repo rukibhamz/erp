@@ -220,17 +220,11 @@ class Space_model extends Base_Model {
             // Also accept truthy values like "1", 1, true
             $isBookable = !empty($space['is_bookable']) && (intval($space['is_bookable']) == 1 || $space['is_bookable'] === true);
             
-            // Allow sync if space is bookable OR if bookable_config exists (for manual sync)
-            if (!$isBookable && !$hasBookableConfig) {
-                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' is not bookable and has no config (is_bookable=' . var_export($space['is_bookable'], true) . ')');
-                return false;
-            }
-            
-            // If space is not marked as bookable but has config, mark it as bookable
-            if (!$isBookable && $hasBookableConfig) {
-                error_log('Space_model syncToBookingModule: Space has config but is_bookable=0, updating is_bookable to 1');
+            // Always allow sync — mark space as bookable if it isn't already
+            if (!$isBookable) {
+                error_log('Space_model syncToBookingModule: Space is_bookable=0, marking as bookable to allow sync');
                 $this->update($spaceId, ['is_bookable' => 1]);
-                $space['is_bookable'] = 1; // Update local variable
+                $space['is_bookable'] = 1;
             }
             
             error_log('Space_model syncToBookingModule: Space is bookable or has config, proceeding with sync');
