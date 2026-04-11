@@ -303,7 +303,9 @@ class Spaces extends Base_Controller {
             if ($facilityId) {
                 $this->setFlashMessage('success', 'Space synchronized with booking module successfully.');
             } else {
-                $this->setFlashMessage('warning', 'Failed to sync space. Ensure space is marked as bookable.');
+                // Get last error from model for a more helpful message
+                $lastError = $this->spaceModel->getLastSyncError() ?? 'Space could not be synced. Check error logs for details.';
+                $this->setFlashMessage('warning', 'Failed to sync space: ' . $lastError);
             }
         } catch (Exception $e) {
             error_log('Spaces syncToBooking error: ' . $e->getMessage());

@@ -3,6 +3,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Space_model extends Base_Model {
     protected $table = 'spaces';
+    private $lastSyncError = null;
+
+    public function getLastSyncError() {
+        return $this->lastSyncError;
+    }
     
     public function getNextSpaceNumber($propertyId) {
         try {
@@ -201,16 +206,14 @@ class Space_model extends Base_Model {
      * Sync space to booking module facilities table
      */
     public function syncToBookingModule($spaceId) {
+        $this->lastSyncError = null;
         try {
-            error_log('Space_model syncToBookingModule: Starting sync for space ' . $spaceId);
-            
             $space = $this->getWithProperty($spaceId);
             if (!$space) {
-                error_log('Space_model syncToBookingModule: Space ' . $spaceId . ' not found');
+                $this->lastSyncError = 'Space ID ' . $spaceId . ' not found in database.';
+                error_log('Space_model syncToBookingModule: ' . $this->lastSyncError);
                 return false;
             }
-            
-            error_log('Space_model syncToBookingModule: Space found - ' . ($space['space_name'] ?? 'unnamed') . ', is_bookable=' . var_export($space['is_bookable'] ?? null, true));
             
             // Check if bookable config exists - if it does, allow sync even if is_bookable is 0
             $config = $this->getBookableConfig($spaceId);
@@ -351,7 +354,8 @@ class Space_model extends Base_Model {
                 $facilityId = $facilityModel->create($facilityData);
                 
                 if (!$facilityId) {
-                    error_log('Space_model syncToBookingModule: Failed to create facility');
+                    $this->lastSyncError = 'Failed to create facility record in database. Check that the facilities table exists and has required columns.';
+                    error_log('Space_model syncToBookingModule: ' . $this->lastSyncError);
                     return false;
                 }
                 
@@ -375,6 +379,7 @@ class Space_model extends Base_Model {
             
             return $facilityId;
         } catch (Exception $e) {
+            $this->lastSyncError = $e->getMessage();
             error_log('Space_model syncToBookingModule error: ' . $e->getMessage());
             return false;
         }
