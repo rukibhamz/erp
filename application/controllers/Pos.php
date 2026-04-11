@@ -129,9 +129,6 @@ class Pos extends Base_Controller {
     }
     
     public function processSale() {
-        // Log start of request (to confirm we reach here)
-        file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - START processSale request\n", FILE_APPEND);
-
         try {
             $this->requirePermission('pos', 'create');
             
@@ -295,7 +292,6 @@ class Pos extends Base_Controller {
             $errorMessage = $e->getMessage();
             $trace = $e->getTraceAsString();
             
-            file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - EXCEPTION: " . $errorMessage . "\n" . $trace . "\n", FILE_APPEND);
             error_log('POS processSale fatal error: ' . $errorMessage);
             
             if (isset($_POST['ajax'])) {
@@ -338,8 +334,7 @@ class Pos extends Base_Controller {
                 $taxAccountId = $taxAccount[0]['id'] ?? null;
             }
             
-            // Log account IDs for debugging
-            file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Accounting Debug: CashID={$cashAccountId}, SalesID={$salesAccountId}, TaxID={$taxAccountId}\n", FILE_APPEND);
+            // Log account IDs for debugging removed (production mode)
 
             if ($cashAccountId && $salesAccountId) {
                 // Prepare journal entry data
@@ -384,10 +379,8 @@ class Pos extends Base_Controller {
                 
                 // Update cash account balance
                 $this->loadModel('Cash_account_model')->updateBalance($cashAccountId, $totalAmount, 'deposit');
-                
-                file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Accounting: Journal posted successfully.\n", FILE_APPEND);
             } else {
-                file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Accounting Skipped: Missing Cash or Sales Account ID.\n", FILE_APPEND);
+                error_log('POS Accounting Skipped: Missing Cash or Sales Account ID for sale ' . $saleId);
             }
             
             // Get walk-in customer if needed
@@ -535,7 +528,7 @@ class Pos extends Base_Controller {
                 }
             }
         } catch (Exception $e) {
-            file_put_contents(__DIR__ . '/../../pos_debug.log', date('Y-m-d H:i:s') . " - Error loading terminals/accounts: " . $e->getMessage() . "\n", FILE_APPEND);
+            error_log('POS load terminals/accounts error: ' . $e->getMessage());
             $terminals = [];
             $assets = [];
             $revenue = [];

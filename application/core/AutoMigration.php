@@ -2571,15 +2571,10 @@ class AutoMigration {
      * 1001 (Cash), Revenue, Liability
      */
     private function ensureEssentialPOSAccounts() {
-        // Log start
-        $debugLog = __DIR__ . '/../../pos_debug.log';
-        file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Starting ensureEssentialPOSAccounts\n", FILE_APPEND);
-
         try {
             // Check if accounts table exists
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
             if (!$stmt || count($stmt->fetchAll()) == 0) {
-                file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Accounts table missing\n", FILE_APPEND);
                 return false;
             }
             
@@ -2588,20 +2583,13 @@ class AutoMigration {
             $stmt->execute(['1001']);
             if ($stmt->fetchColumn() == 0) {
                 try {
-                // Create Cash Account - usage 'asset' (lowercase) to be safe
-                // Removed is_default as it might missing in older schemas
-                $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
-                    (account_code, account_name, account_type, status, created_at)
-                    VALUES ('1001', 'Cash', 'asset', 'active', NOW())");
-                file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Cash account (1001)\n", FILE_APPEND);
+                    $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
+                        (account_code, account_name, account_type, status, created_at)
+                        VALUES ('1001', 'Cash', 'asset', 'active', NOW())");
                 } catch (Exception $e) {
-                     file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Cash account: " . $e->getMessage() . "\n", FILE_APPEND);
+                    error_log('AutoMigration: Failed to create Cash account: ' . $e->getMessage());
                 }
-            } else {
-                 file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Cash account (1001) already exists\n", FILE_APPEND);
             }
-            
-            file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Checking Revenue Account...\n", FILE_APPEND);
 
             // Ensure Sales Revenue Account — only insert if NO revenue account exists at all
             $stmt = $this->pdo->query("SELECT COUNT(*) FROM `{$this->prefix}accounts` WHERE LOWER(account_type) IN ('revenue', 'income')");
@@ -2610,12 +2598,9 @@ class AutoMigration {
                     $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
                         (account_code, account_name, account_type, status, created_at)
                         VALUES ('4001', 'Sales Revenue', 'Revenue', 'active', NOW())");
-                    file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Revenue account (4001)\n", FILE_APPEND);
                 } catch (\Throwable $e) {
-                     file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Revenue account: " . $e->getMessage() . "\n", FILE_APPEND);
+                    error_log('AutoMigration: Failed to create Revenue account: ' . $e->getMessage());
                 }
-            } elseif (!$stmt) {
-                 file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Revenue query failed\n", FILE_APPEND);
             }
             
             // Ensure VAT Liability Account — only insert if NO liability account exists at all
@@ -2625,17 +2610,14 @@ class AutoMigration {
                     $this->pdo->exec("INSERT INTO `{$this->prefix}accounts` 
                         (account_code, account_name, account_type, status, created_at)
                         VALUES ('2001', 'VAT Liability', 'Liabilities', 'active', NOW())");
-                    file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Created default Liability account (2001)\n", FILE_APPEND);
                 } catch (\Throwable $e) {
-                     file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Failed to create Liability account: " . $e->getMessage() . "\n", FILE_APPEND);
+                    error_log('AutoMigration: Failed to create Liability account: ' . $e->getMessage());
                 }
-            } elseif (!$stmt) {
-                 file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Liability query failed\n", FILE_APPEND);
             }
             
             return true;
         } catch (\Throwable $e) {
-            file_put_contents($debugLog, date('Y-m-d H:i:s') . " - AutoMigration: Error ensuring POS accounts: " . $e->getMessage() . "\n", FILE_APPEND);
+            error_log('AutoMigration: Error ensuring POS accounts: ' . $e->getMessage());
             return false;
         }
     }
