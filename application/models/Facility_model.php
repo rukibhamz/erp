@@ -738,8 +738,13 @@ class Facility_model extends Base_Model {
                         // Flat tier price — no multiplication by guest count
                         $totalPrice = floatval($tiers[$autoTier]['surcharge'] ?? $basePerPerson);
                     } else {
-                        // Photoshoot / Videoshoot: flat tier price (base + surcharge, quantity = 1)
-                        $totalPrice = ($basePerPerson + $surcharge);
+                        // Photoshoot / Videoshoot: tier surcharge IS the flat price for that tier
+                        // base_per_person is only used when no tier is selected
+                        if ($equipmentTier && $surcharge > 0) {
+                            $totalPrice = $surcharge;
+                        } else {
+                            $totalPrice = $basePerPerson;
+                        }
                     }
                     
                 } elseif ($bookingType === 'workspace') {

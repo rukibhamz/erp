@@ -1,3 +1,0 @@
-Space: tesy (ID: 1)
-Pricing Rules: {"base_hourly":2,"base_daily":16,"half_day":8,"weekly":112,"deposit":0,"peak_rate_multiplier":1,"per_person_rates":{"picnic":{"base_per_person":2000,"equipment_tiers":{"basic":{"surcharge":0},"standard":{"surcharge":100000},"premium":{"surcharge":150000}}},"photoshoot":{"base_per_person":10000,"equipment_tiers":{"basic":{"surcharge":0},"standard":{"surcharge":20000},"premium":{"surcharge":30000}}},"videoshoot":{"base_per_person":15000,"equipment_tiers":{"basic":{"surcharge":0},"standard":{"surcharge":30000},"premium":{"surcharge":40000}}}},"workspace_rates":{"per_person_daily":10000,"per_person_weekly":0,"per_person_monthly":0}}
--------------------
