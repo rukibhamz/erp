@@ -32,7 +32,7 @@
                             <input type="text" name="code" id="promoCodeInput" class="form-control text-uppercase"
                                    placeholder="e.g. SUMMER20 (leave blank to auto-generate)"
                                    style="text-transform:uppercase">
-                            <button type="button" class="btn btn-outline-secondary" id="generateBtn" title="Generate random code">
+                            <button type="button" class="btn btn-dark" id="generateBtn" title="Generate random code">
                                 <i class="bi bi-shuffle"></i> Generate
                             </button>
                         </div>
