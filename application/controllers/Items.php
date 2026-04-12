@@ -126,6 +126,9 @@ class Items extends Base_Controller {
                 'track_batch' => !empty($_POST['track_batch']) ? 1 : 0,
                 'expiry_tracking' => !empty($_POST['expiry_tracking']) ? 1 : 0,
                 'is_sellable' => isset($_POST['is_sellable']) ? 1 : 0,
+                'is_rentable' => isset($_POST['is_rentable']) ? 1 : 0,
+                'rental_rate' => !empty($_POST['rental_rate']) ? floatval($_POST['rental_rate']) : 0,
+                'rental_rate_type' => sanitize_input($_POST['rental_rate_type'] ?? 'per_event'),
                 'opening_quantity' => floatval($_POST['opening_quantity'] ?? 0),
                 'opening_location_id' => !empty($_POST['opening_location_id']) ? intval($_POST['opening_location_id']) : null,
                 'created_at' => date('Y-m-d H:i:s')
@@ -289,6 +292,9 @@ class Items extends Base_Controller {
                     'track_serial' => !empty($_POST['track_serial']) ? 1 : 0,
                     'track_batch' => !empty($_POST['track_batch']) ? 1 : 0,
                     'expiry_tracking' => !empty($_POST['expiry_tracking']) ? 1 : 0,
+                    'is_rentable' => isset($_POST['is_rentable']) ? 1 : 0,
+                    'rental_rate' => !empty($_POST['rental_rate']) ? floatval($_POST['rental_rate']) : 0,
+                    'rental_rate_type' => sanitize_input($_POST['rental_rate_type'] ?? 'per_event'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
                 

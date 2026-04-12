@@ -387,8 +387,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initially disable date input until booking type is selected
+    // But if a booking type is already selected (e.g. page reload), enable it
     if (bookingDate) {
-        bookingDate.disabled = true;
+        if (bookingTypeSelect && bookingTypeSelect.value) {
+            bookingDate.disabled = false;
+            const hint = document.getElementById('date-hint');
+            if (hint) hint.textContent = 'Click to select a date and see available slots';
+        } else {
+            bookingDate.disabled = true;
+        }
     }
 
         // Show/hide end date and duration based on booking type
@@ -454,7 +461,6 @@ document.addEventListener('DOMContentLoaded', function() {
             bookingDate.setAttribute('disabled', 'disabled');
             const hint = document.getElementById('date-hint');
             if (hint) hint.textContent = 'Select booking type first';
-        }
             timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
         }
         

@@ -126,6 +126,32 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <small class="text-muted d-block">Uncheck for items that shouldn't appear in POS</small>
                             </div>
                         </div>
+
+                        <!-- Rental toggle -->
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" name="is_rentable" id="is_rentable" value="1">
+                                <label class="form-check-label" for="is_rentable">Available for Rental</label>
+                                <small class="text-muted d-block">Enable to offer this item as a booking extra/rental</small>
+                            </div>
+                        </div>
+
+                        <!-- Rental rate fields (shown only when is_rentable is checked) -->
+                        <div class="col-md-6" id="rental_rate_row" style="display:none;">
+                            <label for="rental_rate" class="form-label">Rental Rate <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₦</span>
+                                <input type="number" class="form-control" id="rental_rate" name="rental_rate" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="rental_rate_type_row" style="display:none;">
+                            <label for="rental_rate_type" class="form-label">Rate Type</label>
+                            <select class="form-select" id="rental_rate_type" name="rental_rate_type">
+                                <option value="per_event">Per Event</option>
+                                <option value="per_day">Per Day</option>
+                                <option value="per_hour">Per Hour</option>
+                            </select>
+                        </div>
                         
                         <div class="col-12">
                             <label for="description" class="form-label">Description</label>
@@ -322,6 +348,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update on change
     itemTypeSelect.addEventListener('change', updateFieldsBasedOnItemType);
+
+    // Rental toggle — show/hide rate fields
+    const isRentableCheckbox = document.getElementById('is_rentable');
+    const rentalRateRow = document.getElementById('rental_rate_row');
+    const rentalRateTypeRow = document.getElementById('rental_rate_type_row');
+
+    function toggleRentalFields() {
+        const show = isRentableCheckbox.checked;
+        rentalRateRow.style.display = show ? '' : 'none';
+        rentalRateTypeRow.style.display = show ? '' : 'none';
+        document.getElementById('rental_rate').required = show;
+    }
+
+    isRentableCheckbox.addEventListener('change', toggleRentalFields);
+    toggleRentalFields();
 });
 </script>
 

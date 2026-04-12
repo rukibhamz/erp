@@ -119,6 +119,33 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <option value="out_of_stock" <?= $item['item_status'] === 'out_of_stock' ? 'selected' : '' ?>>Out of Stock</option>
                             </select>
                         </div>
+
+                        <!-- Rental toggle -->
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" name="is_rentable" id="is_rentable" value="1"
+                                    <?= !empty($item['is_rentable']) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="is_rentable">Available for Rental</label>
+                                <small class="text-muted d-block">Enable to offer this item as a booking extra/rental</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6" id="rental_rate_row" style="display:none;">
+                            <label for="rental_rate" class="form-label">Rental Rate</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₦</span>
+                                <input type="number" class="form-control" id="rental_rate" name="rental_rate"
+                                       step="0.01" min="0" value="<?= htmlspecialchars($item['rental_rate'] ?? '') ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="rental_rate_type_row" style="display:none;">
+                            <label for="rental_rate_type" class="form-label">Rate Type</label>
+                            <select class="form-select" id="rental_rate_type" name="rental_rate_type">
+                                <option value="per_event" <?= ($item['rental_rate_type'] ?? '') === 'per_event' ? 'selected' : '' ?>>Per Event</option>
+                                <option value="per_day"   <?= ($item['rental_rate_type'] ?? '') === 'per_day'   ? 'selected' : '' ?>>Per Day</option>
+                                <option value="per_hour"  <?= ($item['rental_rate_type'] ?? '') === 'per_hour'  ? 'selected' : '' ?>>Per Hour</option>
+                            </select>
+                        </div>
                         
                         <div class="col-12">
                             <label for="description" class="form-label">Description</label>
@@ -248,3 +275,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isRentableCheckbox = document.getElementById('is_rentable');
+    const rentalRateRow = document.getElementById('rental_rate_row');
+    const rentalRateTypeRow = document.getElementById('rental_rate_type_row');
+
+    function toggleRentalFields() {
+        const show = isRentableCheckbox.checked;
+        rentalRateRow.style.display = show ? '' : 'none';
+        rentalRateTypeRow.style.display = show ? '' : 'none';
+    }
+
+    isRentableCheckbox.addEventListener('change', toggleRentalFields);
+    toggleRentalFields(); // init on load
+});
+</script>
