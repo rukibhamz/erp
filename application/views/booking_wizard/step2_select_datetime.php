@@ -162,8 +162,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <label class="form-label fw-bold">Start Date <span class="text-danger">*</span></label>
                                         <input type="date" id="booking_date" class="form-control form-control-lg" 
                                                min="<?= date('Y-m-d') ?>" 
-                                               value="<?= date('Y-m-d') ?>" disabled>
-                                        <small class="text-muted d-block mt-1">Select booking type first</small>
+                                               placeholder="Select a date" disabled>
+                                        <small class="text-muted d-block mt-1" id="date-hint">Select booking type first</small>
                                     </div>
                                     <div class="col-md-6" id="end-date-container" style="display: none;">
                                         <label class="form-label fw-bold">End Date <span class="text-danger">*</span></label>
@@ -448,8 +448,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Enable date input
         if (selectedBookingType) {
             bookingDate.removeAttribute('disabled');
+            const hint = document.getElementById('date-hint');
+            if (hint) hint.textContent = 'Click to select a date and see available slots';
         } else {
             bookingDate.setAttribute('disabled', 'disabled');
+            const hint = document.getElementById('date-hint');
+            if (hint) hint.textContent = 'Select booking type first';
+        }
             timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
         }
         
@@ -691,12 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof this.showPicker === 'function') this.showPicker();
     });
 
-    // Load initial slots if date and booking type are selected
-    if (bookingDate.value && bookingTypeSelect.value) {
-        selectedBookingType = bookingTypeSelect.value; // Initialize
-        updateDurationOptions(selectedBookingType);
-        loadTimeSlots(spaceId, bookingDate.value);
-    }
+    // No auto-load — user must select a date to see available slots
 
     function loadTimeSlots(spaceId, date, endDate = null) {
         if (!selectedBookingType) {

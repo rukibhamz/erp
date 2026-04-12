@@ -29,10 +29,10 @@
                     <div class="mb-3">
                         <label class="form-label">Code <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="text" name="code" class="form-control text-uppercase"
+                            <input type="text" name="code" id="promoCodeInput" class="form-control text-uppercase"
                                    placeholder="e.g. SUMMER20 (leave blank to auto-generate)"
                                    style="text-transform:uppercase">
-                            <button type="button" class="btn btn-outline-secondary" id="generateBtn">
+                            <button type="button" class="btn btn-outline-secondary" id="generateBtn" title="Generate random code">
                                 <i class="bi bi-shuffle"></i> Generate
                             </button>
                         </div>
@@ -148,6 +148,7 @@ document.getElementById('generateBtn').addEventListener('click', function() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
     for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    document.querySelector('input[name="code"]').value = code;
+    document.getElementById('promoCodeInput').value = code;
+    document.getElementById('promoCodeInput').focus();
 });
 </script>
