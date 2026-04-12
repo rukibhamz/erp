@@ -64,7 +64,8 @@ class Transaction_service {
             }
             
             if (empty($data['created_by'])) {
-                throw new Exception('Created by user ID is required');
+                // Allow null created_by for system-generated entries (online bookings, etc.)
+                $data['created_by'] = $data['created_by'] ?? null;
             }
             
             // Validate that debits equal credits
@@ -92,7 +93,7 @@ class Transaction_service {
                 'amount' => $totalDebit,
                 'status' => 'draft',
                 'journal_type' => $data['journal_type'] ?? 'general',
-                'created_by' => $data['created_by']
+                'created_by' => $data['created_by'] ?: null  // null allowed for system entries
             ];
             
             $entryId = $this->journalModel->create($entryData);

@@ -467,6 +467,20 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring clean COA: " . $e->getMessage());
         }
+
+        // ALWAYS recalculate account balances from journal entry lines (fixes stale balances)
+        try {
+            $this->recalculateAccountBalances();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error recalculating account balances: " . $e->getMessage());
+        }
+
+        // ALWAYS ensure addons and booking_addons tables exist
+        try {
+            $this->ensureAddonsTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring addons table: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -3068,6 +3082,97 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring users auth columns: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure addons and booking_addons tables exist.
+     */
+    private function ensureAddonsTable() {
+        try {
+            // addons table
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}addons` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `name` varchar(255) NOT NULL,
+                `description` text DEFAULT NULL,
+                `addon_type` enum('equipment','service','catering','decoration','other') NOT NULL DEFAULT 'other',
+                `price` decimal(15,2) NOT NULL DEFAULT 0.00,
+                `resource_id` int(11) DEFAULT NULL COMMENT 'If specific to a resource/facility',
+                `is_active` tinyint(1) DEFAULT 1,
+                `display_order` int(11) DEFAULT 0,
+                `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `resource_id` (`resource_id`),
+                KEY `is_active` (`is_active`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            // booking_addons table
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}booking_addons` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `booking_id` int(11) NOT NULL,
+                `addon_id` int(11) NOT NULL,
+                `quantity` int(11) DEFAULT 1,
+                `unit_price` decimal(15,2) NOT NULL DEFAULT 0.00,
+                `total_price` decimal(15,2) NOT NULL DEFAULT 0.00,
+                `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `booking_id` (`booking_id`),
+                KEY `addon_id` (`addon_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            error_log("AutoMigration: Ensured addons and booking_addons tables");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring addons table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Recalculate account balances from posted journal entry lines.
+     * Fixes accounts where balance column is stale (e.g. VAT Payable showing ₦0
+     * despite having journal entries).
+     * Only runs if journal_entry_lines table exists.
+     */
+    private function recalculateAccountBalances() {
+        try {
+            // Check required tables exist
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}journal_entry_lines'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) return true;
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) return true;
+
+            // Recalculate balance for every account from posted journal lines
+            // For Liabilities, Equity, Revenue: balance = credits - debits
+            // For Assets, Expenses: balance = debits - credits
+            $sql = "UPDATE `{$this->prefix}accounts` a
+                    SET a.balance = (
+                        SELECT COALESCE(
+                            CASE
+                                WHEN LOWER(a.account_type) IN ('liabilities','liability','equity','revenue','income')
+                                    THEN SUM(jel.credit) - SUM(jel.debit)
+                                ELSE
+                                    SUM(jel.debit) - SUM(jel.credit)
+                            END
+                        , 0)
+                        FROM `{$this->prefix}journal_entry_lines` jel
+                        JOIN `{$this->prefix}journal_entries` je ON jel.entry_id = je.id
+                        WHERE jel.account_id = a.id
+                          AND je.status = 'posted'
+                    )
+                    WHERE EXISTS (
+                        SELECT 1 FROM `{$this->prefix}journal_entry_lines` jel2
+                        JOIN `{$this->prefix}journal_entries` je2 ON jel2.entry_id = je2.id
+                        WHERE jel2.account_id = a.id AND je2.status = 'posted'
+                    )";
+
+            $this->pdo->exec($sql);
+            error_log("AutoMigration: Recalculated account balances from journal entries");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR recalculating account balances: " . $e->getMessage());
             return false;
         }
     }
