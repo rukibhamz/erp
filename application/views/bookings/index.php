@@ -13,7 +13,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <i class="bi bi-calendar-month"></i> Calendar View
             </a>
             <?php if (has_permission('bookings', 'update')): ?>
-                <a href="<?= base_url('resource-management/addons') ?>" class="btn btn-outline-secondary">
+                <a href="<?= base_url('resource-management/addons') ?>" class="btn btn-primary">
                     <i class="bi bi-puzzle"></i> Manage Add-ons
                 </a>
             <?php endif; ?>

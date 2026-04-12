@@ -402,11 +402,14 @@ class Facility_model extends Base_Model {
             $allSlots = [];
             $currentDate = new DateTime($date);
             $finalDate = new DateTime($checkEndDate);
-
+            $today = date('Y-m-d');
+            $nowHour = (int) date('H');
+            $nowMinute = (int) date('i');
 
             while ($currentDate <= $finalDate) {
                 $currentDay = $currentDate->format('Y-m-d');
                 $dayOfWeek = $currentDate->format('w');
+                $isToday = ($currentDay === $today);
                 
                 // Determine hours for THIS specific day
                 $startHour = 9;
@@ -495,6 +498,16 @@ class Facility_model extends Base_Model {
                                     
                                     break;
                                 }
+                            }
+                        }
+
+                        // Mark past slots as unavailable for today
+                        if ($isToday && !$isOccupied) {
+                            // Slot is in the past if its start hour is <= current hour
+                            // (add 1 hour buffer so users can't book a slot starting within the next hour)
+                            if ($currentH < $nowHour + 1) {
+                                $isOccupied = true;
+                                $occupier = 'Past';
                             }
                         }
 

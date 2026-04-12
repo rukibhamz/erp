@@ -754,6 +754,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide time slots section and legend for full-day bookings
         const legendEl = document.getElementById('time-slot-legend');
         if (legendEl) legendEl.style.display = 'none';
+
+        // Full-day cutoff: if today is selected and current time is at or after 14:00, reject
+        const today = new Date().toISOString().split('T')[0];
+        if (selectedDate === today) {
+            const currentHour = new Date().getHours();
+            if (currentHour >= 14) {
+                timeSlotsContainer.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">
+                            <i class="bi bi-x-circle"></i> <strong>Full Day Booking Unavailable</strong><br>
+                            Full day bookings for today cannot be made after 2:00 PM. Please select a future date.
+                        </div>
+                    </div>
+                `;
+                continueBtn.disabled = true;
+                return;
+            }
+        }
         
         // Show info message instead of time slots
         timeSlotsContainer.innerHTML = `
@@ -792,9 +810,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error updating summary:', e);
             }
             
-            // ALWAYS enable the button when we have a valid date
             continueBtn.disabled = false;
-            console.log('Full day booking enabled, date:', selectedDate, 'startTime:', selectedStartTime, 'endTime:', selectedEndTime);
         }
     }
     
