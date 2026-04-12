@@ -3098,6 +3098,8 @@ class AutoMigration {
                 `description` text DEFAULT NULL,
                 `addon_type` enum('equipment','service','catering','decoration','other') NOT NULL DEFAULT 'other',
                 `price` decimal(15,2) NOT NULL DEFAULT 0.00,
+                `pricing_type` varchar(50) DEFAULT 'per_booking',
+                `max_quantity` int(11) DEFAULT 0,
                 `resource_id` int(11) DEFAULT NULL COMMENT 'If specific to a resource/facility',
                 `is_active` tinyint(1) DEFAULT 1,
                 `display_order` int(11) DEFAULT 0,
@@ -3123,6 +3125,16 @@ class AutoMigration {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
             error_log("AutoMigration: Ensured addons and booking_addons tables");
+
+            // Add pricing_type and max_quantity to existing addons tables that may be missing them
+            foreach (['pricing_type' => "VARCHAR(50) DEFAULT 'per_booking'", 'max_quantity' => "INT(11) DEFAULT 0"] as $col => $def) {
+                $check = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}addons` LIKE '{$col}'");
+                if (!$check || count($check->fetchAll()) === 0) {
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}addons` ADD COLUMN `{$col}` {$def}");
+                    error_log("AutoMigration: Added {$col} to addons table");
+                }
+            }
+
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring addons table: " . $e->getMessage());

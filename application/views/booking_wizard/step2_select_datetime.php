@@ -624,8 +624,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function onBookingDateChange(date) {
         if (!date) return;
         selectedDate = date;
-        if (bookingEndDate.value) {
+
+        // For multi-day/weekly bookings, respect the end date input
+        // For all other types, end date = start date (single day)
+        const isMultiDay = selectedBookingType === 'multi_day' || selectedBookingType === 'weekly';
+        if (isMultiDay && bookingEndDate.value && bookingEndDate.value >= date) {
             selectedEndDate = bookingEndDate.value;
+        } else {
+            selectedEndDate = date;
         }
         // Reset time selection when date changes (but keep booking type)
         selectedStartTime = '';
@@ -652,14 +658,14 @@ document.addEventListener('DOMContentLoaded', function() {
             handleMultiDayBooking();
         } else if (selectedBookingType) {
             document.getElementById('time-slot-legend').style.display = 'block';
-            loadTimeSlots(spaceId, date, selectedEndDate || date);
+            loadTimeSlots(spaceId, date, date); // always single-day for non-multi-day types
         }
-        // Update end date minimum
+        // Update end date minimum (only affects the visible end date input for multi-day)
         if (bookingEndDate) {
             bookingEndDate.min = date;
-            if (!bookingEndDate.value || bookingEndDate.value < date) {
+            // Only reset end date value if it's before start date
+            if (bookingEndDate.value && bookingEndDate.value < date) {
                 bookingEndDate.value = date;
-                selectedEndDate = date;
             }
         }
     }

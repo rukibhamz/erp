@@ -269,6 +269,8 @@ class Resource_management extends Base_Controller {
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'addon_type' => sanitize_input($_POST['addon_type'] ?? 'other'),
                 'price' => floatval($_POST['price'] ?? 0),
+                'pricing_type' => sanitize_input($_POST['pricing_type'] ?? 'per_booking'),
+                'max_quantity' => intval($_POST['max_quantity'] ?? 0),
                 'resource_id' => !empty($_POST['resource_id']) ? intval($_POST['resource_id']) : null,
                 'is_active' => !empty($_POST['is_active']) ? 1 : 0,
                 'display_order' => intval($_POST['display_order'] ?? 0)
@@ -276,9 +278,9 @@ class Resource_management extends Base_Controller {
             
             if ($this->addonModel->create($data)) {
                 $this->activityModel->log($this->session['user_id'], 'create', 'Bookings', 'Created addon: ' . $data['name']);
-                $this->setFlashMessage('success', 'Addon created successfully.');
+                $this->setFlashMessage('success', 'Add-on created successfully.');
             } else {
-                $this->setFlashMessage('danger', 'Failed to create addon.');
+                $this->setFlashMessage('danger', 'Failed to create add-on.');
             }
             
             redirect('resource-management/addons' . ($resourceId ? '/' . $resourceId : ''));
@@ -306,5 +308,55 @@ class Resource_management extends Base_Controller {
         
         $this->loadView('resource_management/addons', $data);
     }
-}
 
+    /**
+     * Edit an addon
+     */
+    public function editAddon($id) {
+        $this->requirePermission('bookings', 'update');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = [
+                'name' => sanitize_input($_POST['name'] ?? ''),
+                'description' => sanitize_input($_POST['description'] ?? ''),
+                'addon_type' => sanitize_input($_POST['addon_type'] ?? 'other'),
+                'price' => floatval($_POST['price'] ?? 0),
+                'pricing_type' => sanitize_input($_POST['pricing_type'] ?? 'per_booking'),
+                'max_quantity' => intval($_POST['max_quantity'] ?? 0),
+                'is_active' => !empty($_POST['is_active']) ? 1 : 0,
+            ];
+
+            if ($this->addonModel->update($id, $data)) {
+                $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Updated addon ID: ' . $id);
+                $this->setFlashMessage('success', 'Add-on updated successfully.');
+            } else {
+                $this->setFlashMessage('danger', 'Failed to update add-on.');
+            }
+        }
+
+        redirect('resource-management/addons');
+    }
+
+    /**
+     * Delete an addon
+     */
+    public function deleteAddon($id) {
+        $this->requirePermission('bookings', 'delete');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                if ($this->addonModel->delete($id)) {
+                    $this->activityModel->log($this->session['user_id'], 'delete', 'Bookings', 'Deleted addon ID: ' . $id);
+                    $this->setFlashMessage('success', 'Add-on deleted successfully.');
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to delete add-on.');
+                }
+            } catch (Exception $e) {
+                $this->setFlashMessage('danger', 'Error deleting add-on.');
+            }
+        }
+
+        redirect('resource-management/addons');
+    }
+
+}

@@ -290,6 +290,8 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['resource-management/delete-pricing/(:num)'] = 'Resource_management/deletePricing/$1';
         $route['resource-management/addons'] = 'Resource_management/addons';
         $route['resource-management/addons/(:num)'] = 'Resource_management/addons/$1';
+        $route['resource-management/edit-addon/(:num)'] = 'Resource_management/editAddon/$1';
+        $route['resource-management/delete-addon/(:num)'] = 'Resource_management/deleteAddon/$1';
         
         // Booking System
         $route['locations/bookings'] = 'Bookings/index';
