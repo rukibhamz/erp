@@ -64,14 +64,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <small class="text-muted">per unit</small>
                                                 </div>
                                                 <div>
-                                                    <div class="input-group" style="width: 120px;">
-                                                        <button class="btn btn-outline-dark btn-sm minus-btn" type="button" data-addon-id="<?= $addon['id'] ?>">-</button>
+                                                    <div class="qty-control d-flex align-items-center gap-1">
+                                                        <button class="btn btn-dark btn-sm minus-btn" type="button" 
+                                                                data-addon-id="<?= $addon['id'] ?>"
+                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">−</button>
                                                         <input type="number" class="form-control form-control-sm text-center qty-input" 
                                                                data-addon-id="<?= $addon['id'] ?>" 
                                                                data-price="<?= $addon['price'] ?>"
                                                                data-name="<?= htmlspecialchars($addon['name']) ?>"
-                                                               value="0" min="0" max="99">
-                                                        <button class="btn btn-outline-dark btn-sm plus-btn" type="button" data-addon-id="<?= $addon['id'] ?>">+</button>
+                                                               value="0" min="0" max="99"
+                                                               style="width:52px;height:32px;text-align:center;">
+                                                        <button class="btn btn-dark btn-sm plus-btn" type="button" 
+                                                                data-addon-id="<?= $addon['id'] ?>"
+                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">+</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -105,14 +110,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <small class="text-muted">/<?= $item['rental_rate_type'] ?></small>
                                                 </div>
                                                 <div>
-                                                    <div class="input-group" style="width: 120px;">
-                                                        <button class="btn btn-outline-success btn-sm minus-rental-btn" type="button" data-item-id="<?= $item['id'] ?>">-</button>
+                                                    <div class="qty-control d-flex align-items-center gap-1">
+                                                        <button class="btn btn-success btn-sm minus-rental-btn" type="button" 
+                                                                data-item-id="<?= $item['id'] ?>"
+                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">−</button>
                                                         <input type="number" class="form-control form-control-sm text-center rental-qty-input" 
                                                                data-item-id="<?= $item['id'] ?>" 
                                                                data-price="<?= $item['rental_rate'] ?>"
                                                                data-name="<?= htmlspecialchars($item['name']) ?>"
-                                                               value="0" min="0" max="<?= $item['current_stock'] ?>">
-                                                        <button class="btn btn-outline-success btn-sm plus-rental-btn" type="button" data-item-id="<?= $item['id'] ?>">+</button>
+                                                               value="0" min="0" max="<?= $item['current_stock'] ?>"
+                                                               style="width:52px;height:32px;text-align:center;">
+                                                        <button class="btn btn-success btn-sm plus-rental-btn" type="button" 
+                                                                data-item-id="<?= $item['id'] ?>"
+                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">+</button>
                                                     </div>
                                                 </div>
                                             </div>

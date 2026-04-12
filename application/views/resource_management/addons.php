@@ -72,10 +72,10 @@
                                         data-name="<?= htmlspecialchars($addon['name'] ?? '') ?>"
                                         data-description="<?= htmlspecialchars($addon['description'] ?? '') ?>"
                                         data-price="<?= floatval($addon['price'] ?? 0) ?>"
-                                        data-pricing_type="<?= htmlspecialchars($addon['pricing_type'] ?? 'per_booking') ?>"
-                                        data-max_quantity="<?= intval($addon['max_quantity'] ?? 0) ?>"
-                                        data-addon_type="<?= htmlspecialchars($addon['addon_type'] ?? 'other') ?>"
-                                        data-is_active="<?= intval($addon['is_active'] ?? 1) ?>">
+                                        data-pricing-type="<?= htmlspecialchars($addon['pricing_type'] ?? 'per_booking') ?>"
+                                        data-max-quantity="<?= intval($addon['max_quantity'] ?? 0) ?>"
+                                        data-addon-type="<?= htmlspecialchars($addon['addon_type'] ?? 'other') ?>"
+                                        data-is-active="<?= intval($addon['is_active'] ?? 1) ?>">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <?php endif; ?>
@@ -250,16 +250,17 @@
 <script>
 document.getElementById('editAddonModal').addEventListener('show.bs.modal', function(e) {
     const btn = e.relatedTarget;
+    if (!btn) return;
     const id = btn.dataset.id;
     document.getElementById('editAddonForm').action = '<?= base_url('resource-management/edit-addon/') ?>' + id;
-    document.getElementById('edit_name').value = btn.dataset.name;
-    document.getElementById('edit_description').value = btn.dataset.description;
-    document.getElementById('edit_price').value = btn.dataset.price;
-    document.getElementById('edit_max_quantity').value = btn.dataset.max_quantity;
-    document.getElementById('edit_is_active').checked = btn.dataset.is_active == '1';
+    document.getElementById('edit_name').value = btn.dataset.name || '';
+    document.getElementById('edit_description').value = btn.dataset.description || '';
+    document.getElementById('edit_price').value = btn.dataset.price || '';
+    document.getElementById('edit_max_quantity').value = btn.dataset.maxQuantity || '0';
+    document.getElementById('edit_is_active').checked = btn.dataset.isActive == '1';
     const pt = document.getElementById('edit_pricing_type');
-    for (let o of pt.options) o.selected = (o.value === btn.dataset.pricing_type);
+    for (let o of pt.options) o.selected = (o.value === (btn.dataset.pricingType || 'per_booking'));
     const at = document.getElementById('edit_addon_type');
-    for (let o of at.options) o.selected = (o.value === btn.dataset.addon_type);
+    for (let o of at.options) o.selected = (o.value === (btn.dataset.addonType || 'other'));
 });
 </script>
