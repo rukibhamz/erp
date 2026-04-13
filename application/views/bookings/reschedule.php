@@ -75,7 +75,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 (function() {
     // Use facility_id directly — most reliable for internal bookings
     const facilityId  = <?= intval($booking['facility_id'] ?? $booking['space_id'] ?? 0) ?>;

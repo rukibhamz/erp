@@ -73,7 +73,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 (function() {
     const facilityId = <?= intval($booking['facility_id'] ?? $booking['space_id'] ?? 0) ?>;
     const bookingId  = <?= intval($booking['id']) ?>;
