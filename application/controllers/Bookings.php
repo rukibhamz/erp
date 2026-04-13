@@ -1499,6 +1499,36 @@ class Bookings extends Base_Controller {
         }
     }
     
+    /**
+     * Get available time slots by facility_id — used by reschedule views
+     * Accepts: facility_id, date, exclude_booking_id
+     */
+    public function getSlots() {
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json');
+
+        $facilityId      = intval($_GET['facility_id'] ?? 0);
+        $date            = sanitize_input($_GET['date'] ?? '');
+        $excludeBookingId = intval($_GET['exclude_booking_id'] ?? 0);
+
+        // Normalise date
+        $dt = DateTime::createFromFormat('d/m/Y', $date);
+        if ($dt && $dt->format('d/m/Y') === $date) $date = $dt->format('Y-m-d');
+
+        if (!$facilityId || !$date) {
+            echo json_encode(['success' => false, 'message' => 'Missing facility_id or date']);
+            exit;
+        }
+
+        try {
+            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $date);
+            echo json_encode($result);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     private function calculateDuration($date, $startTime, $endTime) {
         try {
             $start = new DateTime($date . ' ' . $startTime);

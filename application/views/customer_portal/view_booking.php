@@ -169,6 +169,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <i class="bi bi-credit-card"></i> Make Payment
                             </a>
                         <?php endif; ?>
+                        <?php if (in_array($booking['status'] ?? '', ['confirmed', 'pending']) && ($booking['booking_date'] ?? '') >= date('Y-m-d')): ?>
+                            <hr>
+                            <a href="<?= base_url('customer-portal/reschedule-booking/' . $booking['id']) ?>"
+                               class="btn btn-warning w-100">
+                                <i class="bi bi-calendar-event"></i> Reschedule Booking
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
 

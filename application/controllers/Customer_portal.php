@@ -4,12 +4,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Customer_portal extends Base_Controller {
     private $customerPortalUserModel;
     private $bookingModel;
+    private $facilityModel;
     private $bookingPaymentModel;
     
     public function __construct() {
         parent::__construct();
         $this->customerPortalUserModel = $this->loadModel('Customer_portal_user_model');
         $this->bookingModel = $this->loadModel('Booking_model');
+        $this->facilityModel = $this->loadModel('Facility_model');
         $this->bookingPaymentModel = $this->loadModel('Booking_payment_model');
         $this->loadLibrary('Email_sender');
     }
@@ -374,6 +376,89 @@ class Customer_portal extends Base_Controller {
         $this->loadView('customer_portal/view_booking', $data);
     }
     
+    /**
+     * Customer reschedule booking
+     */
+    public function rescheduleBooking($id) {
+        $this->requireCustomerAuth();
+
+        $userId = $this->session['customer_user_id'];
+        $user   = $this->customerPortalUserModel->getById($userId);
+
+        try {
+            $booking = $this->bookingModel->getWithFacility($id);
+            if (!$booking || $booking['customer_email'] !== $user['email']) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('customer-portal/bookings');
+                return;
+            }
+        } catch (Exception $e) {
+            $this->setFlashMessage('danger', 'Error loading booking.');
+            redirect('customer-portal/bookings');
+            return;
+        }
+
+        // Only allow reschedule on confirmed/pending bookings that haven't passed
+        $allowedStatuses = ['confirmed', 'pending'];
+        if (!in_array($booking['status'], $allowedStatuses)) {
+            $this->setFlashMessage('danger', 'This booking cannot be rescheduled.');
+            redirect('customer-portal/booking/' . $id);
+            return;
+        }
+        if ($booking['booking_date'] < date('Y-m-d')) {
+            $this->setFlashMessage('danger', 'Past bookings cannot be rescheduled.');
+            redirect('customer-portal/booking/' . $id);
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            $newDate      = sanitize_input($_POST['booking_date'] ?? '');
+            $newStartTime = sanitize_input($_POST['start_time'] ?? '');
+            $newEndTime   = sanitize_input($_POST['end_time'] ?? '');
+            $reason       = sanitize_input($_POST['reason'] ?? '');
+
+            if (!$newDate || !$newStartTime || !$newEndTime) {
+                $this->setFlashMessage('danger', 'Please select a date and time slot.');
+                redirect('customer-portal/reschedule-booking/' . $id);
+                return;
+            }
+
+            try {
+                $resourceId = $booking['facility_id'];
+                if (!$this->facilityModel->checkAdvancedAvailability($resourceId, $newDate . ' ' . $newStartTime, $newDate . ' ' . $newEndTime, $id)) {
+                    $this->setFlashMessage('danger', 'The selected time slot is no longer available. Please choose another.');
+                    redirect('customer-portal/reschedule-booking/' . $id);
+                    return;
+                }
+
+                $duration = abs(strtotime($newEndTime) - strtotime($newStartTime)) / 3600;
+                $this->bookingModel->update($id, [
+                    'booking_date'   => $newDate,
+                    'start_time'     => $newStartTime,
+                    'end_time'       => $newEndTime,
+                    'duration_hours' => $duration
+                ]);
+                $this->bookingModel->createSlots($id, $resourceId, $newDate, $newStartTime, $newEndTime);
+
+                $this->setFlashMessage('success', 'Your booking has been rescheduled successfully.');
+                redirect('customer-portal/booking/' . $id);
+            } catch (Exception $e) {
+                error_log('Customer portal reschedule error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to reschedule. Please try again.');
+                redirect('customer-portal/reschedule-booking/' . $id);
+            }
+            return;
+        }
+
+        $data = [
+            'page_title' => 'Reschedule Booking',
+            'booking'    => $booking,
+            'flash'      => $this->getFlashMessage()
+        ];
+        $this->loadView('customer_portal/reschedule_booking', $data);
+    }
+
     /**
      * View Booking Details (Requires Login)
      */
