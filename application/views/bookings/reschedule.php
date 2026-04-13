@@ -29,6 +29,7 @@
         <!-- Reschedule form -->
         <div class="card shadow-sm">
             <div class="card-header bg-warning"><h6 class="mb-0">New Schedule</h6></div>
+            <!-- Debug: facility_id=<?= $booking['facility_id'] ?? 'NULL' ?>, space_id=<?= $booking['space_id'] ?? 'NULL' ?> -->
             <div class="card-body">
                 <form method="POST" id="rescheduleForm">
                     <?= csrf_field() ?>
@@ -81,6 +82,15 @@
     const bookingId   = <?= intval($booking['id']) ?>;
     const duration    = <?= floatval($booking['duration_hours'] ?? 1) ?>;
 
+    // Debug: log what we have
+    console.log('Reschedule debug — facilityId:', facilityId, 'bookingId:', bookingId, 'duration:', duration);
+    console.log('Booking data:', <?= json_encode(['facility_id' => $booking['facility_id'] ?? null, 'space_id' => $booking['space_id'] ?? null, 'booking_date' => $booking['booking_date'] ?? null]) ?>);
+
+    if (!facilityId) {
+        document.getElementById('slot-section').innerHTML = '<div class="alert alert-danger">Configuration error: no facility linked to this booking (facility_id=0). Please contact support.</div>';
+        document.getElementById('slot-section').style.display = 'block';
+    }
+
     const dateInput      = document.getElementById('reschedule_date');
     const slotSection    = document.getElementById('slot-section');
     const slotContainer  = document.getElementById('slot-container');
@@ -101,6 +111,7 @@
         fetch(`<?= base_url('bookings/get-slots') ?>?facility_id=${facilityId}&date=${date}&exclude_booking_id=${bookingId}`)
             .then(r => r.json())
             .then(data => {
+                console.log('Slot response:', data);
                 if (!data.success || !data.slots || data.slots.length === 0) {
                     slotContainer.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-circle"></i> No available time slots on this date. Please try another date.</div>';
                     return;

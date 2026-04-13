@@ -1507,16 +1507,36 @@ class Bookings extends Base_Controller {
         while (ob_get_level()) { ob_end_clean(); }
         header('Content-Type: application/json');
 
-        $facilityId      = intval($_GET['facility_id'] ?? 0);
-        $date            = sanitize_input($_GET['date'] ?? '');
+        $facilityId       = intval($_GET['facility_id'] ?? 0);
+        $date             = sanitize_input($_GET['date'] ?? '');
         $excludeBookingId = intval($_GET['exclude_booking_id'] ?? 0);
 
-        // Normalise date
+        // Normalise date format
         $dt = DateTime::createFromFormat('d/m/Y', $date);
         if ($dt && $dt->format('d/m/Y') === $date) $date = $dt->format('Y-m-d');
 
+        // If facility_id is 0 but we have a booking_id, look it up
+        if (!$facilityId && $excludeBookingId) {
+            try {
+                $booking = $this->bookingModel->getById($excludeBookingId);
+                if ($booking) {
+                    $facilityId = intval($booking['facility_id'] ?? 0);
+                    // If still 0, try space_id → facility_id via spaces table
+                    if (!$facilityId && !empty($booking['space_id'])) {
+                        $space = $this->db->fetchOne(
+                            "SELECT facility_id FROM `" . $this->db->getPrefix() . "spaces` WHERE id = ?",
+                            [$booking['space_id']]
+                        );
+                        $facilityId = intval($space['facility_id'] ?? 0);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('Bookings getSlots lookup error: ' . $e->getMessage());
+            }
+        }
+
         if (!$facilityId || !$date) {
-            echo json_encode(['success' => false, 'message' => 'Missing facility_id or date']);
+            echo json_encode(['success' => false, 'message' => 'Missing facility_id or date. facility_id=' . $facilityId . ' date=' . $date]);
             exit;
         }
 
