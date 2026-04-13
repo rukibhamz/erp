@@ -564,16 +564,31 @@ class Booking_wizard extends Base_Controller {
         try {
             // Get space to find facility_id
             $space = $this->spaceModel->getWithProperty($spaceId);
-            if (!$space || !$space['is_bookable']) {
-                echo json_encode(['success' => false, 'message' => 'Space not found or not available']);
+
+            // Fallback: if space_id is actually a facility_id (from internal bookings),
+            // look up the space that links to this facility
+            if (!$space || !($space['is_bookable'] ?? false)) {
+                $spaceByFacility = $this->db->fetchOne(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ? LIMIT 1",
+                    [$spaceId]
+                );
+                if ($spaceByFacility) {
+                    $space = $this->spaceModel->getWithProperty($spaceByFacility['id']);
+                }
+            }
+
+            if (!$space) {
+                // Last resort: treat spaceId directly as facilityId
+                $result = $this->facilityModel->getAvailableTimeSlots($spaceId, $date, $endDate);
+                echo json_encode($result);
                 exit;
             }
-            
+
             // Get facility_id
             $facilityId = $space['facility_id'] ?? null;
             if (!$facilityId) {
                 // Try sync if not found
-                $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
+                $facilityId = $this->spaceModel->syncToBookingModule($space['id']);
             }
             
             if (!$facilityId) {
@@ -582,7 +597,6 @@ class Booking_wizard extends Base_Controller {
             }
 
             // Use centralized logic in Facility_model
-            // This ensures default 8am-10pm slots and consistent buffer logic
             $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $endDate);
             
             echo json_encode($result);

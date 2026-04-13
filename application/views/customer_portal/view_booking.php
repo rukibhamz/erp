@@ -184,7 +184,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <p class="mb-2"><strong>Confirmed:</strong><br><?= date('M d, Y', strtotime($booking['confirmed_at'])) ?></p>
                         <?php endif; ?>
                         <div class="alert alert-warning py-2 mt-3 mb-0" style="font-size: 0.85rem;">
-                            <i class="bi bi-exclamation-triangle"></i> <strong>Notice:</strong> No refunds after payment.
+                            <i class="bi bi-exclamation-triangle"></i> <strong>Cancellation Policy:</strong> 70% refund if cancelled before the booking date. No refund on the day of or after the event.
                         </div>
                     </div>
                 </div>

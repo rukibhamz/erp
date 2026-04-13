@@ -72,6 +72,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <br><small>Based on cancellation policy and timing</small>
                                 </div>
                             <?php endif; ?>
+                        <?php else: ?>
+                            <div class="alert alert-warning mb-4">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Cancellation Policy:</strong> A 70% refund applies if cancelled before the booking date.
+                                No refund is issued on the day of or after the event.
+                            </div>
                         <?php endif; ?>
 
                         <form method="POST" action="<?= base_url('bookings/cancel/' . $booking['id']) ?>" 

@@ -232,7 +232,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             
                             <small class="text-muted d-block mt-2 text-center">
                                 By completing this booking, you agree to our terms and conditions.
-                                <br><strong class="text-danger">Notice: No refunds after payment.</strong>
+                                <br><strong class="text-danger">Cancellation Policy: 70% refund if cancelled before the booking date. No refund on the day of or after the event.</strong>
                             </small>
                         </div>
                     </div>

@@ -76,9 +76,15 @@
 
 <script>
 (function() {
+    // Use space_id first; fall back to facility_id (spaces table uses id = facility_id for synced spaces)
     const spaceId   = <?= intval($booking['space_id'] ?? $booking['facility_id'] ?? 0) ?>;
+    const facilityId = <?= intval($booking['facility_id'] ?? 0) ?>;
     const bookingId = <?= intval($booking['id']) ?>;
     const duration  = <?= floatval($booking['duration_hours'] ?? 1) ?>;
+
+    // The get-time-slots endpoint accepts space_id; if we only have facility_id,
+    // find the space that links to this facility
+    const effectiveSpaceId = spaceId || facilityId;
 
     const dateInput   = document.getElementById('reschedule_date');
     const slotSection = document.getElementById('slot-section');
@@ -98,7 +104,7 @@
 
         slotContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div><span class="ms-2 text-muted">Loading slots…</span></div>';
 
-        fetch(`<?= base_url('booking-wizard/get-time-slots') ?>?space_id=${spaceId}&date=${date}&end_date=${date}&exclude_booking_id=${bookingId}`)
+        fetch(`<?= base_url('booking-wizard/get-time-slots') ?>?space_id=${effectiveSpaceId}&date=${date}&end_date=${date}&exclude_booking_id=${bookingId}`)
             .then(r => r.json())
             .then(data => {
                 if (!data.success || !data.slots || data.slots.length === 0) {
@@ -106,44 +112,33 @@
                     return;
                 }
 
-                // Filter slots that fit the booking duration
-                const durationHours = duration;
-                const slots = data.slots.filter(s => {
-                    const [sh, sm] = s.start.split(':').map(Number);
-                    const [eh, em] = s.end.split(':').map(Number);
-                    // Calculate how many consecutive slots we need
-                    return true; // show all available slots; user picks start
-                });
-
                 let html = '<div class="row g-2">';
-                slots.forEach(slot => {
-                    // Calculate end time based on duration
+                data.slots.forEach(slot => {
+                    // Calculate end time based on booking duration
                     const [sh, sm] = slot.start.split(':').map(Number);
                     const startMins = sh * 60 + sm;
-                    const endMins   = startMins + Math.round(durationHours * 60);
+                    const endMins   = startMins + Math.round(duration * 60);
                     const endH = String(Math.floor(endMins / 60)).padStart(2, '0');
                     const endM = String(endMins % 60).padStart(2, '0');
                     const endTime = `${endH}:${endM}`;
 
-                    const startFmt = formatTime(slot.start);
-                    const endFmt   = formatTime(endTime);
-
                     html += `<div class="col-6 col-md-4">
                         <button type="button" class="btn btn-outline-primary w-100 slot-btn"
                                 data-start="${slot.start}" data-end="${endTime}">
-                            <div class="fw-bold">${startFmt}</div>
-                            <small class="text-muted">to ${endFmt}</small>
+                            <div class="fw-bold">${formatTime(slot.start)}</div>
+                            <small class="text-muted">to ${formatTime(endTime)}</small>
                         </button>
                     </div>`;
                 });
                 html += '</div>';
                 slotContainer.innerHTML = html;
 
-                // Attach click handlers
                 slotContainer.querySelectorAll('.slot-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
-                        slotContainer.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('btn-primary', 'active'));
-                        slotContainer.querySelectorAll('.slot-btn').forEach(b => { b.classList.remove('btn-primary'); b.classList.add('btn-outline-primary'); });
+                        slotContainer.querySelectorAll('.slot-btn').forEach(b => {
+                            b.classList.remove('btn-primary', 'active');
+                            b.classList.add('btn-outline-primary');
+                        });
                         this.classList.remove('btn-outline-primary');
                         this.classList.add('btn-primary', 'active');
 
@@ -155,8 +150,9 @@
                     });
                 });
             })
-            .catch(() => {
-                slotContainer.innerHTML = '<div class="alert alert-danger">Failed to load time slots. Please try again.</div>';
+            .catch(err => {
+                slotContainer.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Failed to load time slots. Please try again.</div>';
+                console.error('Slot load error:', err);
             });
     }
 
@@ -170,11 +166,13 @@
     dateInput.addEventListener('change', function() {
         if (this.value) loadSlots(this.value);
     });
+    dateInput.addEventListener('input', function() {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(this.value)) loadSlots(this.value);
+    });
     dateInput.addEventListener('click', function() {
         if (typeof this.showPicker === 'function') this.showPicker();
     });
 
-    // Validate before submit
     document.getElementById('rescheduleForm').addEventListener('submit', function(e) {
         if (!hiddenStart.value || !hiddenEnd.value) {
             e.preventDefault();
