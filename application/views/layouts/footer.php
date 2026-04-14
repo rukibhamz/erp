@@ -75,17 +75,21 @@
     // Auto-refresh notifications every 30 seconds
     setInterval(function() {
         fetch('<?= base_url('notifications/get-notifications') ?>?unread_only=1&limit=10')
-            .then(response => response.json())
+            .then(response => {
+                // If redirected to login (non-JSON), stop polling silently
+                const ct = response.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) return null;
+                return response.json();
+            })
             .then(data => {
-                if (data.success) {
-                    const badge = document.getElementById('notificationBadge') || document.getElementById('notificationBadgeDesktop');
-                    if (badge) {
-                        badge.textContent = data.unread_count || 0;
-                        badge.style.display = data.unread_count > 0 ? 'block' : 'none';
-                    }
+                if (!data || !data.success) return;
+                const badge = document.getElementById('notificationBadge') || document.getElementById('notificationBadgeDesktop');
+                if (badge) {
+                    badge.textContent = data.unread_count || 0;
+                    badge.style.display = data.unread_count > 0 ? 'block' : 'none';
                 }
             })
-            .catch(error => console.error('Error refreshing notifications:', error));
+            .catch(() => {}); // Suppress network errors silently
     }, 30000);
     <?php endif; ?>
     </script>
