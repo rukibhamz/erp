@@ -481,6 +481,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring addons table: " . $e->getMessage());
         }
+
+        // ALWAYS ensure journal_entries and journal_entry_lines tables exist
+        try {
+            $this->ensureJournalTables();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring journal tables: " . $e->getMessage());
+        }
             
         // Check if admin locations fix is needed
         $adminLocationsFix = __DIR__ . '/../../database/migrations/002_ensure_admin_locations_permissions.sql';
@@ -3082,6 +3089,54 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring users auth columns: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure journal_entries and journal_entry_lines tables exist.
+     */
+    private function ensureJournalTables() {
+        try {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}journal_entries` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `entry_number` VARCHAR(50) NOT NULL,
+                `entry_date` DATE NOT NULL,
+                `reference` VARCHAR(255) NULL,
+                `reference_type` VARCHAR(50) NULL,
+                `reference_id` INT(11) NULL,
+                `description` TEXT NULL,
+                `amount` DECIMAL(15,2) DEFAULT 0.00,
+                `status` ENUM('draft','approved','posted','reversed','cancelled') DEFAULT 'draft',
+                `journal_type` VARCHAR(50) DEFAULT 'general',
+                `created_by` INT(11) NULL,
+                `approved_by` INT(11) NULL,
+                `posted_by` INT(11) NULL,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_entry_date` (`entry_date`),
+                KEY `idx_reference` (`reference_type`, `reference_id`),
+                KEY `idx_status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}journal_entry_lines` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `entry_id` INT(11) NOT NULL,
+                `account_id` INT(11) NOT NULL,
+                `description` TEXT NULL,
+                `debit` DECIMAL(15,2) DEFAULT 0.00,
+                `credit` DECIMAL(15,2) DEFAULT 0.00,
+                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_entry_id` (`entry_id`),
+                KEY `idx_account_id` (`account_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            error_log("AutoMigration: Ensured journal_entries and journal_entry_lines tables");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring journal tables: " . $e->getMessage());
             return false;
         }
     }

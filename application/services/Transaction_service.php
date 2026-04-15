@@ -53,6 +53,7 @@ class Transaction_service {
      * ]
      */
     public function postJournalEntry($data) {
+        $isNested = false; // initialise before try so catch block can safely reference it
         try {
             // Validate required fields
             if (empty($data['entries']) || !is_array($data['entries'])) {
@@ -150,7 +151,7 @@ class Transaction_service {
             
         } catch (Exception $e) {
             if (!$isNested && $this->db->inTransaction()) {
-                $this->db->rollBack();
+                try { $this->db->rollBack(); } catch (Exception $rbEx) { error_log('Transaction_service rollback error: ' . $rbEx->getMessage()); }
             }
             error_log('Transaction_service postJournalEntry error: ' . $e->getMessage());
             throw $e;

@@ -1717,7 +1717,7 @@ class Receivables extends Base_Controller {
                 
                 $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'invoice' AND reference_id = ?", [$invId]);
                 foreach ($journals as $j) {
-                    $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `{$prefix}journal_entry_lines` WHERE entry_id = ?", [$j['id']]);
                     $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
                 }
             }
@@ -1730,7 +1730,7 @@ class Receivables extends Base_Controller {
                 
                 $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'payment' AND reference_id = ?", [$payId]);
                 foreach ($journals as $j) {
-                    $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `{$prefix}journal_entry_lines` WHERE entry_id = ?", [$j['id']]);
                     $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
                 }
             }
@@ -1828,7 +1828,7 @@ class Receivables extends Base_Controller {
             // 3. Delete journal entries
             $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'invoice' AND reference_id = ?", [$id]);
             foreach ($journals as $j) {
-                $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                $this->db->query("DELETE FROM `{$prefix}journal_entry_lines` WHERE entry_id = ?", [$j['id']]);
                 $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
             }
 
@@ -1852,4 +1852,6 @@ class Receivables extends Base_Controller {
         redirect('receivables/invoices');
     }
 }
+
+
 

@@ -1079,7 +1079,7 @@ class Payables extends Base_Controller {
                 $this->db->query("DELETE FROM `{$prefix}transactions` WHERE reference_type = 'bill' AND reference_id = ?", [$bId]);
                 $journals = $this->db->fetchAll("SELECT id FROM `{$prefix}journal_entries` WHERE reference_type = 'bill' AND reference_id = ?", [$bId]);
                 foreach ($journals as $j) {
-                    $this->db->query("DELETE FROM `{$prefix}journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `{$prefix}journal_entry_lines` WHERE entry_id = ?", [$j['id']]);
                     $this->db->query("DELETE FROM `{$prefix}journal_entries` WHERE id = ?", [$j['id']]);
                 }
             }
@@ -1316,3 +1316,4 @@ class Payables extends Base_Controller {
         $this->loadView('payables/vendor_history', $data);
     }
 }
+

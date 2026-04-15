@@ -698,6 +698,14 @@ class Bookings extends Base_Controller {
                 redirect('bookings');
             }
 
+            // Always sync paid_amount/balance_amount from actual payment records
+            $synced = $this->paymentModel->syncBookingBalance($id);
+            if ($synced) {
+                $booking['paid_amount']    = $synced['paid_amount'];
+                $booking['balance_amount'] = $synced['balance_amount'];
+                $booking['payment_status'] = $synced['payment_status'];
+            }
+
             // Load rental items for this booking
             $rentalItems = [];
             try {
@@ -1054,6 +1062,9 @@ class Bookings extends Base_Controller {
             }
 
             if (!$isNested) $pdo->commit();
+
+            // Sync paid_amount/balance_amount from actual payment records (self-healing)
+            $this->paymentModel->syncBookingBalance($bookingId);
             
             // Log activity
             $this->activityModel->log(
@@ -2033,7 +2044,7 @@ class Bookings extends Base_Controller {
                 // Delete Journal Entries linked to invoice
                 $journals = $this->db->fetchAll("SELECT id FROM `" . $this->db->getPrefix() . "journal_entries` WHERE reference = ?", ['booking_invoice:' . $invoiceId]);
                 foreach ($journals as $j) {
-                    $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entry_lines` WHERE entry_id = ?", [$j['id']]);
                     $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entries` WHERE id = ?", [$j['id']]);
                 }
                 
@@ -2074,3 +2085,4 @@ class Bookings extends Base_Controller {
         redirect('bookings');
     }
 }
+

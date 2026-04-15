@@ -49,5 +49,50 @@ class Booking_payment_model extends Base_Model {
             return 0;
         }
     }
+
+    /**
+     * Recalculate and sync paid_amount and balance_amount on the bookings table
+     * from the actual sum of completed booking_payments records.
+     * Call this after any payment is recorded/updated and on booking view load.
+     */
+    public function syncBookingBalance($bookingId) {
+        try {
+            $totalPaid = $this->getTotalPaid($bookingId);
+
+            $booking = $this->db->fetchOne(
+                "SELECT total_amount FROM `" . $this->db->getPrefix() . "bookings` WHERE id = ?",
+                [$bookingId]
+            );
+            if (!$booking) return false;
+
+            $totalAmount  = floatval($booking['total_amount'] ?? 0);
+            $balance      = max(0, $totalAmount - $totalPaid);
+
+            // Determine payment status
+            if ($totalPaid <= 0) {
+                $paymentStatus = 'unpaid';
+            } elseif ($balance <= 0) {
+                $paymentStatus = 'paid';
+            } else {
+                $paymentStatus = 'partial';
+            }
+
+            $this->db->update(
+                'bookings',
+                [
+                    'paid_amount'    => $totalPaid,
+                    'balance_amount' => $balance,
+                    'payment_status' => $paymentStatus,
+                ],
+                'id = ?',
+                [$bookingId]
+            );
+
+            return ['paid_amount' => $totalPaid, 'balance_amount' => $balance, 'payment_status' => $paymentStatus];
+        } catch (Exception $e) {
+            error_log('Booking_payment_model syncBookingBalance error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
 
