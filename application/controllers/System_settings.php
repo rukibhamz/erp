@@ -165,6 +165,15 @@ class System_settings extends Base_Controller {
                         'maintenance_mode' => !empty($_POST['maintenance_mode']) ? 1 : 0,
                     ];
                     break;
+
+                case 'policies':
+                    $settings = [
+                        'cancellation_policy_notice' => sanitize_input($_POST['cancellation_policy_notice'] ?? ''),
+                        'operating_hours_notice'     => sanitize_input($_POST['operating_hours_notice'] ?? ''),
+                        'terms_url'                  => sanitize_input($_POST['terms_url'] ?? ''),
+                        'privacy_url'                => sanitize_input($_POST['privacy_url'] ?? ''),
+                    ];
+                    break;
             }
             
             // Save each setting
