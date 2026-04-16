@@ -262,28 +262,66 @@ class Resource_management extends Base_Controller {
         $this->requirePermission('bookings', 'read');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = sanitize_input($_POST['_action'] ?? 'create');
+
+            // Handle delete
+            if ($action === 'delete') {
+                $this->requirePermission('bookings', 'delete');
+                $deleteId = intval($_POST['_id'] ?? 0);
+                if ($deleteId && $this->addonModel->delete($deleteId)) {
+                    $this->activityModel->log($this->session['user_id'], 'delete', 'Bookings', 'Deleted addon ID: ' . $deleteId);
+                    $this->setFlashMessage('success', 'Add-on deleted successfully.');
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to delete add-on.');
+                }
+                redirect('resource-management/addons' . ($resourceId ? '/' . $resourceId : ''));
+                return;
+            }
+
+            // Handle edit
+            if ($action === 'edit') {
+                $this->requirePermission('bookings', 'update');
+                $editId = intval($_POST['_id'] ?? 0);
+                $editData = [
+                    'name'         => sanitize_input($_POST['name'] ?? ''),
+                    'description'  => sanitize_input($_POST['description'] ?? ''),
+                    'addon_type'   => sanitize_input($_POST['addon_type'] ?? 'other'),
+                    'price'        => floatval($_POST['price'] ?? 0),
+                    'pricing_type' => sanitize_input($_POST['pricing_type'] ?? 'per_booking'),
+                    'max_quantity' => intval($_POST['max_quantity'] ?? 0),
+                    'is_active'    => !empty($_POST['is_active']) ? 1 : 0,
+                ];
+                if ($editId && $this->addonModel->update($editId, $editData)) {
+                    $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Updated addon ID: ' . $editId);
+                    $this->setFlashMessage('success', 'Add-on updated successfully.');
+                } else {
+                    $this->setFlashMessage('danger', 'Failed to update add-on.');
+                }
+                redirect('resource-management/addons' . ($resourceId ? '/' . $resourceId : ''));
+                return;
+            }
+
+            // Handle create (default)
             $this->requirePermission('bookings', 'create');
-            
             $data = [
-                'name' => sanitize_input($_POST['name'] ?? ''),
-                'description' => sanitize_input($_POST['description'] ?? ''),
-                'addon_type' => sanitize_input($_POST['addon_type'] ?? 'other'),
-                'price' => floatval($_POST['price'] ?? 0),
+                'name'         => sanitize_input($_POST['name'] ?? ''),
+                'description'  => sanitize_input($_POST['description'] ?? ''),
+                'addon_type'   => sanitize_input($_POST['addon_type'] ?? 'other'),
+                'price'        => floatval($_POST['price'] ?? 0),
                 'pricing_type' => sanitize_input($_POST['pricing_type'] ?? 'per_booking'),
                 'max_quantity' => intval($_POST['max_quantity'] ?? 0),
-                'resource_id' => !empty($_POST['resource_id']) ? intval($_POST['resource_id']) : null,
-                'is_active' => !empty($_POST['is_active']) ? 1 : 0,
-                'display_order' => intval($_POST['display_order'] ?? 0)
+                'resource_id'  => !empty($_POST['resource_id']) ? intval($_POST['resource_id']) : null,
+                'is_active'    => !empty($_POST['is_active']) ? 1 : 0,
+                'display_order'=> intval($_POST['display_order'] ?? 0)
             ];
-            
             if ($this->addonModel->create($data)) {
                 $this->activityModel->log($this->session['user_id'], 'create', 'Bookings', 'Created addon: ' . $data['name']);
                 $this->setFlashMessage('success', 'Add-on created successfully.');
             } else {
                 $this->setFlashMessage('danger', 'Failed to create add-on.');
             }
-            
             redirect('resource-management/addons' . ($resourceId ? '/' . $resourceId : ''));
+            return;
         }
         
         try {

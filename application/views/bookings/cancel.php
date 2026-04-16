@@ -75,8 +75,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php else: ?>
                             <div class="alert alert-warning mb-4">
                                 <i class="bi bi-exclamation-triangle"></i>
-                                <strong>Cancellation Policy:</strong> A 70% refund applies if cancelled before the booking date.
-                                No refund is issued on the day of or after the event.
+                                <strong>Cancellation Policy:</strong> <?= htmlspecialchars(get_policy_notice('cancellation_policy_notice', '70% refund if cancelled before the booking date. No refund on the day of or after the event.')) ?>
                             </div>
                         <?php endif; ?>
 

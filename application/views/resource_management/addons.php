@@ -80,10 +80,12 @@
                                 </button>
                                 <?php endif; ?>
                                 <?php if (has_permission('bookings', 'delete')): ?>
-                                <form method="POST" action="<?= base_url('resource-management/delete-addon/' . $addon['id']) ?>"
+                                <form method="POST" action="<?= base_url('resource-management/addons') ?>"
                                       style="display:inline"
                                       onsubmit="return confirm('Delete this add-on?')">
                                     <?= csrf_field() ?>
+                                    <input type="hidden" name="_action" value="delete">
+                                    <input type="hidden" name="_id" value="<?= $addon['id'] ?>">
                                     <button type="submit" class="btn btn-sm btn-danger">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -182,9 +184,10 @@
 <div class="modal fade" id="editAddonModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" id="editAddonForm" action="">
+            <form method="POST" id="editAddonForm" action="<?= base_url('resource-management/addons') ?>">
                 <?= csrf_field() ?>
-                <input type="hidden" name="_method" value="PUT">
+                <input type="hidden" name="_action" value="edit">
+                <input type="hidden" name="_id" id="edit_id" value="">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Add-on</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -247,12 +250,11 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?= csp_nonce() ?>">
 document.getElementById('editAddonModal').addEventListener('show.bs.modal', function(e) {
     const btn = e.relatedTarget;
     if (!btn) return;
-    const id = btn.dataset.id;
-    document.getElementById('editAddonForm').action = '<?= base_url('resource-management/edit-addon/') ?>' + id;
+    document.getElementById('edit_id').value = btn.dataset.id || '';
     document.getElementById('edit_name').value = btn.dataset.name || '';
     document.getElementById('edit_description').value = btn.dataset.description || '';
     document.getElementById('edit_price').value = btn.dataset.price || '';

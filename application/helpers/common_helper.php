@@ -151,3 +151,21 @@ if (!function_exists('esc')) {
         }
     }
 }
+
+/**
+ * Get a system policy/notice setting with a fallback default.
+ */
+if (!function_exists('get_policy_notice')) {
+    function get_policy_notice($key, $default = '') {
+        try {
+            $db = \Database::getInstance();
+            $row = $db->fetchOne(
+                "SELECT setting_value FROM `" . $db->getPrefix() . "settings` WHERE setting_key = ? LIMIT 1",
+                [$key]
+            );
+            return ($row && !empty($row['setting_value'])) ? $row['setting_value'] : $default;
+        } catch (Exception $e) {
+            return $default;
+        }
+    }
+}

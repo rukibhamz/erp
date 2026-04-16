@@ -44,8 +44,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h1 class="display-6 fw-bold mb-3">Select Date & Time</h1>
                 <p class="lead text-muted">Choose a location and then select the space you'd like to book</p>
                 <div class="alert alert-warning d-inline-block">
-                    <i class="bi bi-clock-history"></i> <strong>Notice:</strong> Spaces are bookable between <strong>9:00 AM and 8:00 PM</strong> daily.
-                    <br><i class="bi bi-exclamation-triangle"></i> <strong>Cancellation Policy:</strong> 70% refund if cancelled before the booking date. No refund on the day of or after the event.
+                    <i class="bi bi-clock-history"></i> <strong>Notice:</strong> <?= htmlspecialchars(get_policy_notice('operating_hours_notice', 'Spaces are bookable between 9:00 AM and 8:00 PM daily.')) ?>
+                    <br><i class="bi bi-exclamation-triangle"></i> <strong>Cancellation Policy:</strong> <?= htmlspecialchars(get_policy_notice('cancellation_policy_notice', '70% refund if cancelled before the booking date. No refund on the day of or after the event.')) ?>
                 </div>
             </div>
 

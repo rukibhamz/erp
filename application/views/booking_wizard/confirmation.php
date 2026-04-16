@@ -174,7 +174,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <li>Please complete payment as per the payment schedule</li>
                     <li>You will receive reminders before your booking date</li>
                     <li>Contact us if you need to modify your booking</li>
-                    <li class="text-danger"><strong>Cancellation Policy: 70% refund if cancelled before the booking date. No refund on the day of or after the event.</strong></li>
+                    <li class="text-danger"><strong>Cancellation Policy: <?= htmlspecialchars(get_policy_notice('cancellation_policy_notice', '70% refund if cancelled before the booking date. No refund on the day of or after the event.')) ?></strong></li>
                 </ul>
             </div>
 

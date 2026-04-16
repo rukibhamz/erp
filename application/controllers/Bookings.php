@@ -1615,125 +1615,82 @@ class Bookings extends Base_Controller {
      */
     private function recognizeBookingRevenue($bookingId, $booking) {
         try {
-            $bookingRevenueAccount = $this->accountModel->getByCode('4000'); // Sales/Service Revenue
+            $bookingRevenueAccount = $this->accountModel->getByCode('4000');
             if (!$bookingRevenueAccount) {
                 $revenueAccounts = $this->accountModel->getByType('Revenue');
                 $bookingRevenueAccount = !empty($revenueAccounts) ? $revenueAccounts[0] : null;
             }
-            
             if (!$bookingRevenueAccount) {
-                error_log('No booking revenue account found. Please configure default accounts.');
+                error_log('recognizeBookingRevenue: No revenue account found, skipping journal entry.');
                 return;
             }
-            
+
             $totalAmount = floatval($booking['total_amount'] ?? 0);
-            if ($totalAmount <= 0) {
-                return;
-            }
-            
-            // Check if revenue entry already exists
-            // We can check this by looking for a transaction with this reference
-            // But Transaction_service doesn't expose a check method easily, so we rely on logic or existing checks
-            // For now, we'll assume the caller ensures this isn't called twice, or we check manually
-            // The original code checked transactionModel->getByReference. We can still do that if needed, 
-            // or just trust the flow. Let's keep the check if possible, but Transaction_service handles posting.
-            
-            // If unearned revenue account exists and booking was prepaid, recognize it
-            // Otherwise, create AR entry if not fully paid
-            $paidAmount = floatval($booking['paid_amount'] ?? 0);
-            $balanceAmount = $totalAmount - $paidAmount;
-            
-            $entries = [];
-            
-            // 1. Debit Accounts Receivable for unpaid portion
-            if ($balanceAmount > 0) {
-                $arAccount = $this->accountModel->getByCode('1200'); // Accounts Receivable
-                if (!$arAccount) {
-                     $arAccounts = $this->accountModel->getByType('Assets');
-                     foreach ($arAccounts as $acc) {
-                        if (stripos($acc['account_name'], 'receivable') !== false) {
-                            $arAccount = $acc;
-                            break;
-                        }
-                    }
-                }
-                
-                if ($arAccount) {
-                    $entries[] = [
-                        'account_id' => $arAccount['id'],
-                        'debit' => $balanceAmount,
-                        'credit' => 0,
-                        'description' => 'Accounts Receivable - Booking #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')'
-                    ];
-                }
-            }
-            
-            // 2. Debit Unearned Revenue for paid portion (transfer to Revenue)
-            if ($paidAmount > 0) {
-                $unearnedRevenueAccount = $this->accountModel->getByCode('2205'); // Unearned Revenue
-                if ($unearnedRevenueAccount) {
-                    $entries[] = [
-                        'account_id' => $unearnedRevenueAccount['id'],
-                        'debit' => $paidAmount,
-                        'credit' => 0,
-                        'description' => 'Recognize Unearned Revenue - Booking #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')'
-                    ];
-                } else {
-                    // If no unearned revenue account, maybe it was credited to revenue directly? 
-                    // Or maybe we should debit Cash? No, cash was debited when payment was received.
-                    // If we don't have unearned revenue account, we assume the payment went to Unearned Revenue 
-                    // (as per processPayment logic). If that logic failed to find Unearned Revenue, it used Revenue.
-                    // If it used Revenue, then we don't need to do anything for the paid amount now?
-                    // Wait, if processPayment credited Revenue directly because it couldn't find Unearned Revenue, 
-                    // then we shouldn't recognize it again.
-                    // BUT, processPayment logic says: if pending, use Unearned Revenue.
-                    // So we should try to find Unearned Revenue.
-                    // If we can't find it, we might have an issue.
-                    // Let's assume Unearned Revenue exists or was used.
-                    // If we can't find it now, we can't debit it.
-                }
-            }
-            
-            // 3. Credit Net Revenue (excluding VAT) to Booking Revenue account
-            $taxAmount = floatval($booking['tax_amount'] ?? 0);
+            if ($totalAmount <= 0) return;
+
+            $taxAmount  = floatval($booking['tax_amount'] ?? 0);
             $netRevenue = $totalAmount - $taxAmount;
 
-            $entries[] = [
-                'account_id' => $bookingRevenueAccount['id'],
-                'debit' => 0,
-                'credit' => $netRevenue,
-                'description' => 'Booking Revenue Recognized - Booking #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')'
+            // Build a balanced journal: DR Accounts Receivable = CR Revenue + CR VAT
+            $arAccount = $this->accountModel->getByCode('1200');
+            if (!$arAccount) {
+                $arAccounts = $this->accountModel->getByType('Assets');
+                foreach ($arAccounts as $acc) {
+                    if (stripos($acc['account_name'], 'receivable') !== false) { $arAccount = $acc; break; }
+                }
+            }
+
+            if (!$arAccount) {
+                error_log('recognizeBookingRevenue: No AR account found, skipping journal entry.');
+                return;
+            }
+
+            $entries = [
+                // DR Accounts Receivable (full invoice amount)
+                [
+                    'account_id' => $arAccount['id'],
+                    'debit'      => $totalAmount,
+                    'credit'     => 0,
+                    'description' => 'Accounts Receivable - Booking #' . ($booking['booking_number'] ?? $bookingId)
+                ],
+                // CR Revenue (net of VAT)
+                [
+                    'account_id' => $bookingRevenueAccount['id'],
+                    'debit'      => 0,
+                    'credit'     => $netRevenue,
+                    'description' => 'Booking Revenue - Booking #' . ($booking['booking_number'] ?? $bookingId)
+                ],
             ];
 
-            // 4. Credit VAT Payable separately for proper VAT tracking
+            // CR VAT Payable
             if ($taxAmount > 0) {
                 $vatAccount = $this->accountModel->getOrCreateVatAccount();
                 if ($vatAccount) {
                     $entries[] = [
                         'account_id' => $vatAccount['id'],
-                        'debit' => 0,
-                        'credit' => $taxAmount,
+                        'debit'      => 0,
+                        'credit'     => $taxAmount,
                         'description' => 'VAT Payable - Booking #' . ($booking['booking_number'] ?? $bookingId)
                     ];
+                } else {
+                    // No VAT account — add to revenue to keep entries balanced
+                    $entries[1]['credit'] += $taxAmount;
                 }
             }
-            
-            if (!empty($entries)) {
-                $journalData = [
-                    'date' => date('Y-m-d'),
-                    'reference_type' => 'booking_revenue',
-                    'reference_id' => $bookingId,
-                    'description' => 'Booking Revenue Recognition #' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')',
-                    'journal_type' => 'sales',
-                    'entries' => $entries,
-                    'created_by' => $this->session['user_id'] ?? null,
-                    'auto_post' => true
-                ];
-                
-                $this->transactionService->postJournalEntry($journalData);
-            }
-            
+
+            $this->transactionService->postJournalEntry([
+                'date'           => date('Y-m-d'),
+                'reference_type' => 'booking_revenue',
+                'reference_id'   => $bookingId,
+                'description'    => 'Booking Revenue - #' . ($booking['booking_number'] ?? $bookingId),
+                'journal_type'   => 'sales',
+                'entries'        => $entries,
+                'created_by'     => $this->session['user_id'] ?? null,
+                'auto_post'      => true
+            ]);
+
         } catch (Exception $e) {
+            // Non-fatal — log but never block booking creation
             error_log('Bookings recognizeBookingRevenue error: ' . $e->getMessage());
         }
     }

@@ -40,6 +40,12 @@ $activeTab = $active_tab ?? 'company';
             <i class="bi bi-gear"></i> Preferences
         </a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $activeTab === 'policies' ? 'active' : '' ?>" 
+           href="<?= base_url('settings/system?tab=policies') ?>">
+            <i class="bi bi-shield-check"></i> Policies & Notices
+        </a>
+    </li>
 </ul>
 
 <!-- Company Settings -->
@@ -471,3 +477,58 @@ function testSMS() {
 </script>
 
 
+
+<!-- Policies & Notices -->
+<?php if ($activeTab === 'policies'): ?>
+    <div class="card">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="bi bi-shield-check"></i> Policies & Customer Notices</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="<?= base_url('settings/system/save') ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="tab" value="policies">
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> These notices appear throughout the booking system to inform customers of your policies.
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Cancellation & Refund Policy</label>
+                    <textarea name="cancellation_policy_notice" class="form-control" rows="3"
+                              placeholder="e.g. 70% refund if cancelled before the booking date. No refund on the day of or after the event."><?= htmlspecialchars($settings['cancellation_policy_notice'] ?? '70% refund if cancelled before the booking date. No refund on the day of or after the event.') ?></textarea>
+                    <small class="text-muted">Shown in booking wizard, customer portal, and confirmation pages.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Operating Hours Notice</label>
+                    <textarea name="operating_hours_notice" class="form-control" rows="2"
+                              placeholder="e.g. Spaces are bookable between 9:00 AM and 8:00 PM daily."><?= htmlspecialchars($settings['operating_hours_notice'] ?? 'Spaces are bookable between 9:00 AM and 8:00 PM daily.') ?></textarea>
+                    <small class="text-muted">Shown in booking wizard date/time selection.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Terms & Conditions URL</label>
+                    <input type="url" name="terms_url" class="form-control"
+                           placeholder="https://yoursite.com/terms"
+                           value="<?= htmlspecialchars($settings['terms_url'] ?? '') ?>">
+                    <small class="text-muted">Link to your full terms and conditions page.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Privacy Policy URL</label>
+                    <input type="url" name="privacy_url" class="form-control"
+                           placeholder="https://yoursite.com/privacy"
+                           value="<?= htmlspecialchars($settings['privacy_url'] ?? '') ?>">
+                    <small class="text-muted">Link to your privacy policy page.</small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-dark">
+                        <i class="bi bi-save"></i> Save Policy Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+<?php endif; ?>
