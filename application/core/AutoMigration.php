@@ -475,6 +475,13 @@ class AutoMigration {
             error_log("AutoMigration: Error recalculating account balances: " . $e->getMessage());
         }
 
+        // ALWAYS ensure settings table exists
+        try {
+            $this->ensureSettingsTable();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring settings table: " . $e->getMessage());
+        }
+
         // ALWAYS ensure addons and booking_addons tables exist
         try {
             $this->ensureAddonsTable();
@@ -3089,6 +3096,27 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring users auth columns: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure the settings table exists.
+     */
+    private function ensureSettingsTable() {
+        try {
+            $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}settings` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `setting_key` varchar(100) NOT NULL,
+                `setting_value` text DEFAULT NULL,
+                `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `setting_key` (`setting_key`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring settings table: " . $e->getMessage());
             return false;
         }
     }
