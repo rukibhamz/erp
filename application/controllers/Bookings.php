@@ -371,11 +371,6 @@ class Bookings extends Base_Controller {
             $priceQuantity = in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace']) ? $numberOfGuests : 1;
             $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, $priceQuantity, false, $endDate, $equipmentTier ?: null);
 
-            // Log if price is 0 for debugging but don't block — let the model validate
-            if ($baseAmount <= 0) {
-                error_log("Bookings create: baseAmount=0 for facilityId={$facilityId}, spaceId={$spaceId}, bookingType={$bookingType}");
-            }
-            
             // Calculate duration
             if ($bookingType === 'multi_day' && $endDate !== $bookingDate) {
                 $startDT = new DateTime($bookingDate);
@@ -485,32 +480,15 @@ class Bookings extends Base_Controller {
                 error_log('Bookings create: space_id/location_id columns not found, using facility_id only');
             }
 
-            // Filter $data to only columns that exist in the bookings table
-            // Do this BEFORE starting the transaction to avoid interfering with it
-            try {
-                $existingCols = [];
-                $colRows = $this->db->fetchAll("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "bookings`");
-                foreach ($colRows as $col) { $existingCols[] = $col['Field']; }
-                if (!empty($existingCols)) {
-                    $data = array_intersect_key($data, array_flip($existingCols));
-                }
-                error_log('Bookings create: ' . count($data) . ' columns after filter: ' . implode(',', array_keys($data)));
-            } catch (Exception $colEx) {
-                error_log('Bookings create: could not check columns - ' . $colEx->getMessage());
-                // Continue without filtering — let the DB report the actual error
-            }
-
             try {
                 $pdo = $this->db->getConnection();
                 $isNested = $this->db->inTransaction();
                 if (!$isNested) $pdo->beginTransaction();
 
                 $bookingId = $this->bookingModel->create($data);
-                if (!$bookingId || intval($bookingId) <= 0) {
-                    error_log('Bookings create: INSERT returned no ID (' . var_export($bookingId, true) . ') | Data: ' . json_encode(array_keys($data)));
-                    throw new Exception('Booking INSERT returned no ID');
+                if (!$bookingId) {
+                    throw new Exception('Failed to create booking');
                 }
-                $bookingId = intval($bookingId);
 
                 // Create booking slots
                 $this->bookingModel->createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endDate, $endTime);
