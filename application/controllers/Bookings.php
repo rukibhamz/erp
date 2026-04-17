@@ -371,23 +371,9 @@ class Bookings extends Base_Controller {
             $priceQuantity = in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace']) ? $numberOfGuests : 1;
             $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, $priceQuantity, false, $endDate, $equipmentTier ?: null);
 
+            // Log if price is 0 for debugging but don't block — let the model validate
             if ($baseAmount <= 0) {
-                error_log("Bookings create: baseAmount=0 for facilityId={$facilityId}, spaceId={$spaceId}, bookingType={$bookingType}, date={$bookingDate}, start={$startTime}, end={$endTime}");
-                // Try to sync the space and recalculate
-                if ($spaceId && !$facilityId) {
-                    try {
-                        $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
-                        if ($facilityId) {
-                            $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, $priceQuantity, false, $endDate, $equipmentTier ?: null);
-                        }
-                    } catch (Exception $syncEx) {
-                        error_log('Bookings create: sync retry failed - ' . $syncEx->getMessage());
-                    }
-                }
-                if ($baseAmount <= 0) {
-                    $this->setFlashMessage('danger', 'Could not calculate booking price. The space may not be synced to the booking module. Please go to Spaces → Edit → click "Sync to Booking" then try again.');
-                    redirect('bookings/create');
-                }
+                error_log("Bookings create: baseAmount=0 for facilityId={$facilityId}, spaceId={$spaceId}, bookingType={$bookingType}");
             }
             
             // Calculate duration

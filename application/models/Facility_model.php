@@ -703,10 +703,12 @@ class Facility_model extends Base_Model {
                 // Always read pricing_rules from bookable_config (source of truth for prices)
                 // This ensures updated prices are always reflected without needing a manual sync
                 $pricingRules = [];
+                // Try both: space linked via facility_id, OR space_id directly
                 $configSql = "SELECT pricing_rules FROM `" . $this->db->getPrefix() . "bookable_config` 
-                              WHERE space_id = (SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ?)
+                              WHERE space_id = (SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ? LIMIT 1)
+                                 OR space_id = ?
                               LIMIT 1";
-                $configRow = $this->db->fetchOne($configSql, [$facilityId]);
+                $configRow = $this->db->fetchOne($configSql, [$facilityId, $facilityId]);
                 if ($configRow && !empty($configRow['pricing_rules'])) {
                     $pricingRules = json_decode($configRow['pricing_rules'], true) ?: [];
                 }
