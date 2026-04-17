@@ -22,9 +22,11 @@ class Booking_model extends Base_Model {
     }
     
     public function create($data) {
+        error_log('Booking_model::create called — total_amount=' . ($data['total_amount'] ?? 'NOT SET') . ', facility_id=' . ($data['facility_id'] ?? 'NOT SET') . ', booking_type=' . ($data['booking_type'] ?? 'NOT SET'));
+
         // Validate: reject zero or negative amount bookings
         if (isset($data['total_amount']) && floatval($data['total_amount']) <= 0) {
-            error_log('Booking_model create error: total_amount=' . ($data['total_amount'] ?? 'not set') . ' — booking rejected');
+            error_log('Booking_model create REJECTED: total_amount=' . $data['total_amount'] . ' is zero or negative');
             return false;
         }
         
@@ -49,6 +51,7 @@ class Booking_model extends Base_Model {
                         $data['customer_phone'] ?? '',
                         'booking'
                     );
+                    error_log('Booking_model::create Identity_resolver returned customer_id=' . ($data['customer_id'] ?? 'NULL'));
                 } catch (Exception $e) {
                     error_log('Booking_model create: Identity_resolver error: ' . $e->getMessage());
                     $data['customer_id'] = null;
@@ -58,7 +61,10 @@ class Booking_model extends Base_Model {
             }
         }
 
-        return parent::create($data);
+        error_log('Booking_model::create calling parent::create with ' . count($data) . ' fields: ' . implode(',', array_keys($data)));
+        $result = parent::create($data);
+        error_log('Booking_model::create parent::create returned: ' . var_export($result, true));
+        return $result;
     }
     
     public function getAllBookings($status = null) {

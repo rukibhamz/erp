@@ -487,6 +487,7 @@ class Bookings extends Base_Controller {
 
                 $bookingId = $this->bookingModel->create($data);
                 if (!$bookingId) {
+                    error_log('Bookings controller: bookingModel->create returned false/0 for booking_number=' . ($data['booking_number'] ?? 'N/A') . ', total_amount=' . ($data['total_amount'] ?? 'N/A'));
                     throw new Exception('Failed to create booking');
                 }
 
