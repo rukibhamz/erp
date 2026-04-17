@@ -329,13 +329,13 @@ class Bookings extends Base_Controller {
                 try {
                     $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
                     if (!$facilityId) {
-                        $this->setFlashMessage('danger', 'Space is not properly configured for booking. Please contact administrator.');
-                        redirect('bookings/create');
+                        // Last resort: use space_id directly (getById handles both)
+                        $facilityId = $spaceId;
                     }
                 } catch (Exception $e) {
                     error_log('Booking create auto-sync error: ' . $e->getMessage());
-                    $this->setFlashMessage('danger', 'Error configuring space for booking.');
-                    redirect('bookings/create');
+                    // Use space_id as fallback
+                    $facilityId = $spaceId;
                 }
             }
 
@@ -370,6 +370,25 @@ class Bookings extends Base_Controller {
             // For per-person types, quantity = number of guests
             $priceQuantity = in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace']) ? $numberOfGuests : 1;
             $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, $priceQuantity, false, $endDate, $equipmentTier ?: null);
+
+            if ($baseAmount <= 0) {
+                error_log("Bookings create: baseAmount=0 for facilityId={$facilityId}, spaceId={$spaceId}, bookingType={$bookingType}, date={$bookingDate}, start={$startTime}, end={$endTime}");
+                // Try to sync the space and recalculate
+                if ($spaceId && !$facilityId) {
+                    try {
+                        $facilityId = $this->spaceModel->syncToBookingModule($spaceId);
+                        if ($facilityId) {
+                            $baseAmount = $this->facilityModel->calculatePrice($facilityId, $bookingDate, $startTime, $endTime, $bookingType, $priceQuantity, false, $endDate, $equipmentTier ?: null);
+                        }
+                    } catch (Exception $syncEx) {
+                        error_log('Bookings create: sync retry failed - ' . $syncEx->getMessage());
+                    }
+                }
+                if ($baseAmount <= 0) {
+                    $this->setFlashMessage('danger', 'Could not calculate booking price. The space may not be synced to the booking module. Please go to Spaces → Edit → click "Sync to Booking" then try again.');
+                    redirect('bookings/create');
+                }
+            }
             
             // Calculate duration
             if ($bookingType === 'multi_day' && $endDate !== $bookingDate) {
@@ -486,10 +505,13 @@ class Bookings extends Base_Controller {
                 $existingCols = [];
                 $colRows = $this->db->fetchAll("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "bookings`");
                 foreach ($colRows as $col) { $existingCols[] = $col['Field']; }
-                $data = array_intersect_key($data, array_flip($existingCols));
-                error_log('Bookings create: filtered data to ' . count($data) . ' columns: ' . implode(',', array_keys($data)));
+                if (!empty($existingCols)) {
+                    $data = array_intersect_key($data, array_flip($existingCols));
+                }
+                error_log('Bookings create: ' . count($data) . ' columns after filter: ' . implode(',', array_keys($data)));
             } catch (Exception $colEx) {
                 error_log('Bookings create: could not check columns - ' . $colEx->getMessage());
+                // Continue without filtering — let the DB report the actual error
             }
 
             try {
@@ -498,10 +520,11 @@ class Bookings extends Base_Controller {
                 if (!$isNested) $pdo->beginTransaction();
 
                 $bookingId = $this->bookingModel->create($data);
-                if (!$bookingId) {
-                    error_log('Bookings create: INSERT returned no ID | Data keys: ' . implode(',', array_keys($data)));
-                    throw new Exception('Booking INSERT returned no ID — check error log for DB details');
+                if (!$bookingId || intval($bookingId) <= 0) {
+                    error_log('Bookings create: INSERT returned no ID (' . var_export($bookingId, true) . ') | Data: ' . json_encode(array_keys($data)));
+                    throw new Exception('Booking INSERT returned no ID');
                 }
+                $bookingId = intval($bookingId);
 
                 // Create booking slots
                 $this->bookingModel->createSlots($bookingId, $facilityId, $bookingDate, $startTime, $endDate, $endTime);

@@ -24,8 +24,8 @@ class Booking_model extends Base_Model {
     public function create($data) {
         // Validate: reject zero or negative amount bookings
         if (isset($data['total_amount']) && floatval($data['total_amount']) <= 0) {
-            error_log('Booking_model create error: total_amount must be greater than 0');
-            return false;
+            error_log('Booking_model create error: total_amount=' . ($data['total_amount'] ?? 'not set') . ' — booking rejected');
+            throw new Exception('Booking total amount must be greater than zero. Please select a space and booking type.');
         }
         
         // Map space_id to facility_id if needed (or just keep as is if data matches)

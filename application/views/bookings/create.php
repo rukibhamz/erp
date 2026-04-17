@@ -637,7 +637,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         }
         
         try {
-            document.getElementById('facility_id').value = opt.dataset.facilityId || '';
+            document.getElementById('facility_id').value = opt.dataset.facilityId || opt.value || '';
+            // If no facility_id, use space_id as fallback (controller will sync)
             currentSpaceData = {
                 id: opt.value,
                 booking_types: JSON.parse(opt.dataset.bookingTypes || '[]'),
