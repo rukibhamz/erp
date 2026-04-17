@@ -701,16 +701,21 @@ class Facility_model extends Base_Model {
             // Per-person booking types — use pricing_rules JSON
             if (in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace'])) {
                 // Always read pricing_rules from bookable_config (source of truth for prices)
-                // This ensures updated prices are always reflected without needing a manual sync
                 $pricingRules = [];
+                $logFile = ROOTPATH . 'logs/booking_create_debug.log';
+                $ts = date('Y-m-d H:i:s');
+
                 // Try both: space linked via facility_id, OR space_id directly
                 $configSql = "SELECT pricing_rules FROM `" . $this->db->getPrefix() . "bookable_config` 
                               WHERE space_id = (SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ? LIMIT 1)
                                  OR space_id = ?
                               LIMIT 1";
                 $configRow = $this->db->fetchOne($configSql, [$facilityId, $facilityId]);
+                @file_put_contents($logFile, "[$ts] calculatePrice: facilityId={$facilityId}, bookingType={$bookingType}, configRow=" . ($configRow ? 'FOUND' : 'NOT FOUND') . "\n", FILE_APPEND);
+
                 if ($configRow && !empty($configRow['pricing_rules'])) {
                     $pricingRules = json_decode($configRow['pricing_rules'], true) ?: [];
+                    @file_put_contents($logFile, "[$ts] calculatePrice: pricingRules keys=" . implode(',', array_keys($pricingRules)) . "\n", FILE_APPEND);
                 }
 
                 // Fallback: use pricing_rules already on the facility record (covers non-space facilities)
@@ -718,6 +723,11 @@ class Facility_model extends Base_Model {
                     $pricingRules = is_array($facility['pricing_rules'])
                         ? $facility['pricing_rules']
                         : (json_decode($facility['pricing_rules'], true) ?: []);
+                    @file_put_contents($logFile, "[$ts] calculatePrice: used facility record pricing_rules, keys=" . implode(',', array_keys($pricingRules)) . "\n", FILE_APPEND);
+                }
+
+                if (empty($pricingRules)) {
+                    @file_put_contents($logFile, "[$ts] calculatePrice: pricingRules is EMPTY — baseRate={$baseRate}, hourly_rate=" . ($facility['hourly_rate'] ?? 'N/A') . "\n", FILE_APPEND);
                 }
                 
                 if ($bookingType === 'picnic' || $bookingType === 'photoshoot' || $bookingType === 'videoshoot') {
@@ -752,6 +762,7 @@ class Facility_model extends Base_Model {
 
                         // Flat tier price — no multiplication by guest count
                         $totalPrice = floatval($tiers[$autoTier]['surcharge'] ?? $basePerPerson);
+                        @file_put_contents(ROOTPATH . 'logs/booking_create_debug.log', "[" . date('Y-m-d H:i:s') . "] calculatePrice picnic: guests={$guests}, autoTier={$autoTier}, tiers=" . json_encode($tiers) . ", basePerPerson={$basePerPerson}, totalPrice={$totalPrice}\n", FILE_APPEND);
                     } else {
                         // Photoshoot / Videoshoot: tier surcharge IS the flat price for that tier
                         // base_per_person is only used when no tier is selected
