@@ -761,8 +761,10 @@ class Facility_model extends Base_Model {
                         }
 
                         // Flat tier price — no multiplication by guest count
-                        $totalPrice = floatval($tiers[$autoTier]['surcharge'] ?? $basePerPerson);
-                        @file_put_contents(ROOTPATH . 'logs/booking_create_debug.log', "[" . date('Y-m-d H:i:s') . "] calculatePrice picnic: guests={$guests}, autoTier={$autoTier}, tiers=" . json_encode($tiers) . ", basePerPerson={$basePerPerson}, totalPrice={$totalPrice}\n", FILE_APPEND);
+                        // Use tier surcharge if > 0, otherwise fall back to base_per_person
+                        $tierSurcharge = floatval($tiers[$autoTier]['surcharge'] ?? 0);
+                        $totalPrice = $tierSurcharge > 0 ? $tierSurcharge : $basePerPerson;
+                        @file_put_contents(ROOTPATH . 'logs/booking_create_debug.log', "[" . date('Y-m-d H:i:s') . "] calculatePrice picnic: guests={$guests}, autoTier={$autoTier}, tierSurcharge={$tierSurcharge}, basePerPerson={$basePerPerson}, totalPrice={$totalPrice}\n", FILE_APPEND);
                     } else {
                         // Photoshoot / Videoshoot: tier surcharge IS the flat price for that tier
                         // base_per_person is only used when no tier is selected
