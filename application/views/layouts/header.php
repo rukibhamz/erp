@@ -148,6 +148,14 @@
                         </a>
                     </li>
                     <?php endif; ?>
+                    <?php if (isset($current_user) && $current_user['role'] === 'super_admin'): ?>
+                    <li class="nav-item">
+                        <a href="<?= base_url('settings/debug-log') ?>" class="nav-link <?= strpos($current_url, 'settings/debug-log') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-bug"></i>
+                            <span class="nav-text">Debug Log</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a href="<?= base_url('settings') ?>" class="nav-link <?= strpos($current_url, 'settings') === 0 ? 'active' : '' ?>">
                             <i class="bi <?= get_module_icon('settings') ?: 'bi-gear' ?>"></i>

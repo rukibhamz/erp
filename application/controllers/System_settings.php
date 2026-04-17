@@ -491,6 +491,47 @@ class System_settings extends Base_Controller {
         echo json_encode(['success' => false, 'message' => 'SMS test not yet implemented']);
         exit;
     }
+
+    /**
+     * View the booking create debug log
+     */
+    public function debugLog() {
+        $this->requirePermission('settings', 'read');
+
+        $logFile = ROOTPATH . 'logs/booking_create_debug.log';
+        $content = '';
+        $exists = file_exists($logFile);
+
+        if ($exists) {
+            // Read last 200 lines
+            $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $lines = array_slice($lines, -200);
+            $content = implode("\n", array_reverse($lines)); // newest first
+        }
+
+        $data = [
+            'page_title' => 'Booking Debug Log',
+            'log_content' => $content,
+            'log_exists' => $exists,
+            'log_file' => $logFile,
+            'flash' => $this->getFlashMessage()
+        ];
+
+        $this->loadView('settings/debug_log', $data);
+    }
+
+    /**
+     * Clear the booking debug log
+     */
+    public function clearDebugLog() {
+        $this->requirePermission('settings', 'update');
+        $logFile = ROOTPATH . 'logs/booking_create_debug.log';
+        if (file_exists($logFile)) {
+            file_put_contents($logFile, '');
+        }
+        $this->setFlashMessage('success', 'Debug log cleared.');
+        redirect('settings/debug-log');
+    }
 }
 
 

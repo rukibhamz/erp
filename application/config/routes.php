@@ -74,6 +74,8 @@ $route['profile/terminate-session/(:any)'] = 'Profile/terminateSession/$1';
         $route['settings/system/save'] = 'System_settings/save';
         $route['settings/system/test-email'] = 'System_settings/testEmail';
         $route['settings/system/test-sms'] = 'System_settings/testSMS';
+        $route['settings/debug-log'] = 'System_settings/debugLog';
+        $route['settings/debug-log/clear'] = 'System_settings/clearDebugLog';
         
         // Notifications
         $route['notifications/settings'] = 'Notifications/settings';
