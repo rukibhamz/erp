@@ -475,6 +475,20 @@ class AutoMigration {
             error_log("AutoMigration: Error recalculating account balances: " . $e->getMessage());
         }
 
+        // ALWAYS reconcile booking paid amounts from actual payment records
+        try {
+            $this->reconcileBookingPayments();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error reconciling booking payments: " . $e->getMessage());
+        }
+
+        // ALWAYS remove orphaned journal entries (no matching booking/invoice)
+        try {
+            $this->reconcileJournalEntries();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error reconciling journal entries: " . $e->getMessage());
+        }
+
         // ALWAYS ensure settings table exists
         try {
             $this->ensureSettingsTable();
@@ -3221,6 +3235,122 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring addons table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Reconcile booking paid_amount/balance_amount from actual booking_payments records.
+     * Fixes cases where paid_amount on bookings table is out of sync with actual payments.
+     */
+    private function reconcileBookingPayments() {
+        try {
+            // Check tables exist
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}bookings'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) return true;
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}booking_payments'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) return true;
+
+            // Update paid_amount, balance_amount, payment_status from actual payments
+            $sql = "UPDATE `{$this->prefix}bookings` b
+                    SET
+                        b.paid_amount = COALESCE((
+                            SELECT SUM(bp.amount)
+                            FROM `{$this->prefix}booking_payments` bp
+                            WHERE bp.booking_id = b.id AND bp.status = 'completed'
+                        ), 0),
+                        b.balance_amount = GREATEST(0, b.total_amount - COALESCE((
+                            SELECT SUM(bp.amount)
+                            FROM `{$this->prefix}booking_payments` bp
+                            WHERE bp.booking_id = b.id AND bp.status = 'completed'
+                        ), 0)),
+                        b.payment_status = CASE
+                            WHEN COALESCE((
+                                SELECT SUM(bp.amount)
+                                FROM `{$this->prefix}booking_payments` bp
+                                WHERE bp.booking_id = b.id AND bp.status = 'completed'
+                            ), 0) <= 0 THEN 'unpaid'
+                            WHEN GREATEST(0, b.total_amount - COALESCE((
+                                SELECT SUM(bp.amount)
+                                FROM `{$this->prefix}booking_payments` bp
+                                WHERE bp.booking_id = b.id AND bp.status = 'completed'
+                            ), 0)) <= 0 THEN 'paid'
+                            ELSE 'partial'
+                        END
+                    WHERE b.status NOT IN ('cancelled', 'refunded')";
+
+            $affected = $this->pdo->exec($sql);
+            if ($affected > 0) {
+                error_log("AutoMigration: Reconciled paid_amount for {$affected} bookings");
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR reconciling booking payments: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Reconcile journal entries against bookings and invoices.
+     * Removes journal entries for booking_revenue references where the booking no longer exists.
+     * Removes journal entries for invoice references where the invoice no longer exists.
+     * Does NOT touch entries that have matching records.
+     */
+    private function reconcileJournalEntries() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}journal_entries'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) return true;
+
+            $removed = 0;
+
+            // Remove orphaned booking_revenue journal entries (booking deleted)
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}bookings'");
+            if ($stmt && count($stmt->fetchAll()) > 0) {
+                $orphanedBookingEntries = $this->pdo->query(
+                    "SELECT je.id FROM `{$this->prefix}journal_entries` je
+                     WHERE je.reference_type = 'booking_revenue'
+                       AND je.reference_id IS NOT NULL
+                       AND je.reference_id > 0
+                       AND NOT EXISTS (
+                           SELECT 1 FROM `{$this->prefix}bookings` b WHERE b.id = je.reference_id
+                       )"
+                );
+                if ($orphanedBookingEntries) {
+                    foreach ($orphanedBookingEntries->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                        $this->pdo->prepare("DELETE FROM `{$this->prefix}journal_entry_lines` WHERE entry_id = ?")->execute([$row['id']]);
+                        $this->pdo->prepare("DELETE FROM `{$this->prefix}journal_entries` WHERE id = ?")->execute([$row['id']]);
+                        $removed++;
+                    }
+                }
+            }
+
+            // Remove orphaned invoice journal entries (invoice deleted)
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}invoices'");
+            if ($stmt && count($stmt->fetchAll()) > 0) {
+                $orphanedInvoiceEntries = $this->pdo->query(
+                    "SELECT je.id FROM `{$this->prefix}journal_entries` je
+                     WHERE je.reference_type IN ('invoice', 'booking_invoice')
+                       AND je.reference_id IS NOT NULL
+                       AND je.reference_id > 0
+                       AND NOT EXISTS (
+                           SELECT 1 FROM `{$this->prefix}invoices` i WHERE i.id = je.reference_id
+                       )"
+                );
+                if ($orphanedInvoiceEntries) {
+                    foreach ($orphanedInvoiceEntries->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                        $this->pdo->prepare("DELETE FROM `{$this->prefix}journal_entry_lines` WHERE entry_id = ?")->execute([$row['id']]);
+                        $this->pdo->prepare("DELETE FROM `{$this->prefix}journal_entries` WHERE id = ?")->execute([$row['id']]);
+                        $removed++;
+                    }
+                }
+            }
+
+            if ($removed > 0) {
+                error_log("AutoMigration: Removed {$removed} orphaned journal entries");
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR reconciling journal entries: " . $e->getMessage());
             return false;
         }
     }

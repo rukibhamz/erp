@@ -799,6 +799,29 @@ class Facility_model extends Base_Model {
                 }
             } else {
                 // Standard time-based booking types
+                // If baseRate is 0, try to get it from bookable_config
+                if ($baseRate <= 0) {
+                    try {
+                        $bcSql = "SELECT pricing_rules FROM `" . $this->db->getPrefix() . "bookable_config`
+                                  WHERE space_id = (SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ? LIMIT 1)
+                                     OR space_id = ? LIMIT 1";
+                        $bcRow = $this->db->fetchOne($bcSql, [$facilityId, $facilityId]);
+                        if ($bcRow && !empty($bcRow['pricing_rules'])) {
+                            $bcRules = json_decode($bcRow['pricing_rules'], true) ?: [];
+                            $baseRate = match($bookingType) {
+                                'hourly'    => floatval($bcRules['base_hourly'] ?? $bcRules['hourly'] ?? 0),
+                                'half_day'  => floatval($bcRules['half_day'] ?? 0),
+                                'daily', 'full_day' => floatval($bcRules['base_daily'] ?? $bcRules['daily'] ?? 0),
+                                'multi_day' => floatval($bcRules['base_hourly'] ?? $bcRules['hourly'] ?? 0),
+                                'weekly'    => floatval($bcRules['weekly'] ?? 0),
+                                default     => 0,
+                            };
+                        }
+                    } catch (Exception $e) {
+                        error_log('calculatePrice: bookable_config fallback error: ' . $e->getMessage());
+                    }
+                }
+
                 if ($bookingType === 'hourly') {
                     $totalPrice = $baseRate * $hours;
                 } elseif ($bookingType === 'half_day') {
