@@ -485,9 +485,27 @@ class Bookings extends Base_Controller {
                 $isNested = $this->db->inTransaction();
                 if (!$isNested) $pdo->beginTransaction();
 
+                // Filter $data to only columns that exist in the bookings table
+                try {
+                    $existingCols = [];
+                    $colRows = $this->db->fetchAll("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "bookings`");
+                    foreach ($colRows as $col) { $existingCols[] = $col['Field']; }
+                    $data = array_intersect_key($data, array_flip($existingCols));
+                } catch (Exception $colEx) {
+                    error_log('Bookings create: could not check columns - ' . $colEx->getMessage());
+                }
+
                 $bookingId = $this->bookingModel->create($data);
                 if (!$bookingId) {
-                    throw new Exception('Failed to create booking');
+                    // Try to get the actual DB error
+                    try {
+                        $dbError = $this->db->getConnection()->errorInfo();
+                        $errorMsg = $dbError[2] ?? 'Unknown DB error';
+                    } catch (Exception $dbEx) {
+                        $errorMsg = 'DB error unavailable';
+                    }
+                    error_log('Bookings create: INSERT failed - ' . $errorMsg . ' | Data keys: ' . implode(',', array_keys($data)));
+                    throw new Exception('Failed to create booking: ' . $errorMsg);
                 }
 
                 // Create booking slots
