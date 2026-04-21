@@ -383,26 +383,11 @@ class Pos extends Base_Controller {
                 error_log('POS Accounting Skipped: Missing Cash or Sales Account ID for sale ' . $saleId);
             }
             
-            // Get walk-in customer if needed
+            // Get walk-in customer if needed — never create, only look up
             $walkInCustomer = null;
             if (empty($customerId)) {
                 try {
                     $walkInCustomer = $this->customerModel->getByCode('WALK-IN');
-                    // If walk-in customer doesn't exist, create it
-                    if (!$walkInCustomer) {
-                        $customerId = $this->customerModel->create([
-                            'customer_code' => 'WALK-IN',
-                            'company_name' => 'Walk-in Customer',
-                            'contact_name' => 'Walk-in Customer',
-                            'email' => '',
-                            'phone' => '',
-                            'status' => 'active',
-                            'created_at' => date('Y-m-d H:i:s')
-                        ]);
-                        if ($customerId) {
-                            $walkInCustomer = $this->customerModel->getById($customerId);
-                        }
-                    }
                 } catch (Exception $e) {
                     error_log('POS walk-in customer fetch error: ' . $e->getMessage());
                 }

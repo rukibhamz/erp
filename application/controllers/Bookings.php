@@ -21,6 +21,7 @@ class Bookings extends Base_Controller {
     private $transactionService;
     private $invoiceModel;
     private $journalModel;
+    private $journalCleanupService;
 
     public function __construct() {
         parent::__construct();
@@ -52,6 +53,15 @@ class Bookings extends Base_Controller {
         } else {
             error_log('Transaction_service.php not found at: ' . $transactionServicePath);
             $this->transactionService = null;
+        }
+
+        $journalCleanupPath = BASEPATH . 'services/Journal_cleanup_service.php';
+        if (file_exists($journalCleanupPath)) {
+            require_once $journalCleanupPath;
+            $this->journalCleanupService = new Journal_cleanup_service();
+        } else {
+            error_log('Journal_cleanup_service.php not found at: ' . $journalCleanupPath);
+            $this->journalCleanupService = null;
         }
     }
 
@@ -1243,9 +1253,9 @@ class Bookings extends Base_Controller {
                     $this->session['user_id']
                 );
                 
-                // Reverse accounting entries if booking was confirmed
-                if ($booking['status'] === 'confirmed' || $booking['status'] === 'in_progress') {
-                    $this->reverseBookingRevenue($id);
+                // Remove booking-linked journal entries on cancellation
+                if ($this->journalCleanupService) {
+                    $this->journalCleanupService->deleteBookingJournalEntries($id);
                 }
                 
                 $pdo->commit();
@@ -1342,8 +1352,10 @@ class Bookings extends Base_Controller {
                     $this->finalizeBookingRevenue($id);
                     $updateData['completed_at'] = date('Y-m-d H:i:s');
                 } elseif ($newStatus === 'cancelled' && in_array($oldStatus, ['pending', 'confirmed', 'in_progress'])) {
-                    // Reverse revenue if cancelled
-                    $this->reverseBookingRevenue($id);
+                    // Remove booking-linked journal entries on cancellation
+                    if ($this->journalCleanupService) {
+                        $this->journalCleanupService->deleteBookingJournalEntries($id);
+                    }
                     $updateData['cancelled_at'] = date('Y-m-d H:i:s');
                     $updateData['cancellation_reason'] = $reason;
                 }
@@ -1810,7 +1822,7 @@ class Bookings extends Base_Controller {
             error_log('Bookings reverseBookingRevenue error: ' . $e->getMessage());
         }
     }
-    
+
     /**
      * Expire pending bookings that haven't been paid within timeout period
      * Can be called via cron: php index.php bookings/expirePendingBookings

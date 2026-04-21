@@ -6,6 +6,7 @@ class Space_bookings extends Base_Controller {
     private $spaceModel;
     private $tenantModel;
     private $activityModel;
+    private $journalCleanupService;
     
     public function __construct() {
         parent::__construct();
@@ -14,6 +15,15 @@ class Space_bookings extends Base_Controller {
         $this->spaceModel = $this->loadModel('Space_model');
         $this->tenantModel = $this->loadModel('Tenant_model');
         $this->activityModel = $this->loadModel('Activity_model');
+
+        $journalCleanupPath = BASEPATH . 'services/Journal_cleanup_service.php';
+        if (file_exists($journalCleanupPath)) {
+            require_once $journalCleanupPath;
+            $this->journalCleanupService = new Journal_cleanup_service();
+        } else {
+            error_log('Journal_cleanup_service.php not found at: ' . $journalCleanupPath);
+            $this->journalCleanupService = null;
+        }
     }
     
     public function index() {
@@ -283,6 +293,9 @@ class Space_bookings extends Base_Controller {
                     'cancellation_reason' => $cancellationReason,
                     'cancelled_at' => date('Y-m-d H:i:s')
                 ])) {
+                    if ($this->journalCleanupService) {
+                        $this->journalCleanupService->deleteBookingJournalEntries($id);
+                    }
                     $this->activityModel->log($this->session['user_id'], 'update', 'Space Bookings', 'Cancelled booking: ' . $booking['booking_number']);
                     $this->setFlashMessage('success', 'Booking cancelled successfully.');
                 } else {
@@ -295,5 +308,6 @@ class Space_bookings extends Base_Controller {
         
         redirect('space-bookings/view/' . $id);
     }
+
 }
 

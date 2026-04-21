@@ -64,18 +64,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="col-md-2">
                                     <label class="form-label">Debit</label>
                                     <input type="number" step="0.01" class="form-control debit-input" name="lines[0][debit]" 
-                                           value="0" min="0" onchange="calculateTotals()">
+                                           value="0" min="0">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Credit</label>
                                     <input type="number" step="0.01" class="form-control credit-input" name="lines[0][credit]" 
-                                           value="0" min="0" onchange="calculateTotals()">
+                                           value="0" min="0">
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <button type="button" class="btn btn-outline-primary mb-3" onclick="addLine()">
+                    <button type="button" class="btn btn-outline-primary mb-3" id="addLineBtn">
                         <i class="bi bi-plus-circle"></i> Add Line
                     </button>
                     
@@ -125,13 +125,13 @@ function addLine() {
             <div class="col-md-2">
                 <label class="form-label">Debit</label>
                 <input type="number" step="0.01" class="form-control debit-input" name="lines[${lineCount}][debit]" 
-                       value="0" min="0" onchange="calculateTotals()">
+                       value="0" min="0">
             </div>
             <div class="col-md-2">
                 <label class="form-label">Credit</label>
                 <input type="number" step="0.01" class="form-control credit-input" name="lines[${lineCount}][credit]" 
-                       value="0" min="0" onchange="calculateTotals()">
-                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removeLine(this)">
+                       value="0" min="0">
+                <button type="button" class="btn btn-sm btn-danger mt-2 remove-line-btn">
                     <i class="bi bi-trash"></i> Remove
                 </button>
             </div>
@@ -176,7 +176,30 @@ function calculateTotals() {
     }
 }
 
-// Initial calculation
-calculateTotals();
+document.addEventListener('DOMContentLoaded', function() {
+    const linesContainer = document.getElementById('linesContainer');
+    const addLineBtn = document.getElementById('addLineBtn');
+
+    if (addLineBtn) {
+        addLineBtn.addEventListener('click', addLine);
+    }
+
+    if (linesContainer) {
+        linesContainer.addEventListener('click', function(event) {
+            const removeBtn = event.target.closest('.remove-line-btn');
+            if (removeBtn) {
+                removeLine(removeBtn);
+            }
+        });
+
+        linesContainer.addEventListener('input', function(event) {
+            if (event.target.classList.contains('debit-input') || event.target.classList.contains('credit-input')) {
+                calculateTotals();
+            }
+        });
+    }
+
+    calculateTotals();
+});
 </script>
 

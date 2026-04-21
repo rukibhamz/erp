@@ -475,6 +475,13 @@ class AutoMigration {
             error_log("AutoMigration: Error recalculating account balances: " . $e->getMessage());
         }
 
+        // ALWAYS ensure walk-in customer exists (single record, never duplicated)
+        try {
+            $this->ensureWalkInCustomer();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring walk-in customer: " . $e->getMessage());
+        }
+
         // ALWAYS reconcile booking paid amounts from actual payment records
         try {
             $this->reconcileBookingPayments();
@@ -3235,6 +3242,46 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring addons table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Ensure exactly one WALK-IN customer exists and deduplicate any extras.
+     */
+    private function ensureWalkInCustomer() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}customers'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) return true;
+
+            // Find all WALK-IN records
+            $stmt = $this->pdo->prepare("SELECT id FROM `{$this->prefix}customers` WHERE customer_code = 'WALK-IN' ORDER BY id ASC");
+            $stmt->execute();
+            $walkIns = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            if (empty($walkIns)) {
+                // Create the single canonical WALK-IN customer
+                $this->pdo->exec("INSERT INTO `{$this->prefix}customers`
+                    (customer_code, company_name, contact_name, email, phone, status, created_at)
+                    VALUES ('WALK-IN', 'Walk-in Customer', 'Walk-in Customer', '', '', 'active', NOW())");
+                error_log("AutoMigration: Created WALK-IN customer");
+            } elseif (count($walkIns) > 1) {
+                // Keep the first, delete the rest
+                $keepId = $walkIns[0]['id'];
+                $deleteIds = array_column(array_slice($walkIns, 1), 'id');
+                $placeholders = implode(',', array_fill(0, count($deleteIds), '?'));
+                // Reassign any references to the canonical record
+                $this->pdo->prepare("UPDATE `{$this->prefix}pos_sales` SET customer_id = ? WHERE customer_id IN ({$placeholders})")
+                    ->execute(array_merge([$keepId], $deleteIds));
+                // Delete duplicates
+                $this->pdo->prepare("DELETE FROM `{$this->prefix}customers` WHERE id IN ({$placeholders})")
+                    ->execute($deleteIds);
+                error_log("AutoMigration: Removed " . count($deleteIds) . " duplicate WALK-IN customers");
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring walk-in customer: " . $e->getMessage());
             return false;
         }
     }
