@@ -15,6 +15,47 @@ class Ledger extends Base_Controller {
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->activityModel = $this->loadModel('Activity_model');
     }
+
+    /**
+     * Normalize an amount string to a float value.
+     * Handles inputs with thousand separators and decimal commas/dots.
+     */
+    private function parseAmount($value) {
+        if ($value === null || $value === '') {
+            return 0.0;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        $value = trim((string) $value);
+        $value = str_replace(' ', '', $value);
+
+        $hasComma = strpos($value, ',') !== false;
+        $hasDot = strpos($value, '.') !== false;
+
+        if ($hasComma && $hasDot) {
+            // If both separators are present, assume the last separator is decimal.
+            if (strrpos($value, ',') > strrpos($value, '.')) {
+                $value = str_replace('.', '', $value);
+                $value = str_replace(',', '.', $value);
+            } else {
+                $value = str_replace(',', '', $value);
+            }
+        } elseif ($hasComma) {
+            // Handle either decimal comma or thousand separators.
+            $parts = explode(',', $value);
+            if (count($parts) > 1 && strlen(end($parts)) <= 2) {
+                $value = str_replace('.', '', $value);
+                $value = str_replace(',', '.', $value);
+            } else {
+                $value = str_replace(',', '', $value);
+            }
+        }
+
+        return is_numeric($value) ? (float) $value : 0.0;
+    }
     
     public function index() {
         $status = $_GET['status'] ?? null;
@@ -70,8 +111,8 @@ class Ledger extends Base_Controller {
                 
                 foreach ($lines as $line) {
                     $accountId = intval($line['account_id'] ?? 0);
-                    $debit = floatval($line['debit'] ?? 0);
-                    $credit = floatval($line['credit'] ?? 0);
+                    $debit = $this->parseAmount($line['debit'] ?? 0);
+                    $credit = $this->parseAmount($line['credit'] ?? 0);
                     $description = sanitize_input($line['description'] ?? '');
                     
                     if ($accountId > 0 && ($debit > 0 || $credit > 0)) {
@@ -88,6 +129,8 @@ class Ledger extends Base_Controller {
                 }
                 
                 // Validate balanced
+                $totalDebit = round($totalDebit, 2);
+                $totalCredit = round($totalCredit, 2);
                 if (abs($totalDebit - $totalCredit) > 0.01) {
                     $this->journalModel->delete($entryId);
                     $this->setFlashMessage('danger', 'Journal entry must be balanced. Debits and credits must be equal.');
@@ -187,8 +230,8 @@ class Ledger extends Base_Controller {
             
             foreach ($lines as $line) {
                 $accountId = intval($line['account_id'] ?? 0);
-                $debit = floatval($line['debit'] ?? 0);
-                $credit = floatval($line['credit'] ?? 0);
+                $debit = $this->parseAmount($line['debit'] ?? 0);
+                $credit = $this->parseAmount($line['credit'] ?? 0);
                 $description = sanitize_input($line['description'] ?? '');
                 
                 if ($accountId > 0 && ($debit > 0 || $credit > 0)) {
@@ -205,6 +248,8 @@ class Ledger extends Base_Controller {
             }
             
             // Validate balanced
+            $totalDebit = round($totalDebit, 2);
+            $totalCredit = round($totalCredit, 2);
             if (abs($totalDebit - $totalCredit) > 0.01) {
                 $this->setFlashMessage('danger', 'Journal entry must be balanced. Debits and credits must be equal.');
                 redirect('ledger/edit/' . $id);
