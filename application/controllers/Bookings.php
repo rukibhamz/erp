@@ -2014,7 +2014,7 @@ class Bookings extends Base_Controller {
                 // Delete Journal Entries linked to invoice
                 $journals = $this->db->fetchAll("SELECT id FROM `" . $this->db->getPrefix() . "journal_entries` WHERE reference = ?", ['booking_invoice:' . $invoiceId]);
                 foreach ($journals as $j) {
-                    $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entry_lines` WHERE entry_id = ?", [$j['id']]);
+                    $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entry_lines` WHERE journal_entry_id = ?", [$j['id']]);
                     $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entries` WHERE id = ?", [$j['id']]);
                 }
                 
