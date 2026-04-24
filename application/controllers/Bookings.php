@@ -728,10 +728,19 @@ class Bookings extends Base_Controller {
                 error_log('Bookings view: could not load rental items: ' . $e->getMessage());
             }
 
+            // Load add-ons/extras for this booking
+            $addonItems = [];
+            try {
+                $addonItems = $this->bookingAddonModel->getByBooking($id);
+            } catch (Exception $e) {
+                error_log('Bookings view: could not load add-ons: ' . $e->getMessage());
+            }
+
             $data = [
                 'page_title' => 'Booking Details - ' . $booking['booking_number'],
                 'booking' => $booking,
                 'payments' => $this->paymentModel->getByBooking($id),
+                'addon_items' => $addonItems,
                 'rental_items' => $rentalItems,
                 'flash' => $this->getFlashMessage()
             ];
@@ -754,6 +763,7 @@ class Bookings extends Base_Controller {
 
             $rentalModel = $this->loadModel('Booking_rental_model');
             $rentals = $rentalModel->getByBooking($id);
+            $addons = $this->bookingAddonModel->getByBooking($id);
 
             // Fetch business name from companies table
             $businessName = 'Business';
@@ -772,6 +782,7 @@ class Bookings extends Base_Controller {
                 'page_title'    => 'Invoice - ' . $booking['booking_number'],
                 'booking'       => $booking,
                 'payments'      => $this->paymentModel->getByBooking($id),
+                'addons'        => $addons,
                 'rentals'       => $rentals,
                 'business_name' => $businessName,
             ];

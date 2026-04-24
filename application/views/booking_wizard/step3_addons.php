@@ -492,5 +492,15 @@ document.addEventListener('DOMContentLoaded', function() {
         margin-top: 2rem;
     }
 }
+
+/* Ensure qty digits remain visible across themes/overrides */
+.qty-control .qty-input,
+.qty-control .rental-qty-input {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    font-weight: 600;
+}
 </style>
 

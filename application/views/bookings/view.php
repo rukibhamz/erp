@@ -125,6 +125,41 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
             </div>
 
+            <!-- Add-ons / Extras -->
+            <?php if (!empty($addon_items)): ?>
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Add-ons & Extras</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Type</th>
+                                    <th>Qty</th>
+                                    <th>Unit Price</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($addon_items as $item): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($item['name'] ?? 'Addon') ?></td>
+                                        <td><?= htmlspecialchars(ucfirst($item['addon_type'] ?? 'addon')) ?></td>
+                                        <td><?= intval($item['quantity'] ?? 0) ?></td>
+                                        <td><?= format_currency($item['unit_price'] ?? 0) ?></td>
+                                        <td><?= format_currency($item['total_price'] ?? 0) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Equipment Rentals -->
             <?php if (!empty($rental_items)): ?>
             <div class="card mb-4">

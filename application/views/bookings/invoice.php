@@ -99,6 +99,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </td>
                 <td><?= format_currency($booking['base_amount']) ?></td>
             </tr>
+            <?php if (!empty($addons)): ?>
+                <?php foreach ($addons as $addon): ?>
+                <tr class="item">
+                    <td>
+                        Add-on: <?= htmlspecialchars($addon['name'] ?? 'Addon') ?>
+                        <small>(Qty: <?= intval($addon['quantity'] ?? 0) ?>)</small>
+                    </td>
+                    <td><?= format_currency($addon['total_price'] ?? 0) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
             <?php if (!empty($rentals)): ?>
                 <?php foreach ($rentals as $rental): ?>
                 <tr class="item">
