@@ -79,7 +79,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <strong>Booking of <?= htmlspecialchars($booking['facility_name']) ?></strong><br>
                     <small>
                         <strong>Type:</strong> <?= ucfirst(str_replace('_', ' ', $booking['booking_type'])) ?>
-                        <?php if (!empty($booking['equipment_tier'])): ?>
+                        <?php
+                            $tierBookingTypes = ['picnic', 'photoshoot', 'videoshoot', 'workspace'];
+                            $showTierInfo = in_array(strtolower($booking['booking_type'] ?? ''), $tierBookingTypes, true) && !empty($booking['equipment_tier']);
+                        ?>
+                        <?php if ($showTierInfo): ?>
                             | <strong>Tier:</strong> <?= ucfirst($booking['equipment_tier']) ?>
                             <?php 
                                 $disclaimers = [

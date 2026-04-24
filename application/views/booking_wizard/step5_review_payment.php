@@ -84,7 +84,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <strong>Guests:</strong> <?= $booking_data['guests'] ?? 1 ?>
                                 </div>
                             </div>
-                            <?php if (!empty($booking_data['equipment_tier'])): ?>
+                            <?php
+                                $tierBookingTypes = ['picnic', 'photoshoot', 'videoshoot', 'workspace'];
+                                $showTierInfo = in_array(strtolower($booking_data['booking_type'] ?? ''), $tierBookingTypes, true) && !empty($booking_data['equipment_tier']);
+                            ?>
+                            <?php if ($showTierInfo): ?>
                                 <div class="row mb-3">
                                     <div class="col-md-12">
                                         <strong>Equipment Tier:</strong> <?= ucfirst($booking_data['equipment_tier']) ?> Equipment
