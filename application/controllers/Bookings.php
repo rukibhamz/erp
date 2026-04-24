@@ -1162,12 +1162,8 @@ class Bookings extends Base_Controller {
         return array_values(array_unique($invoiceIds));
     }
 
-    private function jsonResponse(array $payload, int $status = 200): void {
-        if (!headers_sent()) {
-            http_response_code($status);
-            header('Content-Type: application/json');
-        }
-        echo json_encode($payload);
+    protected function jsonResponse($data, $statusCode = 200) {
+        parent::jsonResponse($data, $statusCode);
     }
 
     public function recordPayment() {
