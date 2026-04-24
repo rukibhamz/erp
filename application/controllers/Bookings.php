@@ -22,6 +22,7 @@ class Bookings extends Base_Controller {
     private $invoiceModel;
     private $journalModel;
     private $journalCleanupService;
+    private $customerModel;
 
     public function __construct() {
         parent::__construct();
@@ -44,6 +45,7 @@ class Bookings extends Base_Controller {
         $this->spaceModel = $this->loadModel('Space_model');
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->journalModel = $this->loadModel('Journal_entry_model');
+        $this->customerModel = $this->loadModel('Customer_model');
         
         // Load Transaction Service
         $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
@@ -858,6 +860,7 @@ class Bookings extends Base_Controller {
                 
                 // Store old values for logging
                 $oldValues = json_encode([
+                    'customer_id' => $booking['customer_id'] ?? null,
                     'customer_name' => $booking['customer_name'],
                     'customer_email' => $booking['customer_email'],
                     'customer_phone' => $booking['customer_phone'],
@@ -876,6 +879,11 @@ class Bookings extends Base_Controller {
                     redirect('bookings/edit/' . $id);
                 }
                 
+                $isSuperAdmin = (($this->session['role'] ?? '') === 'super_admin');
+                $newCustomerId = intval($_POST['customer_id'] ?? ($booking['customer_id'] ?? 0));
+                $oldCustomerId = intval($booking['customer_id'] ?? 0);
+                $customerChanged = $isSuperAdmin && $newCustomerId > 0 && $newCustomerId !== $oldCustomerId;
+
                 $updateData = [
                     'customer_name' => sanitize_input($_POST['customer_name'] ?? $booking['customer_name']),
                     'customer_email' => sanitize_input($_POST['customer_email'] ?? $booking['customer_email']),
@@ -886,6 +894,27 @@ class Bookings extends Base_Controller {
                     'special_requests' => sanitize_input($_POST['special_requests'] ?? $booking['special_requests']),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
+
+                if ($isSuperAdmin && $newCustomerId > 0) {
+                    $targetCustomer = $this->db->fetchOne(
+                        "SELECT id, company_name, contact_name, email, phone, address, status
+                         FROM `" . $this->db->getPrefix() . "customers`
+                         WHERE id = ?",
+                        [$newCustomerId]
+                    );
+                    if (!$targetCustomer || strtolower($targetCustomer['status'] ?? '') !== 'active') {
+                        throw new Exception('Selected customer is invalid or inactive.');
+                    }
+
+                    $updateData['customer_id'] = $newCustomerId;
+                    if ($customerChanged) {
+                        // Keep booking-facing fields aligned to selected owner for clean history.
+                        $updateData['customer_name'] = $targetCustomer['company_name'] ?: ($targetCustomer['contact_name'] ?: $updateData['customer_name']);
+                        $updateData['customer_email'] = $targetCustomer['email'] ?? $updateData['customer_email'];
+                        $updateData['customer_phone'] = $targetCustomer['phone'] ?? $updateData['customer_phone'];
+                        $updateData['customer_address'] = $targetCustomer['address'] ?? $updateData['customer_address'];
+                    }
+                }
                 
                 // Handle discount update if provided
                 if (isset($_POST['discount_amount'])) {
@@ -900,9 +929,46 @@ class Bookings extends Base_Controller {
                 }
                 
                 $this->bookingModel->update($id, $updateData);
+
+                if ($customerChanged) {
+                    $invoiceIds = $this->resolveBookingInvoiceIds($booking, $id);
+                    if (!empty($invoiceIds)) {
+                        $placeholders = implode(',', array_fill(0, count($invoiceIds), '?'));
+                        $params = array_merge([$newCustomerId], $invoiceIds);
+                        $this->db->query(
+                            "UPDATE `" . $this->db->getPrefix() . "invoices`
+                             SET customer_id = ?
+                             WHERE id IN ({$placeholders})",
+                            $params
+                        );
+
+                        $paymentRows = $this->db->fetchAll(
+                            "SELECT DISTINCT payment_id
+                             FROM `" . $this->db->getPrefix() . "payment_allocations`
+                             WHERE invoice_id IN ({$placeholders})",
+                            $invoiceIds
+                        );
+                        if (!empty($paymentRows)) {
+                            $paymentIds = array_values(array_filter(array_map(function($row) {
+                                return intval($row['payment_id'] ?? 0);
+                            }, $paymentRows)));
+                            if (!empty($paymentIds)) {
+                                $paymentPlaceholders = implode(',', array_fill(0, count($paymentIds), '?'));
+                                $paymentParams = array_merge([$newCustomerId], $paymentIds);
+                                $this->db->query(
+                                    "UPDATE `" . $this->db->getPrefix() . "payments`
+                                     SET customer_id = ?
+                                     WHERE id IN ({$paymentPlaceholders})",
+                                    $paymentParams
+                                );
+                            }
+                        }
+                    }
+                }
                 
                 // Log modification
                 $newValues = json_encode([
+                    'customer_id' => $updateData['customer_id'] ?? $oldCustomerId,
                     'customer_name' => $updateData['customer_name'],
                     'customer_email' => $updateData['customer_email'],
                     'customer_phone' => $updateData['customer_phone'],
@@ -926,6 +992,15 @@ class Bookings extends Base_Controller {
                     'Bookings', 
                     'Updated booking details: ' . $booking['booking_number']
                 );
+
+                if ($customerChanged) {
+                    $this->activityModel->log(
+                        $this->session['user_id'],
+                        'update',
+                        'Bookings',
+                        'Reassigned booking customer for ' . $booking['booking_number'] . ' from customer #' . $oldCustomerId . ' to customer #' . $newCustomerId . ' (including linked invoices/payments)'
+                    );
+                }
                 
                 $this->setFlashMessage('success', 'Booking updated successfully.');
                 redirect('bookings/view/' . $id);
@@ -942,10 +1017,157 @@ class Bookings extends Base_Controller {
         $data = [
             'page_title' => 'Edit Booking: ' . $booking['booking_number'],
             'booking' => $booking,
+            'customers' => (($this->session['role'] ?? '') === 'super_admin')
+                ? $this->db->fetchAll(
+                    "SELECT id, company_name, contact_name, email, phone, address
+                     FROM `" . $this->db->getPrefix() . "customers`
+                     WHERE status = 'active'
+                     ORDER BY company_name ASC, contact_name ASC"
+                )
+                : [],
             'flash' => $this->getFlashMessage()
         ];
         
         $this->loadView('bookings/edit', $data);
+    }
+
+    public function createCustomerInline() {
+        if (($this->session['role'] ?? '') !== 'super_admin') {
+            $this->jsonResponse(['ok' => false, 'message' => 'Access denied. Super Admin only.'], 403);
+            return;
+        }
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['ok' => false, 'message' => 'Invalid request method.'], 405);
+            return;
+        }
+
+        check_csrf();
+
+        $companyName = sanitize_input($_POST['company_name'] ?? '');
+        $contactName = sanitize_input($_POST['contact_name'] ?? '');
+        $email = sanitize_input($_POST['email'] ?? '');
+        $phone = sanitize_input($_POST['phone'] ?? '');
+        $address = sanitize_input($_POST['address'] ?? '');
+
+        if ($companyName === '') {
+            $this->jsonResponse(['ok' => false, 'message' => 'Company name is required.'], 422);
+            return;
+        }
+        if ($email !== '' && !validate_email($email)) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Invalid email address.'], 422);
+            return;
+        }
+        if ($phone !== '' && !validate_phone($phone)) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Invalid phone number.'], 422);
+            return;
+        }
+        if ($phone !== '') {
+            $phone = sanitize_phone($phone);
+        }
+
+        if ($email !== '') {
+            $existing = $this->db->fetchOne(
+                "SELECT id FROM `" . $this->db->getPrefix() . "customers` WHERE email = ? AND status = 'active'",
+                [$email]
+            );
+            if ($existing) {
+                $this->jsonResponse(['ok' => false, 'message' => 'A customer with this email already exists.'], 409);
+                return;
+            }
+        }
+
+        $pdo = $this->db->getConnection();
+        $pdo->beginTransaction();
+        try {
+            $createData = [
+                'customer_code' => $this->customerModel->getNextCustomerCode(),
+                'company_name' => $companyName,
+                'contact_name' => $contactName,
+                'email' => $email,
+                'phone' => $phone,
+                'address' => $address,
+                'city' => sanitize_input($_POST['city'] ?? ''),
+                'state' => sanitize_input($_POST['state'] ?? ''),
+                'zip_code' => sanitize_input($_POST['zip_code'] ?? ''),
+                'country' => sanitize_input($_POST['country'] ?? 'Nigeria'),
+                'tax_id' => sanitize_input($_POST['tax_id'] ?? ''),
+                'credit_limit' => floatval($_POST['credit_limit'] ?? 0),
+                'payment_terms' => sanitize_input($_POST['payment_terms'] ?? ''),
+                'currency' => sanitize_input($_POST['currency'] ?? 'NGN'),
+                'status' => 'active'
+            ];
+            $customerId = $this->customerModel->create($createData);
+            if (!$customerId) {
+                throw new Exception('Failed to create customer.');
+            }
+
+            // Mirror receivables behavior: create customer ledger account when possible.
+            $parentAr = $this->accountModel->getByCode('1200');
+            if ($parentAr) {
+                $suffix = str_pad($customerId, 4, '0', STR_PAD_LEFT);
+                $newAccountCode = '1200-' . $suffix;
+                if (!$this->accountModel->getByCode($newAccountCode)) {
+                    $this->accountModel->create([
+                        'account_code' => $newAccountCode,
+                        'account_name' => $companyName,
+                        'account_type' => 'Assets',
+                        'parent_account_id' => $parentAr['id'],
+                        'is_system' => 0,
+                        'status' => 'active',
+                        'created_by' => $this->session['user_id']
+                    ]);
+                }
+            }
+
+            $pdo->commit();
+            $this->activityModel->log($this->session['user_id'], 'create', 'Bookings', 'Inline customer created during booking edit: ' . $companyName);
+
+            $this->jsonResponse([
+                'ok' => true,
+                'customer' => [
+                    'id' => intval($customerId),
+                    'company_name' => $companyName,
+                    'contact_name' => $contactName,
+                    'email' => $email,
+                    'phone' => $phone,
+                    'address' => $address
+                ]
+            ]);
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $this->jsonResponse(['ok' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    private function resolveBookingInvoiceIds(array $booking, int $bookingId): array {
+        $invoiceIds = [];
+        $directId = intval($booking['invoice_id'] ?? 0);
+        if ($directId > 0) {
+            $invoiceIds[] = $directId;
+        }
+
+        $byReference = $this->db->fetchAll(
+            "SELECT id FROM `" . $this->db->getPrefix() . "invoices` WHERE reference = ?",
+            ['BKG-' . $bookingId]
+        );
+        foreach ($byReference as $row) {
+            $rowId = intval($row['id'] ?? 0);
+            if ($rowId > 0) {
+                $invoiceIds[] = $rowId;
+            }
+        }
+
+        return array_values(array_unique($invoiceIds));
+    }
+
+    private function jsonResponse(array $payload, int $status = 200): void {
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: application/json');
+        }
+        echo json_encode($payload);
     }
 
     public function recordPayment() {

@@ -44,6 +44,31 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                 <!-- Customer Information -->
                 <h5 class="mb-3">Customer Information</h5>
+                <?php $isSuperAdmin = (($this->session['role'] ?? '') === 'super_admin'); ?>
+                <?php if ($isSuperAdmin): ?>
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="customer_id" class="form-label">Linked Customer</label>
+                        <select name="customer_id" id="customer_id" class="form-select">
+                            <?php foreach (($customers ?? []) as $customer): ?>
+                                <?php
+                                    $customerLabel = trim(($customer['company_name'] ?? '') !== '' ? $customer['company_name'] : ($customer['contact_name'] ?? ('Customer #' . intval($customer['id']))));
+                                    $selected = intval($booking['customer_id'] ?? 0) === intval($customer['id']) ? 'selected' : '';
+                                ?>
+                                <option value="<?= intval($customer['id']) ?>" <?= $selected ?>>
+                                    <?= htmlspecialchars($customerLabel) ?><?= !empty($customer['email']) ? ' (' . htmlspecialchars($customer['email']) . ')' : '' ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Changing this customer will transfer booking, linked invoice, and linked payment ownership.</small>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#inlineCustomerModal">
+                            <i class="bi bi-person-plus"></i> Add Customer
+                        </button>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -121,3 +146,143 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </div>
 </div>
+
+<?php if ($isSuperAdmin): ?>
+<div class="modal fade" id="inlineCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="inlineCustomerAlert" class="alert d-none"></div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Company Name <span class="text-danger">*</span></label>
+                        <input type="text" id="inline_company_name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Name</label>
+                        <input type="text" id="inline_contact_name" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="inline_email" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone</label>
+                        <input type="text" id="inline_phone" class="form-control">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Address</label>
+                        <textarea id="inline_address" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="inlineCreateCustomerBtn" class="btn btn-primary">Create Customer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const customers = <?= json_encode(array_values($customers ?? [])) ?>;
+    const customerSelect = document.getElementById('customer_id');
+    const nameInput = document.querySelector('input[name="customer_name"]');
+    const emailInput = document.querySelector('input[name="customer_email"]');
+    const phoneInput = document.querySelector('input[name="customer_phone"]');
+    const addressInput = document.querySelector('textarea[name="customer_address"]');
+    const createBtn = document.getElementById('inlineCreateCustomerBtn');
+    const alertBox = document.getElementById('inlineCustomerAlert');
+
+    function showAlert(message, type) {
+        alertBox.className = 'alert alert-' + type;
+        alertBox.textContent = message;
+    }
+
+    function hideAlert() {
+        alertBox.className = 'alert d-none';
+        alertBox.textContent = '';
+    }
+
+    function fillCustomerFields(customerId) {
+        const selected = customers.find(c => Number(c.id) === Number(customerId));
+        if (!selected) return;
+        if (nameInput) {
+            nameInput.value = selected.company_name || selected.contact_name || nameInput.value;
+        }
+        if (emailInput) {
+            emailInput.value = selected.email || '';
+        }
+        if (phoneInput) {
+            phoneInput.value = selected.phone || '';
+        }
+        if (addressInput) {
+            addressInput.value = selected.address || '';
+        }
+    }
+
+    if (customerSelect) {
+        customerSelect.addEventListener('change', function () {
+            fillCustomerFields(this.value);
+        });
+    }
+
+    createBtn.addEventListener('click', function () {
+        hideAlert();
+        const companyName = document.getElementById('inline_company_name').value.trim();
+        if (!companyName) {
+            showAlert('Company name is required.', 'danger');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('company_name', companyName);
+        formData.append('contact_name', document.getElementById('inline_contact_name').value.trim());
+        formData.append('email', document.getElementById('inline_email').value.trim());
+        formData.append('phone', document.getElementById('inline_phone').value.trim());
+        formData.append('address', document.getElementById('inline_address').value.trim());
+        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+
+        createBtn.disabled = true;
+        fetch('<?= base_url('bookings/createCustomerInline') ?>', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(async response => {
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) {
+                throw new Error(payload.message || 'Failed to create customer.');
+            }
+            return payload;
+        })
+        .then(payload => {
+            const c = payload.customer;
+            customers.push(c);
+            const label = (c.company_name || c.contact_name || ('Customer #' + c.id)) + (c.email ? ' (' + c.email + ')' : '');
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = label;
+            customerSelect.appendChild(opt);
+            customerSelect.value = String(c.id);
+            fillCustomerFields(c.id);
+
+            const modalEl = document.getElementById('inlineCustomerModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        })
+        .catch(err => {
+            showAlert(err.message, 'danger');
+        })
+        .finally(() => {
+            createBtn.disabled = false;
+        });
+    });
+})();
+</script>
+<?php endif; ?>

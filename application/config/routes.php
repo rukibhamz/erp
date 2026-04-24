@@ -316,6 +316,7 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['bookings/view/(:num)'] = 'Bookings/view/$1';
         // Keep advanced booking features in original controller for now
         $route['bookings/payment'] = 'Bookings/recordPayment';
+        $route['bookings/createCustomerInline'] = 'Bookings/createCustomerInline';
         $route['bookings/status/(:num)'] = 'Bookings/updateStatus/$1';
         $route['bookings/reschedule/(:num)'] = 'Bookings/reschedule/$1';
         $route['bookings/cancel/(:num)'] = 'Bookings/cancel/$1';
