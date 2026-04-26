@@ -186,21 +186,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endif; ?>
                             <?php endif; ?>
                             <?php if (($booking_data['discount_amount'] ?? 0) > 0): ?>
-                                <div class="d-flex justify-content-between mb-2 text-success">
+                                <div class="d-flex justify-content-between mb-2 text-success" id="summary-discount-row">
                                     <span>Discount:</span>
-                                    <strong>-<?= format_currency($booking_data['discount_amount'] ?? 0) ?></strong>
+                                    <strong id="summary-discount-amount">-<?= format_currency($booking_data['discount_amount'] ?? 0) ?></strong>
                                 </div>
                             <?php endif; ?>
                             <?php if (($booking_data['tax_amount'] ?? 0) > 0): ?>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Tax (<?= number_format($booking_data['tax_rate'] ?? 0, 1) ?>%):</span>
-                                    <strong><?= format_currency($booking_data['tax_amount'] ?? 0) ?></strong>
+                                <div class="d-flex justify-content-between mb-2" id="summary-tax-row">
+                                    <span id="summary-tax-label">Tax (<?= number_format($booking_data['tax_rate'] ?? 0, 1) ?>%):</span>
+                                    <strong id="summary-tax-amount"><?= format_currency($booking_data['tax_amount'] ?? 0) ?></strong>
                                 </div>
                             <?php endif; ?>
                             <?php if (($booking_data['security_deposit'] ?? 0) > 0): ?>
-                                <div class="d-flex justify-content-between mb-2">
+                                <div class="d-flex justify-content-between mb-2" id="summary-security-row">
                                     <span>Security Deposit:</span>
-                                    <strong><?= format_currency($booking_data['security_deposit'] ?? 0) ?></strong>
+                                    <strong id="summary-security-amount"><?= format_currency($booking_data['security_deposit'] ?? 0) ?></strong>
                                 </div>
                             <?php endif; ?>
                             <hr>
@@ -253,6 +253,84 @@ document.addEventListener('DOMContentLoaded', function() {
     const promoMessage = document.getElementById('promo-message');
     const completeBookingBtn = document.getElementById('complete-booking-btn');
     let appliedPromoCode = '';
+    let promoDiscountAmount = <?= json_encode(floatval($booking_data['discount_amount'] ?? 0)) ?>;
+
+    const pricing = {
+        base: <?= json_encode(floatval($booking_data['base_amount'] ?? 0)) ?>,
+        addons: <?= json_encode(floatval($booking_data['addons_total'] ?? 0)) ?>,
+        rentals: <?= json_encode(floatval($booking_data['rentals_total'] ?? 0)) ?>,
+        securityDeposit: <?= json_encode(floatval($booking_data['security_deposit'] ?? 0)) ?>,
+        taxRate: <?= json_encode(floatval($booking_data['tax_rate'] ?? 0)) ?>
+    };
+
+    function formatNgn(amount) {
+        return amount.toLocaleString('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 });
+    }
+
+    function ensureSummaryRow(rowId, labelId, valueId, labelText, rowClass = 'd-flex justify-content-between mb-2') {
+        let row = document.getElementById(rowId);
+        if (!row) {
+            row = document.createElement('div');
+            row.id = rowId;
+            row.className = rowClass;
+
+            const label = document.createElement('span');
+            label.id = labelId;
+            label.textContent = labelText;
+
+            const value = document.createElement('strong');
+            value.id = valueId;
+
+            row.appendChild(label);
+            row.appendChild(value);
+
+            const summaryBody = document.getElementById('summary-total').closest('.card-body');
+            const hr = summaryBody.querySelector('hr');
+            summaryBody.insertBefore(row, hr);
+        }
+        return row;
+    }
+
+    function updateSummaryTotals() {
+        const subtotal = pricing.base + pricing.addons + pricing.rentals;
+        const taxableBase = Math.max(0, subtotal - promoDiscountAmount);
+        const taxAmount = pricing.taxRate > 0 ? (taxableBase * pricing.taxRate / 100) : 0;
+        const finalTotal = taxableBase + taxAmount + pricing.securityDeposit;
+
+        const summaryTotalEl = document.getElementById('summary-total');
+        if (summaryTotalEl) {
+            summaryTotalEl.textContent = formatNgn(finalTotal);
+        }
+
+        // Discount row
+        if (promoDiscountAmount > 0) {
+            const discountRow = ensureSummaryRow(
+                'summary-discount-row',
+                'summary-discount-label',
+                'summary-discount-amount',
+                'Discount:',
+                'd-flex justify-content-between mb-2 text-success'
+            );
+            discountRow.style.display = '';
+            document.getElementById('summary-discount-amount').textContent = '-' + formatNgn(promoDiscountAmount);
+        } else {
+            const discountRow = document.getElementById('summary-discount-row');
+            if (discountRow) discountRow.style.display = 'none';
+        }
+
+        // Tax row (tax is recalculated on discounted base)
+        if (pricing.taxRate > 0) {
+            const taxRow = ensureSummaryRow(
+                'summary-tax-row',
+                'summary-tax-label',
+                'summary-tax-amount',
+                `Tax (${pricing.taxRate.toFixed(1)}%):`
+            );
+            taxRow.style.display = '';
+            document.getElementById('summary-tax-label').textContent = `Tax (${pricing.taxRate.toFixed(1)}%):`;
+            document.getElementById('summary-tax-amount').textContent = formatNgn(taxAmount);
+        }
+    }
 
     // Apply promo code
     applyPromoBtn.addEventListener('click', function() {
@@ -273,16 +351,21 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.valid) {
                 appliedPromoCode = code;
-                const discountAmount = Number(data.discount_amount || 0);
-                promoMessage.innerHTML = `<div class="alert alert-success">Promo code applied! Discount: ${discountAmount.toLocaleString('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 })}</div>`;
+                promoDiscountAmount = Number(data.discount_amount || 0);
+                promoMessage.innerHTML = `<div class="alert alert-success">Promo code applied! Discount: ${formatNgn(promoDiscountAmount)}</div>`;
+                updateSummaryTotals();
             } else {
                 appliedPromoCode = '';
+                promoDiscountAmount = 0;
                 promoMessage.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                updateSummaryTotals();
             }
         })
         .catch(() => {
             appliedPromoCode = '';
+            promoDiscountAmount = 0;
             promoMessage.innerHTML = '<div class="alert alert-danger">Could not validate promo code. Please try again.</div>';
+            updateSummaryTotals();
         });
     });
 
@@ -325,6 +408,8 @@ document.addEventListener('DOMContentLoaded', function() {
         input.value = value;
         return input;
     }
+
+    updateSummaryTotals();
 });
 </script>
 
