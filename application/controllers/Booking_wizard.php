@@ -683,6 +683,13 @@ class Booking_wizard extends Base_Controller {
      */
     public function step4() {
         $bookingData = $_SESSION['booking_data'] ?? [];
+
+        // Accept promo code from step-5 submit and persist for server-side revalidation.
+        $promoCodeFromPost = sanitize_input($_POST['promo_code'] ?? '');
+        if ($promoCodeFromPost !== '') {
+            $bookingData['promo_code'] = $promoCodeFromPost;
+            $_SESSION['booking_data']['promo_code'] = $promoCodeFromPost;
+        }
         
         if (empty($bookingData['resource_id']) || empty($bookingData['date']) || empty($bookingData['start_time'])) {
             $this->setFlashMessage('danger', 'Please complete previous steps.');

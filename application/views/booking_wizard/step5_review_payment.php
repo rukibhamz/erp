@@ -252,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const applyPromoBtn = document.getElementById('apply-promo-btn');
     const promoMessage = document.getElementById('promo-message');
     const completeBookingBtn = document.getElementById('complete-booking-btn');
+    let appliedPromoCode = '';
 
     // Apply promo code
     applyPromoBtn.addEventListener('click', function() {
@@ -271,11 +272,17 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.valid) {
-                promoMessage.innerHTML = '<div class="alert alert-success">Promo code applied! Discount: <?= format_currency(0) ?></div>';
-                // Update totals would happen here
+                appliedPromoCode = code;
+                const discountAmount = Number(data.discount_amount || 0);
+                promoMessage.innerHTML = `<div class="alert alert-success">Promo code applied! Discount: ${discountAmount.toLocaleString('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 })}</div>`;
             } else {
+                appliedPromoCode = '';
                 promoMessage.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
             }
+        })
+        .catch(() => {
+            appliedPromoCode = '';
+            promoMessage.innerHTML = '<div class="alert alert-danger">Could not validate promo code. Please try again.</div>';
         });
     });
 
@@ -299,6 +306,10 @@ document.addEventListener('DOMContentLoaded', function() {
         form.appendChild(createInput('csrf_token', '<?= csrf_token() ?>'));
         form.appendChild(createInput('payment_plan', paymentPlan));
         form.appendChild(createInput('payment_method', paymentMethod));
+        const promoCode = (appliedPromoCode || promoCodeInput.value || '').trim();
+        if (promoCode) {
+            form.appendChild(createInput('promo_code', promoCode));
+        }
         if (gatewayCode) {
             form.appendChild(createInput('gateway_code', gatewayCode));
         }
