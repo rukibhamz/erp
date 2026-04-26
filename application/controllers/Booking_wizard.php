@@ -813,7 +813,9 @@ class Booking_wizard extends Base_Controller {
                     $bookingData['promo_code'],
                     $baseAmount + $addonsTotal,
                     [$bookingData['resource_id']],
-                    array_keys($bookingData['addons'] ?? [])
+                    array_keys(is_array($addonsData) ? $addonsData : []),
+                    $baseAmount,
+                    $addonsTotal
                 );
                 
                 if ($promoValidation['valid']) {
@@ -1036,6 +1038,8 @@ class Booking_wizard extends Base_Controller {
         
         $code = sanitize_input($_POST['code'] ?? '');
         $amount = floatval($_POST['amount'] ?? 0);
+        $baseAmount = floatval($_POST['base_amount'] ?? $amount);
+        $addonsTotal = floatval($_POST['addons_total'] ?? 0);
         $resourceIds = !empty($_POST['resource_ids']) ? json_decode($_POST['resource_ids'], true) : [];
         $addonIds = !empty($_POST['addon_ids']) ? json_decode($_POST['addon_ids'], true) : [];
         
@@ -1045,7 +1049,7 @@ class Booking_wizard extends Base_Controller {
         }
         
         try {
-            $result = $this->promoCodeModel->validateCode($code, $amount, $resourceIds, $addonIds);
+            $result = $this->promoCodeModel->validateCode($code, $amount, $resourceIds, $addonIds, $baseAmount, $addonsTotal);
             echo json_encode($result);
         } catch (Exception $e) {
             echo json_encode(['valid' => false, 'message' => 'Error validating promo code']);
@@ -1186,7 +1190,9 @@ class Booking_wizard extends Base_Controller {
                     $promoCode,
                     $baseAmount + $addonsTotal + $rentalsTotal,
                     [$bookingData['resource_id']],
-                    array_keys($bookingData['addons'] ?? [])
+                    array_keys(is_array($addonsData2) ? $addonsData2 : []),
+                    $baseAmount,
+                    $addonsTotal
                 );
                 
                 if ($promoValidation['valid']) {

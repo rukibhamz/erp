@@ -44,6 +44,7 @@ class Promo_codes extends Base_Controller {
                 'valid_to'         => sanitize_input($_POST['valid_to'] ?? date('Y-m-d', strtotime('+30 days'))),
                 'usage_limit'      => !empty($_POST['usage_limit']) ? intval($_POST['usage_limit']) : null,
                 'applicable_to'    => in_array($_POST['applicable_to'] ?? '', ['all', 'resource', 'addon']) ? $_POST['applicable_to'] : 'all',
+                'apply_to_addons'  => isset($_POST['apply_to_addons']) ? 1 : 0,
                 'is_active'        => 1,
                 'used_count'       => 0,
             ];
@@ -105,6 +106,7 @@ class Promo_codes extends Base_Controller {
                 'valid_to'         => sanitize_input($_POST['valid_to'] ?? $code['valid_to']),
                 'usage_limit'      => !empty($_POST['usage_limit']) ? intval($_POST['usage_limit']) : null,
                 'applicable_to'    => in_array($_POST['applicable_to'] ?? '', ['all', 'resource', 'addon']) ? $_POST['applicable_to'] : 'all',
+                'apply_to_addons'  => isset($_POST['apply_to_addons']) ? 1 : 0,
                 'is_active'        => isset($_POST['is_active']) ? 1 : 0,
             ];
 

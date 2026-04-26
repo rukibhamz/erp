@@ -104,6 +104,16 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="apply_to_addons" id="applyToAddons">
+                            <label class="form-check-label" for="applyToAddons">
+                                Also apply discount to add-ons
+                            </label>
+                        </div>
+                        <small class="text-muted">By default, promo discounts apply to resource cost only.</small>
+                    </div>
+
                     <div class="d-flex justify-content-end gap-2 mt-4">
                         <a href="<?= base_url('promo-codes') ?>" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-dark">
@@ -121,10 +131,11 @@
                 <h6 class="mb-0"><i class="bi bi-info-circle"></i> How Promo Codes Work</h6>
             </div>
             <div class="card-body small">
-                <p><strong>Percentage:</strong> Deducts a % from the booking total. Set a cap to limit the maximum discount amount.</p>
-                <p><strong>Fixed:</strong> Deducts a flat amount from the booking total.</p>
+                <p><strong>Percentage:</strong> Deducts a % from eligible booking amount. Set a cap to limit the maximum discount amount.</p>
+                <p><strong>Fixed:</strong> Deducts a flat amount from eligible booking amount.</p>
                 <p><strong>Minimum Amount:</strong> The booking must be at least this value for the code to apply.</p>
                 <p><strong>Usage Limit:</strong> How many times the code can be used in total. Leave blank for unlimited.</p>
+                <p><strong>Apply to Add-ons:</strong> Enable if this promo should discount add-ons as well.</p>
                 <p class="mb-0"><strong>Applicable To:</strong> Restrict the code to specific spaces or add-ons, or leave as "All Bookings".</p>
             </div>
         </div>

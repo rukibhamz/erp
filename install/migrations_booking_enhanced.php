@@ -241,6 +241,7 @@ function runBookingEnhancedMigrations($pdo, $prefix = '') {
             `usage_limit` int(11) DEFAULT NULL,
             `used_count` int(11) DEFAULT 0,
             `applicable_to` enum('all','resource','category','addon') DEFAULT 'all',
+            `apply_to_addons` tinyint(1) DEFAULT 0,
             `applicable_ids` text DEFAULT NULL COMMENT 'JSON array of resource/addon IDs',
             `is_active` tinyint(1) DEFAULT 1,
             `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,

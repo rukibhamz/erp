@@ -107,6 +107,17 @@
 
                     <div class="mb-3">
                         <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="apply_to_addons" id="applyToAddons"
+                                   <?= !empty($code['apply_to_addons']) ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="applyToAddons">
+                                Also apply discount to add-ons
+                            </label>
+                        </div>
+                        <small class="text-muted">If disabled, this promo discounts resource cost only.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="is_active" id="isActive"
                                    <?= $code['is_active'] ? 'checked' : '' ?>>
                             <label class="form-check-label" for="isActive">Active</label>

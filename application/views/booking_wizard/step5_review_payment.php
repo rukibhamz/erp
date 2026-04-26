@@ -254,6 +254,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const completeBookingBtn = document.getElementById('complete-booking-btn');
     let appliedPromoCode = '';
     let promoDiscountAmount = <?= json_encode(floatval($booking_data['discount_amount'] ?? 0)) ?>;
+    let promoAppliesToAddons = false;
+    const selectedAddonIds = <?= json_encode(array_map('strval', array_keys((array)($booking_data['addons'] ?? [])))) ?>;
+    const selectedResourceIds = <?= json_encode(!empty($booking_data['resource_id']) ? [strval($booking_data['resource_id'])] : []) ?>;
 
     const pricing = {
         base: <?= json_encode(floatval($booking_data['base_amount'] ?? 0)) ?>,
@@ -293,6 +296,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateSummaryTotals() {
         const subtotal = pricing.base + pricing.addons + pricing.rentals;
+        const promoDiscountBase = pricing.base + (promoAppliesToAddons ? pricing.addons : 0);
+        if (promoDiscountAmount > promoDiscountBase) {
+            promoDiscountAmount = promoDiscountBase;
+        }
         const taxableBase = Math.max(0, subtotal - promoDiscountAmount);
         const taxAmount = pricing.taxRate > 0 ? (taxableBase * pricing.taxRate / 100) : 0;
         const finalTotal = taxableBase + taxAmount + pricing.securityDeposit;
@@ -345,18 +352,20 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `csrf_token=<?= csrf_token() ?>&code=${code}&amount=<?= $booking_data['subtotal'] ?? 0 ?>`
+            body: `csrf_token=<?= csrf_token() ?>&code=${encodeURIComponent(code)}&amount=${encodeURIComponent(<?= json_encode(floatval($booking_data['subtotal'] ?? 0)) ?>)}&base_amount=${encodeURIComponent(pricing.base)}&addons_total=${encodeURIComponent(pricing.addons)}&resource_ids=${encodeURIComponent(JSON.stringify(selectedResourceIds))}&addon_ids=${encodeURIComponent(JSON.stringify(selectedAddonIds))}`
         })
         .then(response => response.json())
         .then(data => {
             if (data.valid) {
                 appliedPromoCode = code;
                 promoDiscountAmount = Number(data.discount_amount || 0);
+                promoAppliesToAddons = !!data.apply_to_addons;
                 promoMessage.innerHTML = `<div class="alert alert-success">Promo code applied! Discount: ${formatNgn(promoDiscountAmount)}</div>`;
                 updateSummaryTotals();
             } else {
                 appliedPromoCode = '';
                 promoDiscountAmount = 0;
+                promoAppliesToAddons = false;
                 promoMessage.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
                 updateSummaryTotals();
             }
@@ -364,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(() => {
             appliedPromoCode = '';
             promoDiscountAmount = 0;
+            promoAppliesToAddons = false;
             promoMessage.innerHTML = '<div class="alert alert-danger">Could not validate promo code. Please try again.</div>';
             updateSummaryTotals();
         });

@@ -261,6 +261,21 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring PAYE tax brackets: " . $e->getMessage());
         }
+
+        // ALWAYS ensure promo_codes.apply_to_addons column exists
+        try {
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}promo_codes` LIKE 'apply_to_addons'");
+            $hasApplyToAddons = ($stmt && count($stmt->fetchAll()) > 0);
+            if (!$hasApplyToAddons) {
+                $this->pdo->exec(
+                    "ALTER TABLE `{$this->prefix}promo_codes`
+                     ADD COLUMN `apply_to_addons` TINYINT(1) NOT NULL DEFAULT 0 AFTER `applicable_to`"
+                );
+                error_log("AutoMigration: Added promo_codes.apply_to_addons");
+            }
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring promo_codes.apply_to_addons: " . $e->getMessage());
+        }
         
         // ALWAYS ensure default POS terminal
         try {
