@@ -121,13 +121,27 @@ class User_model extends Base_Model {
     }
     
     public function getByPasswordResetToken($token) {
+        $token = trim((string) $token);
+        if ($token === '') {
+            return false;
+        }
+
+        // Query by token only; validate expiry in PHP to avoid DB/app timezone mismatches.
         $user = $this->db->fetchOne(
-            "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE password_reset_token = ? AND password_reset_expires > NOW()",
+            "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE password_reset_token = ? LIMIT 1",
             [$token]
         );
-        if ($user) {
-            unset($user['password']);
+
+        if (!$user) {
+            return false;
         }
+
+        $expiresAt = $user['password_reset_expires'] ?? null;
+        if (empty($expiresAt) || strtotime($expiresAt) <= time()) {
+            return false;
+        }
+
+        unset($user['password']);
         return $user;
     }
     
