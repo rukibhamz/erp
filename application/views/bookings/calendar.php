@@ -34,7 +34,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Month</label>
-                    <input type="month" name="month" class="form-control" value="<?= htmlspecialchars($selected_month) ?>" onchange="this.form.submit()">
+                    <div class="input-group">
+                        <input type="hidden" name="month" id="month-value" value="<?= htmlspecialchars($selected_month) ?>">
+                        <input type="text" class="form-control" id="month-display" value="<?= date('F Y', strtotime($selected_month . '-01')) ?>" readonly style="cursor: pointer;">
+                        <button class="btn btn-outline-secondary" type="button" id="open-month-picker" aria-label="Select month and year">
+                            <i class="bi bi-calendar3"></i>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -149,5 +155,111 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </div>
 </div>
+
+<!-- Month-Year Picker Modal -->
+<div class="modal fade" id="monthPickerModal" tabindex="-1" aria-labelledby="monthPickerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="monthPickerModalLabel">Select Month</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="picker-month" class="form-label">Month</label>
+                    <select id="picker-month" class="form-select">
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                <div class="mb-0">
+                    <label for="picker-year" class="form-label">Year</label>
+                    <select id="picker-year" class="form-select"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="apply-month-picker">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="<?= csp_nonce() ?>">
+(() => {
+    const form = document.querySelector('.card .card-body form[method="GET"]');
+    const monthValue = document.getElementById('month-value');
+    const monthDisplay = document.getElementById('month-display');
+    const openMonthPicker = document.getElementById('open-month-picker');
+    const applyMonthPicker = document.getElementById('apply-month-picker');
+    const pickerMonth = document.getElementById('picker-month');
+    const pickerYear = document.getElementById('picker-year');
+    const modalEl = document.getElementById('monthPickerModal');
+    const pickerModal = new bootstrap.Modal(modalEl);
+
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    function ensureYearOptions(selectedYear) {
+        const currentYear = new Date().getFullYear();
+        const startYear = currentYear - 10;
+        const endYear = currentYear + 10;
+        pickerYear.innerHTML = '';
+
+        for (let y = startYear; y <= endYear; y++) {
+            const option = document.createElement('option');
+            option.value = String(y);
+            option.textContent = String(y);
+            if (String(y) === String(selectedYear)) {
+                option.selected = true;
+            }
+            pickerYear.appendChild(option);
+        }
+    }
+
+    function openPicker() {
+        const raw = monthValue.value || '';
+        const [year, month] = raw.split('-');
+        const now = new Date();
+        const activeYear = year || String(now.getFullYear());
+        const activeMonth = month || String(now.getMonth() + 1).padStart(2, '0');
+
+        ensureYearOptions(activeYear);
+        pickerMonth.value = activeMonth;
+        pickerModal.show();
+    }
+
+    function formatDisplay(year, month) {
+        const monthIndex = Number(month) - 1;
+        const monthName = monthNames[monthIndex] || 'January';
+        return `${monthName} ${year}`;
+    }
+
+    monthDisplay.addEventListener('click', openPicker);
+    openMonthPicker.addEventListener('click', openPicker);
+
+    applyMonthPicker.addEventListener('click', () => {
+        const selectedYear = pickerYear.value;
+        const selectedMonth = pickerMonth.value;
+        const finalValue = `${selectedYear}-${selectedMonth}`;
+        monthValue.value = finalValue;
+        monthDisplay.value = formatDisplay(selectedYear, selectedMonth);
+        pickerModal.hide();
+        form.submit();
+    });
+})();
+</script>
 
 

@@ -65,6 +65,13 @@
 /* Calendar Styles */
 .calendar-table {
     width: 100%;
+    min-width: 760px;
+    table-layout: fixed;
+}
+
+.calendar-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .calendar-day {
@@ -97,6 +104,17 @@
 
 .booking-item:hover {
     opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .calendar-day {
+        min-height: 84px;
+    }
+
+    .booking-item {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.35rem;
+    }
 }
 
 /* Notification Dot */
