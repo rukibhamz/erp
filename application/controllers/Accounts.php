@@ -350,5 +350,71 @@ class Accounts extends Base_Controller {
             redirect('accounts/view/' . $id);
         }
     }
+
+    public function reconcileAll() {
+        $this->requirePermission('accounts', 'update');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('accounts');
+            return;
+        }
+
+        check_csrf();
+
+        try {
+            $accounts = $this->accountModel->getAll();
+            if (empty($accounts)) {
+                $this->setFlashMessage('info', 'No accounts found to reconcile.');
+                redirect('accounts');
+                return;
+            }
+
+            $processedCount = 0;
+            $changedCount = 0;
+            $unchangedCount = 0;
+            foreach ($accounts as $account) {
+                $accountId = intval($account['id'] ?? 0);
+                if ($accountId <= 0) {
+                    continue;
+                }
+
+                $previousBalance = floatval($account['balance'] ?? 0);
+                $reconciledBalance = floatval($this->balanceCalculator->calculateBalance($accountId, null, false));
+
+                if (abs($reconciledBalance - $previousBalance) < 0.01) {
+                    $unchangedCount++;
+                } else {
+                    $changedCount++;
+                }
+
+                $this->accountModel->update($accountId, [
+                    'balance' => $reconciledBalance,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
+                $processedCount++;
+            }
+
+            $this->activityModel->log(
+                $this->session['user_id'],
+                'update',
+                'Accounts',
+                'Reconciled all accounts - processed: ' . $processedCount .
+                ', changed: ' . $changedCount .
+                ', unchanged: ' . $unchangedCount
+            );
+
+            $this->setFlashMessage(
+                'success',
+                'Reconciled ' . $processedCount . ' account(s): ' .
+                $changedCount . ' changed, ' . $unchangedCount . ' unchanged.'
+            );
+            redirect('accounts');
+        } catch (Exception $e) {
+            error_log('Accounts reconcileAll error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to reconcile all accounts.');
+            redirect('accounts');
+        }
+    }
 }
 

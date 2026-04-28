@@ -5,11 +5,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Chart of Accounts</h1>
-        <?php if (hasPermission('accounts', 'create')): ?>
-            <a href="<?= base_url('accounts/create') ?>" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Create Account
-            </a>
-        <?php endif; ?>
+        <div class="btn-group">
+            <?php if (hasPermission('accounts', 'update')): ?>
+                <form method="POST" action="<?= base_url('accounts/reconcile-all') ?>" class="d-inline-block m-0 p-0" onsubmit="return confirm('Recalculate balances for all accounts from posted ledger entries?');">
+                    <?php echo csrf_field(); ?>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat"></i> Reconcile All Accounts
+                    </button>
+                </form>
+            <?php endif; ?>
+            <?php if (hasPermission('accounts', 'create')): ?>
+                <a href="<?= base_url('accounts/create') ?>" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create Account
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 
