@@ -64,7 +64,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <tr>
                         <th>Code</th>
                         <th>Company Name</th>
-                        <th>Contact</th>
                         <th>Email</th>
                         <th>Phone</th>
                         <th class="text-end">Outstanding</th>
@@ -82,7 +81,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <?= htmlspecialchars($customer['company_name']) ?>
                                     </a>
                                 </td>
-                                <td><?= htmlspecialchars($customer['contact_name'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($customer['email'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($customer['phone'] ?? '-') ?></td>
                                 <td class="text-end">
@@ -125,7 +123,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center py-5">
+                            <td colspan="7" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-people"></i>
                                     <p class="mb-0">No customers found.</p>
