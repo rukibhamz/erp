@@ -156,42 +156,49 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<!-- Month-Year Picker Modal -->
-<div class="modal fade" id="monthPickerModal" tabindex="-1" aria-labelledby="monthPickerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="monthPickerModalLabel">Select Month</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="picker-month" class="form-label">Month</label>
-                    <select id="picker-month" class="form-select">
-                        <option value="01">January</option>
-                        <option value="02">February</option>
-                        <option value="03">March</option>
-                        <option value="04">April</option>
-                        <option value="05">May</option>
-                        <option value="06">June</option>
-                        <option value="07">July</option>
-                        <option value="08">August</option>
-                        <option value="09">September</option>
-                        <option value="10">October</option>
-                        <option value="11">November</option>
-                        <option value="12">December</option>
-                    </select>
-                </div>
-                <div class="mb-0">
-                    <label for="picker-year" class="form-label">Year</label>
-                    <select id="picker-year" class="form-select"></select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="apply-month-picker">Apply</button>
-            </div>
-        </div>
+<style>
+    .month-picker-popover {
+        position: absolute;
+        z-index: 1080;
+        min-width: 240px;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        padding: 0.75rem;
+    }
+
+    .month-picker-popover.hidden {
+        display: none;
+    }
+</style>
+
+<!-- Month-Year Picker Popover -->
+<div id="monthPickerPopover" class="month-picker-popover hidden" role="dialog" aria-label="Select month and year">
+    <div class="mb-3">
+        <label for="picker-month" class="form-label">Month</label>
+        <select id="picker-month" class="form-select">
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="picker-year" class="form-label">Year</label>
+        <select id="picker-year" class="form-select"></select>
+    </div>
+    <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-sm btn-secondary" id="cancel-month-picker">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="apply-month-picker">Apply</button>
     </div>
 </div>
 
@@ -202,10 +209,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     const monthDisplay = document.getElementById('month-display');
     const openMonthPicker = document.getElementById('open-month-picker');
     const applyMonthPicker = document.getElementById('apply-month-picker');
+    const cancelMonthPicker = document.getElementById('cancel-month-picker');
     const pickerMonth = document.getElementById('picker-month');
     const pickerYear = document.getElementById('picker-year');
-    const modalEl = document.getElementById('monthPickerModal');
-    const pickerModal = new bootstrap.Modal(modalEl);
+    const popover = document.getElementById('monthPickerPopover');
+
+    if (!form || !monthValue || !monthDisplay || !openMonthPicker || !applyMonthPicker || !pickerMonth || !pickerYear || !popover) {
+        return;
+    }
 
     const monthNames = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -229,7 +240,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         }
     }
 
-    function openPicker() {
+    function positionPopover(anchor) {
+        const rect = anchor.getBoundingClientRect();
+        const top = rect.bottom + window.scrollY + 6;
+        const left = rect.left + window.scrollX;
+        popover.style.top = `${top}px`;
+        popover.style.left = `${left}px`;
+    }
+
+    function openPicker(anchor) {
         const raw = monthValue.value || '';
         const [year, month] = raw.split('-');
         const now = new Date();
@@ -238,7 +257,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
         ensureYearOptions(activeYear);
         pickerMonth.value = activeMonth;
-        pickerModal.show();
+        positionPopover(anchor);
+        popover.classList.remove('hidden');
+    }
+
+    function closePicker() {
+        popover.classList.add('hidden');
     }
 
     function formatDisplay(year, month) {
@@ -247,8 +271,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         return `${monthName} ${year}`;
     }
 
-    monthDisplay.addEventListener('click', openPicker);
-    openMonthPicker.addEventListener('click', openPicker);
+    monthDisplay.addEventListener('click', () => openPicker(monthDisplay));
+    openMonthPicker.addEventListener('click', () => openPicker(openMonthPicker));
+    cancelMonthPicker.addEventListener('click', closePicker);
 
     applyMonthPicker.addEventListener('click', () => {
         const selectedYear = pickerYear.value;
@@ -256,8 +281,26 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         const finalValue = `${selectedYear}-${selectedMonth}`;
         monthValue.value = finalValue;
         monthDisplay.value = formatDisplay(selectedYear, selectedMonth);
-        pickerModal.hide();
+        closePicker();
         form.submit();
+    });
+
+    document.addEventListener('click', (event) => {
+        if (popover.classList.contains('hidden')) {
+            return;
+        }
+
+        const clickedInsidePopover = popover.contains(event.target);
+        const clickedTrigger = event.target === monthDisplay || event.target === openMonthPicker || openMonthPicker.contains(event.target);
+        if (!clickedInsidePopover && !clickedTrigger) {
+            closePicker();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (!popover.classList.contains('hidden')) {
+            positionPopover(openMonthPicker);
+        }
     });
 })();
 </script>
