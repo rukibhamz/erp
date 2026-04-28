@@ -23,7 +23,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <form method="GET" class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Facility</label>
-                    <select name="facility_id" class="form-select" onchange="this.form.submit()">
+                    <select name="facility_id" class="form-select">
                         <option value="">All Facilities</option>
                         <?php foreach ($facilities as $facility): ?>
                             <option value="<?= $facility['id'] ?>" <?= ($selected_facility_id ?? '') == $facility['id'] ? 'selected' : '' ?>>
@@ -41,6 +41,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <i class="bi bi-calendar3"></i>
                         </button>
                     </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Apply Filter
+                    </button>
                 </div>
             </form>
         </div>
@@ -282,7 +287,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         monthValue.value = finalValue;
         monthDisplay.value = formatDisplay(selectedYear, selectedMonth);
         closePicker();
-        form.submit();
     });
 
     document.addEventListener('click', (event) => {
