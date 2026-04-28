@@ -25,6 +25,24 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
+<style>
+    .customer-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-wrap: nowrap;
+    }
+
+    .customer-actions .btn {
+        padding: 0.2rem 0.45rem;
+    }
+
+    .actions-cell {
+        white-space: nowrap;
+        min-width: 210px;
+    }
+</style>
+
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center py-2">
         <span class="fw-semibold">Customer List</span>
@@ -51,7 +69,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <th>Phone</th>
                         <th class="text-end">Outstanding</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th class="actions-cell">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,8 +93,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <?= ucfirst($customer['status']) ?>
                                     </span>
                                 </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
+                                <td class="actions-cell">
+                                    <div class="customer-actions">
                                         <a href="<?= base_url('receivables/customers/view/' . intval($customer['id'])) ?>" class="btn btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
@@ -93,7 +111,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         </a>
                                         <?php if (isSuperAdmin()): ?>
                                             <form method="POST" action="<?= base_url('receivables/deleteCustomer/' . intval($customer['id'])) ?>" 
-                                                  style="display: inline;" 
+                                                  class="m-0 p-0"
                                                   onsubmit="return confirm('Are you sure you want to delete this customer?');">
                                                 <?php echo csrf_field(); ?>
                                                 <button type="submit" class="btn btn-danger" title="Delete">
