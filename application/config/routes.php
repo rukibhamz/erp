@@ -101,6 +101,7 @@ $route['accounts'] = 'Accounts/index';
 $route['accounts/create'] = 'Accounts/create';
 $route['accounts/edit/(:num)'] = 'Accounts/edit/$1';
 $route['accounts/view/(:num)'] = 'Accounts/view/$1';
+$route['accounts/reconcile/(:num)'] = 'Accounts/reconcile/$1';
 $route['accounts/delete/(:num)'] = 'Accounts/delete/$1';
 
 // Transactions

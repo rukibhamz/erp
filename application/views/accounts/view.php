@@ -7,6 +7,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title mb-0">Account: <?= htmlspecialchars($account['account_name'] ?? 'N/A') ?></h1>
         <div class="btn-group">
             <?php if (hasPermission('accounts', 'update')): ?>
+                <form method="POST" action="<?= base_url('accounts/reconcile/' . intval($account['id'])) ?>" class="d-inline" onsubmit="return confirm('Recalculate this account balance from posted ledger entries?');">
+                    <?php echo csrf_field(); ?>
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-repeat"></i> Reconcile Balance
+                    </button>
+                </form>
+            <?php endif; ?>
+            <?php if (hasPermission('accounts', 'update')): ?>
                 <a href="<?= base_url('accounts/edit/' . $account['id']) ?>" class="btn btn-primary">
                     <i class="bi bi-pencil"></i> Edit
                 </a>

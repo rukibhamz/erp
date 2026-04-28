@@ -6,6 +6,7 @@ class Accounts extends Base_Controller {
     private $accountNumberEnabled;
     private $transactionModel;
     private $activityModel;
+    private $balanceCalculator;
     
     public function __construct() {
         parent::__construct();
@@ -14,6 +15,8 @@ class Accounts extends Base_Controller {
         $this->accountNumberEnabled = $this->accountModel->hasAccountNumberColumn();
         $this->transactionModel = $this->loadModel('Transaction_model');
         $this->activityModel = $this->loadModel('Activity_model');
+        require_once BASEPATH . 'services/Balance_calculator.php';
+        $this->balanceCalculator = new Balance_calculator();
     }
     
     public function index() {
@@ -219,6 +222,17 @@ class Accounts extends Base_Controller {
             
             // Get ledger with running balance
             $ledger = $this->transactionModel->getLedger($id);
+
+            // Display balance from ledger math so UI is resilient to any historical
+            // denormalized `accounts.balance` drift.
+            if (!empty($ledger)) {
+                $lastEntry = end($ledger);
+                if (isset($lastEntry['running_balance'])) {
+                    $account['balance'] = floatval($lastEntry['running_balance']);
+                }
+            } else {
+                $account['balance'] = floatval($account['opening_balance'] ?? 0);
+            }
         } catch (Exception $e) {
             error_log('Accounts view error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error loading account details.');
@@ -284,6 +298,57 @@ class Accounts extends Base_Controller {
         }
         
         redirect('accounts');
+    }
+
+    public function reconcile($id) {
+        $this->requirePermission('accounts', 'update');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('accounts/view/' . intval($id));
+            return;
+        }
+
+        check_csrf();
+
+        $id = intval($id);
+        if ($id <= 0) {
+            $this->setFlashMessage('danger', 'Invalid account ID.');
+            redirect('accounts');
+            return;
+        }
+
+        try {
+            $account = $this->accountModel->getById($id);
+            if (!$account) {
+                $this->setFlashMessage('danger', 'Account not found.');
+                redirect('accounts');
+                return;
+            }
+
+            $previousBalance = floatval($account['balance'] ?? 0);
+            $reconciledBalance = floatval($this->balanceCalculator->calculateBalance($id, null, false));
+
+            $this->accountModel->update($id, [
+                'balance' => $reconciledBalance,
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+
+            $this->activityModel->log(
+                $this->session['user_id'],
+                'update',
+                'Accounts',
+                'Reconciled account balance for ' . ($account['account_name'] ?? ('ID ' . $id)) .
+                ' (from ' . number_format($previousBalance, 2) . ' to ' . number_format($reconciledBalance, 2) . ')'
+            );
+
+            $this->setFlashMessage('success', 'Account balance reconciled successfully.');
+            redirect('accounts/view/' . $id);
+        } catch (Exception $e) {
+            error_log('Accounts reconcile error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to reconcile account balance.');
+            redirect('accounts/view/' . $id);
+        }
     }
 }
 
