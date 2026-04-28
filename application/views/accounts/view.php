@@ -7,9 +7,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title mb-0">Account: <?= htmlspecialchars($account['account_name'] ?? 'N/A') ?></h1>
         <div class="btn-group">
             <?php if (hasPermission('accounts', 'update')): ?>
-                <form method="POST" action="<?= base_url('accounts/reconcile/' . intval($account['id'])) ?>" class="d-inline" onsubmit="return confirm('Recalculate this account balance from posted ledger entries?');">
+                <form method="POST" action="<?= base_url('accounts/reconcile/' . intval($account['id'])) ?>" class="d-inline-block m-0 p-0" onsubmit="return confirm('Recalculate this account balance from posted ledger entries?');">
                     <?php echo csrf_field(); ?>
-                    <button type="submit" class="btn btn-outline-primary">
+                    <button type="submit" class="btn btn-primary">
                         <i class="bi bi-arrow-repeat"></i> Reconcile Balance
                     </button>
                 </form>
