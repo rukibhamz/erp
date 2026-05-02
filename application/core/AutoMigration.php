@@ -2764,8 +2764,9 @@ class AutoMigration {
     }
 
     /**
-     * Ensure spaces table has video_url and detailed_description columns
-     * Fixes SQLSTATE[42S22] error when creating/editing spaces
+     * Ensure spaces table has media and merchandising columns.
+     * - video_url, detailed_description: richer listing content
+     * - is_featured: controls prominence in booking wizard listings
      */
     private function ensureSpacesVideoColumns() {
         try {
@@ -2786,6 +2787,13 @@ class AutoMigration {
                 $this->pdo->exec("ALTER TABLE `{$this->prefix}spaces` 
                     ADD COLUMN `detailed_description` TEXT DEFAULT NULL");
                 error_log("AutoMigration: Added detailed_description column to spaces table");
+            }
+
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}spaces` LIKE 'is_featured'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                $this->pdo->exec("ALTER TABLE `{$this->prefix}spaces`
+                    ADD COLUMN `is_featured` TINYINT(1) NOT NULL DEFAULT 0");
+                error_log("AutoMigration: Added is_featured column to spaces table");
             }
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring spaces video columns: " . $e->getMessage());

@@ -396,6 +396,7 @@ class Booking_wizard extends Base_Controller {
                     'id' => $space['id'],
                     'space_name' => $space['space_name'],
                     'space_number' => $space['space_number'] ?? '',
+                    'is_featured' => !empty($space['is_featured']) ? 1 : 0,
                     'capacity' => $space['capacity'] ?? 0,
                     'description' => $space['description'] ?? '',
                     'facility_id' => $facilityId,

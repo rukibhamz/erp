@@ -114,7 +114,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                             <div class="card-body">
-                                                <h5 class="card-title"><?= htmlspecialchars($space['space_name']) ?></h5>
+                                                <h5 class="card-title d-flex align-items-center gap-2">
+                                                    <?= htmlspecialchars($space['space_name']) ?>
+                                                    <?php if (!empty($space['is_featured'])): ?>
+                                                        <span class="badge bg-warning text-dark">Featured</span>
+                                                    <?php endif; ?>
+                                                </h5>
                                                 <?php if (!empty($space['space_number'])): ?>
                                                     <p class="text-muted mb-2">
                                                         <small><i class="bi bi-hash"></i> <?= htmlspecialchars($space['space_number']) ?></small>

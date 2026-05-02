@@ -161,6 +161,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             Make this space bookable (sync with Booking Module)
                         </label>
                     </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured" value="1">
+                        <label class="form-check-label" for="is_featured">
+                            Featured space (show first in Booking Wizard)
+                        </label>
+                    </div>
                 </div>
                 
                 <div class="col-12">

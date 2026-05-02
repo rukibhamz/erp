@@ -35,7 +35,7 @@ class Space_model extends Base_Model {
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
                  WHERE property_id = ? 
-                 ORDER BY space_number, space_name",
+                 ORDER BY is_featured DESC, space_number, space_name",
                 [$propertyId]
             );
         } catch (Exception $e) {
@@ -66,7 +66,7 @@ class Space_model extends Base_Model {
                 $params[] = $propertyId;
             }
             
-            $sql .= " ORDER BY p.property_name, s.space_name";
+            $sql .= " ORDER BY p.property_name, s.is_featured DESC, s.space_name";
             
             $spaces = $this->db->fetchAll($sql, $params);
 
@@ -77,7 +77,7 @@ class Space_model extends Base_Model {
                         JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                         WHERE s.property_id = ?
                         AND s.operational_status NOT IN ('decommissioned')
-                        ORDER BY s.space_name";
+                        ORDER BY s.is_featured DESC, s.space_name";
                 $spaces = $this->db->fetchAll($sql, [$propertyId]);
             }
 
