@@ -178,10 +178,27 @@ class Customer_portal_user_model extends Base_Model {
             $token = bin2hex(random_bytes(32));
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
             
-            $this->update($user['id'], [
+            $updated = $this->update($user['id'], [
                 'password_reset_token' => $token,
                 'password_reset_expires' => $expires
             ]);
+
+            if (!$updated) {
+                error_log('Customer_portal_user_model requestPasswordReset: Failed to persist reset token for user ID ' . $user['id']);
+                return ['success' => false, 'message' => 'Could not create reset token'];
+            }
+
+            // Verify token was actually saved before returning success.
+            $saved = $this->db->fetchOne(
+                "SELECT id FROM `" . $this->db->getPrefix() . $this->table . "`
+                 WHERE id = ? AND password_reset_token = ? AND password_reset_expires IS NOT NULL",
+                [$user['id'], $token]
+            );
+
+            if (!$saved) {
+                error_log('Customer_portal_user_model requestPasswordReset: Token verification failed after update for user ID ' . $user['id']);
+                return ['success' => false, 'message' => 'Could not verify reset token'];
+            }
             
             return ['success' => true, 'token' => $token];
         } catch (Exception $e) {
@@ -195,13 +212,24 @@ class Customer_portal_user_model extends Base_Model {
      */
     public function resetPassword($token, $newPassword) {
         try {
+            $token = trim((string)$token);
+            if ($token === '') {
+                return false;
+            }
+
             $user = $this->db->fetchOne(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE password_reset_token = ? AND password_reset_expires > NOW()",
+                 WHERE password_reset_token = ?",
                 [$token]
             );
             
             if (!$user) {
+                return false;
+            }
+
+            $expiresAt = $user['password_reset_expires'] ?? null;
+            $expiresTs = $expiresAt ? strtotime($expiresAt) : false;
+            if (!$expiresTs || $expiresTs <= time()) {
                 return false;
             }
             
