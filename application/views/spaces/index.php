@@ -108,7 +108,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm border-0">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="bi bi-door-open"></i> <?= htmlspecialchars($space['space_name']) ?></h6>
+                        <h6 class="mb-0">
+                            <i class="bi bi-door-open"></i> <?= htmlspecialchars($space['space_name']) ?>
+                            <?php if (!empty($space['is_featured'])): ?>
+                                <span class="badge bg-warning text-dark ms-1" title="Featured in Booking Wizard">
+                                    <i class="bi bi-star-fill"></i> Featured
+                                </span>
+                            <?php endif; ?>
+                        </h6>
                         <span class="badge bg-<?= $space['operational_status'] === 'active' ? 'success' : 'warning' ?>">
                             <?= ucfirst(str_replace('_', ' ', $space['operational_status'])) ?>
                         </span>
@@ -143,6 +150,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <span class="badge bg-info"><i class="bi bi-calendar-check"></i> Bookable</span>
                             <?php else: ?>
                                 <span class="badge bg-secondary">Not Bookable</span>
+                            <?php endif; ?>
+                            <?php if (!empty($space['is_featured'])): ?>
+                                <span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i> Featured</span>
                             <?php endif; ?>
                         </div>
                         

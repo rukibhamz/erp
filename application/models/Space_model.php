@@ -4,6 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class Space_model extends Base_Model {
     protected $table = 'spaces';
     private $lastSyncError = null;
+    private $columnExistsCache = [];
 
     public function getLastSyncError() {
         return $this->lastSyncError;
@@ -32,10 +33,14 @@ class Space_model extends Base_Model {
     
     public function getByProperty($propertyId) {
         try {
+            $featuredOrder = $this->hasColumn($this->table, 'is_featured')
+                ? 'is_featured DESC, '
+                : '';
+
             return $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
                  WHERE property_id = ? 
-                 ORDER BY is_featured DESC, space_number, space_name",
+                 ORDER BY " . $featuredOrder . "space_number, space_name",
                 [$propertyId]
             );
         } catch (Exception $e) {
@@ -54,6 +59,9 @@ class Space_model extends Base_Model {
                 return [];
             }
 
+            $hasFeaturedColumn = $this->hasColumn($this->table, 'is_featured');
+            $featuredOrderSql = $hasFeaturedColumn ? ", s.is_featured DESC" : "";
+
             $sql = "SELECT s.*, p.property_name, p.property_code 
                     FROM `" . $this->db->getPrefix() . $this->table . "` s
                     JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
@@ -66,7 +74,7 @@ class Space_model extends Base_Model {
                 $params[] = $propertyId;
             }
             
-            $sql .= " ORDER BY p.property_name, s.is_featured DESC, s.space_name";
+            $sql .= " ORDER BY p.property_name" . $featuredOrderSql . ", s.space_name";
             
             $spaces = $this->db->fetchAll($sql, $params);
 
@@ -77,7 +85,7 @@ class Space_model extends Base_Model {
                         JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
                         WHERE s.property_id = ?
                         AND s.operational_status NOT IN ('decommissioned')
-                        ORDER BY s.is_featured DESC, s.space_name";
+                        ORDER BY " . ($hasFeaturedColumn ? "s.is_featured DESC, " : "") . "s.space_name";
                 $spaces = $this->db->fetchAll($sql, [$propertyId]);
             }
 
@@ -86,6 +94,26 @@ class Space_model extends Base_Model {
             error_log('Space_model getBookableSpaces error: ' . $e->getMessage());
             return [];
         }
+    }
+
+    private function hasColumn($table, $column) {
+        $cacheKey = $table . ':' . $column;
+        if (array_key_exists($cacheKey, $this->columnExistsCache)) {
+            return $this->columnExistsCache[$cacheKey];
+        }
+
+        try {
+            $result = $this->db->fetchOne(
+                "SHOW COLUMNS FROM `" . $this->db->getPrefix() . $table . "` LIKE ?",
+                [$column]
+            );
+            $this->columnExistsCache[$cacheKey] = !empty($result);
+        } catch (Exception $e) {
+            error_log('Space_model hasColumn check failed: ' . $e->getMessage());
+            $this->columnExistsCache[$cacheKey] = false;
+        }
+
+        return $this->columnExistsCache[$cacheKey];
     }
 
     public function getBookingTypes($spaceId) {

@@ -30,8 +30,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </head>
 <body>
     <div class="no-print text-center my-4">
-        <button onclick="window.print()" class="btn btn-primary">Print Now</button>
-        <button onclick="window.close()" class="btn btn-secondary">Close</button>
+        <button id="printNowBtn" type="button" class="btn btn-primary">Print Now</button>
+        <button id="closeInvoiceBtn" type="button" class="btn btn-secondary">Close</button>
     </div>
 
     <div class="invoice-box">
@@ -181,5 +181,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </tr>
         </table>
     </div>
+
+    <script nonce="<?= csp_nonce() ?>">
+    (function() {
+        const printButton = document.getElementById('printNowBtn');
+        const closeButton = document.getElementById('closeInvoiceBtn');
+
+        if (printButton) {
+            printButton.addEventListener('click', function() {
+                window.print();
+            });
+        }
+
+        if (closeButton) {
+            closeButton.addEventListener('click', function() {
+                // Fallback for tabs not opened by script
+                if (window.history.length > 1) {
+                    window.history.back();
+                    return;
+                }
+                window.close();
+            });
+        }
+    })();
+    </script>
 </body>
 </html>
