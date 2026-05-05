@@ -20,6 +20,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         }
         body {
             background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         .navbar {
             background-color: #000 !important;
@@ -112,5 +115,5 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </nav>
 
-    <main class="py-4">
+    <main class="py-4 flex-grow-1">
 
