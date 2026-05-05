@@ -269,6 +269,21 @@ class Booking_wizard extends Base_Controller {
                         }
                     }
                     unset($space);
+
+                    // Enforce featured-first ordering in PHP as a safety net
+                    // so portal ordering remains correct even on older DB schemas.
+                    usort($spaces, function ($a, $b) {
+                        $aFeatured = !empty($a['is_featured']) ? 1 : 0;
+                        $bFeatured = !empty($b['is_featured']) ? 1 : 0;
+                        if ($aFeatured !== $bFeatured) {
+                            return $bFeatured <=> $aFeatured;
+                        }
+
+                        $aName = strtolower(trim((string)($a['space_name'] ?? '')));
+                        $bName = strtolower(trim((string)($b['space_name'] ?? '')));
+                        return strcmp($aName, $bName);
+                    });
+
                     $spacesByLocation[$location['id']] = $spaces;
                 }
             }
@@ -411,6 +426,19 @@ class Booking_wizard extends Base_Controller {
                     'photos' => $photos
                 ];
             }
+
+            // Keep API responses consistent with portal ordering.
+            usort($spacesData, function ($a, $b) {
+                $aFeatured = !empty($a['is_featured']) ? 1 : 0;
+                $bFeatured = !empty($b['is_featured']) ? 1 : 0;
+                if ($aFeatured !== $bFeatured) {
+                    return $bFeatured <=> $aFeatured;
+                }
+
+                $aName = strtolower(trim((string)($a['space_name'] ?? '')));
+                $bName = strtolower(trim((string)($b['space_name'] ?? '')));
+                return strcmp($aName, $bName);
+            });
             
             echo json_encode(['success' => true, 'spaces' => $spacesData]);
         } catch (Exception $e) {
