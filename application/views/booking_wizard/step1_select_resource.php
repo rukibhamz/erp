@@ -54,7 +54,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Select Location</label>
-                            <select id="location_filter" class="form-select" onchange="filterByLocation()">
+                            <select id="location_filter" class="form-select">
                                 <option value="">All Locations</option>
                                 <?php foreach ($locations as $location): ?>
                                     <option value="<?= $location['id'] ?>" <?= ($selected_location_id ?? null) == $location['id'] ? 'selected' : '' ?>>
@@ -205,9 +205,12 @@ function filterByLocation() {
 
 // Apply filter on page load if location is selected
 document.addEventListener('DOMContentLoaded', function() {
-    const selectedLocation = document.getElementById('location_filter').value;
-    if (selectedLocation) {
-        filterByLocation();
+    const locationFilter = document.getElementById('location_filter');
+    if (locationFilter) {
+        locationFilter.addEventListener('change', filterByLocation);
+        if (locationFilter.value) {
+            filterByLocation();
+        }
     }
 });
 </script>

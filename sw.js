@@ -27,10 +27,22 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
+  // Never intercept uploaded media files. Corrupt/truncated assets should come
+  // directly from the server/CDN and not through stale SW cache logic.
+  if (url.pathname.startsWith('/uploads/')) return;
 
   event.respondWith(
     caches.match(event.request)
-      .then(response => response || fetch(event.request))
-      .catch(() => fetch(event.request))
+      .then(response => {
+        if (response) return response;
+        return fetch(event.request).catch(() => {
+          // Keep browser behavior predictable: for navigation requests,
+          // fallback to cached shell if available.
+          if (event.request.mode === 'navigate') {
+            return caches.match('/');
+          }
+          return Response.error();
+        });
+      })
   );
 });
