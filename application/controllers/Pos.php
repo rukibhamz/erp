@@ -16,6 +16,7 @@ class Pos extends Base_Controller {
     private $transactionService;
     private $bookingModel;
     private $bookingPaymentModel;
+    private $addonModel;
     
     public function __construct() {
         parent::__construct();
@@ -33,6 +34,7 @@ class Pos extends Base_Controller {
         $this->taxTypeModel = $this->loadModel('Tax_type_model'); // Use Tax_type_model for erp_tax_types table
         $this->bookingModel = $this->loadModel('Booking_model');
         $this->bookingPaymentModel = $this->loadModel('Booking_payment_model');
+        $this->addonModel = $this->loadModel('Addon_model');
         
         // Load Transaction Service
         // Use relative path to be safe (APPPATH constant is not defined in this environment)
@@ -61,6 +63,27 @@ class Pos extends Base_Controller {
             $items = $this->itemModel->getSellableItems();
         } catch (Exception $e) {
             $items = [];
+        }
+        
+        // Include active booking add-ons in POS catalog
+        try {
+            $addons = $this->addonModel->getActive();
+            foreach ($addons as $addon) {
+                $items[] = [
+                    'id' => intval($addon['id']),
+                    'item_name' => $addon['name'] ?? '',
+                    'name' => $addon['name'] ?? '',
+                    'sku' => 'ADDON-' . intval($addon['id']),
+                    'item_code' => 'ADDON-' . intval($addon['id']),
+                    'selling_price' => floatval($addon['price'] ?? 0),
+                    'item_type' => 'addon',
+                    'is_wholesale_enabled' => 0,
+                    'wholesale_price' => 0,
+                    'wholesale_moq' => 0
+                ];
+            }
+        } catch (Exception $e) {
+            error_log('POS addon load error: ' . $e->getMessage());
         }
         
         // Get default VAT rate from erp_tax_types table
@@ -191,14 +214,28 @@ class Pos extends Base_Controller {
             }
             
             foreach ($items as $itemData) {
-                $item = $this->itemModel->getById($itemData['item_id']);
+                $itemType = strtolower(trim($itemData['item_type'] ?? 'inventory'));
+                $itemId = intval($itemData['item_id'] ?? 0);
+                if ($itemId <= 0) {
+                    continue;
+                }
+                
+                $item = null;
+                if ($itemType === 'addon') {
+                    $item = $this->addonModel->getById($itemId);
+                } else {
+                    $item = $this->itemModel->getById($itemId);
+                }
                 if (!$item) continue;
                 
                 $quantity = floatval($itemData['quantity'] ?? 1);
-                $unitPrice = floatval($itemData['price'] ?? $item['selling_price'] ?? 0);
+                $defaultPrice = ($itemType === 'addon')
+                    ? floatval($item['price'] ?? 0)
+                    : floatval($item['selling_price'] ?? 0);
+                $unitPrice = floatval($itemData['price'] ?? $defaultPrice);
                 
                 // Wholesale Logic
-                if (($item['is_wholesale_enabled'] ?? 0) == 1 && $quantity >= ($item['wholesale_moq'] ?? 0)) {
+                if ($itemType !== 'addon' && ($item['is_wholesale_enabled'] ?? 0) == 1 && $quantity >= ($item['wholesale_moq'] ?? 0)) {
                     $unitPrice = floatval($item['wholesale_price'] ?? $unitPrice);
                 }
                 
@@ -214,9 +251,11 @@ class Pos extends Base_Controller {
                 $taxAmount += $lineTax;
                 
                 $saleItems[] = [
-                    'item_id' => $item['id'],
+                    'item_id' => intval($item['id']),
                     'item_name' => $item['item_name'] ?? $item['name'] ?? '',
-                    'item_code' => $item['sku'] ?? $item['item_code'] ?? '',
+                    'item_code' => ($itemType === 'addon')
+                        ? ('ADDON-' . intval($item['id']))
+                        : ($item['sku'] ?? $item['item_code'] ?? ''),
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'discount_amount' => $itemDiscount,
@@ -268,6 +307,10 @@ class Pos extends Base_Controller {
             
             // Update inventory
             foreach ($saleItems as $saleItem) {
+                $isAddon = strpos(strtoupper((string)($saleItem['item_code'] ?? '')), 'ADDON-') === 0;
+                if ($isAddon) {
+                    continue; // Add-ons are service/equipment charges, no inventory stock movement here.
+                }
                 try {
                     $this->stockModel->decreaseStock($saleItem['item_id'], $saleItem['quantity'], 'POS Sale', $saleId);
                 } catch (Exception $e) {
@@ -661,6 +704,14 @@ class Pos extends Base_Controller {
     }
 
     private function resolveOrCreateAddonFromSaleItem(array $saleItem) {
+        $itemCode = strtoupper(trim($saleItem['item_code'] ?? ''));
+        if (strpos($itemCode, 'ADDON-') === 0) {
+            $addonId = intval(substr($itemCode, 6));
+            if ($addonId > 0) {
+                return $addonId;
+            }
+        }
+
         $name = trim($saleItem['item_name'] ?? '');
         if ($name === '') {
             return null;

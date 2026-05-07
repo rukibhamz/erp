@@ -57,7 +57,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <div class="row g-2" id="itemsGrid">
                         <?php foreach ($items as $item): ?>
                             <div class="col-md-3 col-sm-4 col-6">
-                                <div class="card item-card" data-item-id="<?= $item['id'] ?>" data-item-name="<?= htmlspecialchars($item['item_name'] ?? $item['name'] ?? '') ?>" data-item-price="<?= $item['selling_price'] ?? 0 ?>">
+                                <div class="card item-card"
+                                     data-item-id="<?= $item['id'] ?>"
+                                     data-item-name="<?= htmlspecialchars($item['item_name'] ?? $item['name'] ?? '') ?>"
+                                     data-item-price="<?= $item['selling_price'] ?? 0 ?>"
+                                     data-item-type="<?= htmlspecialchars($item['item_type'] ?? 'inventory') ?>">
                                     <div class="card-body text-center p-2">
                                         <div class="fw-bold small"><?= htmlspecialchars(substr($item['item_name'] ?? $item['name'] ?? '', 0, 20)) ?></div>
                                         <div class="text-muted small"><?= htmlspecialchars($item['sku'] ?? $item['item_code'] ?? '') ?></div>
@@ -215,25 +219,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 const itemId = parseInt(itemCard.dataset.itemId);
                 const itemName = itemCard.dataset.itemName;
                 const itemPrice = parseFloat(itemCard.dataset.itemPrice);
+                const itemType = itemCard.dataset.itemType || 'inventory';
                 if (itemId && itemName !== undefined) {
-                    addToCart(itemId, itemName, itemPrice);
+                    addToCart(itemId, itemName, itemPrice, itemType);
                 }
             }
         });
     }
 });
 
-function addToCart(itemId, itemName, price) {
-    const existing = cart.find(i => i.item_id === itemId);
+function addToCart(itemId, itemName, price, itemType = 'inventory') {
+    const existing = cart.find(i => i.item_id === itemId && i.item_type === itemType);
     if (existing) {
         existing.quantity += 1;
     } else {
         // Find item details to check wholesale
-        const item = itemsList.find(i => i.id === itemId);
+        const item = itemsList.find(i => parseInt(i.id) === itemId && (i.item_type || 'inventory') === itemType);
         let currentPrice = price;
         
         cart.push({
             item_id: itemId,
+            item_type: itemType,
             item_name: itemName,
             quantity: 1,
             price: currentPrice,
