@@ -35,6 +35,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <script nonce="<?= csp_nonce() ?>">
             // Store items globally for JS access
             const itemsList = <?= json_encode($items) ?>;
+            const bookingsList = <?= json_encode($recent_bookings ?? []) ?>;
             const csrfToken = '<?= csrf_token() ?>';
         </script>
         <!-- Left Panel - Items & Cart -->
@@ -143,6 +144,43 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <option value="mobile_money">Mobile Money</option>
                             <option value="credit">Credit</option>
                         </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Linked Booking (Add-on Sale)</label>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <input type="text" class="form-control form-control-sm" id="bookingSearch" placeholder="Filter code/customer...">
+                            </div>
+                            <div class="col-6">
+                                <select class="form-select form-select-sm" id="bookingSort">
+                                    <option value="date_desc">Date: Newest</option>
+                                    <option value="date_asc">Date: Oldest</option>
+                                    <option value="code_asc">Code: A-Z</option>
+                                    <option value="code_desc">Code: Z-A</option>
+                                    <option value="customer_asc">Customer: A-Z</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <select class="form-select form-select-sm" id="bookingPaymentFilter">
+                                    <option value="">All payment statuses</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="overpaid">Overpaid</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control form-control-sm" id="bookingDateFrom" title="From date">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control form-control-sm" id="bookingDateTo" title="To date">
+                            </div>
+                        </div>
+                        <select class="form-select" id="bookingSelect">
+                            <option value="">Walk-in / No booking</option>
+                        </select>
+                        <small class="text-muted">Filter and sort by booking code, date, customer, or payment status.</small>
                     </div>
                     
                     <div class="mb-3">
@@ -323,6 +361,7 @@ function processSale() {
     formData.append('amount_paid', document.getElementById('amountPaid').value);
     formData.append('discount_amount', document.getElementById('discountAmount').value);
     formData.append('discount_type', document.getElementById('discountType').value);
+    formData.append('booking_id', document.getElementById('bookingSelect')?.value || '');
     formData.append('ajax', '1');
     formData.append('csrf_token', csrfToken);
     
@@ -407,6 +446,111 @@ document.getElementById('cartTable')?.addEventListener('change', function(e) {
 function switchTerminal(terminalId) {
     window.location.href = '<?= base_url('pos') ?>?terminal=' + terminalId;
 }
+
+function normalizeBookingDate(dateValue) {
+    if (!dateValue) return null;
+    const parsed = new Date(dateValue);
+    if (!isNaN(parsed.getTime())) return parsed;
+    return null;
+}
+
+function normalizeDateOnly(dateValue) {
+    if (!dateValue) return null;
+    const parsed = new Date(dateValue + 'T00:00:00');
+    if (isNaN(parsed.getTime())) return null;
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
+}
+
+function formatBookingDate(dateValue) {
+    const parsed = normalizeBookingDate(dateValue);
+    if (!parsed) return 'No date';
+    return parsed.toLocaleDateString('en-GB');
+}
+
+function renderBookingOptions() {
+    const select = document.getElementById('bookingSelect');
+    if (!select) return;
+
+    const searchValue = (document.getElementById('bookingSearch')?.value || '').trim().toLowerCase();
+    const sortValue = document.getElementById('bookingSort')?.value || 'date_desc';
+    const paymentFilter = (document.getElementById('bookingPaymentFilter')?.value || '').trim().toLowerCase();
+    const fromDateValue = document.getElementById('bookingDateFrom')?.value || '';
+    const toDateValue = document.getElementById('bookingDateTo')?.value || '';
+    const currentValue = select.value || '';
+    const fromDate = normalizeDateOnly(fromDateValue);
+    const toDate = normalizeDateOnly(toDateValue);
+
+    let filtered = (bookingsList || []).filter(booking => {
+        const code = String(booking.booking_number || '').toLowerCase();
+        const customer = String(booking.customer_name || '').toLowerCase();
+        const paymentStatus = String(booking.payment_status || 'unpaid').toLowerCase();
+        const bookingDate = String(booking.booking_date || '').toLowerCase();
+        const bookingDateObj = normalizeDateOnly(String(booking.booking_date || ''));
+
+        const matchesSearch = !searchValue || code.includes(searchValue) || customer.includes(searchValue) || bookingDate.includes(searchValue);
+        const matchesPayment = !paymentFilter || paymentStatus === paymentFilter;
+        const matchesFromDate = !fromDate || (bookingDateObj && bookingDateObj >= fromDate);
+        const matchesToDate = !toDate || (bookingDateObj && bookingDateObj <= toDate);
+        return matchesSearch && matchesPayment && matchesFromDate && matchesToDate;
+    });
+
+    filtered.sort((a, b) => {
+        const codeA = String(a.booking_number || '');
+        const codeB = String(b.booking_number || '');
+        const customerA = String(a.customer_name || '');
+        const customerB = String(b.customer_name || '');
+        const dateA = normalizeBookingDate(a.booking_date);
+        const dateB = normalizeBookingDate(b.booking_date);
+        const timeA = dateA ? dateA.getTime() : 0;
+        const timeB = dateB ? dateB.getTime() : 0;
+
+        switch (sortValue) {
+            case 'date_asc':
+                return timeA - timeB;
+            case 'code_asc':
+                return codeA.localeCompare(codeB);
+            case 'code_desc':
+                return codeB.localeCompare(codeA);
+            case 'customer_asc':
+                return customerA.localeCompare(customerB);
+            case 'date_desc':
+            default:
+                return timeB - timeA;
+        }
+    });
+
+    let optionsHtml = '<option value="">Walk-in / No booking</option>';
+    filtered.forEach(booking => {
+        const id = Number(booking.id || 0);
+        const code = String(booking.booking_number || ('Booking #' + id));
+        const customer = String(booking.customer_name || 'Customer');
+        const dateLabel = formatBookingDate(booking.booking_date);
+        const paymentStatus = String(booking.payment_status || 'unpaid');
+        optionsHtml += `<option value="${id}">${escapeHtml(code)} - ${escapeHtml(customer)} | ${escapeHtml(dateLabel)} (${escapeHtml(paymentStatus)})</option>`;
+    });
+
+    select.innerHTML = optionsHtml;
+    if (currentValue) {
+        select.value = currentValue;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+document.getElementById('bookingSearch')?.addEventListener('input', renderBookingOptions);
+document.getElementById('bookingSort')?.addEventListener('change', renderBookingOptions);
+document.getElementById('bookingPaymentFilter')?.addEventListener('change', renderBookingOptions);
+document.getElementById('bookingDateFrom')?.addEventListener('change', renderBookingOptions);
+document.getElementById('bookingDateTo')?.addEventListener('change', renderBookingOptions);
+renderBookingOptions();
 </script>
 
 <style>

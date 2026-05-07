@@ -14,6 +14,8 @@ class Pos extends Base_Controller {
     private $activityModel;
     private $taxTypeModel;
     private $transactionService;
+    private $bookingModel;
+    private $bookingPaymentModel;
     
     public function __construct() {
         parent::__construct();
@@ -29,6 +31,8 @@ class Pos extends Base_Controller {
         $this->stockModel = $this->loadModel('Stock_level_model');
         $this->activityModel = $this->loadModel('Activity_model');
         $this->taxTypeModel = $this->loadModel('Tax_type_model'); // Use Tax_type_model for erp_tax_types table
+        $this->bookingModel = $this->loadModel('Booking_model');
+        $this->bookingPaymentModel = $this->loadModel('Booking_payment_model');
         
         // Load Transaction Service
         // Use relative path to be safe (APPPATH constant is not defined in this environment)
@@ -108,6 +112,7 @@ class Pos extends Base_Controller {
             'current_terminal' => $this->terminalModel->getById($terminalId),
             'session' => $session,
             'items' => $items,
+            'recent_bookings' => $this->getRecentBookingsForAddonSales(),
             'walk_in_customer' => $walkInCustomer,
             'default_vat_rate' => $defaultVatRate,
             'flash' => $this->getFlashMessage()
@@ -140,6 +145,7 @@ class Pos extends Base_Controller {
             
             $terminalId = intval($_POST['terminal_id'] ?? 0);
             $customerId = !empty($_POST['customer_id']) ? intval($_POST['customer_id']) : null;
+            $bookingId = !empty($_POST['booking_id']) ? intval($_POST['booking_id']) : null;
             // Use safe JSON decoding with validation
             $items = safe_json_decode($_POST['items'] ?? '[]', true, []);
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? 'cash');
@@ -150,6 +156,17 @@ class Pos extends Base_Controller {
             if (empty($items)) {
                 $this->setFlashMessage('danger', 'No items in cart.');
                 redirect('pos');
+            }
+
+            $linkedBooking = null;
+            if ($bookingId) {
+                $linkedBooking = $this->bookingModel->getById($bookingId);
+                if (!$linkedBooking) {
+                    throw new Exception('Selected booking not found.');
+                }
+                if (empty($customerId) && !empty($linkedBooking['customer_id'])) {
+                    $customerId = intval($linkedBooking['customer_id']);
+                }
             }
             
             // Calculate totals
@@ -239,7 +256,8 @@ class Pos extends Base_Controller {
                 'payment_method' => $paymentMethod,
                 'amount_paid' => $amountPaid,
                 'change_amount' => $changeAmount,
-                'status' => 'completed'
+                'status' => 'completed',
+                'notes' => $bookingId ? ('Booking add-on sale for booking #' . ($linkedBooking['booking_number'] ?? $bookingId)) : null
             ];
             
             $saleId = $this->saleModel->createSale($saleData, $saleItems);
@@ -269,6 +287,14 @@ class Pos extends Base_Controller {
             $session = $this->sessionModel->getOpenSession($terminalId, $this->session['user_id']);
             if ($session) {
                 $this->sessionModel->updateSessionTotals($session['id']);
+            }
+
+            if ($bookingId) {
+                try {
+                    $this->applyBookingAddonSale($bookingId, $saleId, $saleData['sale_number'], $saleItems, $totalAmount, $paymentMethod);
+                } catch (Exception $e) {
+                    error_log('POS booking add-on link error: ' . $e->getMessage());
+                }
             }
             
             $this->activityModel->log($this->session['user_id'], 'create', 'POS', 'Completed POS sale: ' . $saleData['sale_number']);
@@ -568,6 +594,108 @@ class Pos extends Base_Controller {
         ];
         
         $this->loadView('pos/reports', $data);
+    }
+
+    private function getRecentBookingsForAddonSales($limit = 50) {
+        try {
+            $limit = max(1, intval($limit));
+            $sql = "SELECT b.id, b.booking_number, b.customer_name, b.booking_date, b.status, b.payment_status,
+                           b.total_amount, b.paid_amount, b.balance_amount, b.customer_id
+                    FROM `" . $this->db->getPrefix() . "bookings` b
+                    WHERE b.status NOT IN ('cancelled', 'refunded', 'no_show')
+                    ORDER BY b.booking_date DESC, b.id DESC
+                    LIMIT " . $limit;
+            return $this->db->fetchAll($sql);
+        } catch (Exception $e) {
+            error_log('POS getRecentBookingsForAddonSales error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function applyBookingAddonSale($bookingId, $saleId, $saleNumber, array $saleItems, $saleTotal, $paymentMethod) {
+        $booking = $this->bookingModel->getById($bookingId);
+        if (!$booking) {
+            return false;
+        }
+
+        foreach ($saleItems as $saleItem) {
+            $addonId = $this->resolveOrCreateAddonFromSaleItem($saleItem);
+            if (!$addonId) {
+                continue;
+            }
+
+            $quantity = floatval($saleItem['quantity'] ?? 1);
+            $unitPrice = floatval($saleItem['unit_price'] ?? 0);
+            $lineTotal = $quantity * $unitPrice;
+
+            $this->db->insert('booking_addons', [
+                'booking_id' => intval($bookingId),
+                'addon_id' => intval($addonId),
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'total_price' => $lineTotal
+            ]);
+        }
+
+        $paymentData = [
+            'booking_id' => intval($bookingId),
+            'payment_number' => $this->bookingPaymentModel->getNextPaymentNumber(),
+            'payment_date' => date('Y-m-d'),
+            'payment_type' => 'addon_pos',
+            'payment_method' => $paymentMethod ?: 'cash',
+            'amount' => floatval($saleTotal),
+            'currency' => 'NGN',
+            'status' => 'completed',
+            'reference' => 'POS-' . $saleId,
+            'notes' => 'POS add-on sale ' . $saleNumber,
+            'created_by' => $this->session['user_id'] ?? null
+        ];
+
+        $this->bookingPaymentModel->create($paymentData);
+
+        $newTotalAmount = floatval($booking['total_amount'] ?? 0) + floatval($saleTotal);
+        $this->bookingModel->update($bookingId, ['total_amount' => $newTotalAmount]);
+        $this->bookingPaymentModel->syncBookingBalance($bookingId);
+
+        return true;
+    }
+
+    private function resolveOrCreateAddonFromSaleItem(array $saleItem) {
+        $name = trim($saleItem['item_name'] ?? '');
+        if ($name === '') {
+            return null;
+        }
+
+        $unitPrice = floatval($saleItem['unit_price'] ?? 0);
+        try {
+            $existing = $this->db->fetchOne(
+                "SELECT id FROM `" . $this->db->getPrefix() . "addons`
+                 WHERE name = ? AND is_active = 1
+                 ORDER BY id DESC
+                 LIMIT 1",
+                [$name]
+            );
+            if ($existing && !empty($existing['id'])) {
+                return intval($existing['id']);
+            }
+
+            $this->db->insert('addons', [
+                'name' => $name,
+                'description' => 'Auto-created from POS add-on sale',
+                'addon_type' => 'other',
+                'price' => $unitPrice,
+                'pricing_type' => 'per_booking',
+                'max_quantity' => 0,
+                'resource_id' => null,
+                'is_active' => 1,
+                'display_order' => 999
+            ]);
+
+            return intval($this->db->lastInsertId());
+        } catch (Exception $e) {
+            error_log('POS resolveOrCreateAddonFromSaleItem error: ' . $e->getMessage());
+            return null;
+        }
     }
 }
 
