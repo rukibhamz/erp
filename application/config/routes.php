@@ -338,6 +338,7 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['booking-wizard/step5'] = 'Booking_wizard/step5';
         $route['booking-wizard/get-time-slots'] = 'Booking_wizard/getTimeSlots';
         $route['bookings/get-slots'] = 'Bookings/getSlots';
+        $route['bookings/get-available-dates'] = 'Bookings/getAvailableDates';
         $route['booking-wizard/getSpacesForLocation'] = 'Booking_wizard/getSpacesForLocation';
         $route['booking-wizard/save-step'] = 'Booking_wizard/saveStep';
         $route['booking-wizard/validate-promo'] = 'Booking_wizard/validatePromoCode';

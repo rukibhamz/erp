@@ -25,20 +25,40 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <form method="POST">
                 <?php echo csrf_field(); ?>
                 
-                <!-- Booking Info (Read-only) -->
+                <!-- Booking Info -->
                 <div class="row mb-4">
                     <div class="col-md-4">
                         <label class="form-label">Booking Number</label>
                         <input type="text" class="form-control" value="<?= htmlspecialchars($booking['booking_number'] ?? '') ?>" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Date</label>
-                        <input type="text" class="form-control" value="<?= date('M d, Y', strtotime($booking['booking_date'])) ?>" readonly>
-                        <small class="text-muted">Use Reschedule to change date/time</small>
+                        <label class="form-label">Date <span class="text-danger">*</span></label>
+                        <select name="booking_date" id="booking_date_select" class="form-select" required>
+                            <option value="<?= htmlspecialchars($booking['booking_date'] ?? '') ?>" selected>
+                                <?= htmlspecialchars(date('M d, Y', strtotime($booking['booking_date'] ?? date('Y-m-d')))) ?> (current)
+                            </option>
+                        </select>
+                        <small class="text-muted">Only dates with available slots are listed.</small>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Time</label>
-                        <input type="text" class="form-control" value="<?= date('h:i A', strtotime($booking['start_time'])) ?> - <?= date('h:i A', strtotime($booking['end_time'])) ?>" readonly>
+                        <label class="form-label">Time <span class="text-danger">*</span></label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <select name="start_time" id="start_time_select" class="form-select" required>
+                                    <option value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>" selected>
+                                        <?= htmlspecialchars(date('h:i A', strtotime($booking['start_time'] ?? '00:00:00'))) ?> (current)
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <select name="end_time" id="end_time_select" class="form-select" required>
+                                    <option value="<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>" selected>
+                                        <?= htmlspecialchars(date('h:i A', strtotime($booking['end_time'] ?? '00:00:00'))) ?> (current)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <small class="text-muted" id="durationHint">Duration is automatically preserved.</small>
                     </div>
                 </div>
 
@@ -146,6 +166,201 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </div>
 </div>
+
+<script nonce="<?= csp_nonce() ?>">
+(function () {
+    const bookingId = <?= intval($booking['id'] ?? 0) ?>;
+    const facilityId = <?= intval($booking['facility_id'] ?? ($booking['space_id'] ?? 0)) ?>;
+    const currentDate = '<?= htmlspecialchars($booking['booking_date'] ?? '') ?>';
+    const currentStart = '<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>';
+    const currentEnd = '<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>';
+    const durationHours = <?= max(0.5, floatval($booking['duration_hours'] ?? 0)) ?>;
+    const durationMinutes = Math.max(30, Math.round(durationHours * 60));
+
+    const dateSelect = document.getElementById('booking_date_select');
+    const startSelect = document.getElementById('start_time_select');
+    const endSelect = document.getElementById('end_time_select');
+
+    function toMinutes(timeValue) {
+        const parts = String(timeValue || '').split(':');
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (isNaN(h) || isNaN(m)) return null;
+        return (h * 60) + m;
+    }
+
+    function toTime(minutes) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+
+    function displayTime(timeValue) {
+        const mins = toMinutes(timeValue);
+        if (mins === null) return timeValue;
+        let hour = Math.floor(mins / 60);
+        const minute = mins % 60;
+        const suffix = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        return hour + ':' + String(minute).padStart(2, '0') + ' ' + suffix;
+    }
+
+    function displayDate(dateValue) {
+        const dt = new Date(dateValue + 'T00:00:00');
+        if (isNaN(dt.getTime())) return dateValue;
+        return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function setSelectOptions(select, options, selectedValue) {
+        const normalizedSelected = String(selectedValue || '');
+        let html = '';
+        options.forEach(opt => {
+            const selected = String(opt.value) === normalizedSelected ? ' selected' : '';
+            html += '<option value="' + escapeHtml(opt.value) + '"' + selected + '>' + escapeHtml(opt.label) + '</option>';
+        });
+        select.innerHTML = html;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function computeValidStartTimes(availableSlots) {
+        const starts = availableSlots
+            .filter(slot => !!slot.available)
+            .map(slot => toMinutes(slot.start))
+            .filter(v => v !== null)
+            .sort((a, b) => a - b);
+
+        const startSet = new Set(starts);
+        const requiredSteps = Math.max(1, Math.ceil(durationMinutes / 60));
+        const valid = [];
+
+        starts.forEach(startMin => {
+            let ok = true;
+            for (let step = 0; step < requiredSteps; step++) {
+                const candidate = startMin + (step * 60);
+                if (!startSet.has(candidate)) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok && (startMin + durationMinutes) <= (24 * 60)) {
+                valid.push(startMin);
+            }
+        });
+
+        return Array.from(new Set(valid));
+    }
+
+    function populateEndTimeFromStart() {
+        const selectedStart = startSelect.value;
+        if (!selectedStart) {
+            setSelectOptions(endSelect, [{ value: '', label: 'Select start time first' }], '');
+            return;
+        }
+        const startMin = toMinutes(selectedStart);
+        const endMin = startMin + durationMinutes;
+        const endValue = toTime(endMin);
+        setSelectOptions(endSelect, [{ value: endValue, label: displayTime(endValue) }], endValue);
+    }
+
+    function loadSlotsForDate(dateValue) {
+        if (!dateValue || !facilityId) return;
+
+        setSelectOptions(startSelect, [{ value: '', label: 'Loading available times...' }], '');
+        setSelectOptions(endSelect, [{ value: '', label: 'Loading...' }], '');
+
+        fetch(`<?= base_url('bookings/get-slots') ?>?facility_id=${facilityId}&date=${encodeURIComponent(dateValue)}&exclude_booking_id=${bookingId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to load slots.');
+                }
+
+                const validStartMinutes = computeValidStartTimes(data.slots || []);
+                const startOptions = validStartMinutes.map(mins => {
+                    const value = toTime(mins);
+                    return { value: value, label: displayTime(value) };
+                });
+
+                if (dateValue === currentDate && currentStart) {
+                    const exists = startOptions.some(opt => opt.value === currentStart);
+                    if (!exists) {
+                        startOptions.unshift({ value: currentStart, label: displayTime(currentStart) + ' (current)' });
+                    }
+                }
+
+                if (startOptions.length === 0) {
+                    setSelectOptions(startSelect, [{ value: '', label: 'No available times for selected date' }], '');
+                    setSelectOptions(endSelect, [{ value: '', label: 'No end time available' }], '');
+                    return;
+                }
+
+                const preferredStart = (dateValue === currentDate) ? currentStart : startOptions[0].value;
+                setSelectOptions(startSelect, startOptions, preferredStart);
+                populateEndTimeFromStart();
+            })
+            .catch(() => {
+                setSelectOptions(startSelect, [{ value: '', label: 'Failed to load times. Try another date.' }], '');
+                setSelectOptions(endSelect, [{ value: '', label: 'Unavailable' }], '');
+            });
+    }
+
+    function loadAvailableDates() {
+        if (!facilityId) {
+            setSelectOptions(dateSelect, [{ value: currentDate, label: displayDate(currentDate) + ' (current)' }], currentDate);
+            return;
+        }
+
+        setSelectOptions(dateSelect, [{ value: '', label: 'Loading available dates...' }], '');
+        fetch(`<?= base_url('bookings/get-available-dates') ?>?facility_id=${facilityId}&exclude_booking_id=${bookingId}&days=60`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to load dates.');
+                }
+
+                const options = (data.dates || []).map(item => ({
+                    value: item.date,
+                    label: displayDate(item.date) + ' (' + (item.slots_count || 0) + ' slots)'
+                }));
+
+                if (currentDate) {
+                    const hasCurrent = options.some(opt => opt.value === currentDate);
+                    if (!hasCurrent) {
+                        options.unshift({ value: currentDate, label: displayDate(currentDate) + ' (current)' });
+                    }
+                }
+
+                if (options.length === 0) {
+                    options.push({ value: currentDate, label: displayDate(currentDate) + ' (current)' });
+                }
+
+                const selectedDate = currentDate || options[0].value;
+                setSelectOptions(dateSelect, options, selectedDate);
+                loadSlotsForDate(selectedDate);
+            })
+            .catch(() => {
+                const fallbackDate = currentDate || '';
+                setSelectOptions(dateSelect, [{ value: fallbackDate, label: displayDate(fallbackDate) + ' (current)' }], fallbackDate);
+                loadSlotsForDate(fallbackDate);
+            });
+    }
+
+    dateSelect.addEventListener('change', function () {
+        loadSlotsForDate(this.value);
+    });
+
+    startSelect.addEventListener('change', populateEndTimeFromStart);
+    loadAvailableDates();
+})();
+</script>
 
 <?php if ($isSuperAdmin): ?>
 <div class="modal fade" id="inlineCustomerModal" tabindex="-1" aria-hidden="true">

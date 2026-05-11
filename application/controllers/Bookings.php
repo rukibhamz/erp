@@ -875,7 +875,10 @@ class Bookings extends Base_Controller {
                     'customer_name' => $booking['customer_name'],
                     'customer_email' => $booking['customer_email'],
                     'customer_phone' => $booking['customer_phone'],
-                    'booking_notes' => $booking['booking_notes']
+                    'booking_notes' => $booking['booking_notes'],
+                    'booking_date' => $booking['booking_date'] ?? null,
+                    'start_time' => $booking['start_time'] ?? null,
+                    'end_time' => $booking['end_time'] ?? null
                 ]);
                 
                 // Validate customer email if provided
@@ -888,6 +891,46 @@ class Bookings extends Base_Controller {
                 if (!empty($_POST['customer_phone']) && !validate_phone($_POST['customer_phone'])) {
                     $this->setFlashMessage('danger', 'Invalid phone number.');
                     redirect('bookings/edit/' . $id);
+                }
+
+                $newBookingDate = sanitize_input($_POST['booking_date'] ?? ($booking['booking_date'] ?? ''));
+                $newStartTime = sanitize_input($_POST['start_time'] ?? ($booking['start_time'] ?? ''));
+                $newEndTime = sanitize_input($_POST['end_time'] ?? ($booking['end_time'] ?? ''));
+
+                if (empty($newBookingDate) || empty($newStartTime) || empty($newEndTime)) {
+                    throw new Exception('Booking date and time are required.');
+                }
+
+                $newStartTimestamp = strtotime($newBookingDate . ' ' . $newStartTime);
+                $newEndTimestamp = strtotime($newBookingDate . ' ' . $newEndTime);
+                if ($newStartTimestamp === false || $newEndTimestamp === false) {
+                    throw new Exception('Invalid date or time format.');
+                }
+                if ($newEndTimestamp <= $newStartTimestamp) {
+                    throw new Exception('End time must be after start time.');
+                }
+
+                $resourceId = intval($booking['facility_id'] ?? ($booking['space_id'] ?? 0));
+                if ($resourceId <= 0) {
+                    throw new Exception('Booking resource is missing. Cannot validate availability.');
+                }
+
+                $dateTimeChanged = (
+                    ($booking['booking_date'] ?? '') !== $newBookingDate ||
+                    substr((string)($booking['start_time'] ?? ''), 0, 5) !== substr($newStartTime, 0, 5) ||
+                    substr((string)($booking['end_time'] ?? ''), 0, 5) !== substr($newEndTime, 0, 5)
+                );
+
+                if ($dateTimeChanged) {
+                    $isAvailable = $this->facilityModel->checkAdvancedAvailability(
+                        $resourceId,
+                        $newBookingDate . ' ' . $newStartTime,
+                        $newBookingDate . ' ' . $newEndTime,
+                        $id
+                    );
+                    if (!$isAvailable) {
+                        throw new Exception('The selected date/time slot is not available.');
+                    }
                 }
                 
                 $isSuperAdmin = (($this->session['role'] ?? '') === 'super_admin');
@@ -905,6 +948,13 @@ class Bookings extends Base_Controller {
                     'special_requests' => sanitize_input($_POST['special_requests'] ?? $booking['special_requests']),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
+
+                if ($dateTimeChanged) {
+                    $updateData['booking_date'] = $newBookingDate;
+                    $updateData['start_time'] = $newStartTime;
+                    $updateData['end_time'] = $newEndTime;
+                    $updateData['duration_hours'] = round(($newEndTimestamp - $newStartTimestamp) / 3600, 2);
+                }
 
                 if ($isSuperAdmin && $newCustomerId > 0) {
                     $targetCustomer = $this->db->fetchOne(
@@ -940,6 +990,14 @@ class Bookings extends Base_Controller {
                 }
                 
                 $this->bookingModel->update($id, $updateData);
+
+                if ($dateTimeChanged) {
+                    $this->db->query(
+                        "DELETE FROM `" . $this->db->getPrefix() . "booking_slots` WHERE booking_id = ?",
+                        [$id]
+                    );
+                    $this->bookingModel->createSlots($id, $resourceId, $newBookingDate, $newStartTime, null, $newEndTime);
+                }
 
                 if ($customerChanged) {
                     $invoiceIds = $this->resolveBookingInvoiceIds($booking, $id);
@@ -983,7 +1041,10 @@ class Bookings extends Base_Controller {
                     'customer_name' => $updateData['customer_name'],
                     'customer_email' => $updateData['customer_email'],
                     'customer_phone' => $updateData['customer_phone'],
-                    'booking_notes' => $updateData['booking_notes']
+                    'booking_notes' => $updateData['booking_notes'],
+                    'booking_date' => $updateData['booking_date'] ?? ($booking['booking_date'] ?? null),
+                    'start_time' => $updateData['start_time'] ?? ($booking['start_time'] ?? null),
+                    'end_time' => $updateData['end_time'] ?? ($booking['end_time'] ?? null)
                 ]);
                 
                 $this->bookingModificationModel->logModification(
@@ -1797,6 +1858,90 @@ class Bookings extends Base_Controller {
             $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $date);
             echo json_encode($result);
         } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
+     * Get available dates that still have at least one free slot.
+     * Accepts: facility_id, exclude_booking_id, days, start_date
+     */
+    public function getAvailableDates() {
+        $this->requirePermission('bookings', 'read');
+
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json');
+
+        $facilityId = intval($_GET['facility_id'] ?? 0);
+        $excludeBookingId = intval($_GET['exclude_booking_id'] ?? 0);
+        $days = intval($_GET['days'] ?? 60);
+        $days = max(1, min($days, 120));
+        $startDateRaw = sanitize_input($_GET['start_date'] ?? date('Y-m-d'));
+
+        // If facility_id is not provided, try to resolve from booking
+        if (!$facilityId && $excludeBookingId) {
+            try {
+                $booking = $this->bookingModel->getById($excludeBookingId);
+                if ($booking) {
+                    $facilityId = intval($booking['facility_id'] ?? 0);
+                    if (!$facilityId && !empty($booking['space_id'])) {
+                        $space = $this->db->fetchOne(
+                            "SELECT facility_id FROM `" . $this->db->getPrefix() . "spaces` WHERE id = ?",
+                            [intval($booking['space_id'])]
+                        );
+                        $facilityId = intval($space['facility_id'] ?? 0);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('Bookings getAvailableDates facility lookup error: ' . $e->getMessage());
+            }
+        }
+
+        if (!$facilityId) {
+            echo json_encode(['success' => false, 'message' => 'Missing facility_id.']);
+            exit;
+        }
+
+        try {
+            $startDate = DateTime::createFromFormat('Y-m-d', $startDateRaw);
+            if (!$startDate) {
+                $startDate = new DateTime(date('Y-m-d'));
+            }
+
+            $availableDates = [];
+            for ($i = 0; $i < $days; $i++) {
+                $current = clone $startDate;
+                $current->modify('+' . $i . ' day');
+                $dateStr = $current->format('Y-m-d');
+
+                $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $dateStr, $dateStr);
+                if (!($result['success'] ?? false)) {
+                    continue;
+                }
+
+                $slots = $result['slots'] ?? [];
+                $count = 0;
+                foreach ($slots as $slot) {
+                    if (!empty($slot['available'])) {
+                        $count++;
+                    }
+                }
+
+                if ($count > 0) {
+                    $availableDates[] = [
+                        'date' => $dateStr,
+                        'slots_count' => $count
+                    ];
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'dates' => $availableDates
+            ]);
+        } catch (Exception $e) {
+            error_log('Bookings getAvailableDates error: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
         exit;
