@@ -42,23 +42,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Time <span class="text-danger">*</span></label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <select name="start_time" id="start_time_select" class="form-select" required>
-                                    <option value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>" selected>
-                                        <?= htmlspecialchars(date('h:i A', strtotime($booking['start_time'] ?? '00:00:00'))) ?> (current)
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <select name="end_time" id="end_time_select" class="form-select" required>
-                                    <option value="<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>" selected>
-                                        <?= htmlspecialchars(date('h:i A', strtotime($booking['end_time'] ?? '00:00:00'))) ?> (current)
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                        <small class="text-muted" id="durationHint">Duration is automatically preserved.</small>
+                        <input type="hidden" name="start_time" id="start_time_input" value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>">
+                        <input type="hidden" name="end_time" id="end_time_input" value="<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>">
+                        <select id="time_slot_select" class="form-select" required>
+                            <option value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5) . '|' . substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>" selected>
+                                <?= htmlspecialchars(date('h:i A', strtotime($booking['start_time'] ?? '00:00:00'))) ?> - <?= htmlspecialchars(date('h:i A', strtotime($booking['end_time'] ?? '00:00:00'))) ?> (current)
+                            </option>
+                        </select>
+                        <small class="text-muted">Time slots are shown as ranges (Start - End).</small>
                     </div>
                 </div>
 
@@ -174,26 +165,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     const currentDate = '<?= htmlspecialchars($booking['booking_date'] ?? '') ?>';
     const currentStart = '<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>';
     const currentEnd = '<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>';
-    const durationHours = <?= max(0.5, floatval($booking['duration_hours'] ?? 0)) ?>;
-    const durationMinutes = Math.max(30, Math.round(durationHours * 60));
 
     const dateSelect = document.getElementById('booking_date_select');
-    const startSelect = document.getElementById('start_time_select');
-    const endSelect = document.getElementById('end_time_select');
-
-    function toMinutes(timeValue) {
-        const parts = String(timeValue || '').split(':');
-        const h = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10);
-        if (isNaN(h) || isNaN(m)) return null;
-        return (h * 60) + m;
-    }
-
-    function toTime(minutes) {
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
-        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-    }
+    const slotSelect = document.getElementById('time_slot_select');
+    const startInput = document.getElementById('start_time_input');
+    const endInput = document.getElementById('end_time_input');
 
     function displayTime(timeValue) {
         const mins = toMinutes(timeValue);
@@ -230,51 +206,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             .replace(/'/g, '&#039;');
     }
 
-    function computeValidStartTimes(availableSlots) {
-        const starts = availableSlots
-            .filter(slot => !!slot.available)
-            .map(slot => toMinutes(slot.start))
-            .filter(v => v !== null)
-            .sort((a, b) => a - b);
-
-        const startSet = new Set(starts);
-        const requiredSteps = Math.max(1, Math.ceil(durationMinutes / 60));
-        const valid = [];
-
-        starts.forEach(startMin => {
-            let ok = true;
-            for (let step = 0; step < requiredSteps; step++) {
-                const candidate = startMin + (step * 60);
-                if (!startSet.has(candidate)) {
-                    ok = false;
-                    break;
-                }
-            }
-            if (ok && (startMin + durationMinutes) <= (24 * 60)) {
-                valid.push(startMin);
-            }
-        });
-
-        return Array.from(new Set(valid));
-    }
-
-    function populateEndTimeFromStart() {
-        const selectedStart = startSelect.value;
-        if (!selectedStart) {
-            setSelectOptions(endSelect, [{ value: '', label: 'Select start time first' }], '');
+    function syncSelectedSlotToHiddenFields() {
+        const selected = slotSelect.value || '';
+        const parts = selected.split('|');
+        if (parts.length !== 2) {
+            startInput.value = '';
+            endInput.value = '';
             return;
         }
-        const startMin = toMinutes(selectedStart);
-        const endMin = startMin + durationMinutes;
-        const endValue = toTime(endMin);
-        setSelectOptions(endSelect, [{ value: endValue, label: displayTime(endValue) }], endValue);
+        startInput.value = parts[0];
+        endInput.value = parts[1];
     }
 
     function loadSlotsForDate(dateValue) {
         if (!dateValue || !facilityId) return;
 
-        setSelectOptions(startSelect, [{ value: '', label: 'Loading available times...' }], '');
-        setSelectOptions(endSelect, [{ value: '', label: 'Loading...' }], '');
+        setSelectOptions(slotSelect, [{ value: '', label: 'Loading available slots...' }], '');
 
         fetch(`<?= base_url('bookings/get-slots') ?>?facility_id=${facilityId}&date=${encodeURIComponent(dateValue)}&exclude_booking_id=${bookingId}`)
             .then(response => response.json())
@@ -283,32 +230,41 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     throw new Error(data.message || 'Failed to load slots.');
                 }
 
-                const validStartMinutes = computeValidStartTimes(data.slots || []);
-                const startOptions = validStartMinutes.map(mins => {
-                    const value = toTime(mins);
-                    return { value: value, label: displayTime(value) };
-                });
+                const availableSlots = (data.slots || []).filter(slot => !!slot.available);
+                const slotOptions = availableSlots.map(slot => ({
+                    value: String(slot.start) + '|' + String(slot.end),
+                    label: displayTime(slot.start) + ' - ' + displayTime(slot.end)
+                }));
 
                 if (dateValue === currentDate && currentStart) {
-                    const exists = startOptions.some(opt => opt.value === currentStart);
+                    const currentValue = currentStart + '|' + currentEnd;
+                    const exists = slotOptions.some(opt => opt.value === currentValue);
                     if (!exists) {
-                        startOptions.unshift({ value: currentStart, label: displayTime(currentStart) + ' (current)' });
+                        slotOptions.unshift({
+                            value: currentValue,
+                            label: displayTime(currentStart) + ' - ' + displayTime(currentEnd) + ' (current)'
+                        });
                     }
                 }
 
-                if (startOptions.length === 0) {
-                    setSelectOptions(startSelect, [{ value: '', label: 'No available times for selected date' }], '');
-                    setSelectOptions(endSelect, [{ value: '', label: 'No end time available' }], '');
+                if (slotOptions.length === 0) {
+                    setSelectOptions(slotSelect, [{ value: '', label: 'No available slots for selected date' }], '');
+                    startInput.value = '';
+                    endInput.value = '';
                     return;
                 }
 
-                const preferredStart = (dateValue === currentDate) ? currentStart : startOptions[0].value;
-                setSelectOptions(startSelect, startOptions, preferredStart);
-                populateEndTimeFromStart();
+                const preferredSlot = (dateValue === currentDate)
+                    ? (currentStart + '|' + currentEnd)
+                    : slotOptions[0].value;
+
+                setSelectOptions(slotSelect, slotOptions, preferredSlot);
+                syncSelectedSlotToHiddenFields();
             })
             .catch(() => {
-                setSelectOptions(startSelect, [{ value: '', label: 'Failed to load times. Try another date.' }], '');
-                setSelectOptions(endSelect, [{ value: '', label: 'Unavailable' }], '');
+                setSelectOptions(slotSelect, [{ value: '', label: 'Failed to load slots. Try another date.' }], '');
+                startInput.value = '';
+                endInput.value = '';
             });
     }
 
@@ -357,7 +313,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         loadSlotsForDate(this.value);
     });
 
-    startSelect.addEventListener('change', populateEndTimeFromStart);
+    slotSelect.addEventListener('change', syncSelectedSlotToHiddenFields);
     loadAvailableDates();
 })();
 </script>
