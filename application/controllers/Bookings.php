@@ -23,6 +23,7 @@ class Bookings extends Base_Controller {
     private $journalModel;
     private $journalCleanupService;
     private $customerModel;
+    private $bookingRentalModel;
 
     public function __construct() {
         parent::__construct();
@@ -46,6 +47,7 @@ class Bookings extends Base_Controller {
         $this->invoiceModel = $this->loadModel('Invoice_model');
         $this->journalModel = $this->loadModel('Journal_entry_model');
         $this->customerModel = $this->loadModel('Customer_model');
+        $this->bookingRentalModel = $this->loadModel('Booking_rental_model');
         
         // Load Transaction Service
         $transactionServicePath = BASEPATH . 'services/Transaction_service.php';
@@ -896,6 +898,7 @@ class Bookings extends Base_Controller {
                 $newBookingDate = sanitize_input($_POST['booking_date'] ?? ($booking['booking_date'] ?? ''));
                 $newStartTime = sanitize_input($_POST['start_time'] ?? ($booking['start_time'] ?? ''));
                 $newEndTime = sanitize_input($_POST['end_time'] ?? ($booking['end_time'] ?? ''));
+                $selectedSpaceId = intval($_POST['space_id'] ?? ($booking['space_id'] ?? 0));
 
                 if (empty($newBookingDate) || empty($newStartTime) || empty($newEndTime)) {
                     throw new Exception('Booking date and time are required.');
@@ -910,7 +913,11 @@ class Bookings extends Base_Controller {
                     throw new Exception('End time must be after start time.');
                 }
 
-                $resourceId = intval($booking['facility_id'] ?? ($booking['space_id'] ?? 0));
+                $selectedSpace = $this->resolveBookingSpace($selectedSpaceId, $booking);
+                if (!$selectedSpace) {
+                    throw new Exception('Please select a valid venue.');
+                }
+                $resourceId = intval($selectedSpace['facility_id']);
                 if ($resourceId <= 0) {
                     throw new Exception('Booking resource is missing. Cannot validate availability.');
                 }
@@ -920,8 +927,10 @@ class Bookings extends Base_Controller {
                     substr((string)($booking['start_time'] ?? ''), 0, 5) !== substr($newStartTime, 0, 5) ||
                     substr((string)($booking['end_time'] ?? ''), 0, 5) !== substr($newEndTime, 0, 5)
                 );
+                $venueChanged = intval($booking['space_id'] ?? 0) !== intval($selectedSpace['space_id'] ?? 0)
+                    || intval($booking['facility_id'] ?? 0) !== $resourceId;
 
-                if ($dateTimeChanged) {
+                if ($dateTimeChanged || $venueChanged) {
                     $isAvailable = $this->facilityModel->checkAdvancedAvailability(
                         $resourceId,
                         $newBookingDate . ' ' . $newStartTime,
@@ -948,6 +957,12 @@ class Bookings extends Base_Controller {
                     'special_requests' => sanitize_input($_POST['special_requests'] ?? $booking['special_requests']),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
+
+                $updateData['space_id'] = intval($selectedSpace['space_id']);
+                $updateData['facility_id'] = $resourceId;
+                if (!empty($selectedSpace['property_id'])) {
+                    $updateData['location_id'] = intval($selectedSpace['property_id']);
+                }
 
                 if ($dateTimeChanged) {
                     $updateData['booking_date'] = $newBookingDate;
@@ -980,18 +995,32 @@ class Bookings extends Base_Controller {
                 // Handle discount update if provided
                 if (isset($_POST['discount_amount'])) {
                     $newDiscount = floatval($_POST['discount_amount']);
-                    if ($newDiscount != floatval($booking['discount_amount'])) {
-                        $updateData['discount_amount'] = $newDiscount;
-                        // Recalculate total
-                        $newTotal = floatval($booking['base_amount']) + floatval($booking['tax_amount']) - $newDiscount;
-                        $updateData['total_amount'] = $newTotal;
-                        $updateData['balance_amount'] = $newTotal - floatval($booking['paid_amount']);
-                    }
+                    $updateData['discount_amount'] = $newDiscount;
+                }
+
+                if ($dateTimeChanged || $venueChanged || isset($_POST['discount_amount'])) {
+                    $effectiveDate = $updateData['booking_date'] ?? ($booking['booking_date'] ?? date('Y-m-d'));
+                    $effectiveStart = $updateData['start_time'] ?? ($booking['start_time'] ?? '00:00:00');
+                    $effectiveEnd = $updateData['end_time'] ?? ($booking['end_time'] ?? '00:00:00');
+                    $effectiveGuests = intval($updateData['number_of_guests'] ?? ($booking['number_of_guests'] ?? 1));
+                    $effectiveDiscount = floatval($updateData['discount_amount'] ?? ($booking['discount_amount'] ?? 0));
+
+                    $pricing = $this->recalculateBookingPricing(
+                        $id,
+                        $booking,
+                        $resourceId,
+                        $effectiveDate,
+                        $effectiveStart,
+                        $effectiveEnd,
+                        $effectiveGuests,
+                        $effectiveDiscount
+                    );
+                    $updateData = array_merge($updateData, $pricing);
                 }
                 
                 $this->bookingModel->update($id, $updateData);
 
-                if ($dateTimeChanged) {
+                if ($dateTimeChanged || $venueChanged) {
                     $this->db->query(
                         "DELETE FROM `" . $this->db->getPrefix() . "booking_slots` WHERE booking_id = ?",
                         [$id]
@@ -1044,7 +1073,11 @@ class Bookings extends Base_Controller {
                     'booking_notes' => $updateData['booking_notes'],
                     'booking_date' => $updateData['booking_date'] ?? ($booking['booking_date'] ?? null),
                     'start_time' => $updateData['start_time'] ?? ($booking['start_time'] ?? null),
-                    'end_time' => $updateData['end_time'] ?? ($booking['end_time'] ?? null)
+                    'end_time' => $updateData['end_time'] ?? ($booking['end_time'] ?? null),
+                    'space_id' => $updateData['space_id'] ?? ($booking['space_id'] ?? null),
+                    'facility_id' => $updateData['facility_id'] ?? ($booking['facility_id'] ?? null),
+                    'base_amount' => $updateData['base_amount'] ?? ($booking['base_amount'] ?? null),
+                    'total_amount' => $updateData['total_amount'] ?? ($booking['total_amount'] ?? null)
                 ]);
                 
                 $this->bookingModificationModel->logModification(
@@ -1089,6 +1122,7 @@ class Bookings extends Base_Controller {
         $data = [
             'page_title' => 'Edit Booking: ' . $booking['booking_number'],
             'booking' => $booking,
+            'venue_options' => $this->getVenueOptionsForBooking($booking),
             'customers' => (($this->session['role'] ?? '') === 'super_admin')
                 ? $this->db->fetchAll(
                     "SELECT id, company_name, contact_name, email, phone, address
@@ -1392,6 +1426,7 @@ class Bookings extends Base_Controller {
             $newDate = sanitize_input($_POST['booking_date'] ?? '');
             $newStartTime = sanitize_input($_POST['start_time'] ?? '');
             $newEndTime = sanitize_input($_POST['end_time'] ?? '');
+            $selectedSpaceId = intval($_POST['space_id'] ?? 0);
             $reason = sanitize_input($_POST['reason'] ?? '');
             
             try {
@@ -1401,8 +1436,14 @@ class Bookings extends Base_Controller {
                     redirect('bookings');
                 }
                 
+                $selectedSpace = $this->resolveBookingSpace($selectedSpaceId, $booking);
+                if (!$selectedSpace) {
+                    $this->setFlashMessage('danger', 'Please select a valid venue.');
+                    redirect('bookings/reschedule/' . $id);
+                }
+                $resourceId = intval($selectedSpace['facility_id']);
+
                 // Check new availability
-                $resourceId = $booking['facility_id'];
                 if (!$this->facilityModel->checkAdvancedAvailability($resourceId, $newDate . ' ' . $newStartTime, $newDate . ' ' . $newEndTime, $id)) {
                     $this->setFlashMessage('danger', 'The selected time slot is not available.');
                     redirect('bookings/reschedule/' . $id);
@@ -1420,7 +1461,9 @@ class Bookings extends Base_Controller {
                 $newValue = json_encode([
                     'date' => $newDate,
                     'start_time' => $newStartTime,
-                    'end_time' => $newEndTime
+                    'end_time' => $newEndTime,
+                    'space_id' => intval($selectedSpace['space_id']),
+                    'facility_id' => $resourceId
                 ]);
                 
                 $this->bookingModificationModel->logModification(
@@ -1434,12 +1477,25 @@ class Bookings extends Base_Controller {
                 
                 // Update booking
                 $duration = $this->calculateDuration($newDate, $newStartTime, $newEndTime);
+                $pricing = $this->recalculateBookingPricing(
+                    $id,
+                    $booking,
+                    $resourceId,
+                    $newDate,
+                    $newStartTime,
+                    $newEndTime,
+                    intval($booking['number_of_guests'] ?? 1),
+                    floatval($booking['discount_amount'] ?? 0)
+                );
                 $updateData = [
                     'booking_date' => $newDate,
                     'start_time' => $newStartTime,
                     'end_time' => $newEndTime,
-                    'duration_hours' => $duration
+                    'duration_hours' => $duration,
+                    'space_id' => intval($selectedSpace['space_id']),
+                    'facility_id' => $resourceId
                 ];
+                $updateData = array_merge($updateData, $pricing);
                 
                 $this->bookingModel->update($id, $updateData);
                 
@@ -1473,6 +1529,7 @@ class Bookings extends Base_Controller {
         $data = [
             'page_title' => 'Reschedule Booking',
             'booking' => $booking,
+            'venue_options' => $this->getVenueOptionsForBooking($booking),
             'flash' => $this->getFlashMessage()
         ];
         
@@ -1947,6 +2004,40 @@ class Bookings extends Base_Controller {
         exit;
     }
 
+    public function getRescheduleQuote($bookingId) {
+        $this->requirePermission('bookings', 'read');
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json');
+
+        try {
+            $bookingId = intval($bookingId);
+            $booking = $this->bookingModel->getById($bookingId);
+            if (!$booking) {
+                echo json_encode(['success' => false, 'message' => 'Booking not found.']);
+                exit;
+            }
+
+            $spaceId = intval($_GET['space_id'] ?? ($_GET['venue_id'] ?? ($booking['space_id'] ?? 0)));
+            $date = sanitize_input($_GET['booking_date'] ?? ($booking['booking_date'] ?? date('Y-m-d')));
+            $start = sanitize_input($_GET['start_time'] ?? ($booking['start_time'] ?? '00:00:00'));
+            $end = sanitize_input($_GET['end_time'] ?? ($booking['end_time'] ?? '00:00:00'));
+            $discount = floatval($_GET['discount_amount'] ?? ($booking['discount_amount'] ?? 0));
+            $guests = intval($_GET['number_of_guests'] ?? ($booking['number_of_guests'] ?? 1));
+
+            $space = $this->resolveBookingSpace($spaceId, $booking);
+            if (!$space) {
+                echo json_encode(['success' => false, 'message' => 'Invalid venue selected.']);
+                exit;
+            }
+
+            $pricing = $this->recalculateBookingPricing($bookingId, $booking, intval($space['facility_id']), $date, $start, $end, $guests, $discount);
+            echo json_encode(['success' => true, 'quote' => $pricing]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     private function calculateDuration($date, $startTime, $endTime) {
         try {
             $start = new DateTime($date . ' ' . $startTime);
@@ -1957,6 +2048,117 @@ class Bookings extends Base_Controller {
             error_log('Bookings calculateDuration error: ' . $e->getMessage());
             return 0;
         }
+    }
+
+    private function getVenueOptionsForBooking($booking) {
+        try {
+            $propertyId = 0;
+            if (!empty($booking['space_id'])) {
+                $space = $this->spaceModel->getWithProperty(intval($booking['space_id']));
+                $propertyId = intval($space['property_id'] ?? 0);
+            }
+
+            $spaces = $this->spaceModel->getBookableSpaces($propertyId ?: null);
+            if (empty($spaces)) {
+                return [];
+            }
+
+            $options = [];
+            foreach ($spaces as $space) {
+                $facilityId = intval($space['facility_id'] ?? 0);
+                if ($facilityId <= 0 && !empty($space['id'])) {
+                    $facilityId = intval($this->spaceModel->syncToBookingModule(intval($space['id'])) ?: 0);
+                }
+                if ($facilityId <= 0) {
+                    continue;
+                }
+                $options[] = [
+                    'space_id' => intval($space['id']),
+                    'facility_id' => $facilityId,
+                    'property_id' => intval($space['property_id'] ?? 0),
+                    'space_name' => $space['space_name'] ?? ('Space #' . intval($space['id'])),
+                    'property_name' => $space['property_name'] ?? ''
+                ];
+            }
+            if (empty($options) && !empty($booking['space_id'])) {
+                $currentSpace = $this->spaceModel->getWithProperty(intval($booking['space_id']));
+                if ($currentSpace) {
+                    $currentFacilityId = intval($currentSpace['facility_id'] ?? intval($booking['facility_id'] ?? 0));
+                    if ($currentFacilityId > 0) {
+                        $options[] = [
+                            'space_id' => intval($currentSpace['id']),
+                            'facility_id' => $currentFacilityId,
+                            'property_id' => intval($currentSpace['property_id'] ?? 0),
+                            'space_name' => $currentSpace['space_name'] ?? ('Space #' . intval($currentSpace['id'])),
+                            'property_name' => $currentSpace['property_name'] ?? ''
+                        ];
+                    }
+                }
+            }
+            return $options;
+        } catch (Exception $e) {
+            error_log('Bookings getVenueOptionsForBooking error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function resolveBookingSpace($selectedSpaceId, $booking) {
+        $spaceId = intval($selectedSpaceId ?: ($booking['space_id'] ?? 0));
+        if ($spaceId <= 0) {
+            return null;
+        }
+        $space = $this->spaceModel->getWithProperty($spaceId);
+        if (!$space) {
+            return null;
+        }
+        $facilityId = intval($space['facility_id'] ?? 0);
+        if ($facilityId <= 0) {
+            $facilityId = intval($this->spaceModel->syncToBookingModule($spaceId) ?: 0);
+        }
+        if ($facilityId <= 0) {
+            return null;
+        }
+        return [
+            'space_id' => $spaceId,
+            'facility_id' => $facilityId,
+            'property_id' => intval($space['property_id'] ?? 0)
+        ];
+    }
+
+    private function recalculateBookingPricing($bookingId, $booking, $facilityId, $date, $startTime, $endTime, $guests, $discountAmount) {
+        $bookingType = $booking['booking_type'] ?? 'hourly';
+        $quantity = in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace'])
+            ? max(1, intval($guests))
+            : max(1, intval($booking['quantity'] ?? 1));
+
+        $baseAmount = floatval($this->facilityModel->calculatePrice(
+            $facilityId,
+            $date,
+            $startTime,
+            $endTime,
+            $bookingType,
+            $quantity,
+            false,
+            $booking['end_date'] ?? null,
+            $booking['equipment_tier'] ?? null
+        ));
+
+        $addonsTotal = $this->bookingAddonModel ? floatval($this->bookingAddonModel->getTotalByBooking($bookingId)) : 0;
+        $rentalsTotal = $this->bookingRentalModel ? floatval($this->bookingRentalModel->getTotalByBooking($bookingId)) : 0;
+        $subtotal = $baseAmount + $addonsTotal + $rentalsTotal;
+        $taxRate = floatval($booking['tax_rate'] ?? 0);
+        $taxAmount = $subtotal * ($taxRate / 100);
+        $totalAmount = max(0, $subtotal + $taxAmount - floatval($discountAmount));
+        $paidAmount = floatval($booking['paid_amount'] ?? 0);
+        $balanceAmount = $totalAmount - $paidAmount;
+
+        return [
+            'base_amount' => $baseAmount,
+            'subtotal' => $subtotal,
+            'tax_amount' => $taxAmount,
+            'total_amount' => $totalAmount,
+            'balance_amount' => $balanceAmount
+        ];
     }
     
     /**

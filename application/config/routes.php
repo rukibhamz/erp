@@ -325,6 +325,7 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['bookings/modifications/(:num)'] = 'Bookings/modifications/$1';
         $route['bookings/add-resource/(:num)'] = 'Bookings/addResource/$1';
         $route['bookings/remove-resource/(:num)'] = 'Bookings/removeResource/$1';
+        $route['bookings/reschedule-quote/(:num)'] = 'Bookings/getRescheduleQuote/$1';
         
         // Public Booking Portal - Enhanced Multi-step Wizard
         // Legacy routes redirect to new wizard
@@ -404,6 +405,7 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['customer-portal/bookings/(:any)'] = 'Customer_portal/bookings/$1';
         $route['customer-portal/booking/(:num)'] = 'Customer_portal/booking/$1';
         $route['customer-portal/reschedule-booking/(:num)'] = 'Customer_portal/rescheduleBooking/$1';
+        $route['customer-portal/reschedule-quote/(:num)'] = 'Customer_portal/getRescheduleQuote/$1';
         $route['customer-portal/profile'] = 'Customer_portal/profile';
         $route['customer-portal/forgot-password'] = 'Customer_portal/forgotPassword';
         $route['customer-portal/reset-password'] = 'Customer_portal/resetPassword';

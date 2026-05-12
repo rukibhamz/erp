@@ -33,6 +33,18 @@
             <div class="card-body">
                 <form method="POST" id="rescheduleForm">
                     <?= csrf_field() ?>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Venue <span class="text-danger">*</span></label>
+                        <select name="space_id" id="space_select" class="form-select" required>
+                            <?php foreach (($venue_options ?? []) as $venue): ?>
+                                <option value="<?= intval($venue['space_id']) ?>"
+                                        data-facility-id="<?= intval($venue['facility_id']) ?>"
+                                        <?= intval($booking['space_id'] ?? 0) === intval($venue['space_id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($venue['space_name']) ?><?= !empty($venue['property_name']) ? ' - ' . htmlspecialchars($venue['property_name']) : '' ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <input type="hidden" name="start_time" id="hidden_start_time">
                     <input type="hidden" name="end_time"   id="hidden_end_time">
 
@@ -46,6 +58,11 @@
                     <!-- Time slot picker -->
                     <div class="mb-3" id="slot-section" style="display:none;">
                         <label class="form-label fw-bold">Available Time Slots</label>
+                        <div class="d-flex gap-2 mb-2">
+                            <span class="badge bg-success">Available</span>
+                            <span class="badge bg-danger">Occupied</span>
+                            <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
+                        </div>
                         <div id="slot-container">
                             <div class="text-center py-3">
                                 <div class="spinner-border spinner-border-sm" role="status"></div>
@@ -54,6 +71,24 @@
                         </div>
                         <div id="selected-slot-display" class="alert alert-success mt-2" style="display:none;">
                             <i class="bi bi-check-circle"></i> Selected: <strong id="selected-slot-text"></strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="card border-info">
+                            <div class="card-header bg-light"><strong>Updated Price Preview</strong></div>
+                            <div class="card-body py-2">
+                                <div id="quote_preview_status" class="small text-muted">Select venue, date and slot to preview.</div>
+                                <div class="row mt-2">
+                                    <div class="col-6 small">Base:</div><div class="col-6 small text-end" id="quote_base">-</div>
+                                    <div class="col-6 small">Subtotal:</div><div class="col-6 small text-end" id="quote_subtotal">-</div>
+                                    <div class="col-6 small">Tax:</div><div class="col-6 small text-end" id="quote_tax">-</div>
+                                    <div class="col-6 small fw-bold">Total:</div><div class="col-6 small fw-bold text-end" id="quote_total">-</div>
+                                    <div class="col-6 small">Balance:</div><div class="col-6 small text-end" id="quote_balance">-</div>
+                                    <div class="col-12"><hr class="my-2"></div>
+                                    <div class="col-6 small">Total vs saved booking:</div><div class="col-6 small text-end" id="quote_delta_total">-</div>
+                                    <div class="col-6 small">Balance vs saved:</div><div class="col-6 small text-end" id="quote_delta_balance">-</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -77,20 +112,12 @@
 
 <script nonce="<?= csp_nonce() ?>">
 (function() {
-    // Use facility_id directly — most reliable for internal bookings
-    const facilityId  = <?= intval($booking['facility_id'] ?? $booking['space_id'] ?? 0) ?>;
     const bookingId   = <?= intval($booking['id']) ?>;
-    const duration    = <?= floatval($booking['duration_hours'] ?? 1) ?>;
+    const currentDate = '<?= htmlspecialchars($booking['booking_date'] ?? '') ?>';
+    const currentStart = '<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>';
+    const currentEnd = '<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>';
 
-    // Debug: log what we have
-    console.log('Reschedule debug — facilityId:', facilityId, 'bookingId:', bookingId, 'duration:', duration);
-    console.log('Booking data:', <?= json_encode(['facility_id' => $booking['facility_id'] ?? null, 'space_id' => $booking['space_id'] ?? null, 'booking_date' => $booking['booking_date'] ?? null]) ?>);
-
-    if (!facilityId) {
-        document.getElementById('slot-section').innerHTML = '<div class="alert alert-danger">Configuration error: no facility linked to this booking (facility_id=0). Please contact support.</div>';
-        document.getElementById('slot-section').style.display = 'block';
-    }
-
+    const venueSelect = document.getElementById('space_select');
     const dateInput      = document.getElementById('reschedule_date');
     const slotSection    = document.getElementById('slot-section');
     const slotContainer  = document.getElementById('slot-container');
@@ -99,59 +126,103 @@
     const hiddenStart    = document.getElementById('hidden_start_time');
     const hiddenEnd      = document.getElementById('hidden_end_time');
     const submitBtn      = document.getElementById('submitBtn');
+    const quoteStatus = document.getElementById('quote_preview_status');
+    const quoteBase = document.getElementById('quote_base');
+    const quoteSubtotal = document.getElementById('quote_subtotal');
+    const quoteTax = document.getElementById('quote_tax');
+    const quoteTotal = document.getElementById('quote_total');
+    const quoteBalance = document.getElementById('quote_balance');
+    const quoteDeltaTotal = document.getElementById('quote_delta_total');
+    const quoteDeltaBalance = document.getElementById('quote_delta_balance');
+    const savedTotalAmount = <?= json_encode(floatval($booking['total_amount'] ?? 0)) ?>;
+    const savedBalanceAmount = <?= json_encode(floatval($booking['balance_amount'] ?? 0)) ?>;
+
+    function getFacilityId() {
+        const option = venueSelect?.options?.[venueSelect.selectedIndex];
+        return parseInt(option?.dataset?.facilityId || '0', 10);
+    }
 
     function loadSlots(date) {
+        const facilityId = getFacilityId();
         slotSection.style.display = 'block';
         selectedDisplay.style.display = 'none';
         hiddenStart.value = '';
         hiddenEnd.value   = '';
         submitBtn.disabled = true;
+        clearQuotePreview();
         slotContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div><span class="ms-2 text-muted">Loading slots…</span></div>';
 
         fetch(`<?= base_url('bookings/get-slots') ?>?facility_id=${facilityId}&date=${date}&exclude_booking_id=${bookingId}`)
             .then(r => r.json())
             .then(data => {
-                console.log('Slot response:', data);
-                if (!data.success || !data.slots || data.slots.length === 0) {
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to load slots.');
+                }
+
+                const availableSlots = data.slots || [];
+                const occupiedSlots = data.occupied || [];
+                if (availableSlots.length === 0 && occupiedSlots.length === 0) {
                     slotContainer.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-circle"></i> No available time slots on this date. Please try another date.</div>';
                     return;
                 }
 
-                let html = '<div class="row g-2">';
-                data.slots.forEach(slot => {
-                    const [sh, sm] = slot.start.split(':').map(Number);
-                    const endMins = sh * 60 + sm + Math.round(duration * 60);
-                    const endTime = String(Math.floor(endMins/60)).padStart(2,'0') + ':' + String(endMins%60).padStart(2,'0');
-                    html += `<div class="col-6 col-md-4">
-                        <button type="button" class="btn btn-outline-primary w-100 slot-btn"
-                                data-start="${slot.start}" data-end="${endTime}">
-                            <div class="fw-bold">${formatTime(slot.start)}</div>
-                            <small class="text-muted">to ${formatTime(endTime)}</small>
-                        </button>
-                    </div>`;
+                let rendered = [];
+                availableSlots.forEach(slot => {
+                    rendered.push({
+                        start: slot.start,
+                        html: `<div class="col-6 col-md-4">
+                                <button type="button" class="btn btn-outline-success w-100 slot-btn available-slot"
+                                        data-start="${slot.start}" data-end="${slot.end}">
+                                    <small class="d-block text-muted">${slot.date || date}</small>
+                                    <span class="fw-bold">${formatTime(slot.start)} - ${formatTime(slot.end)}</span>
+                                    <div class="small text-success">Available</div>
+                                </button>
+                            </div>`
+                    });
                 });
+                occupiedSlots.forEach(slot => {
+                    const isBuffer = !!slot.is_buffer;
+                    rendered.push({
+                        start: slot.start,
+                        html: `<div class="col-6 col-md-4">
+                                <button type="button" class="btn ${isBuffer ? 'btn-warning text-dark' : 'btn-danger'} w-100" disabled>
+                                    <small class="d-block ${isBuffer ? 'text-dark' : 'text-white'}">${slot.date || date}</small>
+                                    <span class="fw-bold">${formatTime(slot.start)} - ${formatTime(slot.end)}</span>
+                                    <div class="small ${isBuffer ? 'text-dark fw-bold' : 'text-white'}">${isBuffer ? 'Buffer' : 'Occupied'}</div>
+                                </button>
+                            </div>`
+                    });
+                });
+                rendered.sort((a,b) => String(a.start).localeCompare(String(b.start)));
+                let html = '<div class="row g-2">' + rendered.map(r => r.html).join('');
                 html += '</div>';
                 slotContainer.innerHTML = html;
 
-                slotContainer.querySelectorAll('.slot-btn').forEach(btn => {
+                slotContainer.querySelectorAll('.available-slot').forEach(btn => {
                     btn.addEventListener('click', function() {
                         slotContainer.querySelectorAll('.slot-btn').forEach(b => {
-                            b.classList.remove('btn-primary', 'active');
-                            b.classList.add('btn-outline-primary');
+                            b.classList.remove('btn-success', 'active');
+                            b.classList.add('btn-outline-success');
                         });
-                        this.classList.remove('btn-outline-primary');
-                        this.classList.add('btn-primary', 'active');
+                        this.classList.remove('btn-outline-success');
+                        this.classList.add('btn-success', 'active');
                         hiddenStart.value = this.dataset.start;
                         hiddenEnd.value   = this.dataset.end;
                         selectedText.textContent = formatTime(this.dataset.start) + ' – ' + formatTime(this.dataset.end);
                         selectedDisplay.style.display = 'block';
                         submitBtn.disabled = false;
+                        updateQuote();
                     });
                 });
+                const currentBtn = Array.from(slotContainer.querySelectorAll('.available-slot'))
+                    .find(b => b.dataset.start === currentStart && b.dataset.end === currentEnd && date === currentDate);
+                if (currentBtn) {
+                    currentBtn.click();
+                }
             })
-            .catch(err => {
+            .catch(() => {
                 slotContainer.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Failed to load time slots. Please try again.</div>';
-                console.error('Slot load error:', err);
+                clearQuotePreview();
             });
     }
 
@@ -160,6 +231,73 @@
         const ampm = h >= 12 ? 'PM' : 'AM';
         const h12  = h % 12 || 12;
         return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+    }
+
+    function formatCurrency(num) {
+        return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(Number(num || 0));
+    }
+
+    function formatSignedDelta(diff) {
+        const n = Number(diff);
+        if (!Number.isFinite(n) || Math.abs(n) < 0.005) {
+            return { html: '<span class="text-muted">No change</span>' };
+        }
+        const sign = n > 0 ? '+' : '−';
+        const cls = n > 0 ? 'text-danger' : 'text-success';
+        const body = formatCurrency(Math.abs(n));
+        return { html: `<span class="${cls}">${sign} ${body}</span>` };
+    }
+
+    function applyQuoteDeltas(quote) {
+        if (!quoteDeltaTotal || !quoteDeltaBalance) return;
+        quoteDeltaTotal.innerHTML = formatSignedDelta(Number(quote.total_amount) - savedTotalAmount).html;
+        quoteDeltaBalance.innerHTML = formatSignedDelta(Number(quote.balance_amount) - savedBalanceAmount).html;
+    }
+
+    function clearQuoteDeltas() {
+        if (quoteDeltaTotal) quoteDeltaTotal.textContent = '-';
+        if (quoteDeltaBalance) quoteDeltaBalance.textContent = '-';
+    }
+
+    const defaultQuoteStatus = 'Select venue, date and slot to preview.';
+
+    function clearQuotePreview(statusMsg) {
+        if (quoteStatus) quoteStatus.textContent = statusMsg !== undefined ? statusMsg : defaultQuoteStatus;
+        if (quoteBase) quoteBase.textContent = '-';
+        if (quoteSubtotal) quoteSubtotal.textContent = '-';
+        if (quoteTax) quoteTax.textContent = '-';
+        if (quoteTotal) quoteTotal.textContent = '-';
+        if (quoteBalance) quoteBalance.textContent = '-';
+        clearQuoteDeltas();
+    }
+
+    function updateQuote() {
+        if (!hiddenStart.value || !hiddenEnd.value || !dateInput.value) {
+            clearQuotePreview();
+            return;
+        }
+        const params = new URLSearchParams({
+            space_id: String(venueSelect.value || ''),
+            booking_date: String(dateInput.value),
+            start_time: String(hiddenStart.value),
+            end_time: String(hiddenEnd.value)
+        });
+        quoteStatus.textContent = 'Calculating...';
+        fetch(`<?= base_url('bookings/reschedule-quote/' . intval($booking['id'] ?? 0)) ?>?${params.toString()}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success || !data.quote) throw new Error();
+                quoteBase.textContent = formatCurrency(data.quote.base_amount);
+                quoteSubtotal.textContent = formatCurrency(data.quote.subtotal);
+                quoteTax.textContent = formatCurrency(data.quote.tax_amount);
+                quoteTotal.textContent = formatCurrency(data.quote.total_amount);
+                quoteBalance.textContent = formatCurrency(data.quote.balance_amount);
+                applyQuoteDeltas(data.quote);
+                quoteStatus.textContent = 'Preview reflects current selection.';
+            })
+            .catch(() => {
+                clearQuotePreview('Unable to calculate preview.');
+            });
     }
 
     dateInput.addEventListener('change', function() {
@@ -171,6 +309,9 @@
     dateInput.addEventListener('click', function() {
         if (typeof this.showPicker === 'function') this.showPicker();
     });
+    venueSelect.addEventListener('change', function() {
+        if (dateInput.value) loadSlots(dateInput.value);
+    });
 
     document.getElementById('rescheduleForm').addEventListener('submit', function(e) {
         if (!hiddenStart.value || !hiddenEnd.value) {
@@ -178,5 +319,12 @@
             alert('Please select a time slot before confirming.');
         }
     });
+
+    if (dateInput.value) {
+        loadSlots(dateInput.value);
+    } else if (currentDate) {
+        dateInput.value = currentDate;
+        loadSlots(currentDate);
+    }
 })();
 </script>

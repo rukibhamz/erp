@@ -32,24 +32,53 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <input type="text" class="form-control" value="<?= htmlspecialchars($booking['booking_number'] ?? '') ?>" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Date <span class="text-danger">*</span></label>
-                        <select name="booking_date" id="booking_date_select" class="form-select" required>
-                            <option value="<?= htmlspecialchars($booking['booking_date'] ?? '') ?>" selected>
-                                <?= htmlspecialchars(date('M d, Y', strtotime($booking['booking_date'] ?? date('Y-m-d')))) ?> (current)
-                            </option>
+                        <label class="form-label">Venue <span class="text-danger">*</span></label>
+                        <select name="space_id" id="space_select" class="form-select" required>
+                            <?php foreach (($venue_options ?? []) as $venue): ?>
+                                <option value="<?= intval($venue['space_id']) ?>"
+                                        data-facility-id="<?= intval($venue['facility_id']) ?>"
+                                        <?= intval($booking['space_id'] ?? 0) === intval($venue['space_id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($venue['space_name']) ?><?= !empty($venue['property_name']) ? ' - ' . htmlspecialchars($venue['property_name']) : '' ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
-                        <small class="text-muted">Only dates with available slots are listed.</small>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Time <span class="text-danger">*</span></label>
-                        <input type="hidden" name="start_time" id="start_time_input" value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>">
-                        <input type="hidden" name="end_time" id="end_time_input" value="<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>">
-                        <select id="time_slot_select" class="form-select" required>
-                            <option value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5) . '|' . substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>" selected>
-                                <?= htmlspecialchars(date('h:i A', strtotime($booking['start_time'] ?? '00:00:00'))) ?> - <?= htmlspecialchars(date('h:i A', strtotime($booking['end_time'] ?? '00:00:00'))) ?> (current)
-                            </option>
-                        </select>
-                        <small class="text-muted">Time slots are shown as ranges (Start - End).</small>
+                        <label class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" name="booking_date" id="booking_date_input" class="form-control"
+                               value="<?= htmlspecialchars($booking['booking_date'] ?? '') ?>" min="<?= date('Y-m-d') ?>" required>
+                    </div>
+                </div>
+                <input type="hidden" name="start_time" id="start_time_input" value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>">
+                <input type="hidden" name="end_time" id="end_time_input" value="<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>">
+                <div class="mb-4">
+                    <h6 class="mb-2">Time Slots</h6>
+                    <div class="d-flex gap-2 mb-2">
+                        <span class="badge bg-success">Available</span>
+                        <span class="badge bg-danger">Occupied</span>
+                        <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
+                    </div>
+                    <div id="time_slots_container" class="row g-2"></div>
+                    <div id="selected-slot-display" class="alert alert-success mt-2 d-none">
+                        Selected: <strong id="selected-slot-text"></strong>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <div class="card border-info">
+                        <div class="card-header bg-light"><strong>Updated Price Preview</strong></div>
+                        <div class="card-body py-2">
+                            <div id="quote_preview_status" class="small text-muted">Select venue, date, and time slot to preview updated price.</div>
+                            <div class="row mt-2">
+                                <div class="col-6 small">Base:</div><div class="col-6 small text-end" id="quote_base">-</div>
+                                <div class="col-6 small">Subtotal:</div><div class="col-6 small text-end" id="quote_subtotal">-</div>
+                                <div class="col-6 small">Tax:</div><div class="col-6 small text-end" id="quote_tax">-</div>
+                                <div class="col-6 small fw-bold">Total:</div><div class="col-6 small fw-bold text-end" id="quote_total">-</div>
+                                <div class="col-6 small">Balance:</div><div class="col-6 small text-end" id="quote_balance">-</div>
+                                <div class="col-12"><hr class="my-2"></div>
+                                <div class="col-6 small">Total vs saved booking:</div><div class="col-6 small text-end" id="quote_delta_total">-</div>
+                                <div class="col-6 small">Balance vs saved:</div><div class="col-6 small text-end" id="quote_delta_balance">-</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -161,41 +190,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <script nonce="<?= csp_nonce() ?>">
 (function () {
     const bookingId = <?= intval($booking['id'] ?? 0) ?>;
-    const facilityId = <?= intval($booking['facility_id'] ?? ($booking['space_id'] ?? 0)) ?>;
     const currentDate = '<?= htmlspecialchars($booking['booking_date'] ?? '') ?>';
     const currentStart = '<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>';
     const currentEnd = '<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>';
 
-    const dateSelect = document.getElementById('booking_date_select');
-    const slotSelect = document.getElementById('time_slot_select');
+    const venueSelect = document.getElementById('space_select');
+    const dateInput = document.getElementById('booking_date_input');
+    const slotContainer = document.getElementById('time_slots_container');
+    const selectedDisplay = document.getElementById('selected-slot-display');
+    const selectedText = document.getElementById('selected-slot-text');
     const startInput = document.getElementById('start_time_input');
     const endInput = document.getElementById('end_time_input');
-
-    function displayTime(timeValue) {
-        const mins = toMinutes(timeValue);
-        if (mins === null) return timeValue;
-        let hour = Math.floor(mins / 60);
-        const minute = mins % 60;
-        const suffix = hour >= 12 ? 'PM' : 'AM';
-        hour = hour % 12 || 12;
-        return hour + ':' + String(minute).padStart(2, '0') + ' ' + suffix;
-    }
-
-    function displayDate(dateValue) {
-        const dt = new Date(dateValue + 'T00:00:00');
-        if (isNaN(dt.getTime())) return dateValue;
-        return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    }
-
-    function setSelectOptions(select, options, selectedValue) {
-        const normalizedSelected = String(selectedValue || '');
-        let html = '';
-        options.forEach(opt => {
-            const selected = String(opt.value) === normalizedSelected ? ' selected' : '';
-            html += '<option value="' + escapeHtml(opt.value) + '"' + selected + '>' + escapeHtml(opt.label) + '</option>';
-        });
-        select.innerHTML = html;
-    }
+    const quoteStatus = document.getElementById('quote_preview_status');
+    const quoteBase = document.getElementById('quote_base');
+    const quoteSubtotal = document.getElementById('quote_subtotal');
+    const quoteTax = document.getElementById('quote_tax');
+    const quoteTotal = document.getElementById('quote_total');
+    const quoteBalance = document.getElementById('quote_balance');
+    const quoteDeltaTotal = document.getElementById('quote_delta_total');
+    const quoteDeltaBalance = document.getElementById('quote_delta_balance');
+    const savedTotalAmount = <?= json_encode(floatval($booking['total_amount'] ?? 0)) ?>;
+    const savedBalanceAmount = <?= json_encode(floatval($booking['balance_amount'] ?? 0)) ?>;
+    const discountInput = document.querySelector('input[name="discount_amount"]');
+    const guestsInput = document.querySelector('input[name="number_of_guests"]');
 
     function escapeHtml(value) {
         return String(value)
@@ -206,115 +223,207 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             .replace(/'/g, '&#039;');
     }
 
-    function syncSelectedSlotToHiddenFields() {
-        const selected = slotSelect.value || '';
-        const parts = selected.split('|');
-        if (parts.length !== 2) {
-            startInput.value = '';
-            endInput.value = '';
-            return;
-        }
-        startInput.value = parts[0];
-        endInput.value = parts[1];
+    function formatTime(t) {
+        const [h, m] = String(t || '').split(':').map(Number);
+        if (isNaN(h) || isNaN(m)) return t;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
     }
 
-    function loadSlotsForDate(dateValue) {
-        if (!dateValue || !facilityId) return;
+    function getFacilityId() {
+        const option = venueSelect?.options?.[venueSelect.selectedIndex];
+        return parseInt(option?.dataset?.facilityId || '0', 10);
+    }
 
-        setSelectOptions(slotSelect, [{ value: '', label: 'Loading available slots...' }], '');
+    function setSelectedSlot(start, end, activeBtn) {
+        startInput.value = start || '';
+        endInput.value = end || '';
+        if (start && end) {
+            selectedText.textContent = `${formatTime(start)} - ${formatTime(end)}`;
+            selectedDisplay.classList.remove('d-none');
+        } else {
+            selectedDisplay.classList.add('d-none');
+        }
 
+        if (activeBtn) {
+            slotContainer.querySelectorAll('.slot-card').forEach(btn => {
+                btn.classList.remove('btn-success', 'active');
+                btn.classList.add('btn-outline-success');
+            });
+            activeBtn.classList.remove('btn-outline-success');
+            activeBtn.classList.add('btn-success', 'active');
+        }
+        updateQuote();
+    }
+
+    function formatCurrency(num) {
+        return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(Number(num || 0));
+    }
+
+    function formatSignedDelta(diff) {
+        const n = Number(diff);
+        if (!Number.isFinite(n) || Math.abs(n) < 0.005) {
+            return { html: '<span class="text-muted">No change</span>', raw: 'No change' };
+        }
+        const sign = n > 0 ? '+' : '−';
+        const cls = n > 0 ? 'text-danger' : 'text-success';
+        const body = formatCurrency(Math.abs(n));
+        return { html: `<span class="${cls}">${sign} ${body}</span>`, raw: sign + ' ' + body };
+    }
+
+    function applyQuoteDeltas(quote) {
+        if (!quoteDeltaTotal || !quoteDeltaBalance) return;
+        const dt = formatSignedDelta(Number(quote.total_amount) - savedTotalAmount);
+        const db = formatSignedDelta(Number(quote.balance_amount) - savedBalanceAmount);
+        quoteDeltaTotal.innerHTML = dt.html;
+        quoteDeltaBalance.innerHTML = db.html;
+    }
+
+    function clearQuoteDeltas() {
+        if (quoteDeltaTotal) quoteDeltaTotal.textContent = '-';
+        if (quoteDeltaBalance) quoteDeltaBalance.textContent = '-';
+    }
+
+    const defaultQuoteStatus = 'Select venue, date, and time slot to preview updated price.';
+
+    function clearQuotePreview(statusMsg) {
+        if (quoteStatus) quoteStatus.textContent = statusMsg !== undefined ? statusMsg : defaultQuoteStatus;
+        if (quoteBase) quoteBase.textContent = '-';
+        if (quoteSubtotal) quoteSubtotal.textContent = '-';
+        if (quoteTax) quoteTax.textContent = '-';
+        if (quoteTotal) quoteTotal.textContent = '-';
+        if (quoteBalance) quoteBalance.textContent = '-';
+        clearQuoteDeltas();
+    }
+
+    function updateQuote() {
+        const facilityId = getFacilityId();
+        const dateValue = dateInput.value;
+        const startValue = startInput.value;
+        const endValue = endInput.value;
+        if (!facilityId || !dateValue || !startValue || !endValue) {
+            clearQuotePreview();
+            return;
+        }
+
+        const params = new URLSearchParams({
+            space_id: String(venueSelect.value || ''),
+            booking_date: String(dateValue),
+            start_time: String(startValue),
+            end_time: String(endValue),
+            discount_amount: String(discountInput?.value || 0),
+            number_of_guests: String(guestsInput?.value || 1)
+        });
+        quoteStatus.textContent = 'Calculating...';
+        fetch(`<?= base_url('bookings/reschedule-quote/' . intval($booking['id'] ?? 0)) ?>?${params.toString()}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success || !data.quote) throw new Error(data.message || 'Failed to calculate quote');
+                quoteBase.textContent = formatCurrency(data.quote.base_amount);
+                quoteSubtotal.textContent = formatCurrency(data.quote.subtotal);
+                quoteTax.textContent = formatCurrency(data.quote.tax_amount);
+                quoteTotal.textContent = formatCurrency(data.quote.total_amount);
+                quoteBalance.textContent = formatCurrency(data.quote.balance_amount);
+                applyQuoteDeltas(data.quote);
+                quoteStatus.textContent = 'Preview reflects current selection.';
+            })
+            .catch(() => {
+                clearQuotePreview('Unable to calculate preview.');
+            });
+    }
+
+    function renderSlots(data, dateValue) {
+        const available = (data.slots || []).filter(s => !!s.available);
+        const occupied = data.occupied || [];
+        const cards = [];
+        const today = (new Date()).toISOString().slice(0, 10);
+
+        available.forEach(slot => {
+            cards.push({
+                start: slot.start,
+                html: `<div class="col-md-6 col-lg-4">
+                        <button type="button" class="btn btn-outline-success w-100 slot-card available-slot" data-start="${escapeHtml(slot.start)}" data-end="${escapeHtml(slot.end)}">
+                            <small class="d-block text-muted">${slot.date === today ? 'Today' : escapeHtml(slot.date)}</small>
+                            <span class="fw-bold">${escapeHtml(formatTime(slot.start))} - ${escapeHtml(formatTime(slot.end))}</span>
+                            <div class="small text-success">Available</div>
+                        </button>
+                    </div>`
+            });
+        });
+
+        occupied.forEach(slot => {
+            const isBuffer = !!slot.is_buffer;
+            cards.push({
+                start: slot.start,
+                html: `<div class="col-md-6 col-lg-4">
+                        <button type="button" class="btn ${isBuffer ? 'btn-warning text-dark' : 'btn-danger'} w-100" disabled>
+                            <small class="d-block ${isBuffer ? 'text-dark' : 'text-white'}">${escapeHtml(slot.date || dateValue)}</small>
+                            <span class="fw-bold">${escapeHtml(formatTime(slot.start))} - ${escapeHtml(formatTime(slot.end))}</span>
+                            <div class="small ${isBuffer ? 'text-dark fw-bold' : 'text-white'}">${isBuffer ? 'Buffer' : 'Occupied'}</div>
+                        </button>
+                    </div>`
+            });
+        });
+
+        cards.sort((a, b) => String(a.start).localeCompare(String(b.start)));
+        if (cards.length === 0) {
+            slotContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning mb-0">No available time slots on this date.</div></div>';
+            setSelectedSlot('', '');
+            return;
+        }
+
+        slotContainer.innerHTML = cards.map(c => c.html).join('');
+        slotContainer.querySelectorAll('.available-slot').forEach(btn => {
+            btn.addEventListener('click', function () {
+                setSelectedSlot(this.dataset.start, this.dataset.end, this);
+            });
+        });
+
+        const currentBtn = Array.from(slotContainer.querySelectorAll('.available-slot'))
+            .find(b => b.dataset.start === currentStart && b.dataset.end === currentEnd && dateValue === currentDate);
+        if (currentBtn) {
+            setSelectedSlot(currentStart, currentEnd, currentBtn);
+        } else {
+            setSelectedSlot('', '');
+        }
+    }
+
+    function loadSlots() {
+        const facilityId = getFacilityId();
+        const dateValue = dateInput.value;
+        if (!facilityId || !dateValue) {
+            slotContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning mb-0">Select venue and date to load slots.</div></div>';
+            setSelectedSlot('', '');
+            return;
+        }
+
+        clearQuotePreview();
+        slotContainer.innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>';
         fetch(`<?= base_url('bookings/get-slots') ?>?facility_id=${facilityId}&date=${encodeURIComponent(dateValue)}&exclude_booking_id=${bookingId}`)
             .then(response => response.json())
             .then(data => {
                 if (!data.success) {
                     throw new Error(data.message || 'Failed to load slots.');
                 }
-
-                const availableSlots = (data.slots || []).filter(slot => !!slot.available);
-                const slotOptions = availableSlots.map(slot => ({
-                    value: String(slot.start) + '|' + String(slot.end),
-                    label: displayTime(slot.start) + ' - ' + displayTime(slot.end)
-                }));
-
-                if (dateValue === currentDate && currentStart) {
-                    const currentValue = currentStart + '|' + currentEnd;
-                    const exists = slotOptions.some(opt => opt.value === currentValue);
-                    if (!exists) {
-                        slotOptions.unshift({
-                            value: currentValue,
-                            label: displayTime(currentStart) + ' - ' + displayTime(currentEnd) + ' (current)'
-                        });
-                    }
-                }
-
-                if (slotOptions.length === 0) {
-                    setSelectOptions(slotSelect, [{ value: '', label: 'No available slots for selected date' }], '');
-                    startInput.value = '';
-                    endInput.value = '';
-                    return;
-                }
-
-                const preferredSlot = (dateValue === currentDate)
-                    ? (currentStart + '|' + currentEnd)
-                    : slotOptions[0].value;
-
-                setSelectOptions(slotSelect, slotOptions, preferredSlot);
-                syncSelectedSlotToHiddenFields();
+                renderSlots(data, dateValue);
             })
             .catch(() => {
-                setSelectOptions(slotSelect, [{ value: '', label: 'Failed to load slots. Try another date.' }], '');
-                startInput.value = '';
-                endInput.value = '';
+                slotContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger mb-0">Failed to load slots. Try another date.</div></div>';
+                clearQuotePreview();
+                setSelectedSlot('', '');
             });
     }
 
-    function loadAvailableDates() {
-        if (!facilityId) {
-            setSelectOptions(dateSelect, [{ value: currentDate, label: displayDate(currentDate) + ' (current)' }], currentDate);
-            return;
-        }
-
-        setSelectOptions(dateSelect, [{ value: '', label: 'Loading available dates...' }], '');
-        fetch(`<?= base_url('bookings/get-available-dates') ?>?facility_id=${facilityId}&exclude_booking_id=${bookingId}&days=60`)
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    throw new Error(data.message || 'Failed to load dates.');
-                }
-
-                const options = (data.dates || []).map(item => ({
-                    value: item.date,
-                    label: displayDate(item.date) + ' (' + (item.slots_count || 0) + ' slots)'
-                }));
-
-                if (currentDate) {
-                    const hasCurrent = options.some(opt => opt.value === currentDate);
-                    if (!hasCurrent) {
-                        options.unshift({ value: currentDate, label: displayDate(currentDate) + ' (current)' });
-                    }
-                }
-
-                if (options.length === 0) {
-                    options.push({ value: currentDate, label: displayDate(currentDate) + ' (current)' });
-                }
-
-                const selectedDate = currentDate || options[0].value;
-                setSelectOptions(dateSelect, options, selectedDate);
-                loadSlotsForDate(selectedDate);
-            })
-            .catch(() => {
-                const fallbackDate = currentDate || '';
-                setSelectOptions(dateSelect, [{ value: fallbackDate, label: displayDate(fallbackDate) + ' (current)' }], fallbackDate);
-                loadSlotsForDate(fallbackDate);
-            });
-    }
-
-    dateSelect.addEventListener('change', function () {
-        loadSlotsForDate(this.value);
+    venueSelect?.addEventListener('change', loadSlots);
+    dateInput?.addEventListener('change', loadSlots);
+    discountInput?.addEventListener('input', updateQuote);
+    guestsInput?.addEventListener('input', updateQuote);
+    dateInput?.addEventListener('click', function () {
+        if (typeof this.showPicker === 'function') this.showPicker();
     });
 
-    slotSelect.addEventListener('change', syncSelectedSlotToHiddenFields);
-    loadAvailableDates();
+    loadSlots();
 })();
 </script>
 

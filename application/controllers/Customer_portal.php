@@ -6,6 +6,9 @@ class Customer_portal extends Base_Controller {
     private $bookingModel;
     private $facilityModel;
     private $bookingPaymentModel;
+    private $spaceModel;
+    private $bookingAddonModel;
+    private $bookingRentalModel;
     
     public function __construct() {
         parent::__construct();
@@ -13,6 +16,9 @@ class Customer_portal extends Base_Controller {
         $this->bookingModel = $this->loadModel('Booking_model');
         $this->facilityModel = $this->loadModel('Facility_model');
         $this->bookingPaymentModel = $this->loadModel('Booking_payment_model');
+        $this->spaceModel = $this->loadModel('Space_model');
+        $this->bookingAddonModel = $this->loadModel('Booking_addon_model');
+        $this->bookingRentalModel = $this->loadModel('Booking_rental_model');
         $this->loadLibrary('Email_sender');
     }
     
@@ -416,6 +422,7 @@ class Customer_portal extends Base_Controller {
             $newDate      = sanitize_input($_POST['booking_date'] ?? '');
             $newStartTime = sanitize_input($_POST['start_time'] ?? '');
             $newEndTime   = sanitize_input($_POST['end_time'] ?? '');
+            $selectedSpaceId = intval($_POST['space_id'] ?? 0);
             $reason       = sanitize_input($_POST['reason'] ?? '');
 
             if (!$newDate || !$newStartTime || !$newEndTime) {
@@ -425,7 +432,13 @@ class Customer_portal extends Base_Controller {
             }
 
             try {
-                $resourceId = $booking['facility_id'];
+                $selectedSpace = $this->resolveBookingSpace($selectedSpaceId, $booking);
+                if (!$selectedSpace) {
+                    $this->setFlashMessage('danger', 'Please select a valid venue.');
+                    redirect('customer-portal/reschedule-booking/' . $id);
+                    return;
+                }
+                $resourceId = intval($selectedSpace['facility_id']);
                 if (!$this->facilityModel->checkAdvancedAvailability($resourceId, $newDate . ' ' . $newStartTime, $newDate . ' ' . $newEndTime, $id)) {
                     $this->setFlashMessage('danger', 'The selected time slot is no longer available. Please choose another.');
                     redirect('customer-portal/reschedule-booking/' . $id);
@@ -433,11 +446,27 @@ class Customer_portal extends Base_Controller {
                 }
 
                 $duration = abs(strtotime($newEndTime) - strtotime($newStartTime)) / 3600;
+                $pricing = $this->recalculateBookingPricing(
+                    $id,
+                    $booking,
+                    $resourceId,
+                    $newDate,
+                    $newStartTime,
+                    $newEndTime
+                );
                 $this->bookingModel->update($id, [
                     'booking_date'   => $newDate,
                     'start_time'     => $newStartTime,
                     'end_time'       => $newEndTime,
-                    'duration_hours' => $duration
+                    'duration_hours' => $duration,
+                    'space_id'       => intval($selectedSpace['space_id']),
+                    'facility_id'    => $resourceId,
+                    'location_id'    => intval($selectedSpace['property_id'] ?? 0),
+                    'base_amount'    => $pricing['base_amount'],
+                    'subtotal'       => $pricing['subtotal'],
+                    'tax_amount'     => $pricing['tax_amount'],
+                    'total_amount'   => $pricing['total_amount'],
+                    'balance_amount' => $pricing['balance_amount']
                 ]);
                 $this->bookingModel->createSlots($id, $resourceId, $newDate, $newStartTime, $newEndTime);
 
@@ -454,9 +483,143 @@ class Customer_portal extends Base_Controller {
         $data = [
             'page_title' => 'Reschedule Booking',
             'booking'    => $booking,
+            'venue_options' => $this->getVenueOptionsForBooking($booking),
             'flash'      => $this->getFlashMessage()
         ];
         $this->loadView('customer_portal/reschedule_booking', $data);
+    }
+
+    public function getRescheduleQuote($id) {
+        $this->requireCustomerAuth();
+        while (ob_get_level()) { ob_end_clean(); }
+        header('Content-Type: application/json');
+
+        try {
+            $userId = $this->session['customer_user_id'];
+            $user = $this->customerPortalUserModel->getById($userId);
+            $booking = $this->bookingModel->getById(intval($id));
+            if (!$booking || ($booking['customer_email'] ?? '') !== ($user['email'] ?? '')) {
+                echo json_encode(['success' => false, 'message' => 'Booking not found.']);
+                exit;
+            }
+
+            $spaceId = intval($_GET['space_id'] ?? ($booking['space_id'] ?? 0));
+            $date = sanitize_input($_GET['booking_date'] ?? ($booking['booking_date'] ?? date('Y-m-d')));
+            $start = sanitize_input($_GET['start_time'] ?? ($booking['start_time'] ?? '00:00:00'));
+            $end = sanitize_input($_GET['end_time'] ?? ($booking['end_time'] ?? '00:00:00'));
+
+            $space = $this->resolveBookingSpace($spaceId, $booking);
+            if (!$space) {
+                echo json_encode(['success' => false, 'message' => 'Invalid venue selected.']);
+                exit;
+            }
+
+            $pricing = $this->recalculateBookingPricing($id, $booking, intval($space['facility_id']), $date, $start, $end);
+            echo json_encode(['success' => true, 'quote' => $pricing]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    private function getVenueOptionsForBooking($booking) {
+        try {
+            $propertyId = 0;
+            if (!empty($booking['space_id'])) {
+                $space = $this->spaceModel->getWithProperty(intval($booking['space_id']));
+                $propertyId = intval($space['property_id'] ?? 0);
+            }
+
+            $spaces = $this->spaceModel->getBookableSpaces($propertyId ?: null);
+            $options = [];
+            foreach ($spaces as $space) {
+                $facilityId = intval($space['facility_id'] ?? 0);
+                if ($facilityId <= 0 && !empty($space['id'])) {
+                    $facilityId = intval($this->spaceModel->syncToBookingModule(intval($space['id'])) ?: 0);
+                }
+                if ($facilityId <= 0) continue;
+                $options[] = [
+                    'space_id' => intval($space['id']),
+                    'facility_id' => $facilityId,
+                    'property_id' => intval($space['property_id'] ?? 0),
+                    'space_name' => $space['space_name'] ?? ('Space #' . intval($space['id'])),
+                    'property_name' => $space['property_name'] ?? ''
+                ];
+            }
+            if (empty($options) && !empty($booking['space_id'])) {
+                $currentSpace = $this->spaceModel->getWithProperty(intval($booking['space_id']));
+                if ($currentSpace) {
+                    $currentFacilityId = intval($currentSpace['facility_id'] ?? intval($booking['facility_id'] ?? 0));
+                    if ($currentFacilityId > 0) {
+                        $options[] = [
+                            'space_id' => intval($currentSpace['id']),
+                            'facility_id' => $currentFacilityId,
+                            'property_id' => intval($currentSpace['property_id'] ?? 0),
+                            'space_name' => $currentSpace['space_name'] ?? ('Space #' . intval($currentSpace['id'])),
+                            'property_name' => $currentSpace['property_name'] ?? ''
+                        ];
+                    }
+                }
+            }
+            return $options;
+        } catch (Exception $e) {
+            error_log('Customer portal getVenueOptionsForBooking error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function resolveBookingSpace($selectedSpaceId, $booking) {
+        $spaceId = intval($selectedSpaceId ?: ($booking['space_id'] ?? 0));
+        if ($spaceId <= 0) return null;
+        $space = $this->spaceModel->getWithProperty($spaceId);
+        if (!$space) return null;
+        $facilityId = intval($space['facility_id'] ?? 0);
+        if ($facilityId <= 0) {
+            $facilityId = intval($this->spaceModel->syncToBookingModule($spaceId) ?: 0);
+        }
+        if ($facilityId <= 0) return null;
+        return [
+            'space_id' => $spaceId,
+            'facility_id' => $facilityId,
+            'property_id' => intval($space['property_id'] ?? 0)
+        ];
+    }
+
+    private function recalculateBookingPricing($bookingId, $booking, $facilityId, $date, $startTime, $endTime) {
+        $bookingType = $booking['booking_type'] ?? 'hourly';
+        $quantity = in_array($bookingType, ['picnic', 'photoshoot', 'videoshoot', 'workspace'])
+            ? max(1, intval($booking['number_of_guests'] ?? 1))
+            : max(1, intval($booking['quantity'] ?? 1));
+
+        $baseAmount = floatval($this->facilityModel->calculatePrice(
+            $facilityId,
+            $date,
+            $startTime,
+            $endTime,
+            $bookingType,
+            $quantity,
+            false,
+            $booking['end_date'] ?? null,
+            $booking['equipment_tier'] ?? null
+        ));
+
+        $addonsTotal = $this->bookingAddonModel ? floatval($this->bookingAddonModel->getTotalByBooking($bookingId)) : 0;
+        $rentalsTotal = $this->bookingRentalModel ? floatval($this->bookingRentalModel->getTotalByBooking($bookingId)) : 0;
+        $subtotal = $baseAmount + $addonsTotal + $rentalsTotal;
+        $taxRate = floatval($booking['tax_rate'] ?? 0);
+        $taxAmount = $subtotal * ($taxRate / 100);
+        $discount = floatval($booking['discount_amount'] ?? 0);
+        $totalAmount = max(0, $subtotal + $taxAmount - $discount);
+        $paidAmount = floatval($booking['paid_amount'] ?? 0);
+        $balanceAmount = $totalAmount - $paidAmount;
+
+        return [
+            'base_amount' => $baseAmount,
+            'subtotal' => $subtotal,
+            'tax_amount' => $taxAmount,
+            'total_amount' => $totalAmount,
+            'balance_amount' => $balanceAmount
+        ];
     }
 
     /**
