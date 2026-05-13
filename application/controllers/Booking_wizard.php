@@ -995,7 +995,19 @@ class Booking_wizard extends Base_Controller {
             if (!isset($_SESSION['booking_data'])) {
                 $_SESSION['booking_data'] = [];
             }
-            
+
+            if ($step === 4 && array_key_exists('customer_email', $data)) {
+                $email = trim((string) ($data['customer_email'] ?? ''));
+                if ($email === '' || !validate_email($email)) {
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Please enter a valid email address, including your domain with a dot (e.g. name@gmail.com).',
+                    ]);
+                    exit;
+                }
+                $data['customer_email'] = $email;
+            }
+
             // Merge step data
             $_SESSION['booking_data'] = array_merge($_SESSION['booking_data'], $data);
             
@@ -1115,7 +1127,15 @@ class Booking_wizard extends Base_Controller {
             $this->setFlashMessage('danger', 'Please complete all steps.');
             redirect('booking-wizard/step1');
         }
-        
+
+        $customerEmail = trim((string) $bookingData['customer_email']);
+        if (!validate_email($customerEmail)) {
+            $this->setFlashMessage('danger', 'Please enter a valid email address, including your domain with a dot (e.g. name@gmail.com).');
+            redirect('booking-wizard/step4');
+        }
+        $bookingData['customer_email'] = $customerEmail;
+        $_SESSION['booking_data']['customer_email'] = $customerEmail;
+
         try {
             $pdo = $this->db->getConnection();
             $pdo->beginTransaction();
@@ -1759,10 +1779,16 @@ class Booking_wizard extends Base_Controller {
      * @param string $email
      * @param string $name
      * @param string $phone
-     * @return int|null User ID
+     * @return int|null Portal user id, or null if email invalid / creation failed
      */
     private function createGuestUser($email, $name, $phone) {
         try {
+            $email = trim((string) $email);
+            if ($email === '' || !validate_email($email)) {
+                error_log('Booking_wizard createGuestUser: invalid email, skipping portal account');
+                return null;
+            }
+
             // Check if customer portal user already exists
             $user = $this->customerPortalUserModel->getByEmail($email);
             if ($user) {

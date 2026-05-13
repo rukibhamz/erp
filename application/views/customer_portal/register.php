@@ -35,8 +35,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                         <div class="mb-3">
                             <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control" required
+                            <input type="email" name="email" class="form-control" required autocomplete="email"
+                                   pattern="[^\s@]+@[^\s@]+\.[^\s@]{2,}"
+                                   title="Use a full address with @ and a domain that includes a dot (e.g. name@gmail.com)"
                                    value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+                            <small class="text-muted">Example: you@example.com — include the part after the dot (like .com).</small>
                         </div>
 
                         <div class="mb-3">

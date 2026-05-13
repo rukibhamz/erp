@@ -61,7 +61,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                                <input type="email" name="customer_email" class="form-control" required
+                                <input type="email" name="customer_email" class="form-control" required autocomplete="email"
+                                       pattern="[^\s@]+@[^\s@]+\.[^\s@]{2,}"
+                                       title="Use a full address with @ and a domain that includes a dot (e.g. name@gmail.com)"
                                        value="<?= htmlspecialchars($booking_data['customer_email'] ?? $booking_data['customer_email'] ?? '') ?>">
                             </div>
                         </div>

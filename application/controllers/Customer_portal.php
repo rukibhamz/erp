@@ -82,9 +82,9 @@ class Customer_portal extends Base_Controller {
                 redirect('customer-portal/register');
             }
             
-            // Validate email format
+            // Validate email format (requires dotted domain, e.g. .com — rejects gmailcom typos)
             if (!validate_email($data['email'])) {
-                $this->setFlashMessage('danger', 'Invalid email address.');
+                $this->setFlashMessage('danger', 'Invalid email address. Use a full address like name@example.com and include your domain extension (for example .com).');
                 redirect('customer-portal/register');
             }
             

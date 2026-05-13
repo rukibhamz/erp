@@ -12,11 +12,46 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @return bool
  */
 if (!function_exists('validate_email')) {
+    /**
+     * Validate email for sign-up and contact forms.
+     * Stricter than filter_var alone: requires a dotted domain (e.g. .com) so typos
+     * like name@gmailcom are rejected; enforces length and basic structure.
+     */
     function validate_email($email) {
-        if (empty($email)) {
+        if (!is_string($email)) {
             return false;
         }
-        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+        $email = trim($email);
+        if ($email === '' || strlen($email) > 254) {
+            return false;
+        }
+        if (substr_count($email, '@') !== 1) {
+            return false;
+        }
+        [$local, $domain] = explode('@', $email, 2);
+        if ($local === '' || $domain === '' || strlen($local) > 64) {
+            return false;
+        }
+        // Public mail domains must include a dot (rejects gmailcom, yahooo, etc.)
+        if (strpos($domain, '.') === false) {
+            return false;
+        }
+        if ($domain !== trim($domain, '.')) {
+            return false;
+        }
+        if (strpos($domain, '..') !== false || strpos($local, '..') !== false) {
+            return false;
+        }
+        $labels = explode('.', $domain);
+        $tld = end($labels);
+        if ($tld === false || strlen($tld) < 2) {
+            return false;
+        }
+        $flags = defined('FILTER_FLAG_EMAIL_UNICODE') ? FILTER_FLAG_EMAIL_UNICODE : 0;
+        if (filter_var($email, FILTER_VALIDATE_EMAIL, $flags) === false) {
+            return false;
+        }
+        return true;
     }
 }
 
