@@ -60,11 +60,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                        value="<?= htmlspecialchars($booking_data['customer_name'] ?? '') ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                                <input type="email" name="customer_email" class="form-control" required autocomplete="email"
-                                       pattern="[^\s@]+@[^\s@]+\.[^\s@]{2,}"
-                                       title="Use a full address with @ and a domain that includes a dot (e.g. name@gmail.com)"
-                                       value="<?= htmlspecialchars($booking_data['customer_email'] ?? $booking_data['customer_email'] ?? '') ?>">
+                                <label class="form-label" for="customer_email">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" name="customer_email" id="customer_email" class="form-control" required
+                                       autocomplete="email" inputmode="email" spellcheck="false"
+                                       placeholder="name@domain.com"
+                                       aria-describedby="customer_email_help customer_email_feedback"
+                                       value="<?= htmlspecialchars($booking_data['customer_email'] ?? '') ?>">
+                                <div id="customer_email_help" class="form-text">Format: <strong>name@domain.extension</strong> (e.g. you@gmail.com)</div>
+                                <div id="customer_email_feedback" class="invalid-feedback"></div>
                             </div>
                         </div>
 
@@ -104,7 +107,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <a href="<?= base_url('booking-wizard/step3/' . ($booking_data['resource_id'] ?? '')) ?>" class="btn btn-outline-dark">
                                 <i class="bi bi-arrow-left"></i> Back
                             </a>
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" id="step4_continue_btn" class="btn btn-primary" disabled>
                                 Continue to Review <i class="bi bi-arrow-right"></i>
                             </button>
                         </div>
@@ -118,35 +121,136 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <script nonce="<?= csp_nonce() ?>">
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('customer-info-form');
-    
+    const emailInput = document.getElementById('customer_email');
+    const emailFeedback = document.getElementById('customer_email_feedback');
+    const continueBtn = document.getElementById('step4_continue_btn');
+    const EMAIL_FORMAT_MSG = 'Enter a valid email as name@domain.extension (e.g. you@gmail.com).';
+
+    /** Matches server validate_email(): name@domain.extension */
+    function isValidCustomerEmail(email) {
+        const e = String(email || '').trim();
+        if (!e || e.length > 254) return false;
+        if ((e.match(/@/g) || []).length !== 1) return false;
+        const parts = e.split('@');
+        const local = parts[0];
+        const domain = parts[1];
+        if (!local || !domain || local.length > 64) return false;
+        if (domain.indexOf('.') === -1) return false;
+        if (domain !== domain.replace(/^\.+|\.+$/g, '') || domain.indexOf('..') !== -1 || local.indexOf('..') !== -1) {
+            return false;
+        }
+        const labels = domain.split('.');
+        const tld = labels[labels.length - 1];
+        if (!tld || tld.length < 2) return false;
+        return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+    }
+
+    function setEmailValidity(valid, message) {
+        if (!emailInput) return;
+        emailInput.classList.remove('is-valid', 'is-invalid');
+        if (valid) {
+            emailInput.classList.add('is-valid');
+            if (emailFeedback) {
+                emailFeedback.textContent = '';
+                emailFeedback.classList.remove('d-block');
+            }
+        } else {
+            emailInput.classList.add('is-invalid');
+            if (emailFeedback) {
+                emailFeedback.textContent = message || EMAIL_FORMAT_MSG;
+                emailFeedback.classList.add('d-block');
+            }
+        }
+    }
+
+    function updateContinueButton() {
+        if (!continueBtn || !form) return;
+        const emailOk = isValidCustomerEmail(emailInput ? emailInput.value : '');
+        const formOk = form.checkValidity() && emailOk;
+        continueBtn.disabled = !formOk;
+    }
+
+    function validateEmailLive(showEmptyHint) {
+        const raw = emailInput ? emailInput.value : '';
+        const trimmed = raw.trim();
+        if (trimmed === '') {
+            if (emailInput) {
+                emailInput.classList.remove('is-valid', 'is-invalid');
+            }
+            if (emailFeedback) {
+                emailFeedback.textContent = showEmptyHint ? 'Email is required.' : '';
+                emailFeedback.classList.toggle('d-block', !!showEmptyHint);
+            }
+            updateContinueButton();
+            return false;
+        }
+        const ok = isValidCustomerEmail(trimmed);
+        setEmailValidity(ok, ok ? '' : EMAIL_FORMAT_MSG);
+        updateContinueButton();
+        return ok;
+    }
+
+    if (emailInput) {
+        emailInput.addEventListener('input', function() {
+            validateEmailLive(false);
+        });
+        emailInput.addEventListener('blur', function() {
+            validateEmailLive(true);
+        });
+    }
+
+    form.querySelectorAll('input, textarea, select').forEach(function(el) {
+        if (el === emailInput) return;
+        el.addEventListener('input', updateContinueButton);
+        el.addEventListener('change', updateContinueButton);
+    });
+
+    validateEmailLive(false);
+    updateContinueButton();
+
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
+        if (!validateEmailLive(true)) {
+            emailInput.focus();
+            return;
+        }
+
         const formData = new FormData(form);
         const data = {};
-        formData.forEach((value, key) => {
+        formData.forEach(function(value, key) {
             data[key] = value;
         });
-        
-        // Save customer info to session
+        data.customer_email = String(data.customer_email || '').trim();
+
+        continueBtn.disabled = true;
+
         fetch('<?= base_url('booking-wizard/save-step') ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `step=4&data=${encodeURIComponent(JSON.stringify(data))}`
+            body: 'step=4&data=' + encodeURIComponent(JSON.stringify(data))
         })
-        .then(response => response.json())
-        .then(result => {
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
             if (result.success) {
                 window.location.href = '<?= base_url('booking-wizard/step5') ?>';
-            } else {
-                alert('Error saving data. Please try again.');
+                return;
             }
+            const msg = result.message || 'Error saving data. Please try again.';
+            if (result.message && emailInput) {
+                setEmailValidity(false, msg);
+                emailInput.focus();
+            } else {
+                alert(msg);
+            }
+            updateContinueButton();
         })
-        .catch(error => {
+        .catch(function(error) {
             console.error('Error:', error);
             alert('Error saving data. Please try again.');
+            updateContinueButton();
         });
     });
 });

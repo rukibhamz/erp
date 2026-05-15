@@ -770,6 +770,13 @@ class Booking_wizard extends Base_Controller {
             redirect('booking-wizard/step1');
         }
 
+        $customerEmail = trim((string) $bookingData['customer_email']);
+        if (!validate_email($customerEmail)) {
+            $this->setFlashMessage('danger', 'Please enter a valid email as name@domain.extension (e.g. you@gmail.com).');
+            redirect('booking-wizard/step4');
+        }
+        $_SESSION['booking_data']['customer_email'] = $customerEmail;
+
         try {
             $resource = $this->facilityModel->getById($bookingData['resource_id']);
             
@@ -1001,7 +1008,7 @@ class Booking_wizard extends Base_Controller {
                 if ($email === '' || !validate_email($email)) {
                     echo json_encode([
                         'success' => false,
-                        'message' => 'Please enter a valid email address, including your domain with a dot (e.g. name@gmail.com).',
+                        'message' => 'Please enter a valid email as name@domain.extension (e.g. you@gmail.com).',
                     ]);
                     exit;
                 }
@@ -1130,7 +1137,7 @@ class Booking_wizard extends Base_Controller {
 
         $customerEmail = trim((string) $bookingData['customer_email']);
         if (!validate_email($customerEmail)) {
-            $this->setFlashMessage('danger', 'Please enter a valid email address, including your domain with a dot (e.g. name@gmail.com).');
+            $this->setFlashMessage('danger', 'Please enter a valid email as name@domain.extension (e.g. you@gmail.com).');
             redirect('booking-wizard/step4');
         }
         $bookingData['customer_email'] = $customerEmail;
