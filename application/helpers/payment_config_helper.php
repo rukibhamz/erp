@@ -62,3 +62,75 @@ function resolve_payment_provider($gatewayModel) {
     $default = $gatewayModel->getDefault();
     return $default ? strtolower($default['gateway_code']) : 'paystack';
 }
+
+/**
+ * Whether a gateway row is active and has API credentials configured.
+ */
+function payment_gateway_is_usable(array $gateway) {
+    if (empty($gateway['is_active'])) {
+        return false;
+    }
+
+    $code = strtolower($gateway['gateway_code'] ?? '');
+    $hasSecret = trim($gateway['private_key'] ?? '') !== '' || trim($gateway['secret_key'] ?? '') !== '';
+
+    if ($code === 'paystack') {
+        return $hasSecret && trim($gateway['public_key'] ?? '') !== '';
+    }
+
+    return $hasSecret;
+}
+
+/**
+ * Pick an active gateway: requested → default → env → first active.
+ *
+ * @return array{gateway:array,gateway_code:string,requested_code:?string,fallback_used:bool}|null
+ */
+function resolve_payment_gateway($gatewayModel, $requestedCode = null) {
+    $requestedCode = $requestedCode !== null && $requestedCode !== ''
+        ? strtolower(trim((string) $requestedCode))
+        : null;
+
+    $pick = function (array $gateway, $requested, $fallback) {
+        return [
+            'gateway' => $gateway,
+            'gateway_code' => strtolower($gateway['gateway_code']),
+            'requested_code' => $requested,
+            'fallback_used' => $fallback,
+        ];
+    };
+
+    if ($requestedCode) {
+        $requested = $gatewayModel->getByCode($requestedCode);
+        if ($requested && payment_gateway_is_usable($requested)) {
+            return $pick($requested, $requestedCode, false);
+        }
+    }
+
+    $default = $gatewayModel->getDefault();
+    if ($default && payment_gateway_is_usable($default)) {
+        $defaultCode = strtolower($default['gateway_code']);
+        return $pick($default, $requestedCode, $requestedCode !== null && $requestedCode !== $defaultCode);
+    }
+
+    $envCode = payment_env_config()['default_provider'] ?? null;
+    if ($envCode) {
+        $envCode = strtolower(trim($envCode));
+        if ($envCode !== $requestedCode) {
+            $envGateway = $gatewayModel->getByCode($envCode);
+            if ($envGateway && payment_gateway_is_usable($envGateway)) {
+                return $pick($envGateway, $requestedCode, true);
+            }
+        }
+    }
+
+    foreach ($gatewayModel->getActive() as $gateway) {
+        if (!payment_gateway_is_usable($gateway)) {
+            continue;
+        }
+        $code = strtolower($gateway['gateway_code']);
+        return $pick($gateway, $requestedCode, $requestedCode !== null && $requestedCode !== $code);
+    }
+
+    return null;
+}

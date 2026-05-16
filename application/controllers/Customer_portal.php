@@ -9,6 +9,8 @@ class Customer_portal extends Base_Controller {
     private $spaceModel;
     private $bookingAddonModel;
     private $bookingRentalModel;
+    private $gatewayModel;
+    private $paymentTransactionModel;
     
     public function __construct() {
         parent::__construct();
@@ -19,7 +21,10 @@ class Customer_portal extends Base_Controller {
         $this->spaceModel = $this->loadModel('Space_model');
         $this->bookingAddonModel = $this->loadModel('Booking_addon_model');
         $this->bookingRentalModel = $this->loadModel('Booking_rental_model');
+        $this->gatewayModel = $this->loadModel('Payment_gateway_model');
+        $this->paymentTransactionModel = $this->loadModel('Payment_transaction_model');
         $this->loadLibrary('Email_sender');
+        require_once BASEPATH . 'helpers/payment_initiation_helper.php';
     }
     
     protected function checkAuth() {
@@ -380,6 +385,93 @@ class Customer_portal extends Base_Controller {
         ];
         
         $this->loadView('customer_portal/view_booking', $data);
+    }
+
+    /**
+     * Pay outstanding balance (gateway selection + default fallback).
+     */
+    public function payBooking($id) {
+        $this->requireCustomerAuth();
+
+        $bookingId = (int) $id;
+        $booking = $this->getCustomerBookingOrRedirect($bookingId);
+        if (!$booking) {
+            return;
+        }
+
+        $amountDue = floatval($booking['balance_amount'] ?? 0);
+        if ($amountDue <= 0) {
+            $this->setFlashMessage('info', 'This booking has no outstanding balance.');
+            redirect('customer-portal/booking/' . $bookingId);
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+
+            $requestedCode = sanitize_input($_POST['gateway_code'] ?? '');
+            $result = initiate_booking_gateway_payment(
+                $bookingId,
+                $requestedCode,
+                $this->bookingModel,
+                $this->gatewayModel,
+                $this->paymentTransactionModel
+            );
+
+            if (!empty($result['success']) && !empty($result['authorization_url'])) {
+                redirect($result['authorization_url']);
+                return;
+            }
+
+            $message = $result['message'] ?? 'Could not start payment.';
+            if (!empty($result['already_paid'])) {
+                $this->setFlashMessage('info', $message);
+                redirect('customer-portal/booking/' . $bookingId);
+                return;
+            }
+
+            $this->setFlashMessage('danger', $message);
+            redirect('customer-portal/pay-booking/' . $bookingId);
+            return;
+        }
+
+        $data = [
+            'page_title' => 'Pay Booking',
+            'booking' => $booking,
+            'amount_due' => $amountDue,
+            'gateways' => get_usable_payment_gateways($this->gatewayModel),
+            'flash' => $this->getFlashMessage(),
+        ];
+
+        $this->loadView('customer_portal/pay_booking', $data);
+    }
+
+    /**
+     * Verify booking belongs to logged-in customer; redirect if not.
+     */
+    private function getCustomerBookingOrRedirect($bookingId) {
+        $userId = $this->session['customer_user_id'];
+        $user = $this->customerPortalUserModel->getById($userId);
+
+        try {
+            $booking = $this->bookingModel->getWithFacility($bookingId);
+            if (!$booking || ($booking['customer_email'] ?? '') !== ($user['email'] ?? '')) {
+                $this->setFlashMessage('danger', 'Booking not found.');
+                redirect('customer-portal/bookings');
+                return null;
+            }
+            if (in_array($booking['status'] ?? '', ['cancelled', 'refunded'], true)) {
+                $this->setFlashMessage('danger', 'Cannot pay for a cancelled booking.');
+                redirect('customer-portal/booking/' . $bookingId);
+                return null;
+            }
+            return $booking;
+        } catch (Exception $e) {
+            error_log('Customer_portal getCustomerBookingOrRedirect: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error loading booking.');
+            redirect('customer-portal/bookings');
+            return null;
+        }
     }
     
     /**

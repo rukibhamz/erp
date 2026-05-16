@@ -69,129 +69,16 @@ class Booking_wizard extends Base_Controller {
     }
 
     /**
-     * Make payment for an existing unpaid booking
-     * Called from customer portal "Make Payment" button
+     * Legacy entry — send customers to the portal payment page (gateway picker + default fallback).
      */
     public function makePayment($bookingId) {
-        $bookingId = intval($bookingId);
-        
-        if (!$bookingId) {
-            error_log("makePayment redirect: Invalid booking.");
+        $bookingId = (int) $bookingId;
+        if ($bookingId <= 0) {
             $this->setFlashMessage('danger', 'Invalid booking.');
             redirect('booking-wizard/step1');
             return;
         }
-        
-        try {
-            // Load the booking
-            $booking = $this->bookingModel->getById($bookingId);
-            
-            if (!$booking) {
-                error_log("makePayment redirect: Booking not found for ID $bookingId");
-                $this->setFlashMessage('danger', 'Booking not found.');
-                redirect('booking-wizard/step1');
-                return;
-            }
-            
-            // Check if booking has a balance to pay
-            $balance = floatval($booking['balance_amount'] ?? $booking['total_amount']);
-            if ($balance <= 0) {
-                error_log("makePayment redirect: Booking already fully paid ID $bookingId");
-                $this->setFlashMessage('info', 'This booking is already fully paid.');
-                redirect('customer-portal/bookings');
-                return;
-            }
-            
-            // Check booking isn't cancelled
-            if (in_array($booking['status'], ['cancelled', 'refunded'])) {
-                $this->setFlashMessage('danger', 'Cannot make payment for a cancelled booking.');
-                redirect('customer-portal/bookings');
-                return;
-            }
-            
-            // Find active payment gateway (Paystack)
-            $gatewayCode = 'paystack';
-            $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
-            
-            if (!file_exists($gatewayPath)) {
-                $this->setFlashMessage('danger', 'Payment gateway not available. Please contact support.');
-                redirect('customer-portal/view-booking/' . $bookingId);
-                return;
-            }
-            
-            require_once $gatewayPath;
-            
-            $gateway = $this->gatewayModel->getByCode($gatewayCode);
-            
-            if (!$gateway || !$gateway['is_active']) {
-                $this->setFlashMessage('danger', 'Online payment is currently unavailable. Please contact support.');
-                redirect('customer-portal/view-booking/' . $bookingId);
-                return;
-            }
-            
-            require_once BASEPATH . 'helpers/payment_config_helper.php';
-            $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
-            $gatewayConfig['callback_url'] = base_url('payment/callback');
-            
-            $paymentGateway = new \Payment_gateway($gatewayCode, $gatewayConfig);
-            
-            $customer = [
-                'email' => $booking['customer_email'],
-                'name'  => $booking['customer_name'] ?? '',
-                'phone' => $booking['customer_phone'] ?? ''
-            ];
-            
-            // Generate unique transaction reference
-            $bookingNumber = $booking['booking_number'] ?? ('BK-' . $bookingId);
-            $transactionRef = 'BKG-' . $bookingNumber . '-' . time();
-            
-            $metadata = [
-                'transaction_ref' => $transactionRef,
-                'payment_type'    => 'booking_payment',
-                'reference_id'    => $bookingId,
-                'booking_id'      => $bookingId,
-                'description'     => 'Payment for booking ' . $bookingNumber
-            ];
-            
-            // Create payment transaction record
-            $transactionData = [
-                'transaction_ref'  => $transactionRef,
-                'payment_type'     => 'booking_payment',
-                'reference_id'     => $bookingId,
-                'gateway_code'     => $gatewayCode,
-                'amount'           => $balance,
-                'currency'         => 'NGN',
-                'status'           => 'pending',
-                'customer_email'   => $booking['customer_email'],
-                'customer_name'    => $booking['customer_name'] ?? '',
-                'description'      => 'Payment for booking ' . $bookingNumber,
-                'created_at'       => date('Y-m-d H:i:s')
-            ];
-            $this->paymentTransactionModel->create($transactionData);
-            
-            // Initialize Paystack
-            $paymentResult = $paymentGateway->initialize(
-                $balance,
-                'NGN',
-                $customer,
-                $metadata
-            );
-            
-            if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
-                error_log("makePayment: Redirecting booking #$bookingId to Paystack");
-                redirect($paymentResult['authorization_url']);
-                exit;
-            } else {
-                error_log('makePayment: Gateway initialization failed: ' . json_encode($paymentResult));
-                $this->setFlashMessage('danger', 'Could not initialize payment. Please try again later.');
-                redirect('customer-portal/view-booking/' . $bookingId);
-            }
-            
-        } catch (Exception $e) {
-            error_log('makePayment error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Payment error: ' . $e->getMessage());
-            redirect('customer-portal/view-booking/' . $bookingId);
-        }
+        redirect('customer-portal/pay-booking/' . $bookingId);
     }
     
     protected function checkAuth() {
@@ -887,10 +774,11 @@ class Booking_wizard extends Base_Controller {
             $cancellationPolicy = $this->cancellationPolicyModel->getDefault();
             
             // Get available payment gateways
+        require_once BASEPATH . 'helpers/payment_config_helper.php';
         $rawGateways = $this->gatewayModel->getActive();
         $gateways = [];
         foreach ($rawGateways as $gw) {
-            if (!empty($gw['public_key']) && (!empty($gw['secret_key']) || !empty($gw['private_key']))) {
+            if (payment_gateway_is_usable($gw)) {
                 $gateways[] = $gw;
             }
         }
@@ -1506,24 +1394,32 @@ class Booking_wizard extends Base_Controller {
             
             // Process online payment via gateway
             if ($paymentMethod === 'gateway' && $initialPayment > 0) {
-                $gatewayCode = sanitize_input($_POST['gateway_code'] ?? 'paystack');
+                $requestedGatewayCode = sanitize_input($_POST['gateway_code'] ?? '');
+                require_once BASEPATH . 'helpers/payment_config_helper.php';
+                $resolved = resolve_payment_gateway($this->gatewayModel, $requestedGatewayCode);
+                if (!$resolved) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    $this->setFlashMessage('danger', 'No online payment gateway is available. Choose another method or contact support.');
+                    redirect('booking-wizard/step5');
+                    return;
+                }
+
+                $gateway = $resolved['gateway'];
+                $gatewayCode = $resolved['gateway_code'];
+                if ($resolved['fallback_used'] && $resolved['requested_code']) {
+                    error_log("FINALIZE: gateway fallback {$resolved['requested_code']} -> {$gatewayCode}");
+                }
                 error_log("FINALIZE: Using gateway: $gatewayCode");
 
-                // Initialize payment gateway
                 $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
-                if (!file_exists($gatewayPath)) {
-                    $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
-                }
                 error_log("FINALIZE: Gateway path: $gatewayPath, exists: " . (file_exists($gatewayPath) ? 'YES' : 'NO'));
-                
+
                 if (file_exists($gatewayPath)) {
                     require_once $gatewayPath;
-                    
-                    $gateway = $this->gatewayModel->getByCode($gatewayCode);
-                    error_log("FINALIZE: Gateway from DB: " . ($gateway ? json_encode(['name' => $gateway['gateway_name'] ?? '', 'active' => $gateway['is_active'] ?? 0]) : 'NULL'));
-                    
-                    if ($gateway && $gateway['is_active']) {
-                        require_once BASEPATH . 'helpers/payment_config_helper.php';
+
+                    if ($gateway) {
                         $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
                         $gatewayConfig['callback_url'] = base_url('payment/callback');
                         error_log("FINALIZE: Callback URL: " . base_url('payment/callback'));
@@ -1611,13 +1507,6 @@ class Booking_wizard extends Base_Controller {
                             redirect('booking-wizard/step5');
                             return;
                         }
-                    } else {
-                        if ($pdo->inTransaction()) {
-                            $pdo->rollBack();
-                        }
-                        $this->setFlashMessage('danger', 'Selected payment gateway is not active. Choose another method or contact support.');
-                        redirect('booking-wizard/step5');
-                        return;
                     }
                 } else {
                     if ($pdo->inTransaction()) {

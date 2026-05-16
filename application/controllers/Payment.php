@@ -45,22 +45,27 @@ class Payment extends Base_Controller {
         file_put_contents($logFile, "[$timestamp] PAYMENT INIT: " . print_r($_POST, true) . "\n", FILE_APPEND);
         
         try {
-            $gatewayCode = sanitize_input($_POST['gateway_code'] ?? '');
+            $requestedGatewayCode = sanitize_input($_POST['gateway_code'] ?? '');
             $amount = floatval($_POST['amount'] ?? 0);
             $currency = sanitize_input($_POST['currency'] ?? 'NGN');
             $paymentType = sanitize_input($_POST['payment_type'] ?? 'booking_payment');
             $referenceId = intval($_POST['reference_id'] ?? 0);
             
-            if (!$gatewayCode || $amount <= 0) {
+            if ($amount <= 0) {
                 echo json_encode(['success' => false, 'message' => 'Invalid payment parameters']);
                 exit;
             }
-            
-            // Get gateway
-            $gateway = $this->gatewayModel->getByCode($gatewayCode);
-            if (!$gateway || !$gateway['is_active']) {
-                echo json_encode(['success' => false, 'message' => 'Payment gateway not available']);
+
+            $resolved = resolve_payment_gateway($this->gatewayModel, $requestedGatewayCode);
+            if (!$resolved) {
+                echo json_encode(['success' => false, 'message' => 'No payment gateway is available']);
                 exit;
+            }
+
+            $gateway = $resolved['gateway'];
+            $gatewayCode = $resolved['gateway_code'];
+            if ($resolved['fallback_used'] && $resolved['requested_code']) {
+                error_log("Payment initialize: gateway fallback {$resolved['requested_code']} -> {$gatewayCode}");
             }
             
             // Get customer info based on payment type
@@ -549,7 +554,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     $bookingModel = $this->loadModel('Booking_model');
                     $booking = $bookingModel->getById($transaction['reference_id']);
                     if ($booking && $notificationModel && !empty($booking['customer_email'])) {
-                        $retryUrl = base_url('booking-wizard/retry-payment/' . $booking['id']);
+                        $retryUrl = base_url('customer-portal/pay-booking/' . $booking['id']);
                         $notificationModel->sendPaymentFailedEmail($booking, $retryUrl);
                     }
                 }

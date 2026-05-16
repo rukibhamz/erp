@@ -214,9 +214,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <label class="form-label">Payment Method</label>
                                 <select class="form-select" id="payment_method" name="payment_method">
                                     <?php if (!empty($gateways)): ?>
+                                        <?php
+                                        $hasDefaultGatewayOption = false;
+                                        foreach ($gateways as $_g) {
+                                            if (!empty($_g['is_default'])) {
+                                                $hasDefaultGatewayOption = true;
+                                                break;
+                                            }
+                                        }
+                                        ?>
                                         <?php foreach ($gateways as $index => $gateway): ?>
-                                            <option value="gateway" data-gateway-code="<?= $gateway['gateway_code'] ?>" <?= $index === 0 ? 'selected' : '' ?>>
-                                                Pay Online - <?= htmlspecialchars($gateway['gateway_name']) ?>
+                                            <option value="gateway" data-gateway-code="<?= htmlspecialchars($gateway['gateway_code']) ?>" <?= !empty($gateway['is_default']) || ($index === 0 && !$hasDefaultGatewayOption) ? 'selected' : '' ?>>
+                                                Pay Online - <?= htmlspecialchars($gateway['gateway_name']) ?><?= !empty($gateway['is_default']) ? ' (Default)' : '' ?>
                                             </option>
                                         <?php endforeach; ?>
                                     <?php endif; ?>

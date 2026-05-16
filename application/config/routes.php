@@ -405,6 +405,7 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['customer-portal/bookings'] = 'Customer_portal/bookings';
         $route['customer-portal/bookings/(:any)'] = 'Customer_portal/bookings/$1';
         $route['customer-portal/booking/(:num)'] = 'Customer_portal/booking/$1';
+        $route['customer-portal/pay-booking/(:num)'] = 'Customer_portal/payBooking/$1';
         $route['customer-portal/reschedule-booking/(:num)'] = 'Customer_portal/rescheduleBooking/$1';
         $route['customer-portal/reschedule-quote/(:num)'] = 'Customer_portal/getRescheduleQuote/$1';
         $route['customer-portal/profile'] = 'Customer_portal/profile';

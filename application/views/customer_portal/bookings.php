@@ -94,6 +94,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                            class="btn btn-sm btn-primary">
                                             <i class="bi bi-eye"></i> View
                                         </a>
+                                        <?php if (floatval($booking['balance_amount'] ?? 0) > 0 && ($booking['status'] ?? '') !== 'cancelled'): ?>
+                                            <a href="<?= base_url('customer-portal/pay-booking/' . (int) $booking['id']) ?>"
+                                               class="btn btn-sm btn-success">
+                                                <i class="bi bi-credit-card"></i> Pay
+                                            </a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
