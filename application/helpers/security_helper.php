@@ -255,13 +255,14 @@ function set_security_headers($strictCsp = false) {
     // Content Security Policy with nonce-based script protection
     // - Scripts: only allowed with matching nonce (no more unsafe-inline/unsafe-eval)
     // - Styles: still uses 'unsafe-inline' because Bootstrap and dynamic styles require it
-    $scriptSrc = "'self' 'nonce-{$nonce}' https://cdn.jsdelivr.net https://js.paystack.co https://static.cloudflareinsights.com";
+    $scriptSrc = "'self' 'nonce-{$nonce}' https://cdn.jsdelivr.net https://js.paystack.co https://checkout.flutterwave.com https://static.cloudflareinsights.com";
     $styleSrc = "'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com";
     $fontSrc = "'self' https://fonts.gstatic.com https://cdn.jsdelivr.net";
     $imgSrc = "'self' data: https: blob:";
-    $connectSrc = "'self' https://api.paystack.co https://cdn.jsdelivr.net https://cloudflareinsights.com";
+    $connectSrc = "'self' https://api.paystack.co https://api.flutterwave.com https://checkout.flutterwave.com https://cdn.jsdelivr.net https://cloudflareinsights.com";
+    $frameSrc = "'self' https://checkout.flutterwave.com https://*.flutterwave.com";
     
-    header("Content-Security-Policy: default-src 'self'; script-src {$scriptSrc}; style-src {$styleSrc}; font-src {$fontSrc}; img-src {$imgSrc}; connect-src {$connectSrc}; frame-ancestors 'none';");
+    header("Content-Security-Policy: default-src 'self'; script-src {$scriptSrc}; style-src {$styleSrc}; font-src {$fontSrc}; img-src {$imgSrc}; connect-src {$connectSrc}; frame-src {$frameSrc}; frame-ancestors 'none';");
 }
 
 /**

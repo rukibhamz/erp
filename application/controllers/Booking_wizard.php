@@ -1508,7 +1508,7 @@ class Booking_wizard extends Base_Controller {
             if ($paymentMethod === 'gateway' && $initialPayment > 0) {
                 $gatewayCode = sanitize_input($_POST['gateway_code'] ?? 'paystack');
                 error_log("FINALIZE: Using gateway: $gatewayCode");
-                
+
                 // Initialize payment gateway
                 $gatewayPath = APPPATH . 'libraries/Payment_gateway.php';
                 if (!file_exists($gatewayPath)) {
@@ -1578,16 +1578,11 @@ class Booking_wizard extends Base_Controller {
                         }
                         
                         if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
-                            // Commit transaction and redirect to payment gateway
-                            file_put_contents($logFile, "[$timestamp] GATEWAY SUCCESS - About to commit before redirect\n", FILE_APPEND);
+                            file_put_contents($logFile, "[$timestamp] GATEWAY SUCCESS - commit before redirect\n", FILE_APPEND);
                             if ($pdo->inTransaction()) {
                                 $pdo->commit();
-                                file_put_contents($logFile, "[$timestamp] TRANSACTION COMMITTED before Paystack redirect\n", FILE_APPEND);
-                            } else {
-                                file_put_contents($logFile, "[$timestamp] WARNING: No transaction active before redirect!\n", FILE_APPEND);
                             }
-                            
-                            // SEND PENDING EMAIL with payment link before redirect
+
                             try {
                                 $notificationModel = $this->loadModel('Notification_model');
                                 if ($notificationModel) {
@@ -1595,16 +1590,13 @@ class Booking_wizard extends Base_Controller {
                                     $emailBooking['id'] = $bookingId;
                                     $emailBooking['facility_name'] = $resource['space_name'] ?? $resource['name'] ?? 'Reserved Space';
                                     $notificationModel->sendBookingPendingEmail($emailBooking, $paymentResult['authorization_url']);
-                                    file_put_contents($logFile, "[$timestamp] PENDING EMAIL SENT to: " . $bookingData['customer_email'] . "\n", FILE_APPEND);
                                 }
                             } catch (Exception $emailEx) {
                                 error_log("Booking_wizard: Failed to send pending email - " . $emailEx->getMessage());
-                                // Continue anyway - email is not critical for booking flow
                             }
-                            
+
                             unset($_SESSION['booking_data']);
-                            
-                            // Redirect to Paystack
+
                             file_put_contents($logFile, "[$timestamp] Redirecting to: " . $paymentResult['authorization_url'] . "\n", FILE_APPEND);
                             redirect($paymentResult['authorization_url']);
                             exit;
@@ -2606,5 +2598,6 @@ class Booking_wizard extends Base_Controller {
         echo "</div>";
         echo "<p style='margin-top: 20px;'><a href='" . base_url('booking-wizard') . "' style='padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 5px;'>Return to Booking Wizard</a></p>";
     }
+
 }
 

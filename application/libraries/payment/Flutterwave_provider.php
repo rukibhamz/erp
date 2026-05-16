@@ -8,8 +8,16 @@ require_once BASEPATH . 'helpers/url_helper.php';
 class Flutterwave_provider extends Abstract_payment_provider {
     private const API_BASE = 'https://api.flutterwave.com/v3';
 
+    /**
+     * Flutterwave Standard — server POST /v3/payments, redirect to data.link.
+     * @see https://developer.flutterwave.com/v3.0.0/docs/flutterwave-standard-1
+     */
     public function initialize($amount, $currency, array $customer, array $metadata = []) {
         $secretKey = $this->getSecretKey();
+        if ($secretKey === '') {
+            throw new Exception('Flutterwave secret key is not configured');
+        }
+
         $txRef = $metadata['transaction_ref'] ?? ('TXN-' . time());
 
         $data = [
@@ -19,17 +27,17 @@ class Flutterwave_provider extends Abstract_payment_provider {
             'redirect_url' => $this->appendGatewayToCallback($this->config['callback_url'] ?? ''),
             'payment_options' => 'card,account,banktransfer,mpesa,mobilemoney,ussd',
             'customer' => [
-                'email' => $customer['email'],
+                'email' => $customer['email'] ?? '',
                 'name' => $customer['name'] ?? '',
-                'phone_number' => $customer['phone'] ?? '',
+                'phonenumber' => $customer['phone'] ?? '',
             ],
             'customizations' => [
                 'title' => $metadata['title'] ?? 'Payment',
-                'description' => $metadata['description'] ?? '',
+                'description' => $metadata['description'] ?? ($metadata['payment_type'] ?? 'Payment'),
             ],
             'meta' => [
                 'payment_type' => $metadata['payment_type'] ?? '',
-                'reference_id' => $metadata['reference_id'] ?? '',
+                'reference_id' => (string) ($metadata['reference_id'] ?? ''),
             ],
         ];
 
@@ -50,8 +58,8 @@ class Flutterwave_provider extends Abstract_payment_provider {
         if (($result['status'] ?? '') === 'success') {
             $checkoutLink = $this->extractCheckoutLink($result);
             if ($checkoutLink === '') {
-                error_log('Flutterwave initialize: success response but no checkout link. HTTP ' . $response['http_code']);
-                throw new Exception('Flutterwave did not return a checkout URL. Check API keys and test mode settings.');
+                error_log('Flutterwave Standard: no checkout link in response (HTTP ' . $response['http_code'] . ')');
+                throw new Exception('Flutterwave did not return a payment link. Check API keys and dashboard settings.');
             }
             return [
                 'success' => true,
@@ -61,13 +69,12 @@ class Flutterwave_provider extends Abstract_payment_provider {
         }
 
         $message = $result['message'] ?? 'Failed to initialize payment';
-        error_log('Flutterwave initialize failed (HTTP ' . $response['http_code'] . '): ' . $message);
+        error_log('Flutterwave Standard initialize failed (HTTP ' . $response['http_code'] . '): ' . $message);
         throw new Exception($message);
     }
 
     /**
-     * Resolve hosted checkout URL from Flutterwave Standard API response.
-     * @see https://developer.flutterwave.com/v3.0.0/docs/e-commerce
+     * Hosted payment link from POST /v3/payments (data.link).
      */
     private function extractCheckoutLink(array $result) {
         $data = $result['data'] ?? [];
@@ -95,7 +102,7 @@ class Flutterwave_provider extends Abstract_payment_provider {
             return false;
         }
         $path = parse_url($url, PHP_URL_PATH) ?? '';
-        return (bool) preg_match('#/(hosted/pay|v3/hosted/pay|pay/)#i', $path . '/');
+        return (bool) preg_match('#/(hosted/pay|v3/hosted/pay)#i', $path);
     }
 
     public function verify($reference, array $options = []) {
@@ -163,10 +170,6 @@ class Flutterwave_provider extends Abstract_payment_provider {
         ];
     }
 
-    /**
-     * Flutterwave signs webhooks with a shared secret hash (verif-hash header).
-     * Compare using constant-time equality — do not parse the body first.
-     */
     public function verifyWebhookSignature($rawBody, array $serverHeaders) {
         $signature = $serverHeaders['HTTP_VERIF_HASH'] ?? '';
         if ($signature === '') {

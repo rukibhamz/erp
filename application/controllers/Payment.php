@@ -116,7 +116,7 @@ class Payment extends Base_Controller {
                 'success' => true,
                 'authorization_url' => $result['authorization_url'] ?? '',
                 'transaction_ref' => $transactionRef,
-                'gateway_reference' => $result['reference'] ?? ''
+                'gateway_reference' => $result['reference'] ?? '',
             ]);
             
         } catch (Exception $e) {

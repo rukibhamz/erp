@@ -379,23 +379,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Complete booking
+    // Complete booking (Paystack & Flutterwave Standard: server redirect to gateway checkout)
     completeBookingBtn.addEventListener('click', function() {
         const paymentPlan = document.querySelector('input[name="payment_plan"]:checked').value;
         const paymentMethod = document.getElementById('payment_method').value;
         const selectedOption = document.getElementById('payment_method').selectedOptions[0];
         const gatewayCode = selectedOption.dataset.gatewayCode || '';
 
-        // Disable button to prevent double submission
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
 
-        // Submit form
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '<?= base_url('booking-wizard/finalize') ?>';
-        
-        // Add CSRF token
         form.appendChild(createInput('csrf_token', '<?= csrf_token() ?>'));
         form.appendChild(createInput('payment_plan', paymentPlan));
         form.appendChild(createInput('payment_method', paymentMethod));
@@ -406,7 +402,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (gatewayCode) {
             form.appendChild(createInput('gateway_code', gatewayCode));
         }
-        
         document.body.appendChild(form);
         form.submit();
     });
