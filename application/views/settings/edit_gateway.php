@@ -61,10 +61,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                             <?php if ($gateway['gateway_code'] === 'flutterwave'): ?>
                                 <div class="mb-3">
+                                    <label class="form-label">Webhook Secret Hash</label>
+                                    <input type="password" name="secret_key" class="form-control" 
+                                           value="<?= htmlspecialchars($gateway['secret_key'] ?? '') ?>">
+                                    <small class="text-muted">From Flutterwave dashboard → Settings → Webhooks (<code>verif-hash</code> header)</small>
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">Encryption Key</label>
                                     <input type="text" name="encryption_key" class="form-control" 
                                            value="<?= htmlspecialchars($additional_config['encryption_key'] ?? '') ?>">
-                                    <small class="text-muted">Flutterwave encryption key (optional)</small>
+                                    <small class="text-muted">Optional — for inline/encrypted payloads</small>
                                 </div>
                             <?php endif; ?>
 
@@ -85,9 +91,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <label class="form-label">Webhook URL</label>
                                 <div class="input-group">
                                     <input type="url" name="webhook_url" class="form-control" 
-                                           value="<?= htmlspecialchars($gateway['webhook_url'] ?: base_url('payment/webhook?gateway=' . $gateway['gateway_code'])) ?>"
-                                           placeholder="<?= base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>">
-                                    <button class="btn btn-outline-dark" type="button" onclick="copyToClipboard('<?= base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>')">
+                                           value="<?= htmlspecialchars($gateway['webhook_url'] ?: ($gateway['gateway_code'] === 'flutterwave' ? base_url('webhooks/flutterwave') : base_url('payment/webhook?gateway=' . $gateway['gateway_code']))) ?>"
+                                           placeholder="<?= $gateway['gateway_code'] === 'flutterwave' ? base_url('webhooks/flutterwave') : base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>">
+                                    <button class="btn btn-outline-dark" type="button" onclick="copyToClipboard('<?= $gateway['gateway_code'] === 'flutterwave' ? base_url('webhooks/flutterwave') : base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>')">
                                         <i class="bi bi-clipboard"></i> Copy
                                     </button>
                                 </div>

@@ -392,6 +392,7 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['payment/callback'] = 'Payment/callback';
         $route['payment/confirmation'] = 'Payment/confirmation';
         $route['payment/webhook'] = 'Payment/webhook';
+        $route['webhooks/flutterwave'] = 'Payment/flutterwaveWebhook';
         $route['payment/verify'] = 'Payment/verify';
         $route['payment/verify/(:any)'] = 'Payment/verify/$1';
         

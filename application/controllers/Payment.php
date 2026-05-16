@@ -17,6 +17,7 @@ class Payment extends Base_Controller {
         // Payment controller can be accessed without auth for public payments
         $this->gatewayModel = $this->loadModel('Payment_gateway_model');
         $this->paymentTransactionModel = $this->loadModel('Payment_transaction_model');
+        require_once BASEPATH . 'helpers/payment_config_helper.php';
     }
     
     protected function checkAuth() {
@@ -91,14 +92,8 @@ class Payment extends Base_Controller {
             // Initialize payment with gateway
             require_once BASEPATH . 'libraries/Payment_gateway.php';
             
-            $gatewayConfig = [
-                'public_key' => $gateway['public_key'],
-                'private_key' => $gateway['private_key'],
-                'secret_key' => $gateway['secret_key'] ?? '',
-                'test_mode' => $gateway['test_mode'],
-                'callback_url' => $gateway['callback_url'] ?: base_url('payment/callback'),
-                'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
-            ];
+            $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
+            $gatewayConfig['callback_url'] = $gateway['callback_url'] ?: base_url('payment/callback');
             
             $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
             
@@ -147,10 +142,21 @@ public function callback() {
     $diagEntry .= "  User Agent: " . ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown') . "\n";
     file_put_contents($logFile, $diagEntry, FILE_APPEND);
     
-    $transactionRef = $_GET['reference'] ?? $_GET['tx_ref'] ?? $_GET['trxref'] ?? '';
-    $gatewayCode = $_GET['gateway'] ?? 'paystack';
+    $transactionRef = $_GET['tx_ref'] ?? $_GET['reference'] ?? $_GET['trxref'] ?? '';
+    $gatewayCode = $_GET['gateway'] ?? '';
+    $flutterwaveTransactionId = $_GET['transaction_id'] ?? '';
+
+    if ($transactionRef && $gatewayCode === '') {
+        $existingTxn = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+        if ($existingTxn) {
+            $gatewayCode = $existingTxn['gateway_code'];
+        }
+    }
+    if ($gatewayCode === '') {
+        $gatewayCode = 'paystack';
+    }
     
-    file_put_contents($logFile, "[$timestamp] Extracted ref: '$transactionRef', gateway: '$gatewayCode'\n", FILE_APPEND);
+    file_put_contents($logFile, "[$timestamp] Extracted ref: '$transactionRef', gateway: '$gatewayCode', flw_id: '$flutterwaveTransactionId'\n", FILE_APPEND);
     
     if (!$transactionRef) {
         file_put_contents($logFile, "[$timestamp] ERROR: Empty reference! Cannot proceed.\n", FILE_APPEND);
@@ -166,7 +172,12 @@ public function callback() {
         
         // Verify payment
         file_put_contents($logFile, "[$timestamp] Calling verifyPayment()...\n", FILE_APPEND);
-        $this->verifyPayment($transactionRef, $gatewayCode);
+        $verifyOptions = [];
+        if ($gatewayCode === 'flutterwave' && $flutterwaveTransactionId !== '') {
+            $verifyOptions['transaction_id'] = $flutterwaveTransactionId;
+            $verifyOptions['tx_ref'] = $transactionRef;
+        }
+        $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
         file_put_contents($logFile, "[$timestamp] verifyPayment() completed successfully\n", FILE_APPEND);
         
         // Get transaction for confirmation page
@@ -214,70 +225,122 @@ public function callback() {
     }
     
     /**
-     * Webhook handler for payment notifications
+     * Webhook handler for payment notifications (Paystack and others via ?gateway=)
      */
     public function webhook() {
+        $gatewayCode = $_GET['gateway'] ?? ($_SERVER['HTTP_X_GATEWAY'] ?? 'paystack');
+        $this->handleWebhook($gatewayCode);
+    }
+
+    /**
+     * Dedicated Flutterwave webhook endpoint: POST /webhooks/flutterwave
+     */
+    public function flutterwaveWebhook() {
+        $this->handleWebhook('flutterwave');
+    }
+
+    /**
+     * Shared webhook processing with signature verification on raw body.
+     */
+    private function handleWebhook($gatewayCode) {
         header('Content-Type: application/json');
-        
-        // Get gateway from header or request
-        $gatewayCode = $_GET['gateway'] ?? 
-                      ($_SERVER['HTTP_X_GATEWAY'] ?? 'paystack');
-        
-        $logFile = ROOTPATH . 'debug_log.txt';
+
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['status' => 'error', 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        $gatewayCode = strtolower($gatewayCode);
         $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logFile, "[$timestamp] WEBHOOK RECEIVED: Gateway=$gatewayCode\n", FILE_APPEND);
-        
+        error_log("[$timestamp] Payment webhook received: gateway={$gatewayCode}");
+
         try {
             $gateway = $this->gatewayModel->getByCode($gatewayCode);
             if (!$gateway) {
                 throw new Exception('Gateway not found');
             }
-            
-            $input = file_get_contents('php://input');
-            
-            // Verify webhook signature for security
-            if (!$this->verifyWebhookSignature($gatewayCode, $input, $gateway)) {
-                error_log("Payment webhook signature verification failed for {$gatewayCode}");
-                throw new Exception('Invalid webhook signature');
+
+            $rawBody = file_get_contents('php://input');
+            if ($rawBody === false) {
+                $rawBody = '';
             }
-            
-            $payload = json_decode($input, true);
-            
-            if (!$payload) {
+
+            if (!$this->verifyWebhookSignature($gatewayCode, $rawBody, $gateway)) {
+                error_log("Payment webhook signature verification failed for {$gatewayCode}");
+                http_response_code(401);
+                echo json_encode(['status' => 'error', 'message' => 'Invalid webhook signature']);
+                exit;
+            }
+
+            $payload = json_decode($rawBody, true);
+            if (!is_array($payload)) {
                 $payload = $_POST;
             }
-            
-            // Log the webhook event
-            error_log("Payment webhook received from {$gatewayCode}: " . substr($input, 0, 500));
-            
-            // Check if this is a test/verification webhook (no actual payment data)
+
+            error_log("Payment webhook event from {$gatewayCode}: " . substr($rawBody, 0, 200));
+
             if ($this->isTestWebhook($gatewayCode, $payload)) {
-                error_log("Payment webhook: Test/verification event received from {$gatewayCode}");
                 http_response_code(200);
                 echo json_encode(['status' => 'success', 'message' => 'Webhook verified']);
                 exit;
             }
-            
-            // Process webhook based on gateway
+
+            $event = $payload['event'] ?? $payload['type'] ?? '';
+            if (in_array($event, ['refund.completed', 'refund.failed'], true)) {
+                $this->handleRefundWebhook($gatewayCode, $payload);
+                http_response_code(200);
+                echo json_encode(['status' => 'success', 'message' => 'Refund event logged']);
+                exit;
+            }
+
+            if (!$this->shouldProcessWebhookEvent($gatewayCode, $payload)) {
+                http_response_code(200);
+                echo json_encode(['status' => 'success', 'message' => 'Event acknowledged']);
+                exit;
+            }
+
             $reference = $this->extractReferenceFromWebhook($gatewayCode, $payload);
-            
             if ($reference) {
-                $this->verifyPayment($reference, $gatewayCode, true);
+                $verifyOptions = [];
+                if ($gatewayCode === 'flutterwave') {
+                    $verifyOptions['tx_ref'] = $reference;
+                    if (!empty($payload['data']['id'])) {
+                        $verifyOptions['transaction_id'] = $payload['data']['id'];
+                    }
+                }
+                $this->verifyPayment($reference, $gatewayCode, true, $verifyOptions);
                 http_response_code(200);
                 echo json_encode(['status' => 'success']);
             } else {
-                // No reference but not a test event - still return success to prevent retries
-                error_log("Payment webhook: No reference found but accepting event from {$gatewayCode}");
                 http_response_code(200);
                 echo json_encode(['status' => 'success', 'message' => 'Event acknowledged']);
             }
-            
         } catch (Exception $e) {
             error_log('Payment webhook error: ' . $e->getMessage());
             http_response_code(400);
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => 'Webhook processing failed']);
         }
         exit;
+    }
+
+    /**
+     * Log refund webhook events (fulfillment reversal is manual / future work).
+     */
+    private function handleRefundWebhook($gatewayCode, array $payload) {
+        $txRef = $payload['data']['tx_ref'] ?? null;
+        $event = $payload['event'] ?? $payload['type'] ?? 'refund';
+        error_log("Payment refund webhook [{$gatewayCode}] event={$event} tx_ref=" . ($txRef ?? 'n/a'));
+
+        if ($txRef) {
+            $transaction = $this->paymentTransactionModel->getByTransactionRef($txRef);
+            if ($transaction && $transaction['status'] === 'success') {
+                $this->paymentTransactionModel->update($transaction['id'], [
+                    'failure_reason' => 'Refund: ' . $event,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
     }
     
     /**
@@ -299,15 +362,15 @@ public function callback() {
                 return false;
                 
             case 'flutterwave':
-                // Flutterwave sends 'charge.completed' or 'transfer.completed' for real payments
-                $event = $payload['event'] ?? '';
-                if (empty($event) || !in_array($event, ['charge.completed', 'transfer.completed'])) {
+                $event = $payload['event'] ?? $payload['type'] ?? '';
+                $known = ['charge.completed', 'transfer.completed', 'refund.completed', 'refund.failed'];
+                if ($event === '' || !in_array($event, $known, true)) {
                     return true;
                 }
-                if (empty($payload['data']) || empty($payload['data']['tx_ref'])) {
-                    return true;
+                if (in_array($event, ['charge.completed', 'refund.completed', 'refund.failed'], true)) {
+                    return empty($payload['data']) || empty($payload['data']['tx_ref']);
                 }
-                return false;
+                return empty($payload['data']);
                 
             case 'monnify':
                 // Monnify uses 'eventType' field
@@ -329,46 +392,40 @@ public function callback() {
     /**
      * Verify webhook signature for security
      */
-    private function verifyWebhookSignature($gatewayCode, $input, $gateway) {
-        $secretKey = $gateway['private_key'] ?? '';
-        
-        switch ($gatewayCode) {
-            case 'paystack':
-                // Paystack uses x-paystack-signature header
-                $signature = $_SERVER['HTTP_X_PAYSTACK_SIGNATURE'] ?? '';
-                if (empty($signature)) {
-                    error_log('Paystack webhook: No signature header found');
-                    return true; // Allow if no signature (for backward compatibility, can be made strict)
-                }
-                $computedSignature = hash_hmac('sha512', $input, $secretKey);
-                return hash_equals($computedSignature, $signature);
-                
-            case 'flutterwave':
-                // Flutterwave uses verif-hash header
-                $signature = $_SERVER['HTTP_VERIF_HASH'] ?? '';
-                if (empty($signature)) {
-                    error_log('Flutterwave webhook: No signature header found');
-                    return true;
-                }
-                // Flutterwave uses secret hash from dashboard
-                $secretHash = $gateway['secret_key'] ?? $secretKey;
-                return hash_equals($secretHash, $signature);
-                
-            case 'monnify':
-                // Monnify uses monnify-signature header
-                $signature = $_SERVER['HTTP_MONNIFY_SIGNATURE'] ?? '';
-                if (empty($signature)) {
-                    error_log('Monnify webhook: No signature header found');
-                    return true;
-                }
-                $computedSignature = hash_hmac('sha512', $input, $secretKey);
-                return hash_equals($computedSignature, $signature);
-                
-            default:
-                // For unknown gateways, log but allow (can be made strict)
-                error_log("Unknown gateway for signature verification: {$gatewayCode}");
-                return true;
+    private function verifyWebhookSignature($gatewayCode, $rawBody, $gateway) {
+        require_once BASEPATH . 'libraries/payment/Payment_provider_factory.php';
+
+        if (Payment_provider_factory::supports($gatewayCode)) {
+            $config = merge_gateway_config($gatewayCode, $gateway);
+            $provider = Payment_provider_factory::create($gatewayCode, $config);
+            return $provider->verifyWebhookSignature($rawBody, $_SERVER);
         }
+
+        $secretKey = $gateway['private_key'] ?? '';
+        switch ($gatewayCode) {
+            case 'monnify':
+                $signature = $_SERVER['HTTP_MONNIFY_SIGNATURE'] ?? '';
+                if ($signature === '') {
+                    error_log('Monnify webhook: No signature header found');
+                    return false;
+                }
+                $computedSignature = hash_hmac('sha512', $rawBody, $secretKey);
+                return hash_equals($computedSignature, $signature);
+            default:
+                error_log("Unknown gateway for signature verification: {$gatewayCode}");
+                return false;
+        }
+    }
+
+    private function shouldProcessWebhookEvent($gatewayCode, array $payload) {
+        require_once BASEPATH . 'libraries/payment/Payment_provider_factory.php';
+        if (Payment_provider_factory::supports($gatewayCode)) {
+            $gateway = $this->gatewayModel->getByCode($gatewayCode);
+            $config = merge_gateway_config($gatewayCode, $gateway ?: []);
+            $provider = Payment_provider_factory::create($gatewayCode, $config);
+            return $provider->shouldProcessWebhookEvent($payload);
+        }
+        return true;
     }
     
     /**
@@ -391,7 +448,7 @@ public function callback() {
     /**
  * Verify payment with gateway
  */
-private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = false) {
+private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = false, array $verifyOptions = []) {
     $logFile = ROOTPATH . 'payment_callback_debug.log';
     $timestamp = date('Y-m-d H:i:s');
     
@@ -420,8 +477,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
         
         file_put_contents($logFile, "[$timestamp] verifyPayment: Found transaction ID={$transaction['id']}, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, status={$transaction['status']}\n", FILE_APPEND);
         
-        if ($transaction['status'] === 'success' && !$fromWebhook) {
-            file_put_contents($logFile, "[$timestamp] verifyPayment: Already verified — skipping\n", FILE_APPEND);
+        if ($transaction['status'] === 'success') {
+            file_put_contents($logFile, "[$timestamp] verifyPayment: Already verified — skipping (idempotent)\n", FILE_APPEND);
             return ['already_verified' => true];
         }
         
@@ -435,21 +492,27 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
         
         require_once BASEPATH . 'libraries/Payment_gateway.php';
         
-        $gatewayConfig = [
-            'public_key' => $gateway['public_key'],
-            'private_key' => $gateway['private_key'],
-            'secret_key' => $gateway['secret_key'] ?? '',
-            'test_mode' => $gateway['test_mode'],
-            'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
-        ];
+        $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
         
         $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
+
+        if ($gatewayCode === 'flutterwave') {
+            if (empty($verifyOptions['tx_ref'])) {
+                $verifyOptions['tx_ref'] = $transactionRef;
+            }
+        }
         
-        file_put_contents($logFile, "[$timestamp] verifyPayment: Calling Paystack verify API for ref '$transactionRef'...\n", FILE_APPEND);
-        $verification = $paymentGateway->verify($transactionRef);
-        file_put_contents($logFile, "[$timestamp] verifyPayment: Paystack verify result: " . json_encode($verification) . "\n", FILE_APPEND);
-        
+        file_put_contents($logFile, "[$timestamp] verifyPayment: Calling {$gatewayCode} verify API for ref '$transactionRef'...\n", FILE_APPEND);
+        $verification = $paymentGateway->verify($transactionRef, $verifyOptions);
+        file_put_contents($logFile, "[$timestamp] verifyPayment: Gateway verify result success=" . (($verification['success'] ?? false) ? 'yes' : 'no') . "\n", FILE_APPEND);
+
+        if (!empty($verification['pending'])) {
+            file_put_contents($logFile, "[$timestamp] verifyPayment: Payment still pending\n", FILE_APPEND);
+            return ['pending' => true];
+        }
+
         if ($verification['success']) {
+            $this->assertVerifiedAmountMatchesTransaction($transaction, $verification);
             file_put_contents($logFile, "[$timestamp] verifyPayment: Payment VERIFIED SUCCESS. Updating transaction status...\n", FILE_APPEND);
             
             // Update transaction status
@@ -1115,15 +1178,39 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
      * Extract reference from webhook payload
      */
     private function extractReferenceFromWebhook($gatewayCode, $payload) {
+        require_once BASEPATH . 'libraries/payment/Payment_provider_factory.php';
+        if (Payment_provider_factory::supports($gatewayCode)) {
+            $gateway = $this->gatewayModel->getByCode($gatewayCode);
+            $config = merge_gateway_config($gatewayCode, $gateway ?: []);
+            $provider = Payment_provider_factory::create($gatewayCode, $config);
+            return $provider->extractWebhookReference($payload);
+        }
+
         switch ($gatewayCode) {
-            case 'paystack':
-                return $payload['data']['reference'] ?? null;
-            case 'flutterwave':
-                return $payload['data']['tx_ref'] ?? null;
             case 'monnify':
                 return $payload['transactionReference'] ?? null;
             default:
                 return $payload['reference'] ?? $payload['tx_ref'] ?? null;
+        }
+    }
+
+    /**
+     * Never trust client-supplied amounts — compare gateway-verified values to DB.
+     */
+    private function assertVerifiedAmountMatchesTransaction(array $transaction, array $verification) {
+        $expectedAmount = round((float) $transaction['amount'], 2);
+        $verifiedAmount = round((float) ($verification['amount'] ?? 0), 2);
+
+        if (abs($expectedAmount - $verifiedAmount) > 0.01) {
+            error_log("Payment amount mismatch for {$transaction['transaction_ref']}: expected {$expectedAmount}, got {$verifiedAmount}");
+            throw new Exception('Payment amount mismatch');
+        }
+
+        $expectedCurrency = strtoupper($transaction['currency'] ?? 'NGN');
+        $verifiedCurrency = strtoupper($verification['currency'] ?? '');
+        if ($verifiedCurrency !== '' && $verifiedCurrency !== $expectedCurrency) {
+            error_log("Payment currency mismatch for {$transaction['transaction_ref']}: expected {$expectedCurrency}, got {$verifiedCurrency}");
+            throw new Exception('Payment currency mismatch');
         }
     }
 }

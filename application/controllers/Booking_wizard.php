@@ -129,14 +129,9 @@ class Booking_wizard extends Base_Controller {
                 return;
             }
             
-            $gatewayConfig = [
-                'public_key'  => $gateway['public_key'],
-                'private_key' => $gateway['private_key'],
-                'secret_key'  => $gateway['secret_key'] ?? '',
-                'test_mode'   => $gateway['test_mode'],
-                'callback_url' => base_url('payment/callback'),
-                'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
-            ];
+            require_once BASEPATH . 'helpers/payment_config_helper.php';
+            $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
+            $gatewayConfig['callback_url'] = base_url('payment/callback');
             
             $paymentGateway = new \Payment_gateway($gatewayCode, $gatewayConfig);
             
@@ -1528,14 +1523,9 @@ class Booking_wizard extends Base_Controller {
                     error_log("FINALIZE: Gateway from DB: " . ($gateway ? json_encode(['name' => $gateway['gateway_name'] ?? '', 'active' => $gateway['is_active'] ?? 0]) : 'NULL'));
                     
                     if ($gateway && $gateway['is_active']) {
-                        $gatewayConfig = [
-                            'public_key' => $gateway['public_key'],
-                            'private_key' => $gateway['private_key'],
-                            'secret_key' => $gateway['secret_key'] ?? '',
-                            'test_mode' => $gateway['test_mode'],
-                            'callback_url' => base_url('payment/callback'),
-                            'additional_config' => json_decode($gateway['additional_config'] ?? '{}', true)
-                        ];
+                        require_once BASEPATH . 'helpers/payment_config_helper.php';
+                        $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
+                        $gatewayConfig['callback_url'] = base_url('payment/callback');
                         error_log("FINALIZE: Callback URL: " . base_url('payment/callback'));
                         
                         $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
