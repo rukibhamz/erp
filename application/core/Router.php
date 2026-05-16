@@ -193,15 +193,11 @@ class Router {
             $route = $routeData['route'];
             
             // Convert route pattern to regex (case-insensitive for better matching)
-            // CRITICAL FIX: Properly escape and convert route patterns
-            // Use a more robust order: escape pattern THEN replace placeholders
-            $regexPattern = preg_quote($pattern, '#');
-            $regexPattern = str_replace('\(:num\)', '([0-9]+)', $regexPattern);
-            $regexPattern = str_replace('\(:any\)', '(.+)', $regexPattern);
-            
-            // Unescape forward slashes and hyphens (they're safe in our context)
+            // Replace placeholders before preg_quote — preg_quote escapes ":" so '\(:num\)' never matches.
+            $regexPattern = str_replace(['(:num)', '(:any)'], ['__CINUM__', '__CIANY__'], $pattern);
+            $regexPattern = preg_quote($regexPattern, '#');
+            $regexPattern = str_replace(['__CINUM__', '__CIANY__'], ['([0-9]+)', '(.+)'], $regexPattern);
             $regexPattern = str_replace('\\/', '/', $regexPattern);
-            $regexPattern = str_replace('\\-', '-', $regexPattern);
             $regex = '#^' . $regexPattern . '$#i'; // Added 'i' flag for case-insensitive matching
             
             // Match against lowercase path (already normalized)
@@ -642,15 +638,15 @@ class Router {
                 $method = strtolower($urlParts[1]);
                 
                 // Map hyphenated methods to camelCase if needed, or handle directly
-                if ($method === 'forgot-password') {
-                    $this->method = 'forgotPassword';
-                } elseif ($method === 'reset-password') {
-                    $this->method = 'resetPassword';
-                } elseif ($method === 'view-booking') {
-                    $this->method = 'viewBooking';
-                } else {
-                    $this->method = $method;
-                }
+                $customerPortalMethods = [
+                    'forgot-password' => 'forgotPassword',
+                    'reset-password' => 'resetPassword',
+                    'view-booking' => 'viewBooking',
+                    'pay-booking' => 'payBooking',
+                    'reschedule-booking' => 'rescheduleBooking',
+                    'reschedule-quote' => 'getRescheduleQuote',
+                ];
+                $this->method = $customerPortalMethods[$method] ?? $method;
 
                 // Handle parameters
                 if (count($urlParts) > 2) {
