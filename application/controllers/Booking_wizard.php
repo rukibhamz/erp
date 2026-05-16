@@ -1609,11 +1609,31 @@ class Booking_wizard extends Base_Controller {
                             redirect($paymentResult['authorization_url']);
                             exit;
                         } else {
-                            // Gateway initialization failed, continue with offline booking
-                            file_put_contents($logFile, "[$timestamp] GATEWAY FAILED - continuing with offline booking\n", FILE_APPEND);
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+                            $gatewayError = $paymentResult['message'] ?? 'Could not start online payment.';
                             error_log('Gateway initialization failed: ' . json_encode($paymentResult));
+                            file_put_contents($logFile, "[$timestamp] GATEWAY FAILED: {$gatewayError}\n", FILE_APPEND);
+                            $this->setFlashMessage('danger', 'Online payment could not be started: ' . $gatewayError);
+                            redirect('booking-wizard/step5');
+                            return;
                         }
+                    } else {
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+                        $this->setFlashMessage('danger', 'Selected payment gateway is not active. Choose another method or contact support.');
+                        redirect('booking-wizard/step5');
+                        return;
                     }
+                } else {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    $this->setFlashMessage('danger', 'Payment gateway is not configured. Please contact support.');
+                    redirect('booking-wizard/step5');
+                    return;
                 }
 
             } elseif ($paymentMethod === 'cash' || $paymentMethod === 'bank') {

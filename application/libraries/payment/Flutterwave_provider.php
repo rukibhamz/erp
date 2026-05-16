@@ -2,6 +2,8 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 require_once __DIR__ . '/Abstract_payment_provider.php';
+require_once BASEPATH . 'helpers/payment_config_helper.php';
+require_once BASEPATH . 'helpers/url_helper.php';
 
 class Flutterwave_provider extends Abstract_payment_provider {
     private const API_BASE = 'https://api.flutterwave.com/v3';
@@ -46,14 +48,54 @@ class Flutterwave_provider extends Abstract_payment_provider {
 
         $result = json_decode($response['body'], true);
         if (($result['status'] ?? '') === 'success') {
+            $checkoutLink = $this->extractCheckoutLink($result);
+            if ($checkoutLink === '') {
+                error_log('Flutterwave initialize: success response but no checkout link. HTTP ' . $response['http_code']);
+                throw new Exception('Flutterwave did not return a checkout URL. Check API keys and test mode settings.');
+            }
             return [
                 'success' => true,
-                'authorization_url' => $result['data']['link'] ?? '',
+                'authorization_url' => $checkoutLink,
                 'reference' => $txRef,
             ];
         }
 
-        throw new Exception($result['message'] ?? 'Failed to initialize payment');
+        $message = $result['message'] ?? 'Failed to initialize payment';
+        error_log('Flutterwave initialize failed (HTTP ' . $response['http_code'] . '): ' . $message);
+        throw new Exception($message);
+    }
+
+    /**
+     * Resolve hosted checkout URL from Flutterwave Standard API response.
+     * @see https://developer.flutterwave.com/v3.0.0/docs/e-commerce
+     */
+    private function extractCheckoutLink(array $result) {
+        $data = $result['data'] ?? [];
+        $candidates = [
+            $data['link'] ?? null,
+            $data['checkout_url'] ?? null,
+            $result['link'] ?? null,
+        ];
+        foreach ($candidates as $link) {
+            if (!is_string($link) || $link === '') {
+                continue;
+            }
+            if (!preg_match('/^https?:\/\//i', $link)) {
+                $link = 'https://checkout.flutterwave.com' . (strpos($link, '/') === 0 ? '' : '/') . $link;
+            }
+            if ($this->isCheckoutUrl($link)) {
+                return $link;
+            }
+        }
+        return '';
+    }
+
+    private function isCheckoutUrl($url) {
+        if (!is_trusted_payment_gateway_url($url)) {
+            return false;
+        }
+        $path = parse_url($url, PHP_URL_PATH) ?? '';
+        return (bool) preg_match('#/(hosted/pay|v3/hosted/pay|pay/)#i', $path . '/');
     }
 
     public function verify($reference, array $options = []) {

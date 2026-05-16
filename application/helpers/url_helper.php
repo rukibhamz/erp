@@ -102,54 +102,67 @@ function site_url($path = '') {
     return base_url($path);
 }
 
+/**
+ * Hostnames allowed for payment gateway checkout redirects.
+ */
+function payment_gateway_trusted_hosts() {
+    return [
+        'paystack.com',
+        'checkout.paystack.com',
+        'flutterwave.com',
+        'checkout.flutterwave.com',
+        'dev-flutterwave.com',
+        'ravepay.co',
+        'rave.sh',
+        'flwv.io',
+        'flwprdfhsiymnsuydihtvnsx.eu-west-1.awsapprunner.com',
+        'flwprdflutterwavecomsbxhsiymnsuydihtvnsx.eu-west-1.awsapprunner.com',
+        'flw-prd-api.com',
+        'monnify.com',
+        'sandbox.monnify.com',
+        'stripe.com',
+        'checkout.stripe.com',
+        'paypal.com',
+        'sandbox.paypal.com',
+    ];
+}
+
+function is_trusted_payment_gateway_url($url) {
+    if (!preg_match('/^https?:\/\//i', $url)) {
+        return false;
+    }
+    $host = parse_url($url, PHP_URL_HOST);
+    if ($host === null || $host === '') {
+        return false;
+    }
+    $host = strtolower($host);
+    foreach (payment_gateway_trusted_hosts() as $trusted) {
+        $trusted = strtolower($trusted);
+        if ($host === $trusted || str_ends_with($host, '.' . $trusted)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function redirect($url) {
     // Prevent open redirect vulnerability
     // Only allow absolute URLs if they match our base URL OR trusted payment gateways
     if (preg_match('/^https?:\/\//', $url)) {
-        // Trusted payment gateway domains
-        $trustedDomains = [
-            'paystack.com',
-            'checkout.paystack.com',
-            'flutterwave.com',
-            'checkout.flutterwave.com',
-            'flw-prd-api.com',
-            'monnify.com',
-            'sandbox.monnify.com',
-            'stripe.com',
-            'checkout.stripe.com',
-            'paypal.com',
-            'sandbox.paypal.com'
-        ];
-        
-        // Check if URL is from same domain or trusted domain
         $baseUrl = base_url();
         $baseHost = parse_url($baseUrl, PHP_URL_HOST);
         $redirectHost = parse_url($url, PHP_URL_HOST);
-        
-        $isTrusted = false;
-        
-        // Check if redirect host matches base host
-        if ($redirectHost === $baseHost) {
-            $isTrusted = true;
-        }
-        
-        // Check if redirect host is a trusted payment gateway
-        if (!$isTrusted && $redirectHost !== null) {
-            foreach ($trustedDomains as $trusted) {
-                if ($redirectHost === $trusted || str_ends_with($redirectHost, '.' . $trusted)) {
-                    $isTrusted = true;
-                    error_log("Allowing redirect to trusted payment gateway: $url");
-                    break;
-                }
-            }
-        }
-        
-        // Block untrusted external redirects
+
+        $isTrusted = ($redirectHost === $baseHost) || is_trusted_payment_gateway_url($url);
+
+        // Block untrusted external redirects (previously sent users to ERP dashboard)
         if (!$isTrusted && $redirectHost !== null && $redirectHost !== $baseHost) {
-            error_log('Open redirect attempt blocked: ' . $url);
-            $url = base_url('dashboard'); // Fallback to dashboard
+            error_log('Open redirect attempt blocked (payment checkout URL not whitelisted): ' . $url);
+            $url = base_url('booking-wizard/step5');
+        } elseif ($isTrusted && $redirectHost !== $baseHost) {
+            error_log('Allowing redirect to payment gateway: ' . $url);
         }
-        
+
         header('Location: ' . $url);
         exit;
     }
