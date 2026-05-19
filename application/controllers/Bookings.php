@@ -69,6 +69,25 @@ class Bookings extends Base_Controller {
         }
     }
 
+    /**
+     * Only set space_id / location_id when those columns exist on bookings table.
+     */
+    private function mergeOptionalBookingColumns(array &$data, $spaceId, $locationId = 0) {
+        try {
+            $table = '`' . $this->db->getPrefix() . 'bookings`';
+            $spaceCols = $this->db->fetchAll("SHOW COLUMNS FROM {$table} LIKE 'space_id'");
+            if (!empty($spaceCols) && $spaceId > 0) {
+                $data['space_id'] = (int) $spaceId;
+            }
+            $locationCols = $this->db->fetchAll("SHOW COLUMNS FROM {$table} LIKE 'location_id'");
+            if (!empty($locationCols) && $locationId > 0) {
+                $data['location_id'] = (int) $locationId;
+            }
+        } catch (Exception $e) {
+            error_log('Bookings mergeOptionalBookingColumns: ' . $e->getMessage());
+        }
+    }
+
     public function index() {
         $status = $_GET['status'] ?? 'all';
         $date = $_GET['date'] ?? '';
@@ -554,21 +573,7 @@ class Bookings extends Base_Controller {
                 $data['payment_deadline'] = $deadlineDate->format('Y-m-d');
             }
             
-            // Add space_id and location_id if columns exist (for future use)
-            // Check if columns exist before adding
-            try {
-                $columns = $this->db->fetchAll("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "bookings` LIKE 'space_id'");
-                if (!empty($columns)) {
-                    $data['space_id'] = $spaceId;
-                }
-                $columns = $this->db->fetchAll("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "bookings` LIKE 'location_id'");
-                if (!empty($columns)) {
-                    $data['location_id'] = $locationId;
-                }
-            } catch (Exception $e) {
-                // Columns don't exist, that's OK - we'll use facility_id
-                error_log('Bookings create: space_id/location_id columns not found, using facility_id only');
-            }
+            $this->mergeOptionalBookingColumns($data, $spaceId, $locationId);
 
             try {
                 $pdo = $this->db->getConnection();
@@ -1049,11 +1054,12 @@ class Bookings extends Base_Controller {
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
 
-                $updateData['space_id'] = intval($selectedSpace['space_id']);
                 $updateData['facility_id'] = $resourceId;
-                if (!empty($selectedSpace['property_id'])) {
-                    $updateData['location_id'] = intval($selectedSpace['property_id']);
-                }
+                $this->mergeOptionalBookingColumns(
+                    $updateData,
+                    intval($selectedSpace['space_id']),
+                    intval($selectedSpace['property_id'] ?? 0)
+                );
 
                 if ($dateTimeChanged) {
                     $updateData['booking_date'] = $newBookingDate;
