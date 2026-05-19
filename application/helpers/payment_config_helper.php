@@ -4,6 +4,30 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 /**
  * Load payment.php config once per request.
  */
+/**
+ * Customer redirect URL after gateway checkout (absolute).
+ */
+function payment_callback_url($gatewayCode = null) {
+    $url = rtrim(base_url('payment/callback'), '/');
+    if ($gatewayCode && strtolower($gatewayCode) === 'flutterwave') {
+        if (stripos($url, 'gateway=flutterwave') === false) {
+            $url .= (strpos($url, '?') !== false ? '&' : '?') . 'gateway=flutterwave';
+        }
+    }
+    return $url;
+}
+
+/**
+ * Server webhook URL for gateway dashboards.
+ */
+function payment_webhook_url($gatewayCode) {
+    $code = strtolower($gatewayCode);
+    if ($code === 'flutterwave') {
+        return base_url('webhooks/flutterwave');
+    }
+    return base_url('payment/webhook?gateway=' . rawurlencode($code));
+}
+
 function payment_env_config() {
     static $config = null;
     if ($config === null) {
@@ -54,6 +78,11 @@ function merge_gateway_config($gatewayCode, array $dbGateway) {
             $merged['webhook_secret_hash'] = $webhookHash;
             $merged['secret_key'] = $webhookHash;
         }
+        $merged['callback_url'] = payment_callback_url('flutterwave');
+    }
+
+    if ($code === 'paystack' && ($merged['callback_url'] === '' || stripos($merged['callback_url'], 'payment/callback') === false)) {
+        $merged['callback_url'] = payment_callback_url('paystack');
     }
 
     return $merged;

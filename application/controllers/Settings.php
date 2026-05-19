@@ -80,6 +80,9 @@ class Settings extends Base_Controller {
                 // Flutterwave specific fields
                 if ($gateway['gateway_code'] === 'flutterwave') {
                     $additionalConfig['encryption_key'] = sanitize_input($_POST['encryption_key'] ?? '');
+                    require_once BASEPATH . 'helpers/payment_config_helper.php';
+                    $data['callback_url'] = payment_callback_url('flutterwave');
+                    $data['webhook_url'] = payment_webhook_url('flutterwave');
                 }
                 
                 if (!empty($additionalConfig)) {

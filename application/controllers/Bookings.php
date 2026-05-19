@@ -114,15 +114,91 @@ class Bookings extends Base_Controller {
             error_log('Bookings index error: ' . $e->getMessage());
         }
 
+        $sort = sanitize_input($_GET['sort'] ?? 'booking_number');
+        $sortDir = strtolower(sanitize_input($_GET['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+        $this->sortBookingsList($bookings, $sort, $sortDir);
+
         $data = [
             'page_title' => 'Bookings',
             'bookings' => $bookings,
             'selected_status' => $status,
             'selected_date' => $date,
+            'sort' => $sort,
+            'sort_dir' => $sortDir,
             'flash' => $this->getFlashMessage()
         ];
 
         $this->loadView('bookings/index', $data);
+    }
+
+    /**
+     * Sort bookings list in memory (supports all index table columns).
+     */
+    private function sortBookingsList(array &$bookings, $sort, $dir) {
+        $allowed = [
+            'booking_number',
+            'facility',
+            'customer',
+            'date_time',
+            'duration',
+            'total_amount',
+            'payment_status',
+            'status',
+        ];
+        if (!in_array($sort, $allowed, true)) {
+            $sort = 'booking_number';
+        }
+        $mult = $dir === 'desc' ? -1 : 1;
+
+        usort($bookings, function ($a, $b) use ($sort, $mult) {
+            switch ($sort) {
+                case 'facility':
+                    $va = $a['facility_name'] ?? '';
+                    $vb = $b['facility_name'] ?? '';
+                    break;
+                case 'customer':
+                    $va = $a['customer_name'] ?? '';
+                    $vb = $b['customer_name'] ?? '';
+                    break;
+                case 'date_time':
+                    $da = ($a['booking_date'] ?? '') . ' ' . ($a['start_time'] ?? '');
+                    $db = ($b['booking_date'] ?? '') . ' ' . ($b['start_time'] ?? '');
+                    $cmp = strcmp($da, $db);
+                    return $cmp * $mult;
+                case 'duration':
+                    $va = floatval($a['duration_hours'] ?? 0);
+                    $vb = floatval($b['duration_hours'] ?? 0);
+                    return ($va <=> $vb) * $mult;
+                case 'total_amount':
+                    $va = floatval($a['total_amount'] ?? 0);
+                    $vb = floatval($b['total_amount'] ?? 0);
+                    return ($va <=> $vb) * $mult;
+                case 'payment_status':
+                    $va = $a['payment_status'] ?? '';
+                    $vb = $b['payment_status'] ?? '';
+                    break;
+                case 'status':
+                    $va = $a['status'] ?? '';
+                    $vb = $b['status'] ?? '';
+                    break;
+                case 'booking_number':
+                default:
+                    $va = $a['booking_number'] ?? '';
+                    $vb = $b['booking_number'] ?? '';
+                    break;
+            }
+
+            if ($sort === 'date_time') {
+                return 0;
+            }
+            if (is_float($va) || is_float($vb)) {
+                return 0;
+            }
+            if (is_numeric($va) && is_numeric($vb)) {
+                return (floatval($va) <=> floatval($vb)) * $mult;
+            }
+            return strcasecmp((string) $va, (string) $vb) * $mult;
+        });
     }
 
     public function calendar() {

@@ -98,7 +98,7 @@ class Payment extends Base_Controller {
             require_once BASEPATH . 'libraries/Payment_gateway.php';
             
             $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
-            $gatewayConfig['callback_url'] = $gateway['callback_url'] ?: base_url('payment/callback');
+            $gatewayConfig['callback_url'] = payment_callback_url($gatewayCode);
             
             $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
             
@@ -369,11 +369,11 @@ public function callback() {
                 
             case 'flutterwave':
                 $event = $payload['event'] ?? $payload['type'] ?? '';
-                $known = ['charge.completed', 'transfer.completed', 'refund.completed', 'refund.failed'];
+                $known = ['charge.completed', 'charge.success', 'transfer.completed', 'refund.completed', 'refund.failed'];
                 if ($event === '' || !in_array($event, $known, true)) {
                     return true;
                 }
-                if (in_array($event, ['charge.completed', 'refund.completed', 'refund.failed'], true)) {
+                if (in_array($event, ['charge.completed', 'charge.success', 'refund.completed', 'refund.failed'], true)) {
                     return empty($payload['data']) || empty($payload['data']['tx_ref']);
                 }
                 return empty($payload['data']);

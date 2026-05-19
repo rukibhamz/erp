@@ -47,7 +47,7 @@ function initiate_booking_gateway_payment($bookingId, $requestedGatewayCode, $bo
     }
 
     $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
-    $gatewayConfig['callback_url'] = base_url('payment/callback');
+    $gatewayConfig['callback_url'] = payment_callback_url($gatewayCode);
 
     $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);
 

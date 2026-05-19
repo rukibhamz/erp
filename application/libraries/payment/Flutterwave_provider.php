@@ -216,6 +216,7 @@ class Flutterwave_provider extends Abstract_payment_provider {
         $event = $payload['event'] ?? $payload['type'] ?? '';
         $processable = [
             'charge.completed',
+            'charge.success',
             'transfer.completed',
             'refund.completed',
             'refund.failed',
@@ -223,7 +224,7 @@ class Flutterwave_provider extends Abstract_payment_provider {
         if ($event === '' || !in_array($event, $processable, true)) {
             return true;
         }
-        if (in_array($event, ['charge.completed', 'refund.completed', 'refund.failed'], true)) {
+        if (in_array($event, ['charge.completed', 'charge.success', 'refund.completed', 'refund.failed'], true)) {
             return empty($payload['data']) || empty($payload['data']['tx_ref']);
         }
         return empty($payload['data']);
@@ -231,7 +232,7 @@ class Flutterwave_provider extends Abstract_payment_provider {
 
     public function shouldProcessWebhookEvent(array $payload) {
         $event = $payload['event'] ?? $payload['type'] ?? '';
-        return in_array($event, ['charge.completed', 'transfer.completed'], true);
+        return in_array($event, ['charge.completed', 'charge.success', 'transfer.completed'], true);
     }
 
     private function appendGatewayToCallback($callbackUrl) {

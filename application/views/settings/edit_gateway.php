@@ -78,26 +78,44 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                             <!-- URLs -->
                             <h5 class="mb-3">Callback & Webhook URLs</h5>
+                            <?php
+                            require_once BASEPATH . 'helpers/payment_config_helper.php';
+                            $recommendedCallback = payment_callback_url($gateway['gateway_code']);
+                            $recommendedWebhook = payment_webhook_url($gateway['gateway_code']);
+                            ?>
 
                             <div class="mb-3">
-                                <label class="form-label">Callback URL</label>
-                                <input type="url" name="callback_url" class="form-control" 
-                                       value="<?= htmlspecialchars($gateway['callback_url'] ?: base_url('payment/callback')) ?>"
-                                       placeholder="<?= base_url('payment/callback') ?>">
-                                <small class="text-muted">URL where customers are redirected after payment</small>
+                                <label class="form-label">Callback URL (redirect after payment)</label>
+                                <input type="url" name="callback_url" class="form-control"
+                                       value="<?= htmlspecialchars($gateway['gateway_code'] === 'flutterwave' ? $recommendedCallback : ($gateway['callback_url'] ?: base_url('payment/callback'))) ?>"
+                                       placeholder="<?= htmlspecialchars($recommendedCallback) ?>"
+                                       <?= $gateway['gateway_code'] === 'flutterwave' ? 'readonly' : '' ?>>
+                                <small class="text-muted">
+                                    <?php if ($gateway['gateway_code'] === 'flutterwave'): ?>
+                                        Must include <code>gateway=flutterwave</code> (set automatically when you save).
+                                    <?php else: ?>
+                                        URL where customers are redirected after payment
+                                    <?php endif; ?>
+                                </small>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Webhook URL</label>
                                 <div class="input-group">
-                                    <input type="url" name="webhook_url" class="form-control" 
-                                           value="<?= htmlspecialchars($gateway['webhook_url'] ?: ($gateway['gateway_code'] === 'flutterwave' ? base_url('webhooks/flutterwave') : base_url('payment/webhook?gateway=' . $gateway['gateway_code']))) ?>"
-                                           placeholder="<?= $gateway['gateway_code'] === 'flutterwave' ? base_url('webhooks/flutterwave') : base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>">
-                                    <button class="btn btn-outline-dark" type="button" onclick="copyToClipboard('<?= $gateway['gateway_code'] === 'flutterwave' ? base_url('webhooks/flutterwave') : base_url('payment/webhook?gateway=' . $gateway['gateway_code']) ?>')">
+                                    <input type="url" name="webhook_url" class="form-control"
+                                           value="<?= htmlspecialchars($gateway['gateway_code'] === 'flutterwave' ? $recommendedWebhook : ($gateway['webhook_url'] ?: $recommendedWebhook)) ?>"
+                                           placeholder="<?= htmlspecialchars($recommendedWebhook) ?>"
+                                           <?= $gateway['gateway_code'] === 'flutterwave' ? 'readonly' : '' ?>>
+                                    <button class="btn btn-outline-dark" type="button" onclick="copyToClipboard('<?= htmlspecialchars($recommendedWebhook, ENT_QUOTES) ?>')">
                                         <i class="bi bi-clipboard"></i> Copy
                                     </button>
                                 </div>
-                                <small class="text-muted">Use this URL in your <?= htmlspecialchars($gateway['gateway_name']) ?> dashboard for webhook notifications</small>
+                                <small class="text-muted">
+                                    Register in <?= htmlspecialchars($gateway['gateway_name']) ?> dashboard → Webhooks.
+                                    <?php if ($gateway['gateway_code'] === 'flutterwave'): ?>
+                                        Use the same <strong>Secret Hash</strong> as above.
+                                    <?php endif; ?>
+                                </small>
                             </div>
 
                             <hr>

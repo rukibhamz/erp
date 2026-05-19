@@ -1421,7 +1421,7 @@ class Booking_wizard extends Base_Controller {
 
                     if ($gateway) {
                         $gatewayConfig = merge_gateway_config($gatewayCode, $gateway);
-                        $gatewayConfig['callback_url'] = base_url('payment/callback');
+                        $gatewayConfig['callback_url'] = payment_callback_url($gatewayCode);
                         error_log("FINALIZE: Callback URL: " . base_url('payment/callback'));
                         
                         $paymentGateway = new Payment_gateway($gatewayCode, $gatewayConfig);

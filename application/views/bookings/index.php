@@ -1,5 +1,28 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
+
+$sort = $sort ?? 'booking_number';
+$sort_dir = $sort_dir ?? 'asc';
+
+$buildSortUrl = function ($column) use ($sort, $sort_dir) {
+    $params = $_GET;
+    $params['sort'] = $column;
+    $params['dir'] = ($sort === $column && $sort_dir === 'asc') ? 'desc' : 'asc';
+    return '?' . http_build_query($params);
+};
+
+$sortIcon = function ($column) use ($sort, $sort_dir) {
+    if ($sort !== $column) {
+        return '<i class="bi bi-arrow-down-up text-muted ms-1" style="font-size:0.75rem;"></i>';
+    }
+    return $sort_dir === 'asc'
+        ? '<i class="bi bi-sort-alpha-down ms-1"></i>'
+        : '<i class="bi bi-sort-alpha-up ms-1"></i>';
+};
+
+$sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
+  return '<th class="sortable-th"><a href="' . htmlspecialchars($buildSortUrl($column)) . '" class="text-decoration-none text-reset">' . htmlspecialchars($label) . $sortIcon($column) . '</a></th>';
+};
 ?>
 
 <div class="container-fluid">
@@ -36,6 +59,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" action="" class="row g-3 align-items-end">
+                <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
+                <input type="hidden" name="dir" value="<?= htmlspecialchars($sort_dir) ?>">
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Status</label>
                     <select name="status" id="filter-status" class="form-select">
@@ -85,14 +110,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Booking #</th>
-                            <th>Facility</th>
-                            <th>Customer</th>
-                            <th>Date & Time</th>
-                            <th>Duration</th>
-                            <th>Total Amount</th>
-                            <th>Payment Status</th>
-                            <th>Status</th>
+                            <?= $sortableTh('booking_number', 'Booking #') ?>
+                            <?= $sortableTh('facility', 'Facility') ?>
+                            <?= $sortableTh('customer', 'Customer') ?>
+                            <?= $sortableTh('date_time', 'Date & Time') ?>
+                            <?= $sortableTh('duration', 'Duration') ?>
+                            <?= $sortableTh('total_amount', 'Total Amount') ?>
+                            <?= $sortableTh('payment_status', 'Payment Status') ?>
+                            <?= $sortableTh('status', 'Status') ?>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -158,3 +183,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
+<style>
+.sortable-th a { display: inline-flex; align-items: center; white-space: nowrap; cursor: pointer; }
+.sortable-th a:hover { color: var(--bs-primary) !important; }
+</style>
