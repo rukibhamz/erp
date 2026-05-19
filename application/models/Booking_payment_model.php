@@ -21,6 +21,25 @@ class Booking_payment_model extends Base_Model {
         }
     }
     
+    /**
+     * Find a completed payment tied to a gateway transaction reference (if column exists).
+     */
+    public function getByGatewayReference($reference) {
+        if ($reference === null || $reference === '') {
+            return null;
+        }
+        try {
+            return $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`
+                 WHERE reference = ? AND status = 'completed'
+                 LIMIT 1",
+                [$reference]
+            ) ?: null;
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
     public function getByBooking($bookingId) {
         try {
             return $this->db->fetchAll(

@@ -148,18 +148,8 @@ public function callback() {
     file_put_contents($logFile, $diagEntry, FILE_APPEND);
     
     $transactionRef = $_GET['tx_ref'] ?? $_GET['reference'] ?? $_GET['trxref'] ?? '';
-    $gatewayCode = $_GET['gateway'] ?? '';
     $flutterwaveTransactionId = $_GET['transaction_id'] ?? '';
-
-    if ($transactionRef && $gatewayCode === '') {
-        $existingTxn = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
-        if ($existingTxn) {
-            $gatewayCode = $existingTxn['gateway_code'];
-        }
-    }
-    if ($gatewayCode === '') {
-        $gatewayCode = 'paystack';
-    }
+    $gatewayCode = $this->resolveCallbackGatewayCode($transactionRef);
     
     file_put_contents($logFile, "[$timestamp] Extracted ref: '$transactionRef', gateway: '$gatewayCode', flw_id: '$flutterwaveTransactionId'\n", FILE_APPEND);
     
@@ -178,12 +168,23 @@ public function callback() {
         // Verify payment
         file_put_contents($logFile, "[$timestamp] Calling verifyPayment()...\n", FILE_APPEND);
         $verifyOptions = [];
-        if ($gatewayCode === 'flutterwave' && $flutterwaveTransactionId !== '') {
-            $verifyOptions['transaction_id'] = $flutterwaveTransactionId;
+        if ($gatewayCode === 'flutterwave') {
             $verifyOptions['tx_ref'] = $transactionRef;
+            if ($flutterwaveTransactionId !== '') {
+                $verifyOptions['transaction_id'] = $flutterwaveTransactionId;
+            }
         }
-        $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
-        file_put_contents($logFile, "[$timestamp] verifyPayment() completed successfully\n", FILE_APPEND);
+        $verifyResult = $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
+
+        // Flutterwave may redirect before the verify API reports "successful" — retry once.
+        if (!empty($verifyResult['pending']) && $gatewayCode === 'flutterwave') {
+            $redirectStatus = strtolower((string) ($_GET['status'] ?? ''));
+            if (in_array($redirectStatus, ['successful', 'success', 'completed', 'paid'], true)) {
+                sleep(2);
+                $verifyResult = $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
+            }
+        }
+        file_put_contents($logFile, "[$timestamp] verifyPayment() completed\n", FILE_APPEND);
         
         // Get transaction for confirmation page
         $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
@@ -483,7 +484,11 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
         file_put_contents($logFile, "[$timestamp] verifyPayment: Found transaction ID={$transaction['id']}, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, status={$transaction['status']}\n", FILE_APPEND);
         
         if ($transaction['status'] === 'success') {
-            file_put_contents($logFile, "[$timestamp] verifyPayment: Already verified — skipping (idempotent)\n", FILE_APPEND);
+            file_put_contents($logFile, "[$timestamp] verifyPayment: Transaction already success — checking fulfillment\n", FILE_APPEND);
+            if ($this->bookingFulfillmentStillNeeded($transaction)) {
+                file_put_contents($logFile, "[$timestamp] verifyPayment: Re-running processPaymentSuccess (reconciliation)\n", FILE_APPEND);
+                $this->processPaymentSuccess($transaction);
+            }
             return ['already_verified' => true];
         }
         
@@ -615,9 +620,12 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 
                 file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 2 - Booking found: #{$booking['booking_number']}, status={$booking['status']}, payment_status=" . ($booking['payment_status'] ?? 'N/A') . ", paid_amount=" . ($booking['paid_amount'] ?? '0') . ", total=" . ($booking['total_amount'] ?? '0') . "\n", FILE_APPEND);
                 
-                // IDEMPOTENCY CHECK: Skip if already processed
-                if ($booking['status'] === 'confirmed' && !empty($booking['payment_verified_at'])) {
-                    file_put_contents($logFile, "[$ts] processPaymentSuccess: SKIPPED - Already confirmed and verified (idempotency)\n", FILE_APPEND);
+                // IDEMPOTENCY: skip only if this gateway transaction was already recorded on the booking.
+                $this->bookingPaymentModel = $this->bookingPaymentModel ?? $this->loadModel('Booking_payment_model');
+                $existingPayment = $this->bookingPaymentModel->getByGatewayReference($transaction['transaction_ref']);
+                if ($existingPayment) {
+                    file_put_contents($logFile, "[$ts] processPaymentSuccess: SKIPPED - Payment already recorded for ref {$transaction['transaction_ref']}\n", FILE_APPEND);
+                    $this->bookingPaymentModel->syncBookingBalance($booking['id']);
                     return;
                 }
                 
@@ -685,6 +693,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 // DIAGNOSTIC: Verify the update actually persisted
                 $verifyBooking = $this->bookingModel->getById($booking['id']);
                 file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 VERIFY - After update: status=" . ($verifyBooking['status'] ?? 'NULL') . ", payment_status=" . ($verifyBooking['payment_status'] ?? 'NULL') . ", paid_amount=" . ($verifyBooking['paid_amount'] ?? 'NULL') . ", balance=" . ($verifyBooking['balance_amount'] ?? 'NULL') . "\n", FILE_APPEND);
+
+                $this->bookingPaymentModel->syncBookingBalance($booking['id']);
                 
                 error_log("processPaymentSuccess: Core booking update - paid: $newPaidAmount, balance: $newBalance, result: " . ($updateResult ? 'OK' : 'FAIL'));
                 
@@ -1202,12 +1212,62 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
     /**
      * Never trust client-supplied amounts — compare gateway-verified values to DB.
      */
+    /**
+     * Resolve gateway for payment callback (never assume Paystack when tx exists in DB).
+     */
+    private function resolveCallbackGatewayCode($transactionRef) {
+        if ($transactionRef !== '') {
+            $existingTxn = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+            if ($existingTxn && !empty($existingTxn['gateway_code'])) {
+                return strtolower($existingTxn['gateway_code']);
+            }
+        }
+
+        $fromQuery = strtolower(trim((string) ($_GET['gateway'] ?? '')));
+        if ($fromQuery !== '') {
+            return $fromQuery;
+        }
+
+        return 'paystack';
+    }
+
+    /**
+     * True when a successful payment_transactions row still needs booking fulfillment.
+     */
+    private function bookingFulfillmentStillNeeded(array $transaction) {
+        if (($transaction['payment_type'] ?? '') !== 'booking_payment') {
+            return false;
+        }
+
+        $bookingId = (int) ($transaction['reference_id'] ?? 0);
+        if ($bookingId <= 0) {
+            return false;
+        }
+
+        $bookingPaymentModel = $this->loadModel('Booking_payment_model');
+        if ($bookingPaymentModel->getByGatewayReference($transaction['transaction_ref'])) {
+            return false;
+        }
+
+        $bookingModel = $this->loadModel('Booking_model');
+        $booking = $bookingModel->getById($bookingId);
+        if (!$booking) {
+            return false;
+        }
+
+        $balance = floatval($booking['balance_amount'] ?? 0);
+        $expectedPaid = floatval($booking['paid_amount'] ?? 0) + floatval($transaction['amount']);
+
+        return $balance > 0.01 || floatval($booking['paid_amount'] ?? 0) + 0.01 < $expectedPaid;
+    }
+
     private function assertVerifiedAmountMatchesTransaction(array $transaction, array $verification) {
         $expectedAmount = round((float) $transaction['amount'], 2);
         $verifiedAmount = round((float) ($verification['amount'] ?? 0), 2);
 
-        if (abs($expectedAmount - $verifiedAmount) > 0.01) {
-            error_log("Payment amount mismatch for {$transaction['transaction_ref']}: expected {$expectedAmount}, got {$verifiedAmount}");
+        // Flutterwave docs: paid amount may be >= expected (overpayment / fees).
+        if ($verifiedAmount + 0.01 < $expectedAmount) {
+            error_log("Payment amount insufficient for {$transaction['transaction_ref']}: expected {$expectedAmount}, got {$verifiedAmount}");
             throw new Exception('Payment amount mismatch');
         }
 

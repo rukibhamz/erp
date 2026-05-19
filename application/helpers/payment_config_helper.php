@@ -43,8 +43,16 @@ function merge_gateway_config($gatewayCode, array $dbGateway) {
         if (!empty($providerEnv['encryption_key'])) {
             $merged['additional_config']['encryption_key'] = $providerEnv['encryption_key'];
         }
-        if (!empty($providerEnv['webhook_secret_hash'])) {
-            $merged['secret_key'] = $providerEnv['webhook_secret_hash'];
+        $webhookHash = trim($providerEnv['webhook_secret_hash'] ?? '');
+        if ($webhookHash === '') {
+            $webhookHash = trim($dbGateway['secret_key'] ?? '');
+        }
+        if ($webhookHash === '' && !empty($merged['additional_config']['webhook_secret_hash'])) {
+            $webhookHash = trim($merged['additional_config']['webhook_secret_hash']);
+        }
+        if ($webhookHash !== '') {
+            $merged['webhook_secret_hash'] = $webhookHash;
+            $merged['secret_key'] = $webhookHash;
         }
     }
 

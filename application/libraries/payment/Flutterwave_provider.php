@@ -110,22 +110,35 @@ class Flutterwave_provider extends Abstract_payment_provider {
         $transactionId = $options['transaction_id'] ?? null;
         $txRef = $options['tx_ref'] ?? null;
 
-        if ($transactionId) {
-            $result = $this->verifyByTransactionId($secretKey, $transactionId);
-            if ($result['success'] || empty($txRef)) {
-                return $result;
+        if ($txRef === null && !ctype_digit((string) $reference)) {
+            $txRef = (string) $reference;
+        }
+
+        // Prefer tx_ref — it matches our payment_transactions.transaction_ref.
+        if ($txRef !== null && $txRef !== '') {
+            $byRef = $this->verifyByTxRef($secretKey, $txRef);
+            if ($byRef['success'] || empty($transactionId)) {
+                return $byRef;
             }
         }
 
-        if ($txRef) {
-            return $this->verifyByTxRef($secretKey, $txRef);
+        if ($transactionId) {
+            $byId = $this->verifyByTransactionId($secretKey, $transactionId);
+            if (!empty($txRef) && !empty($byId['gateway_reference']) && $byId['gateway_reference'] !== $txRef) {
+                error_log("Flutterwave verify: transaction_id {$transactionId} tx_ref mismatch (expected {$txRef}, got {$byId['gateway_reference']})");
+                return [
+                    'success' => false,
+                    'message' => 'Transaction reference mismatch',
+                ];
+            }
+            return $byId;
         }
 
         if (ctype_digit((string) $reference)) {
             return $this->verifyByTransactionId($secretKey, $reference);
         }
 
-        return $this->verifyByTxRef($secretKey, $reference);
+        return $this->verifyByTxRef($secretKey, (string) $reference);
     }
 
     private function verifyByTransactionId($secretKey, $transactionId) {
@@ -153,11 +166,13 @@ class Flutterwave_provider extends Abstract_payment_provider {
         }
 
         $data = $result['data'] ?? [];
-        $status = strtolower($data['status'] ?? '');
+        $status = strtolower((string) ($data['status'] ?? ''));
+        $successStatuses = ['successful', 'success', 'completed', 'paid'];
+        $pendingStatuses = ['pending', 'processing', 'pending-validation', 'pending_validation'];
 
         return [
-            'success' => $status === 'successful',
-            'pending' => in_array($status, ['pending', 'processing'], true),
+            'success' => in_array($status, $successStatuses, true),
+            'pending' => in_array($status, $pendingStatuses, true),
             'amount' => (float) ($data['amount'] ?? 0),
             'currency' => $data['currency'] ?? '',
             'gateway_reference' => $data['tx_ref'] ?? ($data['flw_ref'] ?? ''),
@@ -177,9 +192,12 @@ class Flutterwave_provider extends Abstract_payment_provider {
             return false;
         }
 
-        $secretHash = $this->config['secret_key'] ?? '';
+        $secretHash = $this->config['webhook_secret_hash']
+            ?? $this->config['secret_key']
+            ?? ($this->config['additional_config']['webhook_secret_hash'] ?? '');
         if ($secretHash === '') {
-            $secretHash = $this->getSecretKey();
+            error_log('Flutterwave webhook: webhook secret hash not configured');
+            return false;
         }
 
         if ($secretHash === '') {
