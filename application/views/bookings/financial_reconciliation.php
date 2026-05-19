@@ -90,13 +90,13 @@ $queryBase = http_build_query(array_filter([
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span><strong><?= count($mismatched) ?></strong> booking(s) need reconciliation</span>
                     <div class="d-flex gap-2">
-                        <button type="submit" name="reconcile_all_listed" value="1" class="btn btn-warning btn-sm"
+                        <button type="submit" name="reconcile_all_listed" value="1" class="btn btn-primary btn-sm"
                                 onclick="return confirm('Reconcile all <?= count($mismatched) ?> bookings listed? Invoices and GL will be updated.');">
-                            <i class="bi bi-arrow-repeat"></i> Reconcile all listed
+                            <i class="bi bi-arrow-repeat"></i> Reconcile All Listed
                         </button>
-                        <button type="submit" class="btn btn-outline-warning btn-sm"
+                        <button type="submit" class="btn btn-primary btn-sm"
                                 onclick="return confirm('Reconcile selected bookings?');">
-                            <i class="bi bi-check2-square"></i> Reconcile selected
+                            <i class="bi bi-check2-square"></i> Reconcile Selected
                         </button>
                     </div>
                 </div>

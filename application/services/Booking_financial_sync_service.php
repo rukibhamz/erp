@@ -222,7 +222,7 @@ class Booking_financial_sync_service {
             }
 
             $booking = $this->db->fetchOne(
-                "SELECT b.*, f.name AS facility_name
+                "SELECT b.*, f.facility_name AS facility_name
                  FROM `{$prefix}bookings` b
                  LEFT JOIN `{$prefix}facilities` f ON f.id = b.facility_id
                  WHERE b.id = ?",

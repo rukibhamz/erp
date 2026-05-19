@@ -327,8 +327,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php if (has_permission('bookings', 'update')): ?>
                             <form method="POST" action="<?= base_url('bookings/reconcileFinancials/' . $booking['id']) ?>" class="d-grid">
                                 <?php echo csrf_field(); ?>
-                                <button type="submit" class="btn btn-outline-warning btn-sm">
-                                    <i class="bi bi-arrow-repeat"></i> Reconcile with accounts
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-arrow-repeat"></i> Reconcile with Accounts
                                 </button>
                             </form>
                             <?php endif; ?>
