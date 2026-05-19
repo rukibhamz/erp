@@ -283,7 +283,7 @@ class Facility_model extends Base_Model {
         return null;
     }
     
-    public function getAvailableTimeSlots($facilityId, $date, $endDate = null) {
+    public function getAvailableTimeSlots($facilityId, $date, $endDate = null, $excludeBookingId = null) {
         $checkEndDate = $endDate ?? $date;
 
         
@@ -363,6 +363,9 @@ class Facility_model extends Base_Model {
             $bufferMinutes = 60; 
 
             foreach ($bookings as $booking) {
+                if ($excludeBookingId && (int) $booking['id'] === (int) $excludeBookingId) {
+                    continue;
+                }
                 if (!in_array($booking['status'], ['cancelled', 'no_show', 'refunded'])) {
                     $bookingStart = new DateTime($booking['booking_date'] . ' ' . $booking['start_time']);
                     $bookingEnd = new DateTime($booking['booking_date'] . ' ' . $booking['end_time']);
@@ -501,8 +504,8 @@ class Facility_model extends Base_Model {
                             }
                         }
 
-                        // Mark past slots as unavailable for today
-                        if ($isToday && !$isOccupied) {
+                        // Mark past slots as unavailable for today (skip when editing — keep current booking visible)
+                        if ($isToday && !$isOccupied && !$excludeBookingId) {
                             // Slot is in the past if its start hour is <= current hour
                             // (add 1 hour buffer so users can't book a slot starting within the next hour)
                             if ($currentH < $nowHour + 1) {

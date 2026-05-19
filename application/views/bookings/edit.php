@@ -195,7 +195,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <script nonce="<?= csp_nonce() ?>">
 (function () {
     const bookingId = <?= intval($booking['id'] ?? 0) ?>;
-    const currentDate = '<?= htmlspecialchars($booking['booking_date'] ?? '') ?>';
+    <?php $savedBookingDateJs = !empty($booking['booking_date']) ? date('Y-m-d', strtotime($booking['booking_date'])) : ''; ?>
+    const currentDate = '<?= htmlspecialchars($savedBookingDateJs) ?>';
     const currentStart = '<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>';
     const currentEnd = '<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>';
 
@@ -385,10 +386,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             });
         });
 
+        const normalizeTime = (t) => String(t || '').substring(0, 5);
         const currentBtn = Array.from(slotContainer.querySelectorAll('.available-slot'))
-            .find(b => b.dataset.start === currentStart && b.dataset.end === currentEnd && dateValue === currentDate);
+            .find(b => normalizeTime(b.dataset.start) === currentStart
+                && normalizeTime(b.dataset.end) === currentEnd
+                && dateValue === currentDate);
         if (currentBtn) {
-            setSelectedSlot(currentStart, currentEnd, currentBtn);
+            setSelectedSlot(currentBtn.dataset.start, currentBtn.dataset.end, currentBtn);
+        } else if (dateValue === currentDate && currentStart && currentEnd) {
+            // Editing: keep saved times even if UI shows slot as occupied (e.g. this booking).
+            setSelectedSlot(currentStart, currentEnd, null);
         } else {
             setSelectedSlot('', '');
         }
@@ -428,7 +435,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         if (typeof this.showPicker === 'function') this.showPicker();
     });
 
+    // Ensure saved times stay in hidden fields before first slot load completes.
+    if (currentStart && currentEnd) {
+        startInput.value = currentStart;
+        endInput.value = currentEnd;
+    }
+
     loadSlots();
+
+    document.querySelector('form')?.addEventListener('submit', function (e) {
+        if (!startInput.value || !endInput.value) {
+            if (currentStart && currentEnd) {
+                startInput.value = currentStart;
+                endInput.value = currentEnd;
+            } else {
+                e.preventDefault();
+                alert('Please select a time slot before saving.');
+            }
+        }
+    });
 })();
 </script>
 

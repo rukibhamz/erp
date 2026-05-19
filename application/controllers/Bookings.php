@@ -369,8 +369,8 @@ class Bookings extends Base_Controller {
                  exit;
             }
 
-            // Use centralized logic
-            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $endDate);
+            $excludeBookingId = intval($_GET['exclude_booking_id'] ?? 0) ?: null;
+            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $endDate, $excludeBookingId);
             echo json_encode($result);
             
         } catch (Exception $e) {
@@ -972,8 +972,14 @@ class Bookings extends Base_Controller {
                 }
 
                 $newBookingDate = date('Y-m-d', strtotime(sanitize_input($_POST['booking_date'] ?? ($booking['booking_date'] ?? ''))));
-                $newStartTime = sanitize_input($_POST['start_time'] ?? ($booking['start_time'] ?? ''));
-                $newEndTime = sanitize_input($_POST['end_time'] ?? ($booking['end_time'] ?? ''));
+                $newStartTime = trim(sanitize_input($_POST['start_time'] ?? ''));
+                $newEndTime = trim(sanitize_input($_POST['end_time'] ?? ''));
+                if ($newStartTime === '') {
+                    $newStartTime = (string) ($booking['start_time'] ?? '');
+                }
+                if ($newEndTime === '') {
+                    $newEndTime = (string) ($booking['end_time'] ?? '');
+                }
                 if (strlen($newStartTime) === 5) {
                     $newStartTime .= ':00';
                 }
