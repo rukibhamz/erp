@@ -45,8 +45,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Date <span class="text-danger">*</span></label>
+                        <?php
+                        $editBookingDate = !empty($booking['booking_date'])
+                            ? date('Y-m-d', strtotime($booking['booking_date']))
+                            : date('Y-m-d');
+                        ?>
                         <input type="date" name="booking_date" id="booking_date_input" class="form-control"
-                               value="<?= htmlspecialchars($booking['booking_date'] ?? '') ?>" min="<?= date('Y-m-d') ?>" required>
+                               value="<?= htmlspecialchars($editBookingDate) ?>" required>
                     </div>
                 </div>
                 <input type="hidden" name="start_time" id="start_time_input" value="<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>">

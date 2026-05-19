@@ -971,9 +971,15 @@ class Bookings extends Base_Controller {
                     redirect('bookings/edit/' . $id);
                 }
 
-                $newBookingDate = sanitize_input($_POST['booking_date'] ?? ($booking['booking_date'] ?? ''));
+                $newBookingDate = date('Y-m-d', strtotime(sanitize_input($_POST['booking_date'] ?? ($booking['booking_date'] ?? ''))));
                 $newStartTime = sanitize_input($_POST['start_time'] ?? ($booking['start_time'] ?? ''));
                 $newEndTime = sanitize_input($_POST['end_time'] ?? ($booking['end_time'] ?? ''));
+                if (strlen($newStartTime) === 5) {
+                    $newStartTime .= ':00';
+                }
+                if (strlen($newEndTime) === 5) {
+                    $newEndTime .= ':00';
+                }
                 $selectedSpaceId = intval($_POST['space_id'] ?? ($booking['space_id'] ?? 0));
 
                 if (empty($newBookingDate) || empty($newStartTime) || empty($newEndTime)) {
@@ -998,10 +1004,13 @@ class Bookings extends Base_Controller {
                     throw new Exception('Booking resource is missing. Cannot validate availability.');
                 }
 
+                $savedBookingDate = date('Y-m-d', strtotime($booking['booking_date'] ?? ''));
+                $savedStartTime = substr((string) ($booking['start_time'] ?? ''), 0, 8);
+                $savedEndTime = substr((string) ($booking['end_time'] ?? ''), 0, 8);
                 $dateTimeChanged = (
-                    ($booking['booking_date'] ?? '') !== $newBookingDate ||
-                    substr((string)($booking['start_time'] ?? ''), 0, 5) !== substr($newStartTime, 0, 5) ||
-                    substr((string)($booking['end_time'] ?? ''), 0, 5) !== substr($newEndTime, 0, 5)
+                    $savedBookingDate !== $newBookingDate ||
+                    $savedStartTime !== substr($newStartTime, 0, 8) ||
+                    $savedEndTime !== substr($newEndTime, 0, 8)
                 );
                 $venueChanged = intval($booking['space_id'] ?? 0) !== intval($selectedSpace['space_id'] ?? 0)
                     || intval($booking['facility_id'] ?? 0) !== $resourceId;

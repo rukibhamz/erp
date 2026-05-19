@@ -1072,34 +1072,38 @@ class Facility_model extends Base_Model {
                 }
             }
             
-            // Check existing bookings (with simultaneous limit)
+            // Check existing bookings (with simultaneous limit); exclude current booking when editing.
             $simultaneousLimit = intval($facility['simultaneous_limit'] ?? 1);
-            $bookingCount = $this->db->fetchOne(
-                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "bookings`
+            $overlapSql = "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "bookings`
                  WHERE facility_id = ?
                  AND booking_date BETWEEN ? AND ?
-                 AND status NOT IN ('cancelled', 'no_show')
-                 AND (start_time < ? AND end_time > ?)",
-                [$facilityId, $startDate, $endDate, $endTime, $startTime]
-            );
-            
+                 AND status NOT IN ('cancelled', 'no_show', 'refunded')
+                 AND (start_time < ? AND end_time > ?)";
+            $overlapParams = [$facilityId, $startDate, $endDate, $endTime, $startTime];
+            if ($excludeBookingId) {
+                $overlapSql .= " AND id != ?";
+                $overlapParams[] = (int) $excludeBookingId;
+            }
+            $bookingCount = $this->db->fetchOne($overlapSql, $overlapParams);
+
             if ($bookingCount && intval($bookingCount['count']) >= $simultaneousLimit) {
                 return false;
             }
-            
-            // Check lead time
-            if ($facility['lead_time'] > 0) {
-                $daysInAdvance = (strtotime($startDate) - time()) / (60 * 60 * 24);
-                if ($daysInAdvance > $facility['lead_time']) {
-                    return false;
+
+            // Lead time / cutoff apply to new bookings only — not when editing an existing reservation.
+            if (!$excludeBookingId) {
+                if ($facility['lead_time'] > 0) {
+                    $daysInAdvance = (strtotime($startDate) - time()) / (60 * 60 * 24);
+                    if ($daysInAdvance > $facility['lead_time']) {
+                        return false;
+                    }
                 }
-            }
-            
-            // Check cutoff time
-            if ($facility['cutoff_time'] > 0) {
-                $hoursUntilBooking = (strtotime($startDateTime) - time()) / (60 * 60);
-                if ($hoursUntilBooking < $facility['cutoff_time']) {
-                    return false;
+
+                if ($facility['cutoff_time'] > 0) {
+                    $hoursUntilBooking = (strtotime($startDateTime) - time()) / (60 * 60);
+                    if ($hoursUntilBooking < $facility['cutoff_time']) {
+                        return false;
+                    }
                 }
             }
             
