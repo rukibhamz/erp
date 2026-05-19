@@ -36,6 +36,9 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                 <i class="bi bi-calendar-month"></i> Calendar View
             </a>
             <?php if (has_permission('bookings', 'update')): ?>
+                <a href="<?= base_url('bookings/financialReconciliation') ?>" class="btn btn-outline-warning">
+                    <i class="bi bi-arrow-repeat"></i> Reconcile finances
+                </a>
                 <a href="<?= base_url('resource-management/addons') ?>" class="btn btn-primary">
                     <i class="bi bi-puzzle"></i> Manage Add-ons
                 </a>

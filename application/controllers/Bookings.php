@@ -24,6 +24,7 @@ class Bookings extends Base_Controller {
     private $journalCleanupService;
     private $customerModel;
     private $bookingRentalModel;
+    private $bookingFinancialSync;
 
     public function __construct() {
         parent::__construct();
@@ -66,6 +67,15 @@ class Bookings extends Base_Controller {
         } else {
             error_log('Journal_cleanup_service.php not found at: ' . $journalCleanupPath);
             $this->journalCleanupService = null;
+        }
+
+        $financialSyncPath = BASEPATH . 'services/Booking_financial_sync_service.php';
+        if (file_exists($financialSyncPath)) {
+            require_once $financialSyncPath;
+            $this->bookingFinancialSync = new Booking_financial_sync_service();
+        } else {
+            error_log('Booking_financial_sync_service.php not found at: ' . $financialSyncPath);
+            $this->bookingFinancialSync = null;
         }
     }
 
@@ -819,12 +829,18 @@ class Bookings extends Base_Controller {
                 error_log('Bookings view: could not load add-ons: ' . $e->getMessage());
             }
 
+            $financialReconciliation = null;
+            if ($this->bookingFinancialSync) {
+                $financialReconciliation = $this->bookingFinancialSync->getReconciliationSummary($id, $booking);
+            }
+
             $data = [
                 'page_title' => 'Booking Details - ' . $booking['booking_number'],
                 'booking' => $booking,
                 'payments' => $this->paymentModel->getByBooking($id),
                 'addon_items' => $addonItems,
                 'rental_items' => $rentalItems,
+                'financial_reconciliation' => $financialReconciliation,
                 'flash' => $this->getFlashMessage()
             ];
 
@@ -1095,7 +1111,13 @@ class Bookings extends Base_Controller {
                     $updateData['discount_amount'] = $newDiscount;
                 }
 
-                if ($dateTimeChanged || $venueChanged || isset($_POST['discount_amount'])) {
+                $pricingWillChange = $dateTimeChanged || $venueChanged || isset($_POST['discount_amount']);
+                $financialBefore = null;
+                if ($pricingWillChange && $this->bookingFinancialSync) {
+                    $financialBefore = $this->bookingFinancialSync->snapshotFromBooking($booking);
+                }
+
+                if ($pricingWillChange) {
                     $effectiveDate = $updateData['booking_date'] ?? ($booking['booking_date'] ?? date('Y-m-d'));
                     $effectiveStart = $updateData['start_time'] ?? ($booking['start_time'] ?? '00:00:00');
                     $effectiveEnd = $updateData['end_time'] ?? ($booking['end_time'] ?? '00:00:00');
@@ -1204,7 +1226,25 @@ class Bookings extends Base_Controller {
                     );
                 }
                 
-                $this->setFlashMessage('success', 'Booking updated successfully.');
+                $flashType = 'success';
+                $flashMessage = 'Booking updated successfully.';
+                if ($financialBefore !== null && $this->bookingFinancialSync) {
+                    $updatedBooking = $this->bookingModel->getWithFacility($id);
+                    $syncResult = $this->bookingFinancialSync->syncAfterBookingChange(
+                        $id,
+                        $financialBefore,
+                        $updatedBooking ?: array_merge($booking, $updateData),
+                        'edit',
+                        $this->session['user_id'] ?? null
+                    );
+                    if (!empty($syncResult['messages'])) {
+                        $flashMessage .= ' ' . implode(' ', $syncResult['messages']);
+                    }
+                    if (!$syncResult['ok']) {
+                        $flashType = 'warning';
+                    }
+                }
+                $this->setFlashMessage($flashType, $flashMessage);
                 redirect('bookings/view/' . $id);
                 
             } catch (Exception $e) {
@@ -1232,6 +1272,152 @@ class Bookings extends Base_Controller {
         ];
         
         $this->loadView('bookings/edit', $data);
+    }
+
+    /**
+     * POST: align linked invoice(s) and GL with current booking totals.
+     */
+    public function reconcileFinancials($id) {
+        $this->requirePermission('bookings', 'update');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('bookings/view/' . intval($id));
+        }
+
+        check_csrf();
+
+        $booking = $this->bookingModel->getWithFacility($id);
+        if (!$booking) {
+            $this->setFlashMessage('danger', 'Booking not found.');
+            redirect('bookings');
+        }
+
+        if (!$this->bookingFinancialSync) {
+            $this->setFlashMessage('danger', 'Financial sync service is not available.');
+            redirect('bookings/view/' . $id);
+        }
+
+        $result = $this->bookingFinancialSync->reconcile(
+            intval($id),
+            $booking,
+            $this->session['user_id'] ?? null
+        );
+
+        $message = !empty($result['messages'])
+            ? implode(' ', $result['messages'])
+            : ($result['ok'] ? 'Reconciliation completed.' : 'Reconciliation failed.');
+
+        $this->setFlashMessage($result['ok'] ? 'success' : 'warning', $message);
+        $this->activityModel->log(
+            $this->session['user_id'],
+            'update',
+            'Bookings',
+            'Reconciled booking finances: ' . ($booking['booking_number'] ?? $id)
+        );
+
+        redirect('bookings/view/' . $id);
+    }
+
+    /**
+     * Report: bookings where invoice or GL totals differ from booking amount.
+     */
+    public function financialReconciliation() {
+        $this->requirePermission('bookings', 'update');
+
+        if (!$this->bookingFinancialSync) {
+            $this->setFlashMessage('danger', 'Financial sync service is not available.');
+            redirect('bookings');
+        }
+
+        $filters = [
+            'status' => sanitize_input($_GET['status'] ?? 'active'),
+            'date_from' => sanitize_input($_GET['date_from'] ?? ''),
+            'date_to' => sanitize_input($_GET['date_to'] ?? ''),
+            'limit' => intval($_GET['limit'] ?? 200),
+            'full_scan' => !empty($_GET['full_scan']),
+        ];
+
+        $mismatched = $this->bookingFinancialSync->findMismatchedBookings($filters);
+
+        $data = [
+            'page_title' => 'Booking financial reconciliation',
+            'mismatched' => $mismatched,
+            'filters' => $filters,
+            'flash' => $this->getFlashMessage(),
+        ];
+
+        $this->loadView('bookings/financial_reconciliation', $data);
+    }
+
+    /**
+     * POST: bulk reconcile selected bookings (or all listed on report).
+     */
+    public function financialReconciliationBulk() {
+        $this->requirePermission('bookings', 'update');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('bookings/financialReconciliation');
+        }
+
+        check_csrf();
+
+        if (!$this->bookingFinancialSync) {
+            $this->setFlashMessage('danger', 'Financial sync service is not available.');
+            redirect('bookings/financialReconciliation');
+        }
+
+        $bookingIds = [];
+        if (!empty($_POST['reconcile_all_listed'])) {
+            $listed = $_POST['listed_ids'] ?? [];
+            if (is_array($listed)) {
+                $bookingIds = array_map('intval', $listed);
+            }
+        } else {
+            $selected = $_POST['booking_ids'] ?? [];
+            if (is_array($selected)) {
+                $bookingIds = array_map('intval', $selected);
+            }
+        }
+
+        if (empty($bookingIds)) {
+            $this->setFlashMessage('warning', 'No bookings selected for reconciliation.');
+            redirect('bookings/financialReconciliation');
+        }
+
+        $bulk = $this->bookingFinancialSync->reconcileMany(
+            $bookingIds,
+            $this->session['user_id'] ?? null
+        );
+
+        $message = sprintf(
+            'Bulk reconcile finished: %d updated, %d failed, %d skipped (already aligned).',
+            $bulk['ok'],
+            $bulk['failed'],
+            $bulk['skipped']
+        );
+        if (!empty($bulk['errors'])) {
+            $message .= ' ' . implode(' ', array_slice($bulk['errors'], 0, 5));
+            if (count($bulk['errors']) > 5) {
+                $message .= ' …';
+            }
+        }
+
+        $this->setFlashMessage($bulk['failed'] > 0 ? 'warning' : 'success', $message);
+        $this->activityModel->log(
+            $this->session['user_id'],
+            'update',
+            'Bookings',
+            'Bulk financial reconcile: ' . $bulk['ok'] . ' ok, ' . $bulk['failed'] . ' failed'
+        );
+
+        $redirectQuery = [];
+        foreach (['status', 'date_from', 'date_to', 'limit', 'full_scan'] as $key) {
+            if (!empty($_POST['filter_' . $key])) {
+                $redirectQuery[$key] = $_POST['filter_' . $key];
+            }
+        }
+        $suffix = $redirectQuery ? ('?' . http_build_query($redirectQuery)) : '';
+        redirect('bookings/financialReconciliation' . $suffix);
     }
 
     public function createCustomerInline() {
@@ -1546,6 +1732,10 @@ class Bookings extends Base_Controller {
                     redirect('bookings/reschedule/' . $id);
                 }
                 
+                $financialBefore = $this->bookingFinancialSync
+                    ? $this->bookingFinancialSync->snapshotFromBooking($booking)
+                    : null;
+
                 $pdo = $this->db->getConnection();
                 $pdo->beginTransaction();
                 
@@ -1601,7 +1791,26 @@ class Bookings extends Base_Controller {
                 
                 $pdo->commit();
                 $this->activityModel->log($this->session['user_id'], 'update', 'Bookings', 'Rescheduled booking: ' . $booking['booking_number']);
-                $this->setFlashMessage('success', 'Booking rescheduled successfully.');
+
+                $flashType = 'success';
+                $flashMessage = 'Booking rescheduled successfully.';
+                if ($financialBefore !== null && $this->bookingFinancialSync) {
+                    $updatedBooking = $this->bookingModel->getWithFacility($id);
+                    $syncResult = $this->bookingFinancialSync->syncAfterBookingChange(
+                        intval($id),
+                        $financialBefore,
+                        $updatedBooking ?: array_merge($booking, $updateData),
+                        'reschedule',
+                        $this->session['user_id'] ?? null
+                    );
+                    if (!empty($syncResult['messages'])) {
+                        $flashMessage .= ' ' . implode(' ', $syncResult['messages']);
+                    }
+                    if (!$syncResult['ok']) {
+                        $flashType = 'warning';
+                    }
+                }
+                $this->setFlashMessage($flashType, $flashMessage);
                 redirect('bookings/view/' . $id);
             } catch (Exception $e) {
                 if (isset($pdo)) {

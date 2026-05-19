@@ -300,6 +300,42 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </td>
                         </tr>
                     </table>
+
+                    <?php if (!empty($financial_reconciliation)): ?>
+                        <hr class="my-3">
+                        <p class="small text-muted mb-2">Accounts alignment</p>
+                        <table class="table table-sm mb-2">
+                            <?php if ($financial_reconciliation['invoice_total'] !== null): ?>
+                            <tr>
+                                <td>Invoice total:</td>
+                                <td class="text-end <?= !empty($financial_reconciliation['invoice_mismatch']) ? 'text-warning' : '' ?>">
+                                    <?= format_currency($financial_reconciliation['invoice_total']) ?>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                            <tr>
+                                <td>Posted revenue (GL):</td>
+                                <td class="text-end <?= !empty($financial_reconciliation['gl_mismatch']) ? 'text-warning' : '' ?>">
+                                    <?= format_currency($financial_reconciliation['posted_revenue']) ?>
+                                </td>
+                            </tr>
+                        </table>
+                        <?php if (!empty($financial_reconciliation['needs_reconcile'])): ?>
+                            <div class="alert alert-warning py-2 small mb-2">
+                                Booking totals may not match the linked invoice or general ledger.
+                            </div>
+                            <?php if (has_permission('bookings', 'update')): ?>
+                            <form method="POST" action="<?= base_url('bookings/reconcileFinancials/' . $booking['id']) ?>" class="d-grid">
+                                <?php echo csrf_field(); ?>
+                                <button type="submit" class="btn btn-outline-warning btn-sm">
+                                    <i class="bi bi-arrow-repeat"></i> Reconcile with accounts
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <p class="small text-success mb-0"><i class="bi bi-check-circle"></i> Aligned with invoice and GL</p>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 
