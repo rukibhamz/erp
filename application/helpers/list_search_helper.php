@@ -176,34 +176,56 @@ if (!function_exists('render_list_search_field')) {
     }
 }
 
-if (!function_exists('render_list_filter_actions')) {
+if (!function_exists('render_list_filter_per_page')) {
     /**
-     * Per-page select + Apply / Reset buttons for list filter forms.
+     * Records-per-page dropdown (inline, place before Apply in list-filters-row).
      */
+    function render_list_filter_per_page(int $perPage = 50): void {
+        ?>
+        <div class="list-filters-per-page-wrap">
+            <label class="form-label" for="list_filter_per_page">Records</label>
+            <div class="input-group input-group-sm list-filters-per-page-group">
+                <span class="input-group-text">Records</span>
+                <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select list-filters-per-page'); ?>
+            </div>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('render_list_filter_submit_buttons')) {
+    /**
+     * Apply + Clear buttons (inline, after records dropdown).
+     */
+    function render_list_filter_submit_buttons(
+        string $resetUrl = '',
+        string $applyLabel = 'Apply'
+    ): void {
+        ?>
+        <div class="list-filters-row-actions">
+            <input type="hidden" name="page" value="1">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
+            </button>
+            <?php if ($resetUrl !== ''): ?>
+                <a href="<?= htmlspecialchars($resetUrl) ?>" class="btn btn-outline-dark btn-sm">
+                    <i class="bi bi-x-circle me-1"></i>Clear
+                </a>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('render_list_filter_actions')) {
+    /** @deprecated Use render_list_filter_per_page + render_list_filter_submit_buttons in list-filters-row */
     function render_list_filter_actions(
         int $perPage = 50,
         string $resetUrl = '',
         string $applyLabel = 'Apply',
-        string $colClass = 'col-auto'
+        string $colClass = ''
     ): void {
-        ?>
-        <div class="<?= htmlspecialchars($colClass) ?> list-filters-actions-col">
-            <div class="list-filters-toolbar">
-                <div class="input-group input-group-sm list-filters-per-page-group">
-                    <span class="input-group-text">Records</span>
-                    <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select list-filters-per-page'); ?>
-                </div>
-                <input type="hidden" name="page" value="1">
-                <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
-                </button>
-                <?php if ($resetUrl !== ''): ?>
-                    <a href="<?= htmlspecialchars($resetUrl) ?>" class="btn btn-outline-dark btn-sm">
-                        <i class="bi bi-x-circle me-1"></i>Clear
-                    </a>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php
+        render_list_filter_per_page($perPage);
+        render_list_filter_submit_buttons($resetUrl, $applyLabel);
     }
 }

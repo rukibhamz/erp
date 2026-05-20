@@ -48,12 +48,13 @@ $hasFilters = list_has_active_filters(['source', 'search']);
 <div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
         <form method="GET" action="<?= base_url('receivables/customers') ?>" class="list-filters-form">
-            <div class="row g-3 align-items-end">
+            <div class="list-filters-row">
                 <?php
                 $search_placeholder = 'Code, name, email, phone…';
                 include(BASEPATH . 'views/partials/list_search_field.php');
                 ?>
-                <?php render_list_filter_actions($perPage, base_url('receivables/customers')); ?>
+                <?php render_list_filter_per_page($perPage); ?>
+                <?php render_list_filter_submit_buttons(base_url('receivables/customers')); ?>
             </div>
 
             <div class="list-filters-secondary list-source-pills">

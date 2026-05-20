@@ -70,14 +70,14 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
             <form method="GET" action="<?= base_url('bookings') ?>" class="list-filters-form">
                 <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
                 <input type="hidden" name="dir" value="<?= htmlspecialchars($sort_dir) ?>">
-                <div class="row g-3 align-items-end">
+                <div class="list-filters-row">
                     <?php
                     $search_placeholder = 'Booking #, customer, email, facility…';
                     include(BASEPATH . 'views/partials/list_search_field.php');
                     ?>
-                    <div class="col-lg-2 col-md-4">
+                    <div class="list-filters-row-field list-filters-row-field--status">
                         <label class="form-label" for="filter-status">Status</label>
-                        <select name="status" id="filter-status" class="form-select">
+                        <select name="status" id="filter-status" class="form-select form-select-sm">
                             <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All Statuses</option>
                             <option value="pending" <?= $selected_status === 'pending' ? 'selected' : '' ?>>Pending</option>
                             <option value="confirmed" <?= $selected_status === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
@@ -86,11 +86,12 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                             <option value="in_progress" <?= $selected_status === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
                         </select>
                     </div>
-                    <div class="col-lg-2 col-md-4">
+                    <div class="list-filters-row-field list-filters-row-field--date">
                         <label class="form-label" for="filter-date">Date</label>
-                        <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
+                        <input type="date" name="date" id="filter-date" class="form-control form-control-sm" value="<?= htmlspecialchars($selected_date) ?>">
                     </div>
-                    <?php render_list_filter_actions($perPage, base_url('bookings')); ?>
+                    <?php render_list_filter_per_page($perPage); ?>
+                    <?php render_list_filter_submit_buttons(base_url('bookings')); ?>
                 </div>
 
                 <?php if ($bookingHasFilters): ?>
