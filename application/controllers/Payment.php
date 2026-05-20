@@ -114,6 +114,8 @@ class Payment extends Base_Controller {
                 require_once BASEPATH . 'helpers/flutterwave_split_helper.php';
                 if ($paymentType === 'booking_payment' && $referenceId > 0) {
                     $splitMeta = flutterwave_resolve_split_for_booking($referenceId, $currency, $gatewayConfig);
+                } else {
+                    $splitMeta = flutterwave_resolve_linked_subaccounts($gatewayConfig);
                 }
                 if (!empty($splitMeta['subaccounts'])) {
                     $metadata['subaccounts'] = $splitMeta['subaccounts'];

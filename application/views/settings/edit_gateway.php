@@ -81,8 +81,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         </label>
                                     </div>
                                     <small class="text-muted">
-                                        When on, booking payments include configured subaccounts on Flutterwave checkout.
-                                        <a href="<?= base_url('settings/flutterwave/subaccounts') ?>">Manage subaccounts</a>
+                                        When on, checkout sends your linked <code>RS_…</code> code(s) to Flutterwave.
+                                        Split amounts are configured on Flutterwave, not in this ERP.
+                                        <a href="<?= base_url('settings/flutterwave/subaccounts') ?>">Activate subaccount codes</a>
                                     </small>
                                 </div>
                                 <div class="mb-3">

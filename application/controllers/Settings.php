@@ -294,7 +294,7 @@ class Settings extends Base_Controller {
         $service = new Flutterwave_subaccount_service($this->flutterwaveGatewayConfig($gateway));
         $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
 
-        $entryMode = ($_GET['mode'] ?? $_POST['entry_mode'] ?? '') === 'link' ? 'link' : 'create';
+        $entryMode = ($_GET['mode'] ?? $_POST['entry_mode'] ?? 'link') === 'create' ? 'create' : 'link';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf();
@@ -322,10 +322,6 @@ class Settings extends Base_Controller {
                     return;
                 }
 
-                $splitType = in_array($_POST['split_type'] ?? '', ['percentage', 'flat'], true)
-                    ? $_POST['split_type'] : 'percentage';
-                $splitValue = (float) ($_POST['split_value'] ?? 0.85);
-
                 $row = [
                     'subaccount_id' => $subaccountId,
                     'flutterwave_numeric_id' => null,
@@ -333,13 +329,14 @@ class Settings extends Base_Controller {
                     'account_bank' => '—',
                     'account_number' => 'linked',
                     'account_number_masked' => '****',
-                    'country' => strtoupper(sanitize_input($_POST['country'] ?? 'NG')),
-                    'split_type' => $splitType,
-                    'split_value' => $splitValue,
+                    'country' => 'NG',
+                    'split_type' => 'percentage',
+                    'split_value' => 0,
                     'business_email' => null,
                     'business_mobile' => null,
                     'test_mode' => !empty($gateway['test_mode']) ? 1 : 0,
                     'is_active' => 1,
+                    'is_default' => $subaccountModel->countActive() === 0 ? 1 : 0,
                 ];
 
                 $api = $service->getSubaccount($subaccountId);
@@ -353,17 +350,14 @@ class Settings extends Base_Controller {
                         $row['account_number_masked'] = flutterwave_mask_account_number($row['account_number']);
                     }
                     $row['country'] = strtoupper($d['country'] ?? $row['country']);
-                    if (!empty($d['split_type'])) {
-                        $row['split_type'] = $d['split_type'];
-                    }
-                    if (isset($d['split_value'])) {
-                        $row['split_value'] = (float) $d['split_value'];
-                    }
                 }
 
-                $subaccountModel->create($row);
+                $newId = $subaccountModel->create($row);
+                if ($newId && !empty($_POST['set_as_default'])) {
+                    $subaccountModel->setDefault((int) $newId);
+                }
                 $this->activityModel->log($this->session['user_id'], 'create', 'Settings', 'Linked Flutterwave subaccount: ' . $subaccountId);
-                $this->setFlashMessage('success', 'Subaccount code linked. You can now use it in split rules.');
+                $this->setFlashMessage('success', 'Subaccount activated. Enable split payments in gateway settings if not already on.');
                 redirect('settings/flutterwave/subaccounts');
                 return;
             }
@@ -478,8 +472,19 @@ class Settings extends Base_Controller {
         $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
         $row = $subaccountModel->getById((int) $id);
         if ($row) {
-            $subaccountModel->update((int) $id, ['is_active' => 0]);
+            $subaccountModel->update((int) $id, ['is_active' => 0, 'is_default' => 0]);
             $this->setFlashMessage('success', 'Subaccount deactivated locally.');
+        }
+        redirect('settings/flutterwave/subaccounts');
+    }
+
+    public function flutterwaveSubaccountSetDefault($id) {
+        $this->requirePermission('settings', 'update');
+        $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
+        $row = $subaccountModel->getById((int) $id);
+        if ($row && !empty($row['is_active'])) {
+            $subaccountModel->setDefault((int) $id);
+            $this->setFlashMessage('success', 'Default subaccount updated.');
         }
         redirect('settings/flutterwave/subaccounts');
     }

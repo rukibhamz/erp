@@ -34,36 +34,64 @@ function flutterwave_should_log_split(array $gatewayConfig) {
 }
 
 /**
- * Build subaccounts[] for Flutterwave Standard from a resolved split rule.
+ * Build subaccounts[] for Flutterwave — ID only; split %/amount is configured on Flutterwave.
  *
+ * @param string[] $subaccountIds Flutterwave RS_… ids
  * @return array{subaccounts:array, rule_id:?int, subaccount_id:?string}
  */
-function flutterwave_build_subaccounts_from_rule($rule) {
-    if (!$rule || empty($rule['subaccount_id'])) {
-        return ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+function flutterwave_build_subaccounts_payload(array $subaccountIds, $ruleId = null) {
+    $subaccountIds = array_values(array_filter(array_map('strval', $subaccountIds)));
+    if ($subaccountIds === []) {
+        return ['subaccounts' => [], 'rule_id' => $ruleId, 'subaccount_id' => null];
     }
 
-    $entry = ['id' => $rule['subaccount_id']];
-
-    $overrideType = trim($rule['override_charge_type'] ?? '');
-    if ($overrideType !== '' && isset($rule['override_charge']) && $rule['override_charge'] !== '' && $rule['override_charge'] !== null) {
-        $entry['transaction_charge_type'] = $overrideType;
-        $entry['transaction_charge'] = (float) $rule['override_charge'];
-    }
-
-    if (!empty($rule['split_ratio'])) {
-        $entry['transaction_split_ratio'] = (int) $rule['split_ratio'];
+    $subaccounts = [];
+    foreach ($subaccountIds as $id) {
+        $subaccounts[] = ['id' => $id];
     }
 
     return [
-        'subaccounts' => [$entry],
-        'rule_id' => isset($rule['id']) ? (int) $rule['id'] : null,
-        'subaccount_id' => $rule['subaccount_id'],
+        'subaccounts' => $subaccounts,
+        'rule_id' => $ruleId,
+        'subaccount_id' => $subaccountIds[0],
     ];
 }
 
 /**
- * Resolve split for a booking payment.
+ * Active linked subaccounts to attach when splits are enabled (Flutterwave handles settlement).
+ */
+function flutterwave_resolve_linked_subaccounts(array $gatewayConfig) {
+    if (!flutterwave_subaccounts_enabled($gatewayConfig)) {
+        return ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+    }
+
+    try {
+        require_once BASEPATH . 'models/Flutterwave_subaccount_model.php';
+        $model = new Flutterwave_subaccount_model();
+        $active = $model->getAllActive();
+        if ($active === []) {
+            return ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+        }
+
+        $defaultRow = $model->getDefaultActive();
+        if ($defaultRow && !empty($defaultRow['subaccount_id'])) {
+            return flutterwave_build_subaccounts_payload([$defaultRow['subaccount_id']]);
+        }
+
+        if (count($active) === 1) {
+            return flutterwave_build_subaccounts_payload([$active[0]['subaccount_id']]);
+        }
+
+        $ids = array_column($active, 'subaccount_id');
+        return flutterwave_build_subaccounts_payload($ids);
+    } catch (Exception $e) {
+        error_log('flutterwave_resolve_linked_subaccounts: ' . $e->getMessage());
+        return ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+    }
+}
+
+/**
+ * Resolve subaccounts for a booking payment (optional per-scope rule, else linked codes).
  *
  * @return array{subaccounts:array, rule_id:?int, subaccount_id:?string}
  */
@@ -73,38 +101,39 @@ function flutterwave_resolve_split_for_booking($bookingId, $currency, $gatewayCo
     }
 
     $bookingId = (int) $bookingId;
-    if ($bookingId <= 0) {
-        return ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
-    }
+    if ($bookingId > 0) {
+        try {
+            $db = Database::getInstance();
+            $prefix = $db->getPrefix();
+            $booking = $db->fetchOne(
+                "SELECT b.id, b.space_id, b.facility_id, s.property_id
+                 FROM `{$prefix}bookings` b
+                 LEFT JOIN `{$prefix}spaces` s ON s.id = COALESCE(b.space_id, b.facility_id)
+                 WHERE b.id = ?",
+                [$bookingId]
+            );
 
-    try {
-        $db = Database::getInstance();
-        $prefix = $db->getPrefix();
+            if ($booking) {
+                $spaceId = (int) ($booking['space_id'] ?: $booking['facility_id'] ?: 0);
+                $propertyId = (int) ($booking['property_id'] ?? 0);
 
-        $booking = $db->fetchOne(
-            "SELECT b.id, b.space_id, b.facility_id, s.property_id
-             FROM `{$prefix}bookings` b
-             LEFT JOIN `{$prefix}spaces` s ON s.id = COALESCE(b.space_id, b.facility_id)
-             WHERE b.id = ?",
-            [$bookingId]
-        );
+                require_once BASEPATH . 'models/Flutterwave_split_rule_model.php';
+                $ruleModel = new Flutterwave_split_rule_model();
+                $rule = $ruleModel->resolveForBooking($spaceId ?: null, $propertyId ?: null, $currency);
 
-        if (!$booking) {
-            return ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+                if ($rule && !empty($rule['subaccount_id'])) {
+                    return flutterwave_build_subaccounts_payload(
+                        [$rule['subaccount_id']],
+                        isset($rule['id']) ? (int) $rule['id'] : null
+                    );
+                }
+            }
+        } catch (Exception $e) {
+            error_log('flutterwave_resolve_split_for_booking: ' . $e->getMessage());
         }
-
-        $spaceId = (int) ($booking['space_id'] ?: $booking['facility_id'] ?: 0);
-        $propertyId = (int) ($booking['property_id'] ?? 0);
-
-        require_once BASEPATH . 'models/Flutterwave_split_rule_model.php';
-        $ruleModel = new Flutterwave_split_rule_model();
-        $rule = $ruleModel->resolveForBooking($spaceId ?: null, $propertyId ?: null, $currency);
-
-        return flutterwave_build_subaccounts_from_rule($rule ?: false);
-    } catch (Exception $e) {
-        error_log('flutterwave_resolve_split_for_booking: ' . $e->getMessage());
-        return ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
     }
+
+    return flutterwave_resolve_linked_subaccounts($gatewayConfig);
 }
 
 /**

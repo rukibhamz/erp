@@ -40,4 +40,41 @@ class Flutterwave_subaccount_model extends Base_Model {
             return false;
         }
     }
+
+    public function getDefaultActive() {
+        try {
+            return $this->db->fetchOne(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`
+                 WHERE is_active = 1 AND is_default = 1
+                 ORDER BY id ASC LIMIT 1"
+            );
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function setDefault($rowId) {
+        try {
+            $prefix = $this->db->getPrefix();
+            $this->db->query(
+                "UPDATE `{$prefix}{$this->table}` SET is_default = 0",
+                []
+            );
+            return $this->update((int) $rowId, ['is_default' => 1]);
+        } catch (Exception $e) {
+            error_log('Flutterwave_subaccount_model setDefault: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function countActive() {
+        try {
+            $row = $this->db->fetchOne(
+                "SELECT COUNT(*) AS cnt FROM `" . $this->db->getPrefix() . $this->table . "` WHERE is_active = 1"
+            );
+            return (int) ($row['cnt'] ?? 0);
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
 }

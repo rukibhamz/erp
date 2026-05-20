@@ -2176,6 +2176,7 @@ class AutoMigration {
                     `business_contact_mobile` VARCHAR(50) NULL,
                     `meta` TEXT NULL COMMENT 'JSON extra bank fields',
                     `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                    `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Use for all payments when no split rule',
                     `test_mode` TINYINT(1) NOT NULL DEFAULT 1,
                     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -2185,6 +2186,12 @@ class AutoMigration {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
                 $this->pdo->exec($sql);
                 error_log("AutoMigration: Created flutterwave_subaccounts table");
+            } else {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}flutterwave_subaccounts` LIKE 'is_default'");
+                if ($stmt && count($stmt->fetchAll()) === 0) {
+                    $this->pdo->exec("ALTER TABLE `{$this->prefix}flutterwave_subaccounts` ADD COLUMN `is_default` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_active`");
+                    error_log("AutoMigration: Added is_default to flutterwave_subaccounts");
+                }
             }
 
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}flutterwave_split_rules'");

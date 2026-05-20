@@ -50,18 +50,15 @@ $runner->assertTrue(
     'Log split off by default'
 );
 
-$built = flutterwave_build_subaccounts_from_rule([
-    'id' => 5,
-    'subaccount_id' => 'RS_TEST123',
-    'override_charge_type' => 'percentage',
-    'override_charge' => 0.1,
-]);
+$built = flutterwave_build_subaccounts_payload(['RS_TEST123'], 5);
 $runner->assertEquals(5, $built['rule_id'], 'Rule id preserved');
 $runner->assertEquals('RS_TEST123', $built['subaccount_id'], 'Subaccount id preserved');
 $runner->assertEquals(1, count($built['subaccounts']), 'One subaccount entry');
 $runner->assertEquals('RS_TEST123', $built['subaccounts'][0]['id'], 'Subaccount id in payload');
-$runner->assertEquals('percentage', $built['subaccounts'][0]['transaction_charge_type'], 'Override type set');
-$runner->assertEquals(0.1, $built['subaccounts'][0]['transaction_charge'], 'Override charge set');
+$runner->assertTrue(
+    !isset($built['subaccounts'][0]['transaction_charge']),
+    'No ERP split override — Flutterwave handles split'
+);
 
 $masked = flutterwave_mask_account_number('0690000037');
 $runner->assertTrue(str_ends_with($masked, '0037'), 'Mask keeps last 4 digits');

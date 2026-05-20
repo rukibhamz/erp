@@ -75,17 +75,16 @@ Uses [Flutterwave Standard](https://developer.flutterwave.com/v3.0.0/docs/flutte
 
 ## Split payments (subaccounts, optional)
 
-When enabled, a share of each successful booking payment is settled to a [Flutterwave collection subaccount](https://developer.flutterwave.com/v3.0.0/reference/create-a-sub-account) while the customer still pays the **full booking amount** in ERP.
+Flutterwave controls **how much** is split; the ERP only sends your **subaccount code** at checkout.
 
-1. **Settings → Payment Gateways → Flutterwave → Configure**
-   - Enable **split payments (subaccounts)**
-   - Optionally enable **log split details on payment transactions** (audit only)
-2. **Settings → Payment Gateways → Flutterwave → Subaccounts**
-   - **Link existing code** — paste the `RS_…` subaccount ID you already have from Flutterwave (no bank form).
-   - **Create new** — register a new beneficiary via `POST /v3/subaccounts` (bank details required).
-3. **Split rules** — map subaccounts to global, property, or space scope (space wins over property over global).
+1. **Subaccounts** → **Activate code** → paste `RS_…` from Flutterwave.
+2. **Gateway settings** → enable **split payments (subaccounts)**.
+3. Booking payments then include `subaccounts: [{ "id": "RS_…" }]` — no split % in the ERP.
 
-On `POST /v3/payments`, the app adds `subaccounts: [{ id: "RS_…" }]`. Fulfillment and booking balances are unchanged.
+Optional: **Advanced → per property/space** split rules if different bookings need different codes.  
+Optional: **log split details** on payment transactions (audit only).
+
+Customer still pays the **full booking amount** in ERP; fulfillment is unchanged.
 
 AutoMigration creates `flutterwave_subaccounts`, `flutterwave_split_rules`, and optional `payment_transactions.split_applied` / `split_payload` columns on existing installs.
 
