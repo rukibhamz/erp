@@ -118,8 +118,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                         <h5 class="modal-title">Resolve Alert</h5>
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                     </div>
-
-        <?php render_pagination_controls($pagination ?? null); ?>
                                                     <form action="<?= base_url('utilities/alerts/resolve/' . $alert['id']) ?>" method="POST">
                                                         <?php echo csrf_field(); ?>
                                                         <div class="modal-body">
@@ -153,6 +151,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </tbody>
                 </table>
             </div>
+            <?php render_pagination_controls($pagination ?? null); ?>
         </div>
     </div>
 <?php endif; ?>

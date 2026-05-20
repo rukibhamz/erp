@@ -21,6 +21,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 py-2">
+        <span class="fw-semibold">Vendor List</span>
+        <form method="GET" action="<?= base_url('payables/vendors') ?>" class="d-flex align-items-center gap-2 mb-0">
+            <input type="hidden" name="page" value="1">
+            <label class="small text-muted mb-0">Records</label>
+            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
+            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+        </form>
+    </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -80,7 +89,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <?php endif; ?>
                                     </div>
 
-        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -101,5 +109,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </table>
         </div>
     </div>
+    <?php include BASEPATH . 'views/partials/accounting_table_footer.php'; ?>
 </div>
 

@@ -80,13 +80,13 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                         <?php endif; ?>
                                     </div>
 
-        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
+            <?php render_pagination_controls($pagination ?? null); ?>
         </div>
     </div>
 <?php endif; ?>

@@ -16,7 +16,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-    <?php render_pagination_controls($pagination ?? null); ?>
+
 <?php endif; ?>
 
 <!-- Property Management Navigation -->
@@ -130,6 +130,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
             </div>
         <?php endforeach; ?>
+    <?php render_pagination_controls($pagination ?? null); ?>
     <?php endif; ?>
 </div>
 

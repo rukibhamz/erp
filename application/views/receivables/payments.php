@@ -9,11 +9,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php include(BASEPATH . 'views/accounting/_nav.php'); ?>
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="card-title mb-0">All Payments</h5>
-        <a href="<?= base_url('receivables/payments/create') ?>" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Create Payment
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            <form method="GET" action="<?= base_url('receivables/payments') ?>" class="d-flex align-items-center gap-2 mb-0">
+                <input type="hidden" name="page" value="1">
+                <label class="small text-muted mb-0">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
+                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+            </form>
+            <a href="<?= base_url('receivables/payments/create') ?>" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Create Payment
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <?php if (!empty($payments)): ?>
@@ -53,13 +61,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </tbody>
             </table>
         </div>
-
-       <?php render_pagination_controls($pagination ?? null); ?>
         <?php else: ?>
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i> No payments found.
         </div>
         <?php endif; ?>
     </div>
+    <?php include BASEPATH . 'views/partials/accounting_table_footer.php'; ?>
 </div>
 

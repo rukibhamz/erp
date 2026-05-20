@@ -17,7 +17,7 @@ $buildPageUrl = function ($page) use ($queryParams) {
     return pagination_page_url($page, $queryParams);
 };
 ?>
-<div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+<div class="accounting-pagination-bar d-flex justify-content-between align-items-center flex-wrap gap-2 py-2">
     <div class="small text-muted">
         Showing <?= $fromRow ?>-<?= $toRow ?> of <?= $totalRows ?> records
     </div>

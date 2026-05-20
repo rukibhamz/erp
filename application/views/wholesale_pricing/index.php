@@ -83,7 +83,6 @@
                                                     </a>
                                                 </div>
 
-        <?php render_pagination_controls($pagination ?? null); ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -98,6 +97,7 @@
                             </tbody>
                         </table>
                     </div>
+            <?php render_pagination_controls($pagination ?? null); ?>
 
                     <!-- Discount Tiers Section -->
                     <hr class="my-4">

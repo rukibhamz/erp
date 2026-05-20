@@ -26,21 +26,29 @@ class Accounts extends Base_Controller {
         try {
             if (empty($search)) {
                 $accounts = $this->accountModel->getTreeWithDepth($type);
+                // Full chart-of-accounts tree: do not paginate (keeps parent/child hierarchy intact)
+                $total = count($accounts);
+                $pagination = pagination_build_meta($total, 1, max($total, 1));
+                $pagination['per_page'] = $total;
+                $pagination['total_pages'] = 1;
+                $pagination['from'] = $total > 0 ? 1 : 0;
+                $pagination['to'] = $total;
             } else {
                 $accounts = $this->accountModel->getFiltered($type, $search);
+                $paged = $this->paginateList($accounts);
+                $accounts = $paged['items'];
+                $pagination = $paged['pagination'];
             }
-            $paged = $this->paginateList($accounts);
-            $accounts = $paged['items'];
         } catch (Exception $e) {
             error_log('Accounts index error: ' . $e->getMessage());
             $accounts = [];
-            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
+            $pagination = pagination_build_meta(0, 1, 50);
         }
         
         $data = [
             'page_title' => 'Chart of Accounts',
             'accounts' => $accounts,
-            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
+            'pagination' => $pagination ?? pagination_build_meta(0, 1, 50),
             'selected_type' => $type,
             'search' => $search,
             'account_number_enabled' => $this->accountNumberEnabled,

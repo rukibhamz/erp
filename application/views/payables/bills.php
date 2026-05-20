@@ -138,7 +138,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <?php endif; ?>
                                     </div>
 
-        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -159,5 +158,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </table>
         </div>
     </div>
+    <?php include BASEPATH . 'views/partials/accounting_table_footer.php'; ?>
 </div>
 
