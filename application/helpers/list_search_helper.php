@@ -188,9 +188,11 @@ if (!function_exists('render_list_filter_actions')) {
     ): void {
         ?>
         <div class="<?= htmlspecialchars($colClass) ?> list-filters-actions-col">
-            <label class="form-label">Records</label>
             <div class="list-filters-toolbar">
-                <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select form-select-sm list-filters-per-page'); ?>
+                <div class="input-group input-group-sm list-filters-per-page-group">
+                    <span class="input-group-text">Records</span>
+                    <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select list-filters-per-page'); ?>
+                </div>
                 <input type="hidden" name="page" value="1">
                 <button type="submit" class="btn btn-primary btn-sm">
                     <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
