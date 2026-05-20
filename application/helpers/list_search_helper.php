@@ -184,7 +184,7 @@ if (!function_exists('render_list_filter_per_page')) {
         ?>
         <div class="<?= htmlspecialchars($colClass) ?>">
             <label class="form-label" for="list_filter_per_page">Records</label>
-            <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select form-select-sm list-filters-per-page', 'list_filter_per_page'); ?>
+            <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select list-filters-per-page', 'list_filter_per_page'); ?>
         </div>
         <?php
     }
@@ -201,6 +201,7 @@ if (!function_exists('render_list_filter_submit_buttons')) {
     ): void {
         ?>
         <div class="<?= htmlspecialchars($colClass) ?>">
+            <label class="form-label list-filters-btn-spacer" aria-hidden="true">&nbsp;</label>
             <div class="list-filters-btn-group">
                 <input type="hidden" name="page" value="1">
                 <button type="submit" class="btn btn-primary btn-sm">

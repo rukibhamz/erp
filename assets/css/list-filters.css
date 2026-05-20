@@ -24,34 +24,74 @@
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
 }
 
-/* Records dropdown — fixed width, stays inline in Bootstrap row */
+/* Uniform control height across search, status, date, records, buttons */
+.list-filters-form {
+    --list-filter-control-h: 38px;
+}
+
+.list-filters-form .row.align-items-end .form-control,
+.list-filters-form .row.align-items-end .form-select,
+.list-filters-form .row.align-items-end select.list-filters-per-page {
+    height: var(--list-filter-control-h) !important;
+    min-height: var(--list-filter-control-h) !important;
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.25 !important;
+}
+
+.list-filters-form .row.align-items-end .input-group {
+    height: var(--list-filter-control-h);
+}
+
+.list-filters-form .row.align-items-end .input-group .form-control {
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+.list-filters-form .row.align-items-end .input-group-text {
+    height: var(--list-filter-control-h) !important;
+    display: flex;
+    align-items: center;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Records dropdown — fixed width */
 .list-filters-form select.list-filters-per-page,
 .list-filters-form .list-filters-per-page {
     width: 4.25rem !important;
     min-width: 4.25rem !important;
     max-width: 4.25rem !important;
-    flex: 0 0 4.25rem !important;
-    padding-right: 1.5rem !important;
+    padding-right: 1.75rem !important;
 }
 
-/* Apply + Clear on same line as records */
+.list-filters-btn-spacer {
+    display: block;
+    visibility: hidden;
+    margin-bottom: 0.35rem;
+}
+
+/* Apply + Clear */
 .list-filters-btn-group {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: 0.5rem;
-    padding-top: 1.55rem;
-}
-
-.list-filters-form .row.align-items-end .list-filters-btn-group {
-    padding-top: 0;
+    height: var(--list-filter-control-h);
 }
 
 .list-filters-btn-group .btn {
-    display: inline-flex;
-    align-items: center;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     white-space: nowrap;
     flex: 0 0 auto;
+    height: var(--list-filter-control-h) !important;
+    min-height: var(--list-filter-control-h) !important;
+    padding: 0 0.875rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1 !important;
 }
 
 .list-filters-btn-group .btn-primary {

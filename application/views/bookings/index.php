@@ -78,7 +78,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                     ?>
                     <div class="col-md-2 col-sm-6">
                         <label class="form-label" for="filter-status">Status</label>
-                        <select name="status" id="filter-status" class="form-select form-select-sm">
+                        <select name="status" id="filter-status" class="form-select">
                             <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All Statuses</option>
                             <option value="pending" <?= $selected_status === 'pending' ? 'selected' : '' ?>>Pending</option>
                             <option value="confirmed" <?= $selected_status === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
@@ -89,7 +89,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                     </div>
                     <div class="col-md-2 col-sm-6">
                         <label class="form-label" for="filter-date">Date</label>
-                        <input type="date" name="date" id="filter-date" class="form-control form-control-sm" value="<?= htmlspecialchars($selected_date) ?>">
+                        <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
                     </div>
                     <?php render_list_filter_per_page($perPage); ?>
                     <?php render_list_filter_submit_buttons(base_url('bookings')); ?>
