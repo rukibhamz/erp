@@ -185,15 +185,29 @@
         display: none !important;
     }
 
+    /* Apply + Clear must stay on one row (override global mobile btn stacking) */
     .list-filters-actions-col .list-filters-btn-group {
-        width: 100%;
-        height: var(--list-filter-control-h);
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: stretch !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+        height: auto !important;
         min-height: var(--list-filter-control-h);
     }
 
-    .list-filters-actions-col .list-filters-btn-group .btn {
-        flex: 1 1 0;
-        min-width: 0;
+    .list-filters-actions-col .list-filters-btn-group .btn,
+    .list-filters-actions-col .list-filters-btn-group a.btn,
+    .list-filters-actions-col .list-filters-btn-group button.btn {
+        display: inline-flex !important;
+        flex: 1 1 0 !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        height: var(--list-filter-control-h) !important;
+        min-height: var(--list-filter-control-h) !important;
     }
 
     .list-filters-secondary {

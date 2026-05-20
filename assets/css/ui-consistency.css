@@ -382,15 +382,28 @@
         padding: var(--space-md, 1rem);
     }
 
-    .btn-group {
+    .btn-group:not(.list-filters-page-actions) {
         flex-direction: column;
         width: 100%;
         gap: 0.5rem;
     }
 
-    .btn-group .btn {
+    .btn-group:not(.list-filters-page-actions) .btn {
         width: 100%;
         justify-content: center;
+    }
+
+    /* List filter toolbar: Apply + Clear stay horizontal */
+    .list-filters-btn-group {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+    }
+
+    .list-filters-btn-group .btn,
+    .list-filters-btn-group a.btn {
+        width: auto !important;
+        flex: 1 1 0;
     }
 }
 
