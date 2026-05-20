@@ -1,4 +1,4 @@
-/* Shared list page search & filter toolbar */
+/* Shared list page search & filter toolbar (loads after buttons-override + ui-consistency) */
 .list-filters-card .card-body {
     padding: 1rem 1.25rem;
 }
@@ -24,9 +24,11 @@
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
 }
 
-/* Records dropdown + Apply/Clear on one row */
+/* Records + Apply + Clear — single horizontal row */
 .list-filters-actions-col {
     flex: 0 0 auto;
+    width: auto;
+    max-width: none;
 }
 
 .list-filters-toolbar {
@@ -35,53 +37,60 @@
     flex-wrap: nowrap;
     align-items: center;
     gap: 0.5rem;
+    width: max-content;
+    max-width: 100%;
 }
 
-.list-filters-per-page {
-    width: 4.75rem;
-    min-width: 4.75rem;
-    flex: 0 0 auto;
+/* Override global form-select { width: 100% } inside toolbar */
+.list-filters-toolbar .list-filters-per-page,
+.list-filters-toolbar select.form-select {
+    display: inline-block !important;
+    width: 4.5rem !important;
+    min-width: 4.5rem !important;
+    max-width: 4.5rem !important;
+    flex: 0 0 4.5rem !important;
+    padding: 0.25rem 1.75rem 0.25rem 0.5rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+    height: 31px !important;
 }
 
-.list-filters-btns {
-    display: inline-flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 0 0 auto;
-}
-
-.list-filters-btns .btn {
-    display: inline-flex;
+.list-filters-toolbar .btn {
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
     white-space: nowrap;
+    flex: 0 0 auto;
     min-height: 31px;
-    padding: 0.375rem 0.875rem;
-    font-size: 0.875rem;
+    height: 31px;
+    padding: 0.25rem 0.75rem !important;
+    font-size: 0.875rem !important;
     font-weight: 500;
     line-height: 1.25;
     border-radius: 0.375rem;
     text-decoration: none;
 }
 
-.list-filters-btns .btn-primary {
+.list-filters-toolbar .btn-primary {
     color: #fff !important;
 }
 
-.list-filters-card .list-filters-btns .btn-clear-filters {
+/* Clear — must use btn-outline-* so buttons-override does not force white text */
+.list-filters-toolbar .btn-outline-dark {
     background-color: #fff !important;
-    border: 1px solid #6c757d !important;
+    border: 1px solid #495057 !important;
     color: #495057 !important;
-    box-shadow: none;
 }
 
-.list-filters-card .list-filters-btns .btn-clear-filters:hover,
-.list-filters-card .list-filters-btns .btn-clear-filters:focus {
-    background-color: #f8f9fa !important;
-    border-color: #495057 !important;
-    color: #212529 !important;
+.list-filters-toolbar .btn-outline-dark:hover,
+.list-filters-toolbar .btn-outline-dark:focus {
+    background-color: #212529 !important;
+    border-color: #212529 !important;
+    color: #fff !important;
+}
+
+.list-filters-toolbar .btn-outline-dark i {
+    color: inherit !important;
 }
 
 .list-filters-secondary {
@@ -121,17 +130,17 @@
     padding: 0.35em 0.65em;
 }
 
-@media (max-width: 767.98px) {
-    .list-filters-toolbar {
-        flex-wrap: wrap;
+@media (max-width: 991.98px) {
+    .list-filters-actions-col {
         width: 100%;
     }
 
-    .list-filters-btns {
-        flex: 1 1 100%;
+    .list-filters-toolbar {
+        width: 100%;
+        flex-wrap: wrap;
     }
 
-    .list-filters-btns .btn {
+    .list-filters-toolbar .btn {
         flex: 1 1 auto;
     }
 }

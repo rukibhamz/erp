@@ -184,7 +184,7 @@ if (!function_exists('render_list_filter_actions')) {
         int $perPage = 50,
         string $resetUrl = '',
         string $applyLabel = 'Apply',
-        string $colClass = 'col-lg-auto col-md-12'
+        string $colClass = 'col-auto'
     ): void {
         ?>
         <div class="<?= htmlspecialchars($colClass) ?> list-filters-actions-col">
@@ -192,16 +192,14 @@ if (!function_exists('render_list_filter_actions')) {
             <div class="list-filters-toolbar">
                 <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select form-select-sm list-filters-per-page'); ?>
                 <input type="hidden" name="page" value="1">
-                <div class="list-filters-btns">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
-                    </button>
-                    <?php if ($resetUrl !== ''): ?>
-                        <a href="<?= htmlspecialchars($resetUrl) ?>" class="btn btn-sm btn-clear-filters">
-                            <i class="bi bi-x-circle me-1"></i>Clear
-                        </a>
-                    <?php endif; ?>
-                </div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
+                </button>
+                <?php if ($resetUrl !== ''): ?>
+                    <a href="<?= htmlspecialchars($resetUrl) ?>" class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
         <?php

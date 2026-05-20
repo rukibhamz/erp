@@ -90,7 +90,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                         <label class="form-label" for="filter-date">Date</label>
                         <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
                     </div>
-                    <?php render_list_filter_actions($perPage, base_url('bookings'), 'Apply', 'col-lg-auto col-md-12'); ?>
+                    <?php render_list_filter_actions($perPage, base_url('bookings')); ?>
                 </div>
 
                 <?php if ($bookingHasFilters): ?>

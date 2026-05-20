@@ -53,7 +53,7 @@ $hasFilters = list_has_active_filters(['source', 'search']);
                 $search_placeholder = 'Code, name, email, phone…';
                 include(BASEPATH . 'views/partials/list_search_field.php');
                 ?>
-                <?php render_list_filter_actions($perPage, base_url('receivables/customers'), 'Apply', 'col-lg-auto col-md-12'); ?>
+                <?php render_list_filter_actions($perPage, base_url('receivables/customers')); ?>
             </div>
 
             <div class="list-filters-secondary list-source-pills">
