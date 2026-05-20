@@ -154,7 +154,7 @@ class Booking_financial_sync_service {
      */
     public function findMismatchedBookings(array $filters = []): array {
         $prefix = $this->db->getPrefix();
-        $limit = min(500, max(1, intval($filters['limit'] ?? 200)));
+        $limit = min(20000, max(1, intval($filters['limit'] ?? 2000)));
         $statusFilter = $filters['status'] ?? 'active';
         $dateFrom = trim($filters['date_from'] ?? '');
         $dateTo = trim($filters['date_to'] ?? '');

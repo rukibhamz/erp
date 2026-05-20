@@ -3,6 +3,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 $sort = $sort ?? 'booking_number';
 $sort_dir = $sort_dir ?? 'asc';
+$pagination = $pagination ?? [];
+$currentPage = intval($pagination['page'] ?? 1);
+$totalPages = intval($pagination['total_pages'] ?? 1);
+$perPage = intval($pagination['per_page'] ?? 50);
+$perPageOptions = $pagination['per_page_options'] ?? [25, 50, 75, 100, 200];
+$fromRow = intval($pagination['from'] ?? 0);
+$toRow = intval($pagination['to'] ?? 0);
+$totalRows = intval($pagination['total_records'] ?? 0);
 
 $buildSortUrl = function ($column) use ($sort, $sort_dir) {
     $params = $_GET;
@@ -64,6 +72,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
             <form method="GET" action="" class="row g-3 align-items-end">
                 <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
                 <input type="hidden" name="dir" value="<?= htmlspecialchars($sort_dir) ?>">
+                <input type="hidden" name="page" value="1">
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Status</label>
                     <select name="status" id="filter-status" class="form-select">
@@ -78,6 +87,14 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Date</label>
                     <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Records</label>
+                    <select name="per_page" class="form-select">
+                        <?php foreach ($perPageOptions as $opt): ?>
+                            <option value="<?= intval($opt) ?>" <?= $perPage === intval($opt) ? 'selected' : '' ?>><?= intval($opt) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="col-auto d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
@@ -182,6 +199,42 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                     </tbody>
                 </table>
             </div>
+
+            <?php if ($totalRows > 0): ?>
+                <?php
+                    $buildPageUrl = function ($page) {
+                        $params = $_GET;
+                        $params['page'] = max(1, intval($page));
+                        return '?' . http_build_query($params);
+                    };
+                ?>
+                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                    <div class="small text-muted">
+                        Showing <?= $fromRow ?>-<?= $toRow ?> of <?= $totalRows ?> records
+                    </div>
+                    <nav aria-label="Bookings pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                                <a class="page-link" href="<?= $currentPage <= 1 ? '#' : htmlspecialchars($buildPageUrl(1)) ?>">First</a>
+                            </li>
+                            <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                                <a class="page-link" href="<?= $currentPage <= 1 ? '#' : htmlspecialchars($buildPageUrl($currentPage - 1)) ?>">Previous</a>
+                            </li>
+                            <?php for ($i = max(1, $currentPage - 2); $i <= min($totalPages, $currentPage + 2); $i++): ?>
+                                <li class="page-item <?= $i === $currentPage ? 'active' : '' ?>">
+                                    <a class="page-link" href="<?= htmlspecialchars($buildPageUrl($i)) ?>"><?= $i ?></a>
+                                </li>
+                            <?php endfor; ?>
+                            <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+                                <a class="page-link" href="<?= $currentPage >= $totalPages ? '#' : htmlspecialchars($buildPageUrl($currentPage + 1)) ?>">Next</a>
+                            </li>
+                            <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+                                <a class="page-link" href="<?= $currentPage >= $totalPages ? '#' : htmlspecialchars($buildPageUrl($totalPages)) ?>">Last</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

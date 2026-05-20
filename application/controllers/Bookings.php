@@ -102,6 +102,12 @@ class Bookings extends Base_Controller {
         $status = $_GET['status'] ?? 'all';
         $date = $_GET['date'] ?? '';
         $hasDateFilter = !empty($_GET['date']); // Only filter by date if user explicitly set one
+        $allowedPerPage = [25, 50, 75, 100, 200];
+        $perPage = intval($_GET['per_page'] ?? 50);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 50;
+        }
+        $page = max(1, intval($_GET['page'] ?? 1));
 
         // Auto-complete any confirmed/in_progress bookings whose date has passed
         $this->autoCompleteExpiredBookings();
@@ -146,6 +152,13 @@ class Bookings extends Base_Controller {
         $sort = sanitize_input($_GET['sort'] ?? 'booking_number');
         $sortDir = strtolower(sanitize_input($_GET['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
         $this->sortBookingsList($bookings, $sort, $sortDir);
+        $totalRecords = count($bookings);
+        $totalPages = max(1, (int) ceil($totalRecords / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+        }
+        $offset = ($page - 1) * $perPage;
+        $bookings = array_slice($bookings, $offset, $perPage);
 
         $data = [
             'page_title' => 'Bookings',
@@ -154,6 +167,15 @@ class Bookings extends Base_Controller {
             'selected_date' => $date,
             'sort' => $sort,
             'sort_dir' => $sortDir,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'per_page_options' => $allowedPerPage,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'from' => $totalRecords > 0 ? ($offset + 1) : 0,
+                'to' => min($offset + $perPage, $totalRecords),
+            ],
             'flash' => $this->getFlashMessage()
         ];
 
@@ -1329,20 +1351,46 @@ class Bookings extends Base_Controller {
             redirect('bookings');
         }
 
+        $allowedPerPage = [25, 50, 75, 100, 200];
+        $perPage = intval($_GET['per_page'] ?? 50);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 50;
+        }
+        $page = max(1, intval($_GET['page'] ?? 1));
+
         $filters = [
             'status' => sanitize_input($_GET['status'] ?? 'active'),
             'date_from' => sanitize_input($_GET['date_from'] ?? ''),
             'date_to' => sanitize_input($_GET['date_to'] ?? ''),
-            'limit' => intval($_GET['limit'] ?? 200),
             'full_scan' => !empty($_GET['full_scan']),
+            // fetch broadly, then paginate in controller
+            'limit' => 5000,
         ];
 
-        $mismatched = $this->bookingFinancialSync->findMismatchedBookings($filters);
+        $allMismatched = $this->bookingFinancialSync->findMismatchedBookings($filters);
+        $totalRecords = count($allMismatched);
+        $totalPages = max(1, (int) ceil($totalRecords / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+        }
+        $offset = ($page - 1) * $perPage;
+        $mismatched = array_slice($allMismatched, $offset, $perPage);
 
         $data = [
             'page_title' => 'Booking financial reconciliation',
             'mismatched' => $mismatched,
-            'filters' => $filters,
+            'filters' => array_merge($filters, [
+                'per_page' => $perPage,
+            ]),
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'per_page_options' => $allowedPerPage,
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'from' => $totalRecords > 0 ? ($offset + 1) : 0,
+                'to' => min($offset + $perPage, $totalRecords),
+            ],
             'flash' => $this->getFlashMessage(),
         ];
 
@@ -1411,7 +1459,7 @@ class Bookings extends Base_Controller {
         );
 
         $redirectQuery = [];
-        foreach (['status', 'date_from', 'date_to', 'limit', 'full_scan'] as $key) {
+        foreach (['status', 'date_from', 'date_to', 'full_scan', 'per_page', 'page'] as $key) {
             if (!empty($_POST['filter_' . $key])) {
                 $redirectQuery[$key] = $_POST['filter_' . $key];
             }
