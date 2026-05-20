@@ -70,12 +70,13 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
             <form method="GET" action="<?= base_url('bookings') ?>" class="list-filters-form">
                 <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
                 <input type="hidden" name="dir" value="<?= htmlspecialchars($sort_dir) ?>">
-                <div class="list-filters-row">
+                <div class="row g-2 align-items-end">
                     <?php
+                    $search_col_class = 'col-md-4 col-sm-12';
                     $search_placeholder = 'Booking #, customer, email, facility…';
                     include(BASEPATH . 'views/partials/list_search_field.php');
                     ?>
-                    <div class="list-filters-row-field list-filters-row-field--status">
+                    <div class="col-md-2 col-sm-6">
                         <label class="form-label" for="filter-status">Status</label>
                         <select name="status" id="filter-status" class="form-select form-select-sm">
                             <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All Statuses</option>
@@ -86,7 +87,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                             <option value="in_progress" <?= $selected_status === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
                         </select>
                     </div>
-                    <div class="list-filters-row-field list-filters-row-field--date">
+                    <div class="col-md-2 col-sm-6">
                         <label class="form-label" for="filter-date">Date</label>
                         <input type="date" name="date" id="filter-date" class="form-control form-control-sm" value="<?= htmlspecialchars($selected_date) ?>">
                     </div>

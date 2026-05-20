@@ -48,8 +48,9 @@ $hasFilters = list_has_active_filters(['source', 'search']);
 <div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
         <form method="GET" action="<?= base_url('receivables/customers') ?>" class="list-filters-form">
-            <div class="list-filters-row">
+            <div class="row g-2 align-items-end">
                 <?php
+                $search_col_class = 'col-md';
                 $search_placeholder = 'Code, name, email, phone…';
                 include(BASEPATH . 'views/partials/list_search_field.php');
                 ?>

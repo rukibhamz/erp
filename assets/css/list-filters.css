@@ -24,62 +24,10 @@
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
 }
 
-/* Primary filter row: Search → … → Records → Apply → Clear */
-.list-filters-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 0.75rem;
-    width: 100%;
-}
-
-.list-filters-row-search {
-    flex: 1 1 220px;
-    min-width: 200px;
-    max-width: 100%;
-}
-
-.list-filters-row-search .input-group {
-    width: 100%;
-}
-
-.list-filters-row-field {
-    flex: 0 0 auto;
-}
-
-.list-filters-row-field--status {
-    width: 11rem;
-    min-width: 9rem;
-}
-
-.list-filters-row-field--date {
-    width: 10.5rem;
-    min-width: 9rem;
-}
-
-.list-filters-row-field .form-select,
-.list-filters-row-field .form-control {
-    width: 100% !important;
-    display: block !important;
-}
-
-.list-filters-per-page-wrap {
-    flex: 0 0 auto;
-}
-
-.list-filters-per-page-wrap > .form-label {
-    visibility: hidden;
-    height: 0;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-}
-
+/* Records dropdown — fixed width, stays inline in Bootstrap row */
 .list-filters-per-page-group {
-    display: inline-flex !important;
-    flex: 0 0 auto !important;
-    width: auto !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: nowrap;
+    width: auto;
 }
 
 .list-filters-per-page-group .input-group-text {
@@ -87,9 +35,6 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    padding: 0.25rem 0.5rem;
-    height: 31px;
-    line-height: 1.2;
 }
 
 .list-filters-per-page-group .form-select,
@@ -98,52 +43,47 @@
     min-width: 4.25rem !important;
     max-width: 4.25rem !important;
     flex: 0 0 4.25rem !important;
-    height: 31px !important;
-    padding: 0.25rem 1.5rem 0.25rem 0.5rem !important;
-    font-size: 0.875rem !important;
+    padding-right: 1.5rem !important;
 }
 
-.list-filters-row-actions {
-    display: inline-flex !important;
-    flex-flow: row nowrap !important;
-    align-items: center !important;
-    gap: 0.5rem;
-    flex: 0 0 auto;
-    margin-bottom: 0;
-}
-
-.list-filters-row-actions .btn {
-    display: inline-flex !important;
+/* Apply + Clear on same line as records */
+.list-filters-btn-group {
+    display: flex;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-    flex: 0 0 auto !important;
-    width: auto !important;
-    min-height: 31px;
-    height: 31px;
-    padding: 0.25rem 0.75rem !important;
-    font-size: 0.875rem !important;
-    margin: 0 !important;
+    gap: 0.5rem;
+    padding-top: 1.55rem;
 }
 
-.list-filters-row-actions .btn-primary {
+.list-filters-form .row.align-items-end .list-filters-btn-group {
+    padding-top: 0;
+}
+
+.list-filters-btn-group .btn {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.list-filters-btn-group .btn-primary {
     color: #fff !important;
 }
 
-.list-filters-row-actions .btn-outline-dark {
+.list-filters-btn-group .btn-outline-dark {
     background-color: #fff !important;
     border: 1px solid #495057 !important;
     color: #495057 !important;
 }
 
-.list-filters-row-actions .btn-outline-dark:hover,
-.list-filters-row-actions .btn-outline-dark:focus {
+.list-filters-btn-group .btn-outline-dark:hover,
+.list-filters-btn-group .btn-outline-dark:focus {
     background-color: #212529 !important;
     border-color: #212529 !important;
     color: #fff !important;
 }
 
-.list-filters-row-actions .btn-outline-dark i {
+.list-filters-btn-group .btn-outline-dark i {
     color: inherit !important;
 }
 
@@ -155,7 +95,6 @@
     margin-top: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--gray-200, #e9ecef);
-    width: 100%;
 }
 
 .list-filters-secondary .filter-group-label {
@@ -178,29 +117,9 @@
     align-items: center;
     gap: 0.35rem;
     margin-top: 0.65rem;
-    width: 100%;
 }
 
 .list-active-filters .badge {
     font-weight: 500;
     padding: 0.35em 0.65em;
-}
-
-@media (max-width: 767.98px) {
-    .list-filters-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .list-filters-row-search,
-    .list-filters-row-field,
-    .list-filters-per-page-wrap {
-        width: 100%;
-        flex: 1 1 100%;
-    }
-
-    .list-filters-row-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
 }

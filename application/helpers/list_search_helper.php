@@ -180,9 +180,9 @@ if (!function_exists('render_list_filter_per_page')) {
     /**
      * Records-per-page dropdown (inline, place before Apply in list-filters-row).
      */
-    function render_list_filter_per_page(int $perPage = 50): void {
+    function render_list_filter_per_page(int $perPage = 50, string $colClass = 'col-auto'): void {
         ?>
-        <div class="list-filters-per-page-wrap">
+        <div class="<?= htmlspecialchars($colClass) ?>">
             <label class="form-label" for="list_filter_per_page">Records</label>
             <div class="input-group input-group-sm list-filters-per-page-group">
                 <span class="input-group-text">Records</span>
@@ -199,19 +199,22 @@ if (!function_exists('render_list_filter_submit_buttons')) {
      */
     function render_list_filter_submit_buttons(
         string $resetUrl = '',
-        string $applyLabel = 'Apply'
+        string $applyLabel = 'Apply',
+        string $colClass = 'col-auto'
     ): void {
         ?>
-        <div class="list-filters-row-actions">
-            <input type="hidden" name="page" value="1">
-            <button type="submit" class="btn btn-primary btn-sm">
-                <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
-            </button>
-            <?php if ($resetUrl !== ''): ?>
-                <a href="<?= htmlspecialchars($resetUrl) ?>" class="btn btn-outline-dark btn-sm">
-                    <i class="bi bi-x-circle me-1"></i>Clear
-                </a>
-            <?php endif; ?>
+        <div class="<?= htmlspecialchars($colClass) ?>">
+            <div class="list-filters-btn-group">
+                <input type="hidden" name="page" value="1">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
+                </button>
+                <?php if ($resetUrl !== ''): ?>
+                    <a href="<?= htmlspecialchars($resetUrl) ?>" class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
         <?php
     }
