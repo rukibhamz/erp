@@ -60,53 +60,52 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
         </div>
     <?php endif; ?>
 
-    <!-- Filters -->
-    <div class="card mb-4">
+    <?php
+    $bookingHasFilters = list_has_active_filters(['status', 'date', 'search'])
+        || ($selected_status ?? 'all') !== 'all';
+    ?>
+    <!-- Search & filters -->
+    <div class="card shadow-sm mb-4 list-filters-card">
         <div class="card-body">
-            <form method="GET" action="" class="row g-3 align-items-end">
-            <?php $search_placeholder = 'Booking #, customer, email, facility…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
+            <form method="GET" action="<?= base_url('bookings') ?>" class="list-filters-form">
                 <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
                 <input type="hidden" name="dir" value="<?= htmlspecialchars($sort_dir) ?>">
-                <input type="hidden" name="page" value="1">
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">Status</label>
-                    <select name="status" id="filter-status" class="form-select">
-                        <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All Statuses</option>
-                        <option value="pending" <?= $selected_status === 'pending' ? 'selected' : '' ?>>Pending</option>
-                        <option value="confirmed" <?= $selected_status === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
-                        <option value="completed" <?= $selected_status === 'completed' ? 'selected' : '' ?>>Completed</option>
-                        <option value="cancelled" <?= $selected_status === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
-                        <option value="in_progress" <?= $selected_status === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
-                    </select>
+                <div class="row g-3 align-items-end">
+                    <?php
+                    $search_placeholder = 'Booking #, customer, email, facility…';
+                    include(BASEPATH . 'views/partials/list_search_field.php');
+                    ?>
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label" for="filter-status">Status</label>
+                        <select name="status" id="filter-status" class="form-select">
+                            <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All Statuses</option>
+                            <option value="pending" <?= $selected_status === 'pending' ? 'selected' : '' ?>>Pending</option>
+                            <option value="confirmed" <?= $selected_status === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
+                            <option value="completed" <?= $selected_status === 'completed' ? 'selected' : '' ?>>Completed</option>
+                            <option value="cancelled" <?= $selected_status === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                            <option value="in_progress" <?= $selected_status === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label" for="filter-date">Date</label>
+                        <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
+                    </div>
+                    <?php render_list_filter_actions($perPage, base_url('bookings'), 'Apply', 'col-lg-auto col-md-12'); ?>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">Date</label>
-                    <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">Records</label>
-                    <?php render_pagination_per_page_select($perPage); ?>
-                </div>
-                <div class="col-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-funnel-fill me-1"></i> Apply Filter
-                    </button>
-                    <a href="<?= base_url('bookings') ?>" class="btn btn-outline-dark">
-                        <i class="bi bi-x-circle me-1"></i> Clear
-                    </a>
-                </div>
-                <?php if ($selected_status !== 'all' || !empty($selected_date)): ?>
-                <div class="col-12">
-                    <span class="text-muted small">
-                        <i class="bi bi-filter-circle-fill text-primary me-1"></i>
-                        Filtered by:
-                        <?php if ($selected_status !== 'all'): ?>
-                            <span class="badge bg-primary"><?= ucfirst($selected_status) ?></span>
-                        <?php endif; ?>
-                        <?php if (!empty($selected_date)): ?>
-                            <span class="badge bg-secondary"><?= date('M Y', strtotime($selected_date)) ?></span>
-                        <?php endif; ?>
-                    </span>
+
+                <?php if ($bookingHasFilters): ?>
+                <div class="list-active-filters">
+                    <span class="small text-muted me-1"><i class="bi bi-funnel"></i> Active:</span>
+                    <?php if (list_search_term() !== ''): ?>
+                        <span class="badge bg-secondary">Search: <?= htmlspecialchars(list_search_term()) ?></span>
+                    <?php endif; ?>
+                    <?php if ($selected_status !== 'all'): ?>
+                        <span class="badge bg-primary">Status: <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $selected_status))) ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($selected_date)): ?>
+                        <span class="badge bg-info text-dark"><?= date('M Y', strtotime($selected_date)) ?></span>
+                    <?php endif; ?>
+                    <a href="<?= base_url('bookings') ?>" class="small ms-1">Clear all</a>
                 </div>
                 <?php endif; ?>
             </form>
@@ -184,7 +183,14 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="9" class="text-center text-muted">No bookings found.</td>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    <?php if ($bookingHasFilters): ?>
+                                        No bookings match your filters.
+                                        <a href="<?= base_url('bookings') ?>" class="d-block mt-2">Clear filters</a>
+                                    <?php else: ?>
+                                        No bookings found.
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endif; ?>
                     </tbody>

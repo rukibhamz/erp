@@ -11,6 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= base_url('assets/css/main.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/search.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('assets/css/list-filters.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/design-system.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/responsive.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/navigation.css') ?>" rel="stylesheet">

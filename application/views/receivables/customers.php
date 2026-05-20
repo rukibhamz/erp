@@ -1,5 +1,8 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
+
+$perPage = intval($pagination['per_page'] ?? 50);
+$hasFilters = list_has_active_filters(['source', 'search']);
 ?>
 
 <div class="page-header">
@@ -32,44 +35,57 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         gap: 0.25rem;
         flex-wrap: nowrap;
     }
-
     .customer-actions .btn {
         padding: 0.2rem 0.45rem;
     }
-
     .actions-cell {
         white-space: nowrap;
         min-width: 210px;
     }
 </style>
 
-<div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
-        <span class="fw-semibold">Customer List</span>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <form method="GET" action="<?= base_url('receivables/customers') ?>" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
-                <input type="search" name="search" class="form-control form-control-sm" style="min-width:220px"
-                       value="<?= htmlspecialchars(list_search_term()) ?>"
-                       placeholder="Code, name, email, phone…">
-                <?php if (!empty($source_filter)): ?>
-                    <input type="hidden" name="source" value="<?= htmlspecialchars($source_filter) ?>">
-                <?php endif; ?>
-                <input type="hidden" name="page" value="1">
-                <label class="small text-muted mb-0">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
-                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-            </form>
-            <div class="btn-group btn-group-sm" role="group" aria-label="Source filter">
-            <?php
+<!-- Search & filters -->
+<div class="card shadow-sm mb-4 list-filters-card">
+    <div class="card-body">
+        <form method="GET" action="<?= base_url('receivables/customers') ?>" class="list-filters-form">
+            <div class="row g-3 align-items-end">
+                <?php
+                $search_placeholder = 'Code, name, email, phone…';
+                include(BASEPATH . 'views/partials/list_search_field.php');
+                ?>
+                <?php render_list_filter_actions($perPage, base_url('receivables/customers'), 'Apply', 'col-lg-auto col-md-12'); ?>
+            </div>
+
+            <div class="list-filters-secondary list-source-pills">
+                <span class="filter-group-label">Source</span>
+                <?php
                 $sources = [null => 'All', 'invoice' => 'Invoice', 'booking' => 'Booking', 'tenant' => 'Tenant'];
                 foreach ($sources as $val => $label):
-                    $active = ($source_filter === $val) ? 'btn-primary' : 'btn-outline-primary';
-                    $href  = $val ? base_url('receivables/customers?source=' . $val) : base_url('receivables/customers');
-            ?>
-            <a href="<?= $href ?>" class="btn <?= $active ?>"><?= $label ?></a>
-            <?php endforeach; ?>
+                    $active = ($source_filter === $val);
+                    $href = base_url('receivables/customers') . list_filter_query(['source' => $val]);
+                ?>
+                <a href="<?= htmlspecialchars($href) ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>"><?= htmlspecialchars($label) ?></a>
+                <?php endforeach; ?>
             </div>
-        </div>
+
+            <?php if ($hasFilters): ?>
+            <div class="list-active-filters">
+                <span class="small text-muted me-1"><i class="bi bi-funnel"></i> Active:</span>
+                <?php if (list_search_term() !== ''): ?>
+                    <span class="badge bg-secondary">Search: <?= htmlspecialchars(list_search_term()) ?></span>
+                <?php endif; ?>
+                <?php if (!empty($source_filter)): ?>
+                    <span class="badge bg-primary">Source: <?= htmlspecialchars(ucfirst($source_filter)) ?></span>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header py-2">
+        <span class="fw-semibold">Customer List</span>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -122,7 +138,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-plus-circle"></i>
                                         </a>
                                         <?php if (isSuperAdmin()): ?>
-                                            <form method="POST" action="<?= base_url('receivables/deleteCustomer/' . intval($customer['id'])) ?>" 
+                                            <form method="POST" action="<?= base_url('receivables/deleteCustomer/' . intval($customer['id'])) ?>"
                                                   class="m-0 p-0"
                                                   onsubmit="return confirm('Are you sure you want to delete this customer?');">
                                                 <?php echo csrf_field(); ?>
@@ -132,7 +148,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </form>
                                         <?php endif; ?>
                                     </div>
-
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -141,10 +156,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <td colspan="7" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-people"></i>
-                                    <p class="mb-0">No customers found.</p>
-                                    <a href="<?= base_url('receivables/customers/create') ?>" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle"></i> Create First Customer
-                                    </a>
+                                    <?php if (list_search_term() !== '' || !empty($source_filter)): ?>
+                                        <p class="mb-2">No customers match your filters.</p>
+                                        <a href="<?= base_url('receivables/customers') ?>" class="btn btn-outline-primary btn-sm">Clear filters</a>
+                                    <?php else: ?>
+                                        <p class="mb-0">No customers found.</p>
+                                        <a href="<?= base_url('receivables/customers/create') ?>" class="btn btn-primary">
+                                            <i class="bi bi-plus-circle"></i> Create First Customer
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -155,4 +175,3 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
     <?php include BASEPATH . 'views/partials/accounting_table_footer.php'; ?>
 </div>
-

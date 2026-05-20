@@ -21,7 +21,7 @@ if (!function_exists('standard_list_search_fields')) {
      */
     function standard_list_search_fields(string $entity): array {
         $map = [
-            'booking' => ['booking_number', 'customer_name', 'customer_email', 'customer_phone', 'facility_name', 'status'],
+            'booking' => ['booking_number', 'customer_name', 'customer_email', 'customer_phone', 'facility_name', 'facility_code', 'status', 'payment_status', 'id'],
             'customer' => ['customer_code', 'company_name', 'contact_name', 'email', 'phone', 'tax_id'],
             'vendor' => ['vendor_code', 'company_name', 'contact_name', 'email', 'phone', 'tax_id'],
             'invoice' => ['invoice_number', 'company_name', 'reference', 'status'],
@@ -111,6 +111,39 @@ if (!function_exists('sql_append_search')) {
     }
 }
 
+if (!function_exists('list_filter_query')) {
+    /**
+     * Build query string preserving current filters (resets page by default).
+     */
+    function list_filter_query(array $overrides = [], bool $resetPage = true): string {
+        $params = $_GET;
+        if ($resetPage) {
+            unset($params['page']);
+        }
+        foreach ($overrides as $key => $value) {
+            if ($value === null || $value === '') {
+                unset($params[$key]);
+            } else {
+                $params[$key] = $value;
+            }
+        }
+        $qs = http_build_query($params);
+        return $qs !== '' ? '?' . $qs : '';
+    }
+}
+
+if (!function_exists('list_has_active_filters')) {
+    function list_has_active_filters(array $keys): bool {
+        foreach ($keys as $key) {
+            $val = $_GET[$key] ?? '';
+            if ($val !== '' && $val !== null && $val !== 'all') {
+                return true;
+            }
+        }
+        return list_search_term() !== '';
+    }
+}
+
 if (!function_exists('render_list_search_field')) {
     /**
      * Search input for list filter forms. Preserves other GET params via form submit.
@@ -119,12 +152,12 @@ if (!function_exists('render_list_search_field')) {
         string $value = '',
         string $placeholder = 'Search name, ID, email, phone…',
         string $name = 'search',
-        string $colClass = 'col-md-4',
+        string $colClass = 'col-lg-4 col-md-6',
         bool $showLabel = true
     ): void {
         $value = $value !== '' ? $value : list_search_term();
         ?>
-        <div class="<?= htmlspecialchars($colClass) ?>">
+        <div class="<?= htmlspecialchars($colClass) ?> list-filter-search">
             <?php if ($showLabel): ?>
                 <label class="form-label" for="list_search_<?= htmlspecialchars($name) ?>">Search</label>
             <?php endif; ?>
@@ -137,6 +170,36 @@ if (!function_exists('render_list_search_field')) {
                        value="<?= htmlspecialchars($value) ?>"
                        placeholder="<?= htmlspecialchars($placeholder) ?>"
                        autocomplete="off">
+            </div>
+        </div>
+        <?php
+    }
+}
+
+if (!function_exists('render_list_filter_actions')) {
+    /**
+     * Per-page select + Apply / Reset buttons for list filter forms.
+     */
+    function render_list_filter_actions(
+        int $perPage = 50,
+        string $resetUrl = '',
+        string $applyLabel = 'Apply',
+        string $colClass = 'col-lg-auto col-md-12'
+    ): void {
+        ?>
+        <div class="<?= htmlspecialchars($colClass) ?>">
+            <label class="form-label">Records</label>
+            <div class="list-filters-actions">
+                <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select'); ?>
+                <input type="hidden" name="page" value="1">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel-fill me-1"></i><?= htmlspecialchars($applyLabel) ?>
+                </button>
+                <?php if ($resetUrl !== ''): ?>
+                    <a href="<?= htmlspecialchars($resetUrl) ?>" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
         <?php

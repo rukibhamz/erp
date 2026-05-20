@@ -1,0 +1,83 @@
+/* Shared list page search & filter toolbar */
+.list-filters-card .card-body {
+    padding: 1rem 1.25rem;
+}
+
+.list-filters-form .form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--gray-600, #6c757d);
+    margin-bottom: 0.35rem;
+}
+
+.list-filters-form .input-group-text {
+    background: var(--gray-100, #f8f9fa);
+    border-color: var(--gray-300, #dee2e6);
+    color: var(--gray-600, #6c757d);
+}
+
+.list-filters-form .form-control:focus,
+.list-filters-form .form-select:focus {
+    border-color: var(--primary, #0d6efd);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
+}
+
+.list-filters-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.list-filters-actions .btn {
+    white-space: nowrap;
+}
+
+.list-filters-secondary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--gray-200, #e9ecef);
+}
+
+.list-filters-secondary .filter-group-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--gray-600, #6c757d);
+    margin-right: 0.25rem;
+}
+
+.list-source-pills .btn {
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.75rem;
+}
+
+.list-active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.65rem;
+}
+
+.list-active-filters .badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+@media (max-width: 767.98px) {
+    .list-filters-actions {
+        width: 100%;
+    }
+
+    .list-filters-actions .btn {
+        flex: 1 1 auto;
+    }
+}
