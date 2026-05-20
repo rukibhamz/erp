@@ -20,8 +20,11 @@
                 <a href="<?= base_url('settings/payment-gateways/edit/' . (int) $gateway['id']) ?>" class="btn btn-secondary">
                     <i class="bi bi-gear"></i> Gateway settings
                 </a>
+                <a href="<?= base_url('settings/flutterwave/subaccounts/create?mode=link') ?>" class="btn btn-secondary">
+                    <i class="bi bi-link-45deg"></i> Link existing code
+                </a>
                 <a href="<?= base_url('settings/flutterwave/subaccounts/create') ?>" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add subaccount
+                    <i class="bi bi-plus-circle"></i> Create new
                 </a>
             </div>
         </div>
@@ -90,13 +93,16 @@
                 <h5 class="mt-3 text-muted">No subaccounts yet</h5>
                 <p class="text-muted mb-4">Create one to split booking payments at Flutterwave checkout.</p>
                 <div class="d-flex flex-wrap justify-content-center gap-2">
-                    <a href="<?= base_url('settings/flutterwave/subaccounts/create') ?>" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add first subaccount
+                    <a href="<?= base_url('settings/flutterwave/subaccounts/create?mode=link') ?>" class="btn btn-primary">
+                        <i class="bi bi-link-45deg"></i> Link subaccount code (RS_…)
                     </a>
-                    <a href="<?= base_url('settings/flutterwave/split-rules/create') ?>" class="btn btn-secondary">
-                        <i class="bi bi-diagram-3"></i> Add split rule
+                    <a href="<?= base_url('settings/flutterwave/subaccounts/create') ?>" class="btn btn-secondary">
+                        <i class="bi bi-plus-circle"></i> Create new on Flutterwave
                     </a>
                 </div>
+                <p class="small text-muted mt-3 mb-0">
+                    Then <a href="<?= base_url('settings/flutterwave/split-rules/create') ?>">add a split rule</a> for your property or space.
+                </p>
             </div>
         <?php else: ?>
             <div class="card-body p-0">

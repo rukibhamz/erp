@@ -80,7 +80,9 @@ When enabled, a share of each successful booking payment is settled to a [Flutte
 1. **Settings → Payment Gateways → Flutterwave → Configure**
    - Enable **split payments (subaccounts)**
    - Optionally enable **log split details on payment transactions** (audit only)
-2. **Settings → Payment Gateways → Flutterwave → Subaccounts** — create beneficiaries (calls `POST /v3/subaccounts`).
+2. **Settings → Payment Gateways → Flutterwave → Subaccounts**
+   - **Link existing code** — paste the `RS_…` subaccount ID you already have from Flutterwave (no bank form).
+   - **Create new** — register a new beneficiary via `POST /v3/subaccounts` (bank details required).
 3. **Split rules** — map subaccounts to global, property, or space scope (space wins over property over global).
 
 On `POST /v3/payments`, the app adds `subaccounts: [{ id: "RS_…" }]`. Fulfillment and booking balances are unchanged.

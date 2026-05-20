@@ -294,8 +294,80 @@ class Settings extends Base_Controller {
         $service = new Flutterwave_subaccount_service($this->flutterwaveGatewayConfig($gateway));
         $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
 
+        $entryMode = ($_GET['mode'] ?? $_POST['entry_mode'] ?? '') === 'link' ? 'link' : 'create';
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf();
+            $entryMode = ($_POST['entry_mode'] ?? 'create') === 'link' ? 'link' : 'create';
+
+            if ($entryMode === 'link') {
+                $subaccountId = strtoupper(trim(sanitize_input($_POST['subaccount_id'] ?? '')));
+                $businessName = sanitize_input($_POST['business_name'] ?? '');
+
+                if ($subaccountId === '' || !preg_match('/^RS_[A-Z0-9]+$/', $subaccountId)) {
+                    $this->setFlashMessage('danger', 'Enter a valid Flutterwave subaccount code (e.g. RS_FB312AA6C2C84A13421F3079E714F2CB).');
+                    redirect('settings/flutterwave/subaccounts/create?mode=link');
+                    return;
+                }
+
+                if ($businessName === '') {
+                    $this->setFlashMessage('danger', 'Enter a display name for this subaccount.');
+                    redirect('settings/flutterwave/subaccounts/create?mode=link');
+                    return;
+                }
+
+                if ($subaccountModel->getBySubaccountId($subaccountId)) {
+                    $this->setFlashMessage('danger', 'This subaccount code is already registered in the ERP.');
+                    redirect('settings/flutterwave/subaccounts');
+                    return;
+                }
+
+                $splitType = in_array($_POST['split_type'] ?? '', ['percentage', 'flat'], true)
+                    ? $_POST['split_type'] : 'percentage';
+                $splitValue = (float) ($_POST['split_value'] ?? 0.85);
+
+                $row = [
+                    'subaccount_id' => $subaccountId,
+                    'flutterwave_numeric_id' => null,
+                    'business_name' => $businessName,
+                    'account_bank' => '—',
+                    'account_number' => 'linked',
+                    'account_number_masked' => '****',
+                    'country' => strtoupper(sanitize_input($_POST['country'] ?? 'NG')),
+                    'split_type' => $splitType,
+                    'split_value' => $splitValue,
+                    'business_email' => null,
+                    'business_mobile' => null,
+                    'test_mode' => !empty($gateway['test_mode']) ? 1 : 0,
+                    'is_active' => 1,
+                ];
+
+                $api = $service->getSubaccount($subaccountId);
+                if (!empty($api['success']) && is_array($api['data'])) {
+                    $d = $api['data'];
+                    $row['flutterwave_numeric_id'] = $d['id'] ?? null;
+                    $row['business_name'] = $d['business_name'] ?? $d['full_name'] ?? $businessName;
+                    $row['account_bank'] = $d['account_bank'] ?? $row['account_bank'];
+                    $row['account_number'] = $d['account_number'] ?? $row['account_number'];
+                    if (!empty($row['account_number']) && $row['account_number'] !== 'linked') {
+                        $row['account_number_masked'] = flutterwave_mask_account_number($row['account_number']);
+                    }
+                    $row['country'] = strtoupper($d['country'] ?? $row['country']);
+                    if (!empty($d['split_type'])) {
+                        $row['split_type'] = $d['split_type'];
+                    }
+                    if (isset($d['split_value'])) {
+                        $row['split_value'] = (float) $d['split_value'];
+                    }
+                }
+
+                $subaccountModel->create($row);
+                $this->activityModel->log($this->session['user_id'], 'create', 'Settings', 'Linked Flutterwave subaccount: ' . $subaccountId);
+                $this->setFlashMessage('success', 'Subaccount code linked. You can now use it in split rules.');
+                redirect('settings/flutterwave/subaccounts');
+                return;
+            }
+
             $payload = [
                 'account_bank' => sanitize_input($_POST['account_bank'] ?? ''),
                 'account_number' => preg_replace('/\s+/', '', sanitize_input($_POST['account_number'] ?? '')),
@@ -349,7 +421,7 @@ class Settings extends Base_Controller {
         }
 
         $banks = [];
-        if ($service->isConfigured()) {
+        if ($service->isConfigured() && $entryMode === 'create') {
             $bankRes = $service->getBanks('NG');
             if (!empty($bankRes['success']) && is_array($bankRes['data'])) {
                 $banks = $bankRes['data'];
@@ -357,10 +429,11 @@ class Settings extends Base_Controller {
         }
 
         $this->loadView('settings/flutterwave_subaccount_form', [
-            'page_title' => 'Create Flutterwave Subaccount',
+            'page_title' => $entryMode === 'link' ? 'Link Flutterwave Subaccount' : 'Create Flutterwave Subaccount',
             'gateway' => $gateway,
             'subaccount' => null,
             'banks' => $banks,
+            'entry_mode' => $entryMode,
             'flash' => $this->getFlashMessage(),
         ]);
     }
