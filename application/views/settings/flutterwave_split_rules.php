@@ -4,9 +4,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Flutterwave Split Rules</h1>
         <div>
-            <a href="<?= base_url('settings/flutterwave/subaccounts') ?>" class="btn btn-outline-secondary">Subaccounts</a>
+            <a href="<?= base_url('settings/flutterwave/subaccounts') ?>" class="btn btn-secondary">
+                <i class="bi bi-bank2"></i> Subaccounts
+            </a>
             <a href="<?= base_url('settings/flutterwave/split-rules/create') ?>" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> Add rule
+                <i class="bi bi-plus-circle"></i> Add rule
             </a>
         </div>
     </div>
@@ -62,11 +64,15 @@
                                     <?= !empty($rule['is_active']) ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Off</span>' ?>
                                 </td>
                                 <td class="text-end">
-                                    <a href="<?= base_url('settings/flutterwave/split-rules/edit/' . (int) $rule['id']) ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <a href="<?= base_url('settings/flutterwave/split-rules/edit/' . (int) $rule['id']) ?>" class="btn btn-sm btn-primary me-1">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
                                     <?php if (!empty($rule['is_active'])): ?>
                                         <a href="<?= base_url('settings/flutterwave/split-rules/delete/' . (int) $rule['id']) ?>"
-                                           class="btn btn-sm btn-outline-danger"
-                                           onclick="return confirm('Deactivate this rule?');">Deactivate</a>
+                                           class="btn btn-sm btn-danger"
+                                           onclick="return confirm('Deactivate this rule?');">
+                                            <i class="bi bi-x-circle"></i> Deactivate
+                                        </a>
                                     <?php endif; ?>
                                 </td>
                             </tr>

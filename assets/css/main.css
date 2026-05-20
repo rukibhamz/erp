@@ -641,8 +641,8 @@ footer .container-fluid {
     font-family: var(--font-poppins);
 }
 
-/* Base rule: All buttons have white text unless explicitly overridden */
-.btn:not(.btn-outline-primary):not(.btn-outline-dark):not(.btn-ghost):not(.btn-link) {
+/* Base rule: Solid buttons have white text; outline variants keep their own colors */
+.btn:not([class*="btn-outline"]):not(.btn-ghost):not(.btn-link):not(.btn-close) {
     color: #ffffff !important;
 }
 

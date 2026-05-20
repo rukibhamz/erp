@@ -84,7 +84,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         </a>
                                         <?php if (($gateway['gateway_code'] ?? '') === 'flutterwave'): ?>
                                             <a href="<?= base_url('settings/flutterwave/subaccounts') ?>"
-                                               class="btn btn-sm btn-outline-primary me-1">
+                                               class="btn btn-sm btn-secondary me-1">
                                                 <i class="bi bi-diagram-3"></i> Subaccounts
                                             </a>
                                         <?php endif; ?>
