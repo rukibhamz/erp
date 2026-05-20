@@ -68,19 +68,25 @@ class Items extends Base_Controller {
                     return in_array($i['id'], $outOfStockIds);
                 });
             }
+            $items = array_values($items);
             
             // Get unique categories
             $categories = array_unique(array_column($allItems, 'category'));
             $categories = array_filter($categories);
             
+            $paged = $this->paginateList(array_values($items));
+            $items = $paged['items'];
+            
         } catch (Exception $e) {
             $items = [];
             $categories = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Items',
             'items' => $items,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'categories' => $categories,
             'selected_filter' => $filter,
             'selected_item_type' => $itemType,

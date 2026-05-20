@@ -53,6 +53,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </tbody>
             </table>
         </div>
+
+       <?php render_pagination_controls($pagination ?? null); ?>
         <?php else: ?>
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i> No payments found.

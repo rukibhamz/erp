@@ -27,7 +27,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All</option>
                 </select>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
+            </div>
+            <div class="col-md-6">
                 <a href="<?= base_url('utilities/alerts') ?>" class="btn btn-primary">
                     <i class="bi bi-x-circle"></i> Clear Filters
                 </a>
@@ -113,6 +118,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                         <h5 class="modal-title">Resolve Alert</h5>
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                                     <form action="<?= base_url('utilities/alerts/resolve/' . $alert['id']) ?>" method="POST">
                                                         <?php echo csrf_field(); ?>
                                                         <div class="modal-body">

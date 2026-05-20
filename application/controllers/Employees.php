@@ -16,15 +16,19 @@ class Employees extends Base_Controller {
     
     public function index() {
         try {
-            $employees = $this->employeeModel->getActiveEmployees();
+            $all = $this->employeeModel->getActiveEmployees();
+            $paged = $this->paginateList($all);
+            $employees = $paged['items'];
         } catch (Exception $e) {
             error_log('Employees index error: ' . $e->getMessage());
             $employees = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Employees',
             'employees' => $employees,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

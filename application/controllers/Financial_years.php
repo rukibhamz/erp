@@ -19,14 +19,18 @@ class Financial_years extends Base_Controller {
      */
     public function index() {
         try {
-            $financialYears = $this->financialYearModel->getAll('start_date DESC');
+            $all = $this->financialYearModel->getAll('start_date DESC');
+            $paged = $this->paginateList($all);
+            $financialYears = $paged['items'];
         } catch (Exception $e) {
             $financialYears = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
 
         $data = [
             'page_title' => 'Financial Years',
             'financial_years' => $financialYears,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
 

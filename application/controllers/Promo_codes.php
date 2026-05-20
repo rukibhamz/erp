@@ -13,10 +13,11 @@ class Promo_codes extends Base_Controller {
     }
 
     public function index() {
-        $codes = $this->promoModel->getAll(null, 0, 'created_at DESC');
+        $paged = $this->paginateList($this->promoModel->getAll(null, 0, 'created_at DESC'));
         $data = [
             'page_title' => 'Promo Codes',
-            'codes'      => $codes,
+            'codes'      => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash'      => $this->getFlashMessage()
         ];
         $this->loadView('promo_codes/index', $data);

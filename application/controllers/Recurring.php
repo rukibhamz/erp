@@ -19,15 +19,19 @@ class Recurring extends Base_Controller {
         try {
             $transactions = $this->recurringModel->getAll('next_run_date ASC');
             $dueTransactions = $this->recurringModel->getDue();
+            $paged = $this->paginateList($transactions);
+            $transactions = $paged['items'];
         } catch (Exception $e) {
             $transactions = [];
             $dueTransactions = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
 
         $data = [
             'page_title' => 'Recurring Transactions',
             'transactions' => $transactions,
             'due_transactions' => $dueTransactions,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
 

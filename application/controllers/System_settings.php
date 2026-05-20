@@ -153,12 +153,16 @@ class System_settings extends Base_Controller {
                     
                 case 'preferences':
                     $sessionTimeout = intval($_POST['session_timeout'] ?? 60);
+                    $itemsPerPage = intval($_POST['items_per_page'] ?? 25);
+                    if (!in_array($itemsPerPage, pagination_per_page_options(), true)) {
+                        $itemsPerPage = 50;
+                    }
                     $settings = [
                         'timezone' => sanitize_input($_POST['timezone'] ?? 'Africa/Lagos'),
                         'date_format' => sanitize_input($_POST['date_format'] ?? 'Y-m-d'),
                         'time_format' => sanitize_input($_POST['time_format'] ?? 'H:i:s'),
                         'currency_code' => sanitize_input($_POST['currency_code'] ?? 'NGN'),
-                        'items_per_page' => intval($_POST['items_per_page'] ?? 25),
+                        'items_per_page' => $itemsPerPage,
                         'session_timeout' => $sessionTimeout * 60, // Convert to seconds
                         'default_dashboard' => sanitize_input($_POST['default_dashboard'] ?? 'super_admin'),
                         'password_policy' => sanitize_input($_POST['password_policy'] ?? 'basic'),

@@ -27,17 +27,21 @@ class Stock_takes extends Base_Controller {
         
         try {
             if ($status === 'all') {
-                $stockTakes = $this->stockTakeModel->getAll();
+                $all = $this->stockTakeModel->getAll();
             } else {
-                $stockTakes = $this->stockTakeModel->getByStatus($status);
+                $all = $this->stockTakeModel->getByStatus($status);
             }
+            $paged = $this->paginateList($all);
+            $stockTakes = $paged['items'];
         } catch (Exception $e) {
             $stockTakes = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Stock Takes',
             'stock_takes' => $stockTakes,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

@@ -24,7 +24,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label">Filter by Meter</label>
                 <select name="meter_id" class="form-select" onchange="this.form.submit()">
                     <option value="">All Meters</option>
@@ -35,15 +35,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Start Date</label>
                 <input type="date" name="start_date" class="form-control" value="<?= (string)$start_date ?>" onchange="this.form.submit()">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">End Date</label>
                 <input type="date" name="end_date" class="form-control" value="<?= (string)$end_date ?>" onchange="this.form.submit()">
             </div>
             <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
+            </div>
+            <div class="col-md-3">
                 <a href="<?= base_url('utilities/readings') ?>" class="btn btn-primary w-100">
                     <i class="bi bi-x-circle"></i> Clear
                 </a>
@@ -132,6 +137,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </tbody>
                 </table>
             </div>
+
+    <?php render_pagination_controls($pagination ?? null); ?>
         </div>
     </div>
 <?php endif; ?>

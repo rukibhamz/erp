@@ -32,19 +32,23 @@ class Leases extends Base_Controller {
         
         try {
             if ($status === 'active') {
-                $leases = $this->leaseModel->getActive();
+                $all = $this->leaseModel->getActive();
             } elseif ($status === 'expiring') {
-                $leases = $this->leaseModel->getExpiring(90);
+                $all = $this->leaseModel->getExpiring(90);
             } else {
-                $leases = [];
+                $all = [];
             }
+            $paged = $this->paginateList($all);
+            $leases = $paged['items'];
         } catch (Exception $e) {
             $leases = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Leases',
             'leases' => $leases,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

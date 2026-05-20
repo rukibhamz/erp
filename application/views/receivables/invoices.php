@@ -24,7 +24,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('receivables/invoices') ?>" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
                     <option value="">All Status</option>
@@ -35,7 +35,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="overdue" <?= ($selected_status ?? '') === 'overdue' ? 'selected' : '' ?>>Overdue</option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="customer_id" class="form-label">Customer</label>
                 <select class="form-select" id="customer_id" name="customer_id">
                     <option value="">All Customers</option>
@@ -47,6 +47,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
@@ -149,6 +154,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <span class="text-muted">N/A</span>
                                         <?php endif; ?>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

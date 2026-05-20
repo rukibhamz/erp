@@ -27,11 +27,12 @@ class Modules extends Base_Controller {
      * List all modules
      */
     public function index() {
-        $modules = $this->moduleModel->getAll(null, 0, null, false);
-        
+        $paged = $this->paginateList($this->moduleModel->getAll(null, 0, null, false));
+
         $data = [
             'page_title' => 'Module Management',
-            'modules' => $modules,
+            'modules' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         

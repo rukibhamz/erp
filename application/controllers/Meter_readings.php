@@ -29,10 +29,13 @@ class Meter_readings extends Base_Controller {
             }
             
             $meters = $this->meterModel->getActive();
+            $paged = $this->paginateList($readings);
+            $readings = $paged['items'];
         } catch (Exception $e) {
             $readings = [];
             $meter = null;
             $meters = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
@@ -43,6 +46,7 @@ class Meter_readings extends Base_Controller {
             'meter' => $meter,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

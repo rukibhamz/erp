@@ -19,24 +19,27 @@ class Tariffs extends Base_Controller {
         
         try {
             if ($providerId) {
-                $tariffs = $this->tariffModel->getAll();
-                $tariffs = array_filter($tariffs, function($t) use ($providerId) {
+                $all = array_values(array_filter($this->tariffModel->getAll(), function($t) use ($providerId) {
                     return $t['provider_id'] == $providerId;
-                });
+                }));
             } else {
-                $tariffs = $this->tariffModel->getAll();
+                $all = $this->tariffModel->getAll();
             }
             
             $providers = $this->providerModel->getActive();
+            $paged = $this->paginateList($all);
+            $tariffs = $paged['items'];
         } catch (Exception $e) {
             $tariffs = [];
             $providers = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Tariffs',
             'tariffs' => $tariffs,
             'providers' => $providers,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_provider_id' => $providerId,
             'flash' => $this->getFlashMessage()
         ];

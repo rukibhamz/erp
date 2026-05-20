@@ -13,9 +13,11 @@ class Companies extends Base_Controller {
     
     public function index() {
         $this->requirePermission('companies', 'read');
+        $paged = $this->paginateList($this->companyModel->getAll(null, 0, 'created_at DESC'));
         $data = [
             'page_title' => 'Companies',
-            'companies' => $this->companyModel->getAll(null, 0, 'created_at DESC'),
+            'companies' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         

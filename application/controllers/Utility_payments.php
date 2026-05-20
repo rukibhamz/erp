@@ -48,13 +48,18 @@ class Utility_payments extends Base_Controller {
                 }
             }
             unset($payment);
+
+            $paged = $this->paginateList($allPayments);
+            $allPayments = $paged['items'];
         } catch (Exception $e) {
             $allPayments = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Utility Payments',
             'payments' => $allPayments,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

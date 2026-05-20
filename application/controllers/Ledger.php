@@ -61,24 +61,32 @@ class Ledger extends Base_Controller {
         $status = $_GET['status'] ?? null;
         
         try {
-            $sql = "SELECT * FROM `" . $this->db->getPrefix() . "journal_entries`";
-            $params = [];
+            $params = $this->paginationParams();
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT * FROM `{$prefix}journal_entries`";
+            $countSql = "SELECT COUNT(*) as cnt FROM `{$prefix}journal_entries`";
+            $bindParams = [];
             
             if ($status) {
                 $sql .= " WHERE status = ?";
-                $params[] = $status;
+                $countSql .= " WHERE status = ?";
+                $bindParams[] = $status;
             }
-            
-            $sql .= " ORDER BY entry_date DESC, id DESC LIMIT 200";
-            $entries = $this->db->fetchAll($sql, $params);
+
+            $total = intval($this->db->fetchOne($countSql, $bindParams)['cnt'] ?? 0);
+            $pagination = pagination_build_meta($total, $params['page'], $params['per_page']);
+            $sql .= " ORDER BY entry_date DESC, id DESC LIMIT {$params['per_page']} OFFSET {$params['offset']}";
+            $entries = $this->db->fetchAll($sql, $bindParams);
         } catch (Exception $e) {
             error_log('Ledger index error: ' . $e->getMessage());
             $entries = [];
+            $pagination = pagination_build_meta(0, 1, 50);
         }
         
         $data = [
             'page_title' => 'Journal Entries',
             'entries' => $entries,
+            'pagination' => $pagination ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

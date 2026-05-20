@@ -12,18 +12,21 @@ class Notifications extends Base_Controller {
     
     public function index() {
         $userId = $this->session['user_id'] ?? null;
-        $limit = intval($_GET['limit'] ?? 100);
         $unreadOnly = !empty($_GET['unread_only']);
         
         try {
-            $notifications = $this->notificationModel->getUserNotifications($userId, $unreadOnly, $limit);
+            $all = $this->notificationModel->getUserNotifications($userId, $unreadOnly, null);
+            $paged = $this->paginateList($all);
+            $notifications = $paged['items'];
         } catch (Exception $e) {
             $notifications = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Notifications',
             'notifications' => $notifications,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'unread_only' => $unreadOnly,
             'flash' => $this->getFlashMessage()
         ];

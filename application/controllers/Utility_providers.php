@@ -25,15 +25,19 @@ class Utility_providers extends Base_Controller {
             }
             
             $utilityTypes = $this->utilityTypeModel->getActive();
+            $paged = $this->paginateList($providers);
+            $providers = $paged['items'];
         } catch (Exception $e) {
             $providers = [];
             $utilityTypes = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Utility Providers',
             'providers' => $providers,
             'utility_types' => $utilityTypes,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_utility_type_id' => $utilityTypeId,
             'flash' => $this->getFlashMessage()
         ];

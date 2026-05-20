@@ -16,11 +16,12 @@ class Report_builder extends Base_Controller {
         $userId = $this->session['user_id'];
         $role = $this->session['role'] ?? null;
         
-        $reports = $this->reportModel->getUserReports($userId, $role);
-        
+        $paged = $this->paginateList($this->reportModel->getUserReports($userId, $role));
+
         $data = [
             'page_title' => 'Report Builder',
-            'reports' => $reports,
+            'reports' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         

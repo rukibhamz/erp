@@ -28,9 +28,11 @@ class Education_tax extends Base_Controller {
     
     public function index() {
         $summary = $this->taxModel->getSummary();
+        $paged = $this->paginateList($summary);
         $data = [
             'page_title' => 'Education Tax Management',
-            'summary' => $summary,
+            'summary' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         $this->loadView('education_tax/index', $data);
@@ -60,10 +62,12 @@ class Education_tax extends Base_Controller {
     }
     
     public function payments() {
-        $payments = $this->taxModel->getPayments();
+        $all = $this->taxModel->getPayments();
+        $paged = $this->paginateList($all);
         $data = [
             'page_title' => 'Tax Payments',
-            'payments' => $payments
+            'payments' => $paged['items'],
+            'pagination' => $paged['pagination']
         ];
         $this->loadView('education_tax/payments', $data);
     }

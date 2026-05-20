@@ -27,27 +27,46 @@ class Tax_payments extends Base_Controller {
         $periodEnd = $_GET['period_end'] ?? '';
         
         try {
+            $params = $this->paginationParams();
+            $prefix = $this->db->getPrefix();
+            $where = [];
+            $bindParams = [];
+
             if ($taxType !== 'all') {
-                $payments = $this->taxPaymentModel->getByTaxType($taxType, 50);
-            } else {
-                // Get all payments
-                $payments = $this->db->fetchAll(
-                    "SELECT * FROM `" . $this->db->getPrefix() . "tax_payments` 
-                     ORDER BY payment_date DESC 
-                     LIMIT 50"
-                );
+                $where[] = 'tax_type = ?';
+                $bindParams[] = $taxType;
             }
-            
+            if ($periodStart) {
+                $where[] = 'payment_date >= ?';
+                $bindParams[] = $periodStart;
+            }
+            if ($periodEnd) {
+                $where[] = 'payment_date <= ?';
+                $bindParams[] = $periodEnd;
+            }
+
+            $whereClause = !empty($where) ? ' WHERE ' . implode(' AND ', $where) : '';
+            $countSql = "SELECT COUNT(*) as cnt FROM `{$prefix}tax_payments`{$whereClause}";
+            $total = intval($this->db->fetchOne($countSql, $bindParams)['cnt'] ?? 0);
+            $pagination = pagination_build_meta($total, $params['page'], $params['per_page']);
+
+            $sql = "SELECT * FROM `{$prefix}tax_payments`{$whereClause}
+                    ORDER BY payment_date DESC
+                    LIMIT {$params['per_page']} OFFSET {$params['offset']}";
+            $payments = $this->db->fetchAll($sql, $bindParams);
+
             $taxTypes = $this->taxTypeModel->getAllActive();
         } catch (Exception $e) {
             error_log('Tax_payments index error: ' . $e->getMessage());
             $payments = [];
             $taxTypes = [];
+            $pagination = pagination_build_meta(0, 1, 50);
         }
-        
+
         $data = [
             'page_title' => 'Tax Payments',
             'payments' => $payments,
+            'pagination' => $pagination ?? pagination_build_meta(0, 1, 50),
             'tax_types' => $taxTypes,
             'selected_tax_type' => $taxType,
             'period_start' => $periodStart,

@@ -35,7 +35,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="overdue" <?= $selected_status === 'overdue' ? 'selected' : '' ?>>Overdue</option>
                 </select>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
+            </div>
+            <div class="col-md-2">
                 <a href="<?= base_url('utilities/bills') ?>" class="btn btn-primary">
                     <i class="bi bi-x-circle"></i> Clear Filters
                 </a>
@@ -134,6 +139,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

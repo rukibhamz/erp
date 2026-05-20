@@ -55,7 +55,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="posted" <?= ($selected_status ?? '') === 'posted' ? 'selected' : '' ?>>Posted</option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Filter</button>
             </div>
         </form>
@@ -150,6 +155,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </tbody>
             </table>
         </div>
+        <?php render_pagination_controls($pagination ?? null); ?>
     </div>
 </div>
 

@@ -105,6 +105,11 @@
                             <div class="col-md-3">
                                 <input type="text" name="search" class="form-control form-control-sm" value="<?= $filters['search'] ?>" placeholder="Search message or URL...">
                             </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Records</label>
+                                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                                <input type="hidden" name="page" value="1">
+                            </div>
                             <div class="col-md-1">
                                 <button type="submit" class="btn btn-sm btn-primary btn-block">Filter</button>
                             </div>
@@ -156,21 +161,8 @@
                             </tbody>
                         </table>
                     </div>
-                    
-                    <!-- Pagination -->
-                    <?php if ($pages > 1): ?>
-                        <nav>
-                            <ul class="pagination pagination-sm">
-                                <?php for ($i = 1; $i <= $pages; $i++): ?>
-                                    <li class="page-item <?= $i == $current_page ? 'active' : '' ?>">
-                                        <a class="page-link" href="<?= base_url('system_logs?page=' . $i . '&' . http_build_query($filters)) ?>">
-                                            <?= $i ?>
-                                        </a>
-                                    </li>
-                                <?php endfor; ?>
-                            </ul>
-                        </nav>
-                    <?php endif; ?>
+
+       <?php render_pagination_controls($pagination ?? null); ?>
                 </div>
                 
                 <div class="card-footer">

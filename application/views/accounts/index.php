@@ -52,6 +52,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="text" class="form-control" id="search" name="search" 
                        value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Search by code or name">
             </div>
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
+            </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Filter</button>
             </div>
@@ -128,6 +133,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </form>
                                         <?php endif; ?>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

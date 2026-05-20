@@ -24,14 +24,18 @@ class Locations extends Base_Controller {
     
     public function index() {
         try {
-            $locations = $this->locationModel->getAll();
+            $all = $this->locationModel->getAll();
+            $paged = $this->paginateList($all);
+            $locations = $paged['items'];
         } catch (Exception $e) {
             $locations = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Locations',
             'locations' => $locations,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

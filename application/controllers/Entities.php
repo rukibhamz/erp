@@ -13,9 +13,11 @@ class Entities extends Base_Controller {
     
     public function index() {
         $this->requirePermission('entities', 'read');
+        $paged = $this->paginateList($this->entityModel->getAll(null, 0, 'created_at DESC'));
         $data = [
             'page_title' => 'Entities',
-            'entities' => $this->entityModel->getAll(null, 0, 'created_at DESC'),
+            'entities' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         

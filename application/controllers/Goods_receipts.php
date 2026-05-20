@@ -34,14 +34,18 @@ class Goods_receipts extends Base_Controller {
     
     public function index() {
         try {
-            $grns = $this->grnModel->getAll();
+            $all = $this->grnModel->getAll();
+            $paged = $this->paginateList($all);
+            $grns = $paged['items'];
         } catch (Exception $e) {
             $grns = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Goods Receipts',
             'grns' => $grns,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

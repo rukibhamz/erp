@@ -51,6 +51,8 @@ $page_title = $page_title ?? 'Companies';
                 </tbody>
             </table>
         </div>
+
+<?php render_pagination_controls($pagination ?? null); ?>
     </div>
 </div>
 

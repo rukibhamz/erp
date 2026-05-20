@@ -61,32 +61,8 @@ $page_title = $page_title ?? 'Activity Log';
                 </tbody>
             </table>
         </div>
-        
-        <?php if (isset($total) && $total > $per_page): ?>
-            <nav aria-label="Activity log pagination">
-                <ul class="pagination justify-content-center mt-4">
-                    <?php
-                    $total_pages = ceil($total / $per_page);
-                    $prev_page = $current_page > 1 ? $current_page - 1 : 1;
-                    $next_page = $current_page < $total_pages ? $current_page + 1 : $total_pages;
-                    ?>
-                    
-                    <li class="page-item <?= $current_page <= 1 ? 'disabled' : '' ?>">
-                        <a class="page-link" href="<?= base_url('activity?page=' . $prev_page) ?>">Previous</a>
-                    </li>
-                    
-                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                        <li class="page-item <?= $i == $current_page ? 'active' : '' ?>">
-                            <a class="page-link" href="<?= base_url('activity?page=' . $i) ?>"><?= $i ?></a>
-                        </li>
-                    <?php endfor; ?>
-                    
-                    <li class="page-item <?= $current_page >= $total_pages ? 'disabled' : '' ?>">
-                        <a class="page-link" href="<?= base_url('activity?page=' . $next_page) ?>">Next</a>
-                    </li>
-                </ul>
-            </nav>
-        <?php endif; ?>
+
+<?php render_pagination_controls($pagination ?? null); ?>
     </div>
 </div>
 

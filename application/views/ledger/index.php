@@ -26,7 +26,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('ledger') ?>" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-2">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
                     <option value="">All Status</option>
@@ -35,6 +35,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="posted" <?= ($selected_status ?? '') === 'posted' ? 'selected' : '' ?>>Posted</option>
                     <option value="rejected" <?= ($selected_status ?? '') === 'rejected' ? 'selected' : '' ?>>Rejected</option>
                 </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
             </div>
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Filter</button>
@@ -126,6 +131,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </tbody>
             </table>
         </div>
+        <?php render_pagination_controls($pagination ?? null); ?>
     </div>
 </div>
 

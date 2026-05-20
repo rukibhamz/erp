@@ -139,6 +139,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

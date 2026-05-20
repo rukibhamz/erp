@@ -72,6 +72,8 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

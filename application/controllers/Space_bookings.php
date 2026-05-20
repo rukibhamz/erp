@@ -35,13 +35,18 @@ class Space_bookings extends Base_Controller {
             foreach ($bookings as &$booking) {
                 $booking['tenant_name'] = $booking['business_name'] ?? $booking['contact_person'] ?? 'N/A';
             }
+            unset($booking);
+            $paged = $this->paginateList($bookings);
+            $bookings = $paged['items'];
         } catch (Exception $e) {
             $bookings = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Space Bookings',
             'bookings' => $bookings,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

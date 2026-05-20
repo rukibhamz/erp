@@ -18,15 +18,19 @@ class Wht extends Base_Controller {
     
     public function index() {
         try {
-            $whtReturns = $this->whtReturnModel->getRecentReturns(20);
+            $all = $this->whtReturnModel->getRecentReturns(null);
+            $paged = $this->paginateList($all);
+            $whtReturns = $paged['items'];
         } catch (Exception $e) {
             error_log('Wht index error: ' . $e->getMessage());
             $whtReturns = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'WHT Returns',
             'wht_returns' => $whtReturns,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

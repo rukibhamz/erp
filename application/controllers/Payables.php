@@ -47,13 +47,18 @@ class Payables extends Base_Controller {
             foreach ($vendors as &$vendor) {
                 $vendor['outstanding'] = $this->vendorModel->getTotalOutstanding($vendor['id']);
             }
+            unset($vendor);
+            $paged = $this->paginateList($vendors);
+            $vendors = $paged['items'];
         } catch (Exception $e) {
             $vendors = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Vendors',
             'vendors' => $vendors,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         
@@ -272,15 +277,19 @@ class Payables extends Base_Controller {
             }
 
             $vendors = $this->vendorModel->getAll();
+            $paged = $this->paginateList($bills);
+            $bills = $paged['items'];
         } catch (Exception $e) {
             $bills = [];
             $vendors = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Bills',
             'bills' => $bills,
             'vendors' => $vendors,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'selected_vendor' => $vendorId,
             'flash' => $this->getFlashMessage()

@@ -21,34 +21,44 @@ class Transactions extends Base_Controller {
         $status = $_GET['status'] ?? null;
         
         try {
+            $params = $this->paginationParams();
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT t.*, a.account_code, a.account_name 
+                    FROM `{$prefix}transactions` t
+                    JOIN `{$prefix}accounts` a ON t.account_id = a.id
+                    WHERE 1=1";
+            $countSql = "SELECT COUNT(*) as cnt FROM `{$prefix}transactions` t WHERE 1=1";
+            $bindParams = [];
+
             if ($accountId) {
-                $transactions = $this->transactionModel->getByAccount($accountId, $startDate, $endDate);
-            } else {
-                $sql = "SELECT t.*, a.account_code, a.account_name 
-                        FROM `" . $this->db->getPrefix() . "transactions` t
-                        JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                        WHERE 1=1";
-                $params = [];
-                
-                if ($startDate) {
-                    $sql .= " AND t.transaction_date >= ?";
-                    $params[] = $startDate;
-                }
-                if ($endDate) {
-                    $sql .= " AND t.transaction_date <= ?";
-                    $params[] = $endDate;
-                }
-                if ($status) {
-                    $sql .= " AND t.status = ?";
-                    $params[] = $status;
-                }
-                
-                $sql .= " ORDER BY t.transaction_date DESC, t.id DESC LIMIT 500";
-                $transactions = $this->db->fetchAll($sql, $params);
+                $sql .= " AND t.account_id = ?";
+                $countSql .= " AND t.account_id = ?";
+                $bindParams[] = $accountId;
             }
+            if ($startDate) {
+                $sql .= " AND t.transaction_date >= ?";
+                $countSql .= " AND t.transaction_date >= ?";
+                $bindParams[] = $startDate;
+            }
+            if ($endDate) {
+                $sql .= " AND t.transaction_date <= ?";
+                $countSql .= " AND t.transaction_date <= ?";
+                $bindParams[] = $endDate;
+            }
+            if ($status) {
+                $sql .= " AND t.status = ?";
+                $countSql .= " AND t.status = ?";
+                $bindParams[] = $status;
+            }
+
+            $total = intval($this->db->fetchOne($countSql, $bindParams)['cnt'] ?? 0);
+            $pagination = pagination_build_meta($total, $params['page'], $params['per_page']);
+            $sql .= " ORDER BY t.transaction_date DESC, t.id DESC LIMIT {$params['per_page']} OFFSET {$params['offset']}";
+            $transactions = $this->db->fetchAll($sql, $bindParams);
         } catch (Exception $e) {
             error_log('Transactions index error: ' . $e->getMessage());
             $transactions = [];
+            $pagination = pagination_build_meta(0, 1, 50);
         }
         
         try {
@@ -60,6 +70,7 @@ class Transactions extends Base_Controller {
         $data = [
             'page_title' => 'Transactions',
             'transactions' => $transactions,
+            'pagination' => $pagination ?? pagination_build_meta(0, 1, 50),
             'accounts' => $accounts,
             'selected_account_id' => $accountId,
             'start_date' => $startDate,

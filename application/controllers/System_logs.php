@@ -32,12 +32,6 @@ class System_logs extends Base_Controller {
         $date_to = $this->input->get('date_to');
         $search = $this->input->get('search');
         
-        // Pagination
-        $page = $this->input->get('page') ?? 1;
-        $per_page = 50;
-        $offset = ($page - 1) * $per_page;
-        
-        // Get logs with filters
         $filters = [
             'level' => $level,
             'module' => $module,
@@ -46,10 +40,14 @@ class System_logs extends Base_Controller {
             'search' => $search
         ];
         
-        $data['logs'] = $this->System_log_model->getLogs($filters, $per_page, $offset);
-        $data['total'] = $this->System_log_model->countLogs($filters);
-        $data['pages'] = ceil($data['total'] / $per_page);
-        $data['current_page'] = $page;
+        // Pagination
+        $params = $this->paginationParams();
+        $total = $this->System_log_model->countLogs($filters);
+        $pagination = pagination_build_meta($total, $params['page'], $params['per_page']);
+        
+        $data['logs'] = $this->System_log_model->getLogs($filters, $params['per_page'], $params['offset']);
+        $data['total'] = $total;
+        $data['pagination'] = $pagination;
         
         // Get statistics
         $data['stats'] = $this->error_logger->getStatistics(24);

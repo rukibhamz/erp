@@ -16,14 +16,18 @@ class Taxes extends Base_Controller {
 
     public function index() {
         try {
-            $taxes = $this->taxModel->getActive();
+            $all = $this->taxModel->getActive();
+            $paged = $this->paginateList($all);
+            $taxes = $paged['items'];
         } catch (Exception $e) {
             $taxes = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
 
         $data = [
             'page_title' => 'Tax Rates',
             'taxes' => $taxes,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
 

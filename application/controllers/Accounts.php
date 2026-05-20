@@ -29,14 +29,18 @@ class Accounts extends Base_Controller {
             } else {
                 $accounts = $this->accountModel->getFiltered($type, $search);
             }
+            $paged = $this->paginateList($accounts);
+            $accounts = $paged['items'];
         } catch (Exception $e) {
             error_log('Accounts index error: ' . $e->getMessage());
             $accounts = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Chart of Accounts',
             'accounts' => $accounts,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_type' => $type,
             'search' => $search,
             'account_number_enabled' => $this->accountNumberEnabled,

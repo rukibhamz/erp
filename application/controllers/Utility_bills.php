@@ -36,9 +36,9 @@ class Utility_bills extends Base_Controller {
         try {
             $allBills = $this->billModel->getAll();
             if ($status !== 'all') {
-                $bills = array_filter($allBills, function($b) use ($status) {
+                $bills = array_values(array_filter($allBills, function($b) use ($status) {
                     return ($b['status'] ?? '') === $status;
-                });
+                }));
             } else {
                 $bills = $allBills;
             }
@@ -58,17 +58,22 @@ class Utility_bills extends Base_Controller {
                 }
             }
             unset($bill);
+
+            $paged = $this->paginateList($bills);
+            $bills = $paged['items'];
             
             $overdueBills = $this->billModel->getOverdue();
         } catch (Exception $e) {
             $bills = [];
             $overdueBills = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Utility Bills',
             'bills' => $bills,
             'overdue_bills' => $overdueBills,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

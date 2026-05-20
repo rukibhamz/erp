@@ -65,6 +65,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
+    <?php render_pagination_controls($pagination ?? null); ?>
 <?php endif; ?>
 
 <!-- Property Filter -->
@@ -72,7 +73,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label for="property_filter" class="form-label">Filter by Location</label>
                 <select name="property_id" id="property_filter" class="form-select" onchange="this.form.submit()">
                     <option value="">All Locations</option>
@@ -83,7 +84,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
+            </div>
+            <div class="col-md-4">
                 <a href="<?= base_url('spaces') ?>" class="btn btn-primary">Clear Filter</a>
             </div>
         </form>

@@ -37,22 +37,25 @@ class Rent_invoices extends Base_Controller {
         
         try {
             if ($status === 'all') {
-                $invoices = $this->rentInvoiceModel->getAll();
+                $all = $this->rentInvoiceModel->getAll();
             } elseif ($status === 'overdue') {
-                $invoices = $this->rentInvoiceModel->getOverdue();
+                $all = $this->rentInvoiceModel->getOverdue();
             } else {
-                $invoices = $this->rentInvoiceModel->getAll();
-                $invoices = array_filter($invoices, function($inv) use ($status) {
+                $all = array_values(array_filter($this->rentInvoiceModel->getAll(), function($inv) use ($status) {
                     return $inv['status'] === $status;
-                });
+                }));
             }
+            $paged = $this->paginateList($all);
+            $invoices = $paged['items'];
         } catch (Exception $e) {
             $invoices = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Rent Invoices',
             'invoices' => $invoices,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

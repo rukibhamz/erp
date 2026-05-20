@@ -17,9 +17,11 @@ class Users extends Base_Controller {
     }
     
     public function index() {
+        $paged = $this->paginateList($this->userModel->getAll(null, 0, 'created_at DESC'));
         $data = [
             'page_title' => 'Users',
-            'users' => $this->userModel->getAll(null, 0, 'created_at DESC'),
+            'users' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage(),
             'canCreate' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'create') || ($this->session['role'] === 'super_admin' || $this->session['role'] === 'admin'),
             'canUpdate' => $this->userPermissionModel->hasPermission($this->session['user_id'], 'users', 'update') || ($this->session['role'] === 'super_admin' || $this->session['role'] === 'admin'),

@@ -105,6 +105,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     </tbody>
                 </table>
             </div>
+
+    <?php render_pagination_controls($pagination ?? null); ?>
         </div>
     </div>
 <?php endif; ?>

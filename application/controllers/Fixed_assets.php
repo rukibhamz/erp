@@ -30,17 +30,21 @@ class Fixed_assets extends Base_Controller {
         
         try {
             if ($category === 'all') {
-                $assets = $this->assetModel->getAll();
+                $all = $this->assetModel->getAll();
             } else {
-                $assets = $this->assetModel->getByCategory($category);
+                $all = $this->assetModel->getByCategory($category);
             }
+            $paged = $this->paginateList($all);
+            $assets = $paged['items'];
         } catch (Exception $e) {
             $assets = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Fixed Assets',
             'assets' => $assets,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_category' => $category,
             'flash' => $this->getFlashMessage()
         ];

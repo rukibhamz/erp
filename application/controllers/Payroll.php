@@ -29,14 +29,18 @@ class Payroll extends Base_Controller {
         $period = $_GET['period'] ?? date('Y-m');
         
         try {
-            $payrollRuns = $this->payrollModel->getByPeriod($period);
+            $all = $this->payrollModel->getByPeriod($period);
+            $paged = $this->paginateList($all);
+            $payrollRuns = $paged['items'];
         } catch (Exception $e) {
             $payrollRuns = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
 
         $data = [
             'page_title' => 'Payroll',
             'payroll_runs' => $payrollRuns,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_period' => $period,
             'flash' => $this->getFlashMessage()
         ];
@@ -46,14 +50,18 @@ class Payroll extends Base_Controller {
 
     public function employees() {
         try {
-            $employees = $this->employeeModel->getActiveEmployees();
+            $all = $this->employeeModel->getActiveEmployees();
+            $paged = $this->paginateList($all);
+            $employees = $paged['items'];
         } catch (Exception $e) {
             $employees = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
 
         $data = [
             'page_title' => 'Employees',
             'employees' => $employees,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
 

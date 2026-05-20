@@ -11,16 +11,14 @@ class Activity extends Base_Controller {
     }
     
     public function index() {
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $perPage = 50;
-        $offset = ($page - 1) * $perPage;
-        
+        $params = $this->paginationParams();
+        $total = $this->activityModel->count();
+        $pagination = pagination_build_meta($total, $params['page'], $params['per_page']);
+
         $data = [
             'page_title' => 'Activity Log',
-            'activities' => $this->activityModel->getAll(null, [], $offset, 'created_at DESC', $perPage),
-            'total' => $this->activityModel->count(),
-            'current_page' => $page,
-            'per_page' => $perPage,
+            'activities' => $this->activityModel->getAll(null, [], $params['offset'], 'created_at DESC', $params['per_page']),
+            'pagination' => $pagination,
             'flash' => $this->getFlashMessage()
         ];
         

@@ -29,17 +29,21 @@ class Purchase_orders extends Base_Controller {
         
         try {
             if ($status === 'all') {
-                $pos = $this->poModel->getAll();
+                $all = $this->poModel->getAll();
             } else {
-                $pos = $this->poModel->getByStatus($status);
+                $all = $this->poModel->getByStatus($status);
             }
+            $paged = $this->paginateList($all);
+            $pos = $paged['items'];
         } catch (Exception $e) {
             $pos = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Purchase Orders',
             'purchase_orders' => $pos,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

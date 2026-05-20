@@ -40,9 +40,14 @@ include(BASEPATH . 'views/tax/_nav.php');
                 <label class="form-label">Period Start</label>
                 <input type="date" name="period_start" class="form-control" value="<?= htmlspecialchars($period_start) ?>">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Period End</label>
                 <input type="date" name="period_end" class="form-control" value="<?= htmlspecialchars($period_end) ?>">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
             </div>
             <div class="col-md-2">
                 <label class="form-label">&nbsp;</label>
@@ -112,6 +117,8 @@ include(BASEPATH . 'views/tax/_nav.php');
                     </tfoot>
                 </table>
             </div>
+
+    <?php render_pagination_controls($pagination ?? null); ?>
         </div>
     </div>
 <?php endif; ?>

@@ -71,6 +71,8 @@ include(BASEPATH . 'views/tax/_nav.php');
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

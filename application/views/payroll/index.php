@@ -34,7 +34,12 @@ include(BASEPATH . 'views/accounting/_nav.php');
                 <label class="form-label">Period (YYYY-MM)</label>
                 <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($selected_period ?? date('Y-m')) ?>" onchange="this.form.submit()">
             </div>
-            <div class="col-md-9">
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
+            </div>
+            <div class="col-md-7">
                 <a href="<?= base_url('payroll') ?>" class="btn btn-primary">
                     <i class="bi bi-x-circle"></i> Clear Filter
                 </a>
@@ -86,6 +91,8 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

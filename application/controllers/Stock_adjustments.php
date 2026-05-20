@@ -33,17 +33,21 @@ class Stock_adjustments extends Base_Controller {
         
         try {
             if ($status === 'all') {
-                $adjustments = $this->adjustmentModel->getAll();
+                $all = $this->adjustmentModel->getAll();
             } else {
-                $adjustments = $this->adjustmentModel->getByStatus($status);
+                $all = $this->adjustmentModel->getByStatus($status);
             }
+            $paged = $this->paginateList($all);
+            $adjustments = $paged['items'];
         } catch (Exception $e) {
             $adjustments = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Stock Adjustments',
             'adjustments' => $adjustments,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

@@ -79,6 +79,8 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                             </a>
                                         <?php endif; ?>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

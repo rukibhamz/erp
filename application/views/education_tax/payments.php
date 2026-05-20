@@ -38,6 +38,8 @@
                     </tbody>
                 </table>
             </div>
+
+    <?php render_pagination_controls($pagination ?? null); ?>
         </div>
     </div>
 </div>

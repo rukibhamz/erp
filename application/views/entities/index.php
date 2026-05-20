@@ -57,6 +57,8 @@ $page_title = $page_title ?? 'Entities';
                                             </a>
                                         <?php endif; ?>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

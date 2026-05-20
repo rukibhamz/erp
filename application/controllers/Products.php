@@ -33,14 +33,18 @@ class Products extends Base_Controller {
             }
 
             $categories = $this->productModel->getCategories();
+            $paged = $this->paginateList($products);
+            $products = $paged['items'];
         } catch (Exception $e) {
             $products = [];
             $categories = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
 
         $data = [
             'page_title' => 'Products & Services',
             'products' => $products,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'categories' => $categories,
             'selected_type' => $type,
             'selected_category' => $category,

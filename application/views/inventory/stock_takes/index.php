@@ -88,6 +88,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

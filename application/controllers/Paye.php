@@ -37,12 +37,17 @@ class Paye extends Base_Controller {
             $employee = $this->employeeModel->getById($deduction['employee_id']);
             $deduction['employee_name'] = $employee ? ($employee['first_name'] . ' ' . $employee['last_name']) : '-';
         }
+        unset($deduction);
+
+        $paged = $this->paginateList($payeDeductions);
+        $payeDeductions = $paged['items'];
         
         $data = [
             'page_title' => 'PAYE Management',
             'paye_deductions' => $payeDeductions,
             'totals' => $totals,
             'returns' => $returns,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_period' => $period,
             'flash' => $this->getFlashMessage()
         ];

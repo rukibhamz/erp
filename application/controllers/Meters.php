@@ -40,17 +40,21 @@ class Meters extends Base_Controller {
             $utilityTypes = $this->utilityTypeModel->getActive();
             $locations = $this->locationModel->getAll();
             $properties = $locations; // Legacy compatibility
+            $paged = $this->paginateList($meters);
+            $meters = $paged['items'];
         } catch (Exception $e) {
             $meters = [];
             $utilityTypes = [];
             $properties = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Meters',
             'meters' => $meters,
             'utility_types' => $utilityTypes,
             'properties' => $properties,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_utility_type_id' => $utilityTypeId,
             'selected_property_id' => $propertyId,
             'flash' => $this->getFlashMessage()

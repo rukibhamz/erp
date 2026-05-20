@@ -35,12 +35,15 @@ class Spaces extends Base_Controller {
             }
             
             $locations = $this->locationModel->getAll();
+            $paged = $this->paginateList($spaces);
+            $spaces = $paged['items'];
         } catch (Exception $e) {
             $spaces = [];
             $location = null;
             $locations = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Spaces',
             'spaces' => $spaces,
@@ -49,6 +52,7 @@ class Spaces extends Base_Controller {
             'locations' => $locations,
             'properties' => $locations, // Legacy compatibility
             'selected_property_id' => $propertyId,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

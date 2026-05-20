@@ -81,6 +81,8 @@ include(BASEPATH . 'views/staff_management/_nav.php');
                                             </a>
                                         <?php endif; ?>
                                     </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

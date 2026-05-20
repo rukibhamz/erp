@@ -82,6 +82,8 @@
                                                         <i class="fas fa-trash"></i>
                                                     </a>
                                                 </div>
+
+        <?php render_pagination_controls($pagination ?? null); ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

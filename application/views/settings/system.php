@@ -342,12 +342,13 @@ $activeTab = $active_tab ?? 'company';
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Items Per Page</label>
+                        <label class="form-label">Items Per Page (default)</label>
                         <select name="items_per_page" class="form-select">
-                            <option value="10" <?= ($settings['items_per_page'] ?? 25) == 10 ? 'selected' : '' ?>>10</option>
                             <option value="25" <?= ($settings['items_per_page'] ?? 25) == 25 ? 'selected' : '' ?>>25</option>
                             <option value="50" <?= ($settings['items_per_page'] ?? 25) == 50 ? 'selected' : '' ?>>50</option>
+                            <option value="75" <?= ($settings['items_per_page'] ?? 25) == 75 ? 'selected' : '' ?>>75</option>
                             <option value="100" <?= ($settings['items_per_page'] ?? 25) == 100 ? 'selected' : '' ?>>100</option>
+                            <option value="200" <?= ($settings['items_per_page'] ?? 25) == 200 ? 'selected' : '' ?>>200</option>
                         </select>
                     </div>
                     <div class="col-md-4">

@@ -54,6 +54,9 @@ class Base_Controller {
         
         // Load number helper (for formatting large numbers)
         require_once BASEPATH . '../application/helpers/number_helper.php';
+
+        // Pagination helper (shared list paging across modules)
+        require_once BASEPATH . '../application/helpers/pagination_helper.php';
         
         // Initialize database only if installed and config is valid
         if (isset($this->config['installed']) && $this->config['installed'] === true) {
@@ -222,6 +225,34 @@ class Base_Controller {
         $this->loader->view('layouts/header', $data);
         $this->loader->view($view, $data);
         $this->loader->view('layouts/footer', $data);
+    }
+
+    /**
+     * Paginate an in-memory list using shared request params (page, per_page).
+     */
+    protected function paginateList(array $items, $defaultPerPage = null) {
+        $params = pagination_resolve_request($defaultPerPage ?? $this->getDefaultItemsPerPage());
+        $result = pagination_slice($items, $params['page'], $params['per_page']);
+        return [
+            'items' => $result['items'],
+            'pagination' => $result['pagination'],
+        ];
+    }
+
+    /**
+     * Default page size from system settings or 50.
+     */
+    protected function getDefaultItemsPerPage() {
+        $setting = intval($this->getSetting('items_per_page') ?? 50);
+        $options = pagination_per_page_options();
+        return in_array($setting, $options, true) ? $setting : 50;
+    }
+
+    /**
+     * Pagination params for SQL LIMIT/OFFSET queries.
+     */
+    protected function paginationParams($defaultPerPage = null) {
+        return pagination_resolve_request($defaultPerPage ?? $this->getDefaultItemsPerPage());
     }
     
     protected function getCurrentUser() {

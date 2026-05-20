@@ -60,13 +60,18 @@ class Receivables extends Base_Controller {
             foreach ($customers as &$customer) {
                 $customer['outstanding'] = $this->customerModel->getTotalOutstanding($customer['id']);
             }
+            unset($customer);
+            $paged = $this->paginateList($customers);
+            $customers = $paged['items'];
         } catch (Exception $e) {
             $customers = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title'    => 'Customers',
             'customers'     => $customers,
+            'pagination'    => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'source_filter' => $sourceFilter,
             'flash'         => $this->getFlashMessage()
         ];
@@ -403,15 +408,19 @@ class Receivables extends Base_Controller {
             
             $invoices = $this->db->fetchAll($sql, $params);
             $customers = $this->customerModel->getAll();
+            $paged = $this->paginateList($invoices);
+            $invoices = $paged['items'];
         } catch (Exception $e) {
             $invoices = [];
             $customers = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Invoices',
             'invoices' => $invoices,
             'customers' => $customers,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'selected_customer' => $customerId,
             'flash' => $this->getFlashMessage()
@@ -1548,14 +1557,18 @@ class Receivables extends Base_Controller {
         $this->requirePermission('receivables', 'read');
         
         try {
-            $payments = $this->paymentModel->getByType('receipt');
+            $all = $this->paymentModel->getByType('receipt');
+            $paged = $this->paginateList($all);
+            $payments = $paged['items'];
         } catch (Exception $e) {
             $payments = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Receivables Payments',
             'payments' => $payments,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

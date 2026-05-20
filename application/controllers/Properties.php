@@ -16,14 +16,18 @@ class Properties extends Base_Controller {
     
     public function index() {
         try {
-            $properties = $this->propertyModel->getAll();
+            $all = $this->propertyModel->getAll();
+            $paged = $this->paginateList($all);
+            $properties = $paged['items'];
         } catch (Exception $e) {
             $properties = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Properties',
             'properties' => $properties,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

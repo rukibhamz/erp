@@ -15,14 +15,15 @@ class Suppliers extends Base_Controller {
     
     public function index() {
         try {
-            $suppliers = $this->supplierModel->getActive();
+            $paged = $this->paginateList($this->supplierModel->getActive());
         } catch (Exception $e) {
-            $suppliers = [];
+            $paged = ['items' => [], 'pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Suppliers',
-            'suppliers' => $suppliers,
+            'suppliers' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         

@@ -65,6 +65,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <?= htmlspecialchars($flash['message']) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
+    <?php render_pagination_controls($pagination ?? null); ?>
 <?php endif; ?>
 
 <!-- Filters -->
@@ -77,6 +78,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="active" <?= $selected_status === 'active' ? 'selected' : '' ?>>Active</option>
                     <option value="expiring" <?= $selected_status === 'expiring' ? 'selected' : '' ?>>Expiring Soon</option>
                 </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Records</label>
+                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
+                <input type="hidden" name="page" value="1">
             </div>
         </form>
     </div>

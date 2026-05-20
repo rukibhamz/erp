@@ -16,14 +16,18 @@ class Tenants extends Base_Controller {
     
     public function index() {
         try {
-            $tenants = $this->tenantModel->getAll();
+            $all = $this->tenantModel->getAll();
+            $paged = $this->paginateList($all);
+            $tenants = $paged['items'];
         } catch (Exception $e) {
             $tenants = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Tenants',
             'tenants' => $tenants,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         

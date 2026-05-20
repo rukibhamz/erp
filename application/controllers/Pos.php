@@ -554,7 +554,8 @@ class Pos extends Base_Controller {
         }
         
         try {
-            $terminals = $this->terminalModel->getAll();
+            $all = $this->terminalModel->getAll();
+            $paged = $this->paginateList($all);
             
             // Load all active accounts and filter in PHP to ensure we catch them regardless of case/pluralization
             $allAccounts = $this->accountModel->getFiltered();
@@ -583,7 +584,7 @@ class Pos extends Base_Controller {
             }
         } catch (Exception $e) {
             error_log('POS load terminals/accounts error: ' . $e->getMessage());
-            $terminals = [];
+            $paged = ['items' => [], 'pagination' => pagination_build_meta(0, 1, 50)];
             $assets = [];
             $revenue = [];
             $liabilities = [];
@@ -591,7 +592,8 @@ class Pos extends Base_Controller {
         
         $data = [
             'page_title' => 'POS Terminals',
-            'terminals' => $terminals,
+            'terminals' => $paged['items'],
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'accounts' => [
                 'assets' => $assets,
                 'revenue' => $revenue,

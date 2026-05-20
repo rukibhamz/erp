@@ -17,14 +17,18 @@ class Vat extends Base_Controller {
         list($year, $month) = explode('-', $period);
         
         try {
-            $vatReturns = $this->vatReturnModel->getRecentReturns(20);
+            $all = $this->vatReturnModel->getRecentReturns(null);
+            $paged = $this->paginateList($all);
+            $vatReturns = $paged['items'];
         } catch (Exception $e) {
             $vatReturns = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'VAT Returns',
             'vat_returns' => $vatReturns,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_period' => $period,
             'flash' => $this->getFlashMessage()
         ];

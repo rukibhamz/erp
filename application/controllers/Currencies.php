@@ -14,14 +14,15 @@ class Currencies extends Base_Controller {
 
     public function index() {
         try {
-            $currencies = $this->currencyModel->getActive();
+            $paged = $this->paginateList($this->currencyModel->getActive());
         } catch (Exception $e) {
-            $currencies = [];
+            $paged = ['items' => [], 'pagination' => pagination_build_meta(0, 1, 50)];
         }
 
         $data = [
             'page_title' => 'Currencies',
-            'currencies' => $currencies,
+            'currencies' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
 

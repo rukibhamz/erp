@@ -25,14 +25,18 @@ class Cash extends Base_Controller {
     
     public function index() {
         try {
-            $cashAccounts = $this->cashAccountModel->getActive();
+            $all = $this->cashAccountModel->getActive();
+            $paged = $this->paginateList($all);
+            $cashAccounts = $paged['items'];
         } catch (Exception $e) {
             $cashAccounts = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Cash Management',
             'cash_accounts' => $cashAccounts,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage()
         ];
         
@@ -43,15 +47,19 @@ class Cash extends Base_Controller {
         $this->requirePermission('cash', 'read');
         
         try {
-            $cashAccounts = $this->cashAccountModel->getActive();
+            $all = $this->cashAccountModel->getActive();
+            $paged = $this->paginateList($all);
+            $cashAccounts = $paged['items'];
         } catch (Exception $e) {
             error_log('Cash accounts error: ' . $e->getMessage());
             $cashAccounts = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
-        
+
         $data = [
             'page_title' => 'Cash Accounts',
             'cash_accounts' => $cashAccounts,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'flash' => $this->getFlashMessage(),
             'session' => $this->session // Explicitly pass session for role checks
         ];

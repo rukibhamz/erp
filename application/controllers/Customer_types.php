@@ -13,10 +13,11 @@ class Customer_types extends Base_Controller {
     }
     
     public function index() {
-        $types = $this->typeModel->getAll();
+        $paged = $this->paginateList($this->typeModel->getAll());
         $data = [
             'page_title' => 'Customer Types',
-            'types' => $types,
+            'types' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         $this->loadView('customer_types/index', $data);

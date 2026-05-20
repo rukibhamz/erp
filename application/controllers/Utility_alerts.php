@@ -17,20 +17,24 @@ class Utility_alerts extends Base_Controller {
         
         try {
             if ($status === 'unresolved') {
-                $alerts = $this->alertModel->getUnresolved();
+                $all = $this->alertModel->getUnresolved();
             } else {
                 $allAlerts = $this->alertModel->getAll();
-                $alerts = array_filter($allAlerts, function($a) use ($status) {
+                $all = array_values(array_filter($allAlerts, function($a) use ($status) {
                     return $status === 'all' || ($status === 'resolved' && $a['is_resolved']) || ($status === 'unresolved' && !$a['is_resolved']);
-                });
+                }));
             }
+            $paged = $this->paginateList($all);
+            $alerts = $paged['items'];
         } catch (Exception $e) {
             $alerts = [];
+            $paged = ['pagination' => pagination_build_meta(0, 1, 50)];
         }
         
         $data = [
             'page_title' => 'Meter Alerts',
             'alerts' => $alerts,
+            'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'flash' => $this->getFlashMessage()
         ];

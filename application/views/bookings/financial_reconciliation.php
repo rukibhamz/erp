@@ -4,13 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 $filters = $filters ?? [];
 $mismatched = $mismatched ?? [];
 $pagination = $pagination ?? [];
-$currentPage = intval($pagination['page'] ?? 1);
-$totalPages = intval($pagination['total_pages'] ?? 1);
 $perPage = intval($pagination['per_page'] ?? 50);
-$perPageOptions = $pagination['per_page_options'] ?? [25, 50, 75, 100, 200];
-$fromRow = intval($pagination['from'] ?? 0);
-$toRow = intval($pagination['to'] ?? 0);
-$totalRows = intval($pagination['total_records'] ?? 0);
 ?>
 
 <div class="container-fluid">
@@ -52,11 +46,7 @@ $totalRows = intval($pagination['total_records'] ?? 0);
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Records</label>
-                    <select name="per_page" class="form-select">
-                        <?php foreach ($perPageOptions as $opt): ?>
-                            <option value="<?= intval($opt) ?>" <?= $perPage === intval($opt) ? 'selected' : '' ?>><?= intval($opt) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <?php render_pagination_per_page_select($perPage); ?>
                 </div>
                 <div class="col-md-3">
                     <div class="form-check mt-4">
@@ -84,7 +74,7 @@ $totalRows = intval($pagination['total_records'] ?? 0);
             <input type="hidden" name="filter_date_from" value="<?= htmlspecialchars($filters['date_from'] ?? '') ?>">
             <input type="hidden" name="filter_date_to" value="<?= htmlspecialchars($filters['date_to'] ?? '') ?>">
             <input type="hidden" name="filter_per_page" value="<?= intval($perPage) ?>">
-            <input type="hidden" name="filter_page" value="<?= intval($currentPage) ?>">
+            <input type="hidden" name="filter_page" value="<?= intval($pagination['page'] ?? 1) ?>">
             <?php if (!empty($filters['full_scan'])): ?>
                 <input type="hidden" name="filter_full_scan" value="1">
             <?php endif; ?>
@@ -162,39 +152,7 @@ $totalRows = intval($pagination['total_records'] ?? 0);
                         </table>
                     </div>
                 </div>
-                <?php
-                    $buildPageUrl = function ($page) {
-                        $params = $_GET;
-                        $params['page'] = max(1, intval($page));
-                        return '?' . http_build_query($params);
-                    };
-                ?>
-                <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div class="small text-muted">
-                        Showing <?= $fromRow ?>-<?= $toRow ?> of <?= $totalRows ?> records
-                    </div>
-                    <nav aria-label="Reconciliation pagination">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
-                                <a class="page-link" href="<?= $currentPage <= 1 ? '#' : htmlspecialchars($buildPageUrl(1)) ?>">First</a>
-                            </li>
-                            <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
-                                <a class="page-link" href="<?= $currentPage <= 1 ? '#' : htmlspecialchars($buildPageUrl($currentPage - 1)) ?>">Previous</a>
-                            </li>
-                            <?php for ($i = max(1, $currentPage - 2); $i <= min($totalPages, $currentPage + 2); $i++): ?>
-                                <li class="page-item <?= $i === $currentPage ? 'active' : '' ?>">
-                                    <a class="page-link" href="<?= htmlspecialchars($buildPageUrl($i)) ?>"><?= $i ?></a>
-                                </li>
-                            <?php endfor; ?>
-                            <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
-                                <a class="page-link" href="<?= $currentPage >= $totalPages ? '#' : htmlspecialchars($buildPageUrl($currentPage + 1)) ?>">Next</a>
-                            </li>
-                            <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
-                                <a class="page-link" href="<?= $currentPage >= $totalPages ? '#' : htmlspecialchars($buildPageUrl($totalPages)) ?>">Last</a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
+                <?php render_pagination_controls($pagination ?? null, $_GET, 'Reconciliation pagination'); ?>
             </div>
         </form>
 

@@ -16,13 +16,15 @@ class Wholesale_pricing extends Base_Controller {
     
     public function index() {
         $items = $this->itemModel->getAll();
-        $wholesaleItems = array_filter($items, function($i) {
+        $wholesaleItems = array_values(array_filter($items, function($i) {
             return !empty($i['is_wholesale_enabled']);
-        });
+        }));
+        $paged = $this->paginateList($wholesaleItems);
         
         $data = [
             'page_title' => 'Wholesale Pricing Overview',
-            'items' => $wholesaleItems,
+            'items' => $paged['items'],
+            'pagination' => $paged['pagination'],
             'flash' => $this->getFlashMessage()
         ];
         
