@@ -151,3 +151,96 @@
     font-weight: 500;
     padding: 0.35em 0.65em;
 }
+
+/* ——— Mobile ——— */
+@media (max-width: 767.98px) {
+    .list-filters-card .card-body {
+        padding: 0.875rem 1rem;
+    }
+
+    .list-filters-form .list-filters-row {
+        --list-filter-control-h: 44px;
+    }
+
+    .list-filters-form .list-filters-row > [class*="col"] {
+        margin-bottom: 0;
+    }
+
+    /* Full-width inputs on small screens */
+    .list-filters-form .list-filters-row .form-control,
+    .list-filters-form .list-filters-row .form-select,
+    .list-filters-form .list-filters-row select.list-filters-per-page,
+    .list-filters-form .list-filters-row .input-group {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .list-filters-form select.list-filters-per-page,
+    .list-filters-form .list-filters-per-page {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+
+    .list-filters-actions-col .list-filters-btn-spacer {
+        display: none !important;
+    }
+
+    .list-filters-actions-col .list-filters-btn-group {
+        width: 100%;
+        height: var(--list-filter-control-h);
+        min-height: var(--list-filter-control-h);
+    }
+
+    .list-filters-actions-col .list-filters-btn-group .btn {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .list-filters-secondary {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .list-filters-secondary.list-source-pills .btn {
+        flex: 1 1 calc(50% - 0.25rem);
+        text-align: center;
+    }
+
+    .list-active-filters {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .list-filters-secondary.list-source-pills .btn {
+        flex: 1 1 100%;
+    }
+}
+
+/* Bookings / list pages: header action buttons stack on mobile */
+@media (max-width: 767.98px) {
+    .list-filters-page-header .d-flex.justify-content-between,
+    .list-filters-page-header > .d-flex {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.75rem;
+    }
+
+    .list-filters-page-header .d-flex > div:last-child,
+    .list-filters-page-header .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .list-filters-page-header .d-flex .btn {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: 0;
+        font-size: 0.8125rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}

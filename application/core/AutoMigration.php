@@ -318,6 +318,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error ensuring payment_transactions table: " . $e->getMessage());
         }
+
+        // Flutterwave subaccounts & split rules (optional payment splitting)
+        try {
+            $this->ensureFlutterwaveSubaccountsTables();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error ensuring Flutterwave subaccounts tables: " . $e->getMessage());
+        }
         
         // ALWAYS ensure transactions table has accounting columns
         try {
@@ -2068,6 +2075,8 @@ class AutoMigration {
                     `gateway_transaction_id` VARCHAR(255) NULL COMMENT 'Transaction ID from the gateway',
                     `gateway_response` TEXT NULL COMMENT 'JSON response from gateway',
                     `paid_at` DATETIME NULL,
+                    `split_applied` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Flutterwave split was sent on init',
+                    `split_payload` TEXT NULL COMMENT 'JSON audit of subaccounts sent',
                     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
                     PRIMARY KEY (`id`),
@@ -2111,6 +2120,27 @@ class AutoMigration {
                         }
                     }
                 }
+
+                $splitColumns = [
+                    'split_applied' => "TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Flutterwave split was sent on init'",
+                    'split_payload' => "TEXT NULL COMMENT 'JSON audit of subaccounts sent (when logging enabled)'",
+                ];
+                foreach ($splitColumns as $colName => $colDef) {
+                    $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}payment_transactions` LIKE '{$colName}'");
+                    if ($stmt && count($stmt->fetchAll()) == 0) {
+                        try {
+                            $this->pdo->exec("ALTER TABLE `{$this->prefix}payment_transactions` ADD COLUMN `{$colName}` {$colDef}");
+                            error_log("AutoMigration: Added {$colName} to payment_transactions");
+                        } catch (Exception $e) {
+                            try {
+                                $defWithoutAfter = preg_replace('/ AFTER `[^`]+`/', '', $colDef);
+                                $this->pdo->exec("ALTER TABLE `{$this->prefix}payment_transactions` ADD COLUMN `{$colName}` {$defWithoutAfter}");
+                            } catch (Exception $e2) {
+                                error_log("AutoMigration: Could not add {$colName} to payment_transactions: " . $e2->getMessage());
+                            }
+                        }
+                    }
+                }
             }
     
 
@@ -2118,6 +2148,73 @@ class AutoMigration {
             return true;
         } catch (Exception $e) {
             error_log("AutoMigration: ERROR ensuring payment_transactions table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Flutterwave collection subaccounts and split rules (backward-compatible CREATE/ALTER).
+     */
+    private function ensureFlutterwaveSubaccountsTables() {
+        try {
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}flutterwave_subaccounts'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}flutterwave_subaccounts` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `subaccount_id` VARCHAR(64) NOT NULL COMMENT 'Flutterwave RS_… id',
+                    `flutterwave_numeric_id` INT(11) NULL,
+                    `business_name` VARCHAR(255) NOT NULL,
+                    `account_bank` VARCHAR(20) NOT NULL,
+                    `account_number` VARCHAR(64) NOT NULL,
+                    `account_number_masked` VARCHAR(64) NULL,
+                    `country` CHAR(2) NOT NULL DEFAULT 'NG',
+                    `split_type` ENUM('percentage','flat') NOT NULL DEFAULT 'percentage',
+                    `split_value` DECIMAL(12,4) NOT NULL DEFAULT 0.0000,
+                    `business_email` VARCHAR(255) NULL,
+                    `business_mobile` VARCHAR(50) NULL,
+                    `business_contact` VARCHAR(255) NULL,
+                    `business_contact_mobile` VARCHAR(50) NULL,
+                    `meta` TEXT NULL COMMENT 'JSON extra bank fields',
+                    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                    `test_mode` TINYINT(1) NOT NULL DEFAULT 1,
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `uq_flw_subaccount_id` (`subaccount_id`),
+                    KEY `idx_flw_sub_active` (`is_active`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created flutterwave_subaccounts table");
+            }
+
+            $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}flutterwave_split_rules'");
+            if (!$stmt || count($stmt->fetchAll()) === 0) {
+                $sql = "CREATE TABLE IF NOT EXISTS `{$this->prefix}flutterwave_split_rules` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `name` VARCHAR(255) NOT NULL,
+                    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                    `scope_type` ENUM('global','property','space') NOT NULL DEFAULT 'global',
+                    `scope_id` INT(11) NULL,
+                    `subaccount_row_id` INT(11) NOT NULL,
+                    `override_charge_type` VARCHAR(32) NULL COMMENT 'flat, percentage, flat_subaccount',
+                    `override_charge` DECIMAL(12,4) NULL,
+                    `split_ratio` INT(11) NULL,
+                    `priority` INT(11) NOT NULL DEFAULT 0,
+                    `currency` VARCHAR(10) NULL,
+                    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_flw_rule_scope` (`scope_type`, `scope_id`),
+                    KEY `idx_flw_rule_active` (`is_active`),
+                    KEY `idx_flw_rule_subaccount` (`subaccount_row_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                $this->pdo->exec($sql);
+                error_log("AutoMigration: Created flutterwave_split_rules table");
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("AutoMigration: ERROR ensuring Flutterwave subaccounts tables: " . $e->getMessage());
             return false;
         }
     }

@@ -67,6 +67,20 @@ function merge_gateway_config($gatewayCode, array $dbGateway) {
         if (!empty($providerEnv['encryption_key'])) {
             $merged['additional_config']['encryption_key'] = $providerEnv['encryption_key'];
         }
+        if (isset($providerEnv['enable_subaccounts']) && $providerEnv['enable_subaccounts'] !== '') {
+            $merged['additional_config']['enable_subaccounts'] = in_array(
+                strtolower((string) $providerEnv['enable_subaccounts']),
+                ['1', 'true', 'yes', 'on'],
+                true
+            ) ? 1 : 0;
+        }
+        if (isset($providerEnv['log_split']) && $providerEnv['log_split'] !== '') {
+            $merged['additional_config']['log_split_on_transactions'] = in_array(
+                strtolower((string) $providerEnv['log_split']),
+                ['1', 'true', 'yes', 'on'],
+                true
+            ) ? 1 : 0;
+        }
         $webhookHash = trim($providerEnv['webhook_secret_hash'] ?? '');
         if ($webhookHash === '') {
             $webhookHash = trim($dbGateway['secret_key'] ?? '');

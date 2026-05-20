@@ -14,6 +14,8 @@ When set, these override values stored in **Settings → Payment Gateways**:
 | `FLUTTERWAVE_SECRET_KEY` | Secret key for API calls (`FLWSECK_TEST-…` or live) |
 | `FLUTTERWAVE_ENCRYPTION_KEY` | Encryption key for inline/encrypted payloads (optional) |
 | `FLUTTERWAVE_WEBHOOK_SECRET_HASH` | Secret hash from Flutterwave dashboard webhooks settings |
+| `FLUTTERWAVE_ENABLE_SUBACCOUNTS` | Optional `1`/`true` to enable split payments (overrides DB toggle) |
+| `FLUTTERWAVE_LOG_SPLIT` | Optional `1`/`true` to log split payload on `payment_transactions` |
 | `PAYMENT_PROVIDER` | Optional default gateway: `flutterwave` |
 
 Example (Apache/nginx / server env or `.env` loaded by your host):
@@ -71,6 +73,20 @@ Uses [Flutterwave Standard](https://developer.flutterwave.com/v3.0.0/docs/flutte
 5. **Fulfill** — Amount and currency must match the DB record before booking/invoice fulfillment runs.
 6. **Webhook** — Duplicate `charge.completed` events are ignored when the transaction is already `success`.
 
+## Split payments (subaccounts, optional)
+
+When enabled, a share of each successful booking payment is settled to a [Flutterwave collection subaccount](https://developer.flutterwave.com/v3.0.0/reference/create-a-sub-account) while the customer still pays the **full booking amount** in ERP.
+
+1. **Settings → Payment Gateways → Flutterwave → Configure**
+   - Enable **split payments (subaccounts)**
+   - Optionally enable **log split details on payment transactions** (audit only)
+2. **Settings → Payment Gateways → Flutterwave → Subaccounts** — create beneficiaries (calls `POST /v3/subaccounts`).
+3. **Split rules** — map subaccounts to global, property, or space scope (space wins over property over global).
+
+On `POST /v3/payments`, the app adds `subaccounts: [{ id: "RS_…" }]`. Fulfillment and booking balances are unchanged.
+
+AutoMigration creates `flutterwave_subaccounts`, `flutterwave_split_rules`, and optional `payment_transactions.split_applied` / `split_payload` columns on existing installs.
+
 ## Replay failed webhooks
 
 1. Open **Flutterwave Dashboard → Webhooks → Logs**.
@@ -86,6 +102,7 @@ Check application logs (`error_log`) — full card data and secrets are never lo
 php tests/payment/FlutterwaveWebhookTest.php
 php tests/payment/FlutterwaveVerifyTest.php
 FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-xxx php tests/payment/FlutterwaveIntegrationTest.php
+php tests/payment/FlutterwaveSplitTest.php
 ```
 
 No extra Composer dependencies are required for unit tests.

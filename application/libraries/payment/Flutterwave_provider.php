@@ -41,6 +41,10 @@ class Flutterwave_provider extends Abstract_payment_provider {
             ],
         ];
 
+        if (!empty($metadata['subaccounts']) && is_array($metadata['subaccounts'])) {
+            $data['subaccounts'] = $metadata['subaccounts'];
+        }
+
         $response = $this->httpRequest(self::API_BASE . '/payments', [
             'method' => 'POST',
             'body' => $data,

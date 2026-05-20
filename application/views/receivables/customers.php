@@ -5,10 +5,10 @@ $perPage = intval($pagination['per_page'] ?? 50);
 $hasFilters = list_has_active_filters(['source', 'search']);
 ?>
 
-<div class="page-header">
+<div class="page-header list-filters-page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Customers</h1>
-        <div class="btn-group">
+        <div class="btn-group list-filters-page-actions">
             <a href="<?= base_url('customer_types') ?>" class="btn btn-outline-primary">
                 <i class="bi bi-people"></i> Customer Types
             </a>
@@ -48,9 +48,9 @@ $hasFilters = list_has_active_filters(['source', 'search']);
 <div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
         <form method="GET" action="<?= base_url('receivables/customers') ?>" class="list-filters-form">
-            <div class="row g-2 align-items-end">
+            <div class="row g-2 align-items-end list-filters-row">
                 <?php
-                $search_col_class = 'col-md';
+                $search_col_class = 'col-12 col-md';
                 $search_placeholder = 'Code, name, email, phone…';
                 include(BASEPATH . 'views/partials/list_search_field.php');
                 ?>

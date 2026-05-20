@@ -79,13 +79,18 @@ class Settings extends Base_Controller {
                 
                 // Flutterwave specific fields
                 if ($gateway['gateway_code'] === 'flutterwave') {
+                    $existing = $this->gatewayModel->getAdditionalConfig($id);
+                    $additionalConfig = is_array($existing) ? $existing : [];
                     $additionalConfig['encryption_key'] = sanitize_input($_POST['encryption_key'] ?? '');
+                    $additionalConfig['enable_subaccounts'] = !empty($_POST['enable_subaccounts']) ? 1 : 0;
+                    $additionalConfig['log_split_on_transactions'] = !empty($_POST['log_split_on_transactions']) ? 1 : 0;
                     require_once BASEPATH . 'helpers/payment_config_helper.php';
                     $data['callback_url'] = payment_callback_url('flutterwave');
                     $data['webhook_url'] = payment_webhook_url('flutterwave');
+                    $data['additional_config'] = json_encode($additionalConfig);
                 }
                 
-                if (!empty($additionalConfig)) {
+                if (!empty($additionalConfig) && empty($data['additional_config'])) {
                     $data['additional_config'] = json_encode($additionalConfig);
                 }
             }
@@ -237,6 +242,307 @@ class Settings extends Base_Controller {
         ];
         
         $this->loadView('settings/edit_role', $data);
+    }
+
+    // --- Flutterwave subaccounts & split rules ---
+
+    private function requireFlutterwaveGateway() {
+        $gateway = $this->gatewayModel->getByCode('flutterwave');
+        if (!$gateway) {
+            $this->setFlashMessage('danger', 'Flutterwave gateway is not installed.');
+            redirect('settings/payment-gateways');
+            return null;
+        }
+        return $gateway;
+    }
+
+    private function flutterwaveGatewayConfig(array $gateway) {
+        require_once BASEPATH . 'helpers/payment_config_helper.php';
+        return merge_gateway_config('flutterwave', $gateway);
+    }
+
+    public function flutterwaveSubaccounts() {
+        $this->requirePermission('settings', 'read');
+        $gateway = $this->requireFlutterwaveGateway();
+        if (!$gateway) {
+            return;
+        }
+
+        require_once BASEPATH . 'helpers/flutterwave_split_helper.php';
+        $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
+
+        $data = [
+            'page_title' => 'Flutterwave Subaccounts',
+            'gateway' => $gateway,
+            'subaccounts' => $subaccountModel->getAllForAdmin(),
+            'subaccounts_enabled' => flutterwave_subaccounts_enabled($this->flutterwaveGatewayConfig($gateway)),
+            'log_split' => flutterwave_should_log_split($this->flutterwaveGatewayConfig($gateway)),
+            'flash' => $this->getFlashMessage(),
+        ];
+        $this->loadView('settings/flutterwave_subaccounts', $data);
+    }
+
+    public function flutterwaveSubaccountCreate() {
+        $this->requirePermission('settings', 'update');
+        $gateway = $this->requireFlutterwaveGateway();
+        if (!$gateway) {
+            return;
+        }
+
+        require_once BASEPATH . 'libraries/payment/Flutterwave_subaccount_service.php';
+        require_once BASEPATH . 'helpers/flutterwave_split_helper.php';
+        $service = new Flutterwave_subaccount_service($this->flutterwaveGatewayConfig($gateway));
+        $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            $payload = [
+                'account_bank' => sanitize_input($_POST['account_bank'] ?? ''),
+                'account_number' => preg_replace('/\s+/', '', sanitize_input($_POST['account_number'] ?? '')),
+                'business_name' => sanitize_input($_POST['business_name'] ?? ''),
+                'business_mobile' => sanitize_input($_POST['business_mobile'] ?? ''),
+                'country' => strtoupper(sanitize_input($_POST['country'] ?? 'NG')),
+                'split_type' => in_array($_POST['split_type'] ?? '', ['percentage', 'flat'], true)
+                    ? $_POST['split_type'] : 'percentage',
+                'split_value' => (float) ($_POST['split_value'] ?? 0),
+            ];
+            if (!empty($_POST['business_email'])) {
+                $payload['business_email'] = sanitize_input($_POST['business_email']);
+            }
+            if (!empty($_POST['business_contact'])) {
+                $payload['business_contact'] = sanitize_input($_POST['business_contact']);
+            }
+            if (!empty($_POST['business_contact_mobile'])) {
+                $payload['business_contact_mobile'] = sanitize_input($_POST['business_contact_mobile']);
+            }
+
+            $api = $service->createSubaccount($payload);
+            if (empty($api['success']) || empty($api['data']['subaccount_id'])) {
+                $this->setFlashMessage('danger', $api['message'] ?? 'Failed to create subaccount on Flutterwave.');
+                redirect('settings/flutterwave/subaccounts/create');
+                return;
+            }
+
+            $d = $api['data'];
+            $subaccountModel->create([
+                'subaccount_id' => $d['subaccount_id'],
+                'flutterwave_numeric_id' => $d['id'] ?? null,
+                'business_name' => $payload['business_name'],
+                'account_bank' => $payload['account_bank'],
+                'account_number' => $payload['account_number'],
+                'account_number_masked' => flutterwave_mask_account_number($payload['account_number']),
+                'country' => $payload['country'],
+                'split_type' => $payload['split_type'],
+                'split_value' => $payload['split_value'],
+                'business_email' => $payload['business_email'] ?? null,
+                'business_mobile' => $payload['business_mobile'],
+                'business_contact' => $payload['business_contact'] ?? null,
+                'business_contact_mobile' => $payload['business_contact_mobile'] ?? null,
+                'test_mode' => !empty($gateway['test_mode']) ? 1 : 0,
+                'is_active' => 1,
+            ]);
+
+            $this->activityModel->log($this->session['user_id'], 'create', 'Settings', 'Created Flutterwave subaccount: ' . $payload['business_name']);
+            $this->setFlashMessage('success', 'Subaccount created successfully.');
+            redirect('settings/flutterwave/subaccounts');
+            return;
+        }
+
+        $banks = [];
+        if ($service->isConfigured()) {
+            $bankRes = $service->getBanks('NG');
+            if (!empty($bankRes['success']) && is_array($bankRes['data'])) {
+                $banks = $bankRes['data'];
+            }
+        }
+
+        $this->loadView('settings/flutterwave_subaccount_form', [
+            'page_title' => 'Create Flutterwave Subaccount',
+            'gateway' => $gateway,
+            'subaccount' => null,
+            'banks' => $banks,
+            'flash' => $this->getFlashMessage(),
+        ]);
+    }
+
+    public function flutterwaveSubaccountEdit($id) {
+        $this->requirePermission('settings', 'update');
+        $gateway = $this->requireFlutterwaveGateway();
+        if (!$gateway) {
+            return;
+        }
+
+        $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
+        $subaccount = $subaccountModel->getById((int) $id);
+        if (!$subaccount) {
+            $this->setFlashMessage('danger', 'Subaccount not found.');
+            redirect('settings/flutterwave/subaccounts');
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            $subaccountModel->update((int) $id, [
+                'business_name' => sanitize_input($_POST['business_name'] ?? $subaccount['business_name']),
+                'is_active' => !empty($_POST['is_active']) ? 1 : 0,
+            ]);
+            $this->setFlashMessage('success', 'Subaccount updated.');
+            redirect('settings/flutterwave/subaccounts');
+            return;
+        }
+
+        $this->loadView('settings/flutterwave_subaccount_form', [
+            'page_title' => 'Edit Flutterwave Subaccount',
+            'gateway' => $gateway,
+            'subaccount' => $subaccount,
+            'banks' => [],
+            'flash' => $this->getFlashMessage(),
+        ]);
+    }
+
+    public function flutterwaveSubaccountDelete($id) {
+        $this->requirePermission('settings', 'update');
+        $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
+        $row = $subaccountModel->getById((int) $id);
+        if ($row) {
+            $subaccountModel->update((int) $id, ['is_active' => 0]);
+            $this->setFlashMessage('success', 'Subaccount deactivated locally.');
+        }
+        redirect('settings/flutterwave/subaccounts');
+    }
+
+    public function flutterwaveSplitRules() {
+        $this->requirePermission('settings', 'read');
+        $gateway = $this->requireFlutterwaveGateway();
+        if (!$gateway) {
+            return;
+        }
+
+        $ruleModel = $this->loadModel('Flutterwave_split_rule_model');
+        $this->loadView('settings/flutterwave_split_rules', [
+            'page_title' => 'Flutterwave Split Rules',
+            'gateway' => $gateway,
+            'rules' => $ruleModel->getAllWithSubaccount(),
+            'flash' => $this->getFlashMessage(),
+        ]);
+    }
+
+    public function flutterwaveSplitRuleCreate() {
+        $this->requirePermission('settings', 'update');
+        $gateway = $this->requireFlutterwaveGateway();
+        if (!$gateway) {
+            return;
+        }
+
+        $ruleModel = $this->loadModel('Flutterwave_split_rule_model');
+        $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
+        $propertyModel = $this->loadModel('Property_model');
+        $spaceModel = $this->loadModel('Space_model');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            $scopeType = sanitize_input($_POST['scope_type'] ?? 'global');
+            if (!in_array($scopeType, ['global', 'property', 'space'], true)) {
+                $scopeType = 'global';
+            }
+            $scopeId = ($scopeType === 'global') ? null : intval($_POST['scope_id'] ?? 0);
+            if ($scopeType !== 'global' && $scopeId <= 0) {
+                $this->setFlashMessage('danger', 'Please select a property or space for this rule.');
+                redirect('settings/flutterwave/split-rules/create');
+                return;
+            }
+
+            $ruleModel->create([
+                'name' => sanitize_input($_POST['name'] ?? 'Split rule'),
+                'is_active' => !empty($_POST['is_active']) ? 1 : 0,
+                'scope_type' => $scopeType,
+                'scope_id' => $scopeId,
+                'subaccount_row_id' => (int) ($_POST['subaccount_row_id'] ?? 0),
+                'override_charge_type' => sanitize_input($_POST['override_charge_type'] ?? '') ?: null,
+                'override_charge' => $_POST['override_charge'] !== '' ? (float) $_POST['override_charge'] : null,
+                'split_ratio' => $_POST['split_ratio'] !== '' ? (int) $_POST['split_ratio'] : null,
+                'priority' => (int) ($_POST['priority'] ?? 0),
+                'currency' => strtoupper(sanitize_input($_POST['currency'] ?? '')) ?: null,
+            ]);
+
+            $this->setFlashMessage('success', 'Split rule created.');
+            redirect('settings/flutterwave/split-rules');
+            return;
+        }
+
+        $this->loadView('settings/flutterwave_split_rule_form', [
+            'page_title' => 'Create Split Rule',
+            'gateway' => $gateway,
+            'rule' => null,
+            'subaccounts' => $subaccountModel->getAllActive(),
+            'properties' => $propertyModel->getAll(null, 0, ['property_name' => 'ASC']),
+            'spaces' => $spaceModel->getAll(null, 0, ['space_name' => 'ASC']),
+            'flash' => $this->getFlashMessage(),
+        ]);
+    }
+
+    public function flutterwaveSplitRuleEdit($id) {
+        $this->requirePermission('settings', 'update');
+        $gateway = $this->requireFlutterwaveGateway();
+        if (!$gateway) {
+            return;
+        }
+
+        $ruleModel = $this->loadModel('Flutterwave_split_rule_model');
+        $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
+        $propertyModel = $this->loadModel('Property_model');
+        $spaceModel = $this->loadModel('Space_model');
+        $rule = $ruleModel->getById((int) $id);
+
+        if (!$rule) {
+            $this->setFlashMessage('danger', 'Split rule not found.');
+            redirect('settings/flutterwave/split-rules');
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
+            $scopeType = sanitize_input($_POST['scope_type'] ?? 'global');
+            if (!in_array($scopeType, ['global', 'property', 'space'], true)) {
+                $scopeType = 'global';
+            }
+            $scopeId = ($scopeType === 'global') ? null : intval($_POST['scope_id'] ?? 0);
+
+            $ruleModel->update((int) $id, [
+                'name' => sanitize_input($_POST['name'] ?? $rule['name']),
+                'is_active' => !empty($_POST['is_active']) ? 1 : 0,
+                'scope_type' => $scopeType,
+                'scope_id' => $scopeId,
+                'subaccount_row_id' => (int) ($_POST['subaccount_row_id'] ?? $rule['subaccount_row_id']),
+                'override_charge_type' => sanitize_input($_POST['override_charge_type'] ?? '') ?: null,
+                'override_charge' => $_POST['override_charge'] !== '' ? (float) $_POST['override_charge'] : null,
+                'split_ratio' => $_POST['split_ratio'] !== '' ? (int) $_POST['split_ratio'] : null,
+                'priority' => (int) ($_POST['priority'] ?? 0),
+                'currency' => strtoupper(sanitize_input($_POST['currency'] ?? '')) ?: null,
+            ]);
+
+            $this->setFlashMessage('success', 'Split rule updated.');
+            redirect('settings/flutterwave/split-rules');
+            return;
+        }
+
+        $this->loadView('settings/flutterwave_split_rule_form', [
+            'page_title' => 'Edit Split Rule',
+            'gateway' => $gateway,
+            'rule' => $rule,
+            'subaccounts' => $subaccountModel->getAllActive(),
+            'properties' => $propertyModel->getAll(null, 0, ['property_name' => 'ASC']),
+            'spaces' => $spaceModel->getAll(null, 0, ['space_name' => 'ASC']),
+            'flash' => $this->getFlashMessage(),
+        ]);
+    }
+
+    public function flutterwaveSplitRuleDelete($id) {
+        $this->requirePermission('settings', 'update');
+        $ruleModel = $this->loadModel('Flutterwave_split_rule_model');
+        $ruleModel->update((int) $id, ['is_active' => 0]);
+        $this->setFlashMessage('success', 'Split rule deactivated.');
+        redirect('settings/flutterwave/split-rules');
     }
 }
 

@@ -22,5 +22,8 @@ return [
         'encryption_key' => getenv('FLUTTERWAVE_ENCRYPTION_KEY') ?: '',
         // Webhook secret hash from Flutterwave dashboard (verif-hash header)
         'webhook_secret_hash' => getenv('FLUTTERWAVE_WEBHOOK_SECRET_HASH') ?: '',
+        // Optional: 1/true to enable subaccount splits; FLUTTERWAVE_LOG_SPLIT to audit on payment_transactions
+        'enable_subaccounts' => getenv('FLUTTERWAVE_ENABLE_SUBACCOUNTS') ?: '',
+        'log_split' => getenv('FLUTTERWAVE_LOG_SPLIT') ?: '',
     ],
 ];

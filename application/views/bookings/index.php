@@ -28,9 +28,9 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
 ?>
 
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 list-filters-page-header">
         <h1 class="h3 mb-0">Bookings</h1>
-        <div>
+        <div class="list-filters-page-actions">
             <a href="<?= base_url('booking-reports') ?>" class="btn btn-primary">
                 <i class="bi bi-graph-up"></i> Reports
             </a>
@@ -70,13 +70,13 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
             <form method="GET" action="<?= base_url('bookings') ?>" class="list-filters-form">
                 <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
                 <input type="hidden" name="dir" value="<?= htmlspecialchars($sort_dir) ?>">
-                <div class="row g-2 align-items-end">
+                <div class="row g-2 align-items-end list-filters-row">
                     <?php
-                    $search_col_class = 'col-md-4 col-sm-12';
+                    $search_col_class = 'col-12 col-md-4';
                     $search_placeholder = 'Booking #, customer, email, facility…';
                     include(BASEPATH . 'views/partials/list_search_field.php');
                     ?>
-                    <div class="col-md-2 col-sm-6">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label" for="filter-status">Status</label>
                         <select name="status" id="filter-status" class="form-select">
                             <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All Statuses</option>
@@ -87,7 +87,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                             <option value="in_progress" <?= $selected_status === 'in_progress' ? 'selected' : '' ?>>In Progress</option>
                         </select>
                     </div>
-                    <div class="col-md-2 col-sm-6">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label" for="filter-date">Date</label>
                         <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
                     </div>

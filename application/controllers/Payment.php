@@ -108,6 +108,23 @@ class Payment extends Base_Controller {
                 'reference_id' => $referenceId,
                 'description' => $this->getPaymentDescription($paymentType, $referenceId)
             ];
+
+            $splitMeta = ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+            if ($gatewayCode === 'flutterwave') {
+                require_once BASEPATH . 'helpers/flutterwave_split_helper.php';
+                if ($paymentType === 'booking_payment' && $referenceId > 0) {
+                    $splitMeta = flutterwave_resolve_split_for_booking($referenceId, $currency, $gatewayConfig);
+                }
+                if (!empty($splitMeta['subaccounts'])) {
+                    $metadata['subaccounts'] = $splitMeta['subaccounts'];
+                }
+                flutterwave_log_split_on_transaction(
+                    $this->paymentTransactionModel,
+                    $paymentTransactionId,
+                    $splitMeta,
+                    $gatewayConfig
+                );
+            }
             
             $result = $paymentGateway->initialize($amount, $currency, $customer, $metadata);
             

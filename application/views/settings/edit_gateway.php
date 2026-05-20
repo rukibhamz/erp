@@ -72,6 +72,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                            value="<?= htmlspecialchars($additional_config['encryption_key'] ?? '') ?>">
                                     <small class="text-muted">Optional — for inline/encrypted payloads</small>
                                 </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="enable_subaccounts" id="enable_subaccounts"
+                                               <?= !empty($additional_config['enable_subaccounts']) ? 'checked' : '' ?>>
+                                        <label class="form-check-label" for="enable_subaccounts">
+                                            Enable split payments (subaccounts)
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">
+                                        When on, booking payments include configured subaccounts on Flutterwave checkout.
+                                        <a href="<?= base_url('settings/flutterwave/subaccounts') ?>">Manage subaccounts</a>
+                                    </small>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="log_split_on_transactions" id="log_split_on_transactions"
+                                               <?= !empty($additional_config['log_split_on_transactions']) ? 'checked' : '' ?>>
+                                        <label class="form-check-label" for="log_split_on_transactions">
+                                            Log split details on payment transactions
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Audit only — does not change booking amounts or payment status.</small>
+                                </div>
                             <?php endif; ?>
 
                             <hr>

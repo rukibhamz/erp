@@ -386,6 +386,16 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['settings/payment_gateways'] = 'Settings/paymentGateways';
         $route['settings/payment_gateways/edit/(:num)'] = 'Settings/editGateway/$1';
         $route['settings/payment_gateways/toggle/(:num)'] = 'Settings/toggleGateway/$1';
+
+        // Flutterwave subaccounts & split rules
+        $route['settings/flutterwave/subaccounts'] = 'Settings/flutterwaveSubaccounts';
+        $route['settings/flutterwave/subaccounts/create'] = 'Settings/flutterwaveSubaccountCreate';
+        $route['settings/flutterwave/subaccounts/edit/(:num)'] = 'Settings/flutterwaveSubaccountEdit/$1';
+        $route['settings/flutterwave/subaccounts/delete/(:num)'] = 'Settings/flutterwaveSubaccountDelete/$1';
+        $route['settings/flutterwave/split-rules'] = 'Settings/flutterwaveSplitRules';
+        $route['settings/flutterwave/split-rules/create'] = 'Settings/flutterwaveSplitRuleCreate';
+        $route['settings/flutterwave/split-rules/edit/(:num)'] = 'Settings/flutterwaveSplitRuleEdit/$1';
+        $route['settings/flutterwave/split-rules/delete/(:num)'] = 'Settings/flutterwaveSplitRuleDelete/$1';
         
         // Payment Processing
         $route['payment/initialize'] = 'Payment/initialize';

@@ -180,7 +180,7 @@ if (!function_exists('render_list_filter_per_page')) {
     /**
      * Records-per-page dropdown (inline, place before Apply in list-filters-row).
      */
-    function render_list_filter_per_page(int $perPage = 50, string $colClass = 'col-auto'): void {
+    function render_list_filter_per_page(int $perPage = 50, string $colClass = 'col-6 col-md-auto'): void {
         ?>
         <div class="<?= htmlspecialchars($colClass) ?>">
             <label class="form-label" for="list_filter_per_page">Records</label>
@@ -197,11 +197,12 @@ if (!function_exists('render_list_filter_submit_buttons')) {
     function render_list_filter_submit_buttons(
         string $resetUrl = '',
         string $applyLabel = 'Apply',
-        string $colClass = 'col-auto'
+        string $colClass = 'col-6 col-md-auto'
     ): void {
         ?>
-        <div class="<?= htmlspecialchars($colClass) ?>">
-            <label class="form-label list-filters-btn-spacer" aria-hidden="true">&nbsp;</label>
+        <div class="<?= htmlspecialchars($colClass) ?> list-filters-actions-col">
+            <label class="form-label list-filters-btn-spacer d-none d-md-block" aria-hidden="true">&nbsp;</label>
+            <label class="form-label d-md-none">Actions</label>
             <div class="list-filters-btn-group">
                 <input type="hidden" name="page" value="1">
                 <button type="submit" class="btn btn-primary btn-sm">

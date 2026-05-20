@@ -2,6 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 require_once BASEPATH . 'helpers/payment_config_helper.php';
+require_once BASEPATH . 'helpers/flutterwave_split_helper.php';
 
 /**
  * Start an online gateway payment for an existing booking balance.
@@ -62,13 +63,22 @@ function initiate_booking_gateway_payment($bookingId, $requestedGatewayCode, $bo
         'description' => 'Payment for booking ' . $bookingNumber,
     ];
 
-    $paymentTransactionModel->create([
+    $currency = 'NGN';
+    $splitMeta = ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+    if ($gatewayCode === 'flutterwave') {
+        $splitMeta = flutterwave_resolve_split_for_booking($bookingId, $currency, $gatewayConfig);
+        if (!empty($splitMeta['subaccounts'])) {
+            $metadata['subaccounts'] = $splitMeta['subaccounts'];
+        }
+    }
+
+    $transactionId = $paymentTransactionModel->create([
         'transaction_ref' => $transactionRef,
         'payment_type' => 'booking_payment',
         'reference_id' => $bookingId,
         'gateway_code' => $gatewayCode,
         'amount' => $balance,
-        'currency' => 'NGN',
+        'currency' => $currency,
         'status' => 'pending',
         'customer_email' => $booking['customer_email'] ?? '',
         'customer_name' => $booking['customer_name'] ?? '',
@@ -76,10 +86,14 @@ function initiate_booking_gateway_payment($bookingId, $requestedGatewayCode, $bo
         'created_at' => date('Y-m-d H:i:s'),
     ]);
 
+    if ($transactionId && $gatewayCode === 'flutterwave') {
+        flutterwave_log_split_on_transaction($paymentTransactionModel, $transactionId, $splitMeta, $gatewayConfig);
+    }
+
     try {
         $paymentResult = $paymentGateway->initialize(
             $balance,
-            'NGN',
+            $currency,
             [
                 'email' => $booking['customer_email'] ?? '',
                 'name' => $booking['customer_name'] ?? '',

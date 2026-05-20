@@ -1396,6 +1396,7 @@ class Booking_wizard extends Base_Controller {
             if ($paymentMethod === 'gateway' && $initialPayment > 0) {
                 $requestedGatewayCode = sanitize_input($_POST['gateway_code'] ?? '');
                 require_once BASEPATH . 'helpers/payment_config_helper.php';
+                require_once BASEPATH . 'helpers/flutterwave_split_helper.php';
                 $resolved = resolve_payment_gateway($this->gatewayModel, $requestedGatewayCode);
                 if (!$resolved) {
                     if ($pdo->inTransaction()) {
@@ -1442,6 +1443,14 @@ class Booking_wizard extends Base_Controller {
                             'booking_id' => $bookingId,
                             'description' => 'Booking payment for ' . $bookingNumber
                         ];
+
+                        $splitMeta = ['subaccounts' => [], 'rule_id' => null, 'subaccount_id' => null];
+                        if ($gatewayCode === 'flutterwave') {
+                            $splitMeta = flutterwave_resolve_split_for_booking($bookingId, 'NGN', $gatewayConfig);
+                            if (!empty($splitMeta['subaccounts'])) {
+                                $metadata['subaccounts'] = $splitMeta['subaccounts'];
+                            }
+                        }
                         
                         // Create payment transaction record BEFORE calling gateway
                         // This ensures the callback can find and verify the transaction
@@ -1458,7 +1467,15 @@ class Booking_wizard extends Base_Controller {
                             'description' => 'Booking payment for ' . $bookingNumber,
                             'created_at' => date('Y-m-d H:i:s')
                         ];
-                        $this->paymentTransactionModel->create($transactionData);
+                        $paymentTxId = $this->paymentTransactionModel->create($transactionData);
+                        if ($paymentTxId && $gatewayCode === 'flutterwave') {
+                            flutterwave_log_split_on_transaction(
+                                $this->paymentTransactionModel,
+                                $paymentTxId,
+                                $splitMeta,
+                                $gatewayConfig
+                            );
+                        }
                         
                         // Wrap gateway call to prevent transaction rollback on API failure
                         try {

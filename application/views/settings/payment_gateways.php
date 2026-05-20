@@ -82,6 +82,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                            class="btn btn-sm btn-primary me-1">
                                             <i class="bi bi-gear"></i> Configure
                                         </a>
+                                        <?php if (($gateway['gateway_code'] ?? '') === 'flutterwave'): ?>
+                                            <a href="<?= base_url('settings/flutterwave/subaccounts') ?>"
+                                               class="btn btn-sm btn-outline-primary me-1">
+                                                <i class="bi bi-diagram-3"></i> Subaccounts
+                                            </a>
+                                        <?php endif; ?>
                                         <?php if ($gateway['is_active']): ?>
                                             <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 
                                                class="btn btn-sm btn-danger"
