@@ -24,15 +24,64 @@
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
 }
 
-.list-filters-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: flex-end;
+/* Records dropdown + Apply/Clear on one row */
+.list-filters-actions-col {
+    flex: 0 0 auto;
 }
 
-.list-filters-actions .btn {
+.list-filters-toolbar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.list-filters-per-page {
+    width: 4.75rem;
+    min-width: 4.75rem;
+    flex: 0 0 auto;
+}
+
+.list-filters-btns {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+}
+
+.list-filters-btns .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     white-space: nowrap;
+    min-height: 31px;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    border-radius: 0.375rem;
+    text-decoration: none;
+}
+
+.list-filters-btns .btn-primary {
+    color: #fff !important;
+}
+
+.list-filters-card .list-filters-btns .btn-clear-filters {
+    background-color: #fff !important;
+    border: 1px solid #6c757d !important;
+    color: #495057 !important;
+    box-shadow: none;
+}
+
+.list-filters-card .list-filters-btns .btn-clear-filters:hover,
+.list-filters-card .list-filters-btns .btn-clear-filters:focus {
+    background-color: #f8f9fa !important;
+    border-color: #495057 !important;
+    color: #212529 !important;
 }
 
 .list-filters-secondary {
@@ -73,11 +122,16 @@
 }
 
 @media (max-width: 767.98px) {
-    .list-filters-actions {
+    .list-filters-toolbar {
+        flex-wrap: wrap;
         width: 100%;
     }
 
-    .list-filters-actions .btn {
+    .list-filters-btns {
+        flex: 1 1 100%;
+    }
+
+    .list-filters-btns .btn {
         flex: 1 1 auto;
     }
 }
