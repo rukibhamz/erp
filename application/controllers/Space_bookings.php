@@ -36,7 +36,7 @@ class Space_bookings extends Base_Controller {
                 $booking['tenant_name'] = $booking['business_name'] ?? $booking['contact_person'] ?? 'N/A';
             }
             unset($booking);
-            $paged = $this->paginateList($bookings);
+            $paged = $this->paginateList($bookings, null, standard_list_search_fields('booking'));
             $bookings = $paged['items'];
         } catch (Exception $e) {
             $bookings = [];

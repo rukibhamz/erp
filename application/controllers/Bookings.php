@@ -146,7 +146,7 @@ class Bookings extends Base_Controller {
         $sort = sanitize_input($_GET['sort'] ?? 'booking_number');
         $sortDir = strtolower(sanitize_input($_GET['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
         $this->sortBookingsList($bookings, $sort, $sortDir);
-        $paged = $this->paginateList($bookings);
+        $paged = $this->paginateList($bookings, null, standard_list_search_fields('booking'));
 
         $data = [
             'page_title' => 'Bookings',
@@ -156,6 +156,7 @@ class Bookings extends Base_Controller {
             'sort' => $sort,
             'sort_dir' => $sortDir,
             'pagination' => $paged['pagination'],
+            'search' => list_search_term(),
             'flash' => $this->getFlashMessage()
         ];
 
@@ -833,6 +834,8 @@ class Bookings extends Base_Controller {
 
             $financialReconciliation = null;
             if ($this->bookingFinancialSync) {
+                $this->bookingFinancialSync->syncReceivablesFromBookingPayments($id, $booking);
+                $booking = $this->bookingModel->getWithFacility($id) ?: $booking;
                 $financialReconciliation = $this->bookingFinancialSync->getReconciliationSummary($id, $booking);
             }
 
@@ -1341,7 +1344,7 @@ class Bookings extends Base_Controller {
         ];
 
         $allMismatched = $this->bookingFinancialSync->findMismatchedBookings($filters);
-        $paged = $this->paginateList($allMismatched);
+        $paged = $this->paginateList($allMismatched, null, standard_list_search_fields('booking'));
 
         $data = [
             'page_title' => 'Booking financial reconciliation',
@@ -1690,6 +1693,10 @@ class Bookings extends Base_Controller {
 
             // Sync paid_amount/balance_amount from actual payment records (self-healing)
             $this->paymentModel->syncBookingBalance($bookingId);
+
+            if ($this->bookingFinancialSync) {
+                $this->bookingFinancialSync->syncReceivablesFromBookingPayments($bookingId);
+            }
             
             // Log activity
             $this->activityModel->log(

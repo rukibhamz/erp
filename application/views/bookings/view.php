@@ -313,6 +313,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </td>
                             </tr>
                             <?php endif; ?>
+                            <?php if (isset($financial_reconciliation['invoice_paid']) && $financial_reconciliation['invoice_paid'] !== null): ?>
+                            <tr>
+                                <td>Invoice paid:</td>
+                                <td class="text-end <?= !empty($financial_reconciliation['payment_mismatch']) ? 'text-warning' : '' ?>">
+                                    <?= format_currency($financial_reconciliation['invoice_paid']) ?>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
                             <tr>
                                 <td>Posted revenue (GL):</td>
                                 <td class="text-end <?= !empty($financial_reconciliation['gl_mismatch']) ? 'text-warning' : '' ?>">
@@ -322,7 +330,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </table>
                         <?php if (!empty($financial_reconciliation['needs_reconcile'])): ?>
                             <div class="alert alert-warning py-2 small mb-2">
-                                Booking totals may not match the linked invoice or general ledger.
+                                <?php if (!empty($financial_reconciliation['payment_mismatch'])): ?>
+                                    Receivables invoice payment is out of sync with this booking (portal payments may not have updated the invoice).
+                                <?php else: ?>
+                                    Booking totals may not match the linked invoice or general ledger.
+                                <?php endif; ?>
                             </div>
                             <?php if (has_permission('bookings', 'update')): ?>
                             <form method="POST" action="<?= base_url('bookings/reconcileFinancials/' . $booking['id']) ?>" class="d-grid">

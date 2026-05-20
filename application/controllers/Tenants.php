@@ -17,7 +17,7 @@ class Tenants extends Base_Controller {
     public function index() {
         try {
             $all = $this->tenantModel->getAll();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $tenants = $paged['items'];
         } catch (Exception $e) {
             $tenants = [];

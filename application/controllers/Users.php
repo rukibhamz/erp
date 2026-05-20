@@ -17,7 +17,8 @@ class Users extends Base_Controller {
     }
     
     public function index() {
-        $paged = $this->paginateList($this->userModel->getAll(null, 0, 'created_at DESC'));
+        $all = $this->userModel->getAll(null, 0, 'created_at DESC');
+        $paged = $this->paginateList($all, null, standard_list_search_fields('user'));
         $data = [
             'page_title' => 'Users',
             'users' => $paged['items'],

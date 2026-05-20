@@ -25,7 +25,7 @@ class Locations extends Base_Controller {
     public function index() {
         try {
             $all = $this->locationModel->getAll();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $locations = $paged['items'];
         } catch (Exception $e) {
             $locations = [];

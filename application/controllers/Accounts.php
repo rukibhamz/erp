@@ -35,7 +35,7 @@ class Accounts extends Base_Controller {
                 $pagination['to'] = $total;
             } else {
                 $accounts = $this->accountModel->getFiltered($type, $search);
-                $paged = $this->paginateList($accounts);
+                $paged = $this->paginateList($accounts, null, standard_list_search_fields('account'));
                 $accounts = $paged['items'];
                 $pagination = $paged['pagination'];
             }

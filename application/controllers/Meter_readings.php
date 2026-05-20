@@ -29,7 +29,7 @@ class Meter_readings extends Base_Controller {
             }
             
             $meters = $this->meterModel->getActive();
-            $paged = $this->paginateList($readings);
+            $paged = $this->paginateList($readings, null, standard_list_search_fields('generic'));
             $readings = $paged['items'];
         } catch (Exception $e) {
             $readings = [];

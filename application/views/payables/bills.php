@@ -24,6 +24,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('payables/bills') ?>" class="row g-3 align-items-end">
+            <?php $search_placeholder = 'Bill #, vendor, or ID…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
             <div class="col-md-3">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">

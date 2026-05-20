@@ -38,7 +38,7 @@ class Leases extends Base_Controller {
             } else {
                 $all = [];
             }
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $leases = $paged['items'];
         } catch (Exception $e) {
             $leases = [];

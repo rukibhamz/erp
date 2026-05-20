@@ -695,6 +695,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 VERIFY - After update: status=" . ($verifyBooking['status'] ?? 'NULL') . ", payment_status=" . ($verifyBooking['payment_status'] ?? 'NULL') . ", paid_amount=" . ($verifyBooking['paid_amount'] ?? 'NULL') . ", balance=" . ($verifyBooking['balance_amount'] ?? 'NULL') . "\n", FILE_APPEND);
 
                 $this->bookingPaymentModel->syncBookingBalance($booking['id']);
+
+                $this->syncBookingReceivablesInvoice($booking['id'], $booking);
                 
                 error_log("processPaymentSuccess: Core booking update - paid: $newPaidAmount, balance: $newBalance, result: " . ($updateResult ? 'OK' : 'FAIL'));
                 
@@ -772,47 +774,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                         }
                         
                         if ($invoiceId) {
-                            // Get current invoice data
-                            $invoice = $this->invoiceModel->getById($invoiceId);
-                            if ($invoice) {
-                                $invoicePaidAmount = floatval($invoice['paid_amount'] ?? 0) + floatval($transaction['amount']);
-                                $invoiceBalance = floatval($invoice['total_amount'] ?? 0) - $invoicePaidAmount;
-                                
-                                $invoiceUpdate = [
-                                    'status' => ($invoiceBalance <= 0) ? 'paid' : 'partially_paid',
-                                    'paid_amount' => $invoicePaidAmount,
-                                    'balance_amount' => max(0, $invoiceBalance),
-                                    'payment_date' => date('Y-m-d'),
-                                    'updated_at' => date('Y-m-d H:i:s')
-                                ];
-                                $this->invoiceModel->update($invoiceId, $invoiceUpdate);
-                                error_log("processPaymentSuccess: Updated linked invoice #$invoiceId - paid: $invoicePaidAmount, balance: $invoiceBalance");
-                                
-                                // Update customer balance
-                                if ($invoice['customer_id']) {
-                                    try {
-                                        $customerModel = $this->loadModel('Customer_model');
-                                        if ($customerModel) {
-                                            // Calculate total outstanding for this customer
-                                            $outstandingResult = $this->db->fetchOne(
-                                                "SELECT COALESCE(SUM(balance_amount), 0) as total_balance 
-                                                 FROM `" . $this->db->getPrefix() . "invoices` 
-                                                 WHERE customer_id = ? 
-                                                 AND status IN ('sent', 'partially_paid', 'overdue', 'draft')",
-                                                [$invoice['customer_id']]
-                                            );
-                                            $customerBalance = $outstandingResult ? floatval($outstandingResult['total_balance']) : 0;
-                                            $customerModel->update($invoice['customer_id'], [
-                                                'current_balance' => $customerBalance,
-                                                'updated_at' => date('Y-m-d H:i:s')
-                                            ]);
-                                            error_log("processPaymentSuccess: Updated customer #" . $invoice['customer_id'] . " balance to: $customerBalance");
-                                        }
-                                    } catch (Exception $custEx) {
-                                        error_log("processPaymentSuccess: Customer balance update error: " . $custEx->getMessage());
-                                    }
-                                }
-                            }
+                            $this->syncBookingReceivablesInvoice($booking['id'], $verifyBooking ?: $booking);
+                            file_put_contents($logFile, "[$ts] processPaymentSuccess: Invoice payment synced via financial sync service\n", FILE_APPEND);
                         } else {
                             // NO INVOICE EXISTS - Create one now
                             // This handles the case where the booking wizard's invoice creation failed
@@ -1154,6 +1117,23 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
         }
     }
     
+    /**
+     * Sync linked receivables invoice(s) from booking payment totals.
+     */
+    private function syncBookingReceivablesInvoice(int $bookingId, ?array $booking = null): void {
+        $syncPath = BASEPATH . 'services/Booking_financial_sync_service.php';
+        if (!file_exists($syncPath)) {
+            return;
+        }
+        require_once $syncPath;
+        try {
+            $sync = new Booking_financial_sync_service();
+            $sync->syncReceivablesFromBookingPayments($bookingId, $booking);
+        } catch (Exception $e) {
+            error_log('syncBookingReceivablesInvoice: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Get customer info based on payment type
      */

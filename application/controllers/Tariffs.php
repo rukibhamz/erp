@@ -27,7 +27,7 @@ class Tariffs extends Base_Controller {
             }
             
             $providers = $this->providerModel->getActive();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $tariffs = $paged['items'];
         } catch (Exception $e) {
             $tariffs = [];

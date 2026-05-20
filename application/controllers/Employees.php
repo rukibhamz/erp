@@ -17,7 +17,7 @@ class Employees extends Base_Controller {
     public function index() {
         try {
             $all = $this->employeeModel->getActiveEmployees();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $employees = $paged['items'];
         } catch (Exception $e) {
             error_log('Employees index error: ' . $e->getMessage());

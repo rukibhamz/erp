@@ -19,6 +19,7 @@ class Transactions extends Base_Controller {
         $startDate = $_GET['start_date'] ?? null;
         $endDate = $_GET['end_date'] ?? null;
         $status = $_GET['status'] ?? null;
+        $search = list_search_term();
         
         try {
             $params = $this->paginationParams();
@@ -27,7 +28,9 @@ class Transactions extends Base_Controller {
                     FROM `{$prefix}transactions` t
                     JOIN `{$prefix}accounts` a ON t.account_id = a.id
                     WHERE 1=1";
-            $countSql = "SELECT COUNT(*) as cnt FROM `{$prefix}transactions` t WHERE 1=1";
+            $countSql = "SELECT COUNT(*) as cnt FROM `{$prefix}transactions` t
+                         JOIN `{$prefix}accounts` a ON t.account_id = a.id
+                         WHERE 1=1";
             $bindParams = [];
 
             if ($accountId) {
@@ -49,6 +52,24 @@ class Transactions extends Base_Controller {
                 $sql .= " AND t.status = ?";
                 $countSql .= " AND t.status = ?";
                 $bindParams[] = $status;
+            }
+            if ($search !== '') {
+                sql_append_search($sql, $bindParams, [
+                    't.transaction_number',
+                    't.description',
+                    'a.account_code',
+                    'a.account_name',
+                    't.reference_type',
+                    'CAST(t.id AS CHAR)',
+                ], $search);
+                sql_append_search($countSql, $bindParams, [
+                    't.transaction_number',
+                    't.description',
+                    'a.account_code',
+                    'a.account_name',
+                    't.reference_type',
+                    'CAST(t.id AS CHAR)',
+                ], $search);
             }
 
             $total = intval($this->db->fetchOne($countSql, $bindParams)['cnt'] ?? 0);
@@ -76,6 +97,7 @@ class Transactions extends Base_Controller {
             'start_date' => $startDate,
             'end_date' => $endDate,
             'selected_status' => $status,
+            'search' => $search,
             'flash' => $this->getFlashMessage()
         ];
         

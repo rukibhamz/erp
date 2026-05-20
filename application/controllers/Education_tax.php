@@ -28,7 +28,7 @@ class Education_tax extends Base_Controller {
     
     public function index() {
         $summary = $this->taxModel->getSummary();
-        $paged = $this->paginateList($summary);
+        $paged = $this->paginateList($summary, null, standard_list_search_fields('generic'));
         $data = [
             'page_title' => 'Education Tax Management',
             'summary' => $paged['items'],
@@ -63,7 +63,7 @@ class Education_tax extends Base_Controller {
     
     public function payments() {
         $all = $this->taxModel->getPayments();
-        $paged = $this->paginateList($all);
+        $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
         $data = [
             'page_title' => 'Tax Payments',
             'payments' => $paged['items'],

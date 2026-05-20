@@ -340,15 +340,106 @@ class Booking_financial_sync_service {
         $postedTotal = $this->getEffectivePostedRevenue($bookingId, $invoiceIds);
         $glMismatch = abs($bookingTotal - $postedTotal) >= 0.01 && $bookingTotal > 0;
 
+        $bookingPaid = floatval($booking['paid_amount'] ?? 0);
+        $invoicePaid = 0.0;
+        foreach ($invoiceIds as $invoiceId) {
+            $inv = $this->invoiceModel->getById($invoiceId);
+            if (!$inv) {
+                continue;
+            }
+            $invoicePaid += floatval($inv['paid_amount'] ?? 0);
+        }
+        $paymentMismatch = !empty($invoiceIds)
+            && abs($invoicePaid - $bookingPaid) >= 0.01
+            && ($bookingPaid > 0 || $invoicePaid > 0);
+
         return [
             'booking_total' => $bookingTotal,
+            'booking_paid' => $bookingPaid,
             'invoice_total' => $invoiceTotal,
+            'invoice_paid' => $invoicePaid,
             'posted_revenue' => $postedTotal,
             'invoice_ids' => $invoiceIds,
             'invoice_mismatch' => $invoiceMismatch,
+            'payment_mismatch' => $paymentMismatch,
             'gl_mismatch' => $glMismatch,
-            'needs_reconcile' => $invoiceMismatch || $glMismatch,
+            'needs_reconcile' => $invoiceMismatch || $glMismatch || $paymentMismatch,
         ];
+    }
+
+    /**
+     * Push booking payment totals onto linked receivables invoice(s).
+     * Call after portal/gateway/admin booking payments so receivables shows correct balance.
+     */
+    public function syncReceivablesFromBookingPayments(int $bookingId, ?array $booking = null): array {
+        $result = ['updated' => 0, 'invoice_ids' => [], 'messages' => []];
+        $booking = $this->refreshBookingRow($bookingId, $booking ?? []);
+
+        if ($this->paymentModel) {
+            $synced = $this->paymentModel->syncBookingBalance($bookingId);
+            if ($synced) {
+                $booking = $this->refreshBookingRow($bookingId, array_merge($booking, $synced));
+            }
+        }
+
+        $invoiceIds = $this->resolveInvoiceIds($booking, $bookingId);
+        $result['invoice_ids'] = $invoiceIds;
+        if (empty($invoiceIds)) {
+            $result['messages'][] = 'No linked invoice found for this booking.';
+            return $result;
+        }
+
+        $totalAmount = floatval($booking['total_amount'] ?? 0);
+        $paidAmount = min(floatval($booking['paid_amount'] ?? 0), $totalAmount);
+        $balanceAmount = max(0, $totalAmount - $paidAmount);
+        $status = 'sent';
+        if ($paidAmount >= $totalAmount && $totalAmount > 0) {
+            $status = 'paid';
+        } elseif ($paidAmount > 0) {
+            $status = 'partially_paid';
+        }
+
+        $bookingRef = $booking['booking_number'] ?? ('#' . $bookingId);
+        foreach ($invoiceIds as $invoiceId) {
+            $this->invoiceModel->update($invoiceId, [
+                'paid_amount' => $paidAmount,
+                'balance_amount' => $balanceAmount,
+                'status' => $status,
+                'payment_date' => $paidAmount > 0 ? date('Y-m-d') : null,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            $result['updated']++;
+        }
+
+        $customerId = intval($booking['customer_id'] ?? 0);
+        if ($customerId <= 0 && !empty($invoiceIds)) {
+            $inv = $this->invoiceModel->getById($invoiceIds[0]);
+            $customerId = intval($inv['customer_id'] ?? 0);
+        }
+        if ($customerId > 0) {
+            try {
+                $customerModel = $this->loadModel('Customer_model');
+                $outstanding = $this->db->fetchOne(
+                    "SELECT COALESCE(SUM(balance_amount), 0) AS total_balance
+                     FROM `" . $this->db->getPrefix() . "invoices`
+                     WHERE customer_id = ?
+                     AND status IN ('sent', 'partially_paid', 'overdue', 'draft')",
+                    [$customerId]
+                );
+                $customerModel->update($customerId, [
+                    'current_balance' => floatval($outstanding['total_balance'] ?? 0),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+            } catch (Exception $e) {
+                error_log('syncReceivablesFromBookingPayments customer balance: ' . $e->getMessage());
+            }
+        }
+
+        if ($result['updated'] > 0) {
+            $result['messages'][] = 'Synced payment status to ' . $result['updated'] . ' invoice(s) for booking ' . $bookingRef . '.';
+        }
+
+        return $result;
     }
 
     private function refreshBookingRow(int $bookingId, array $fallback): array {
@@ -374,6 +465,20 @@ class Booking_financial_sync_service {
             $rowId = intval($row['id'] ?? 0);
             if ($rowId > 0) {
                 $invoiceIds[] = $rowId;
+            }
+        }
+
+        if (!empty($booking['booking_number'])) {
+            $byNotes = $this->db->fetchAll(
+                "SELECT id FROM `" . $this->db->getPrefix() . "invoices`
+                 WHERE notes LIKE ? OR reference LIKE ?",
+                ['%' . $booking['booking_number'] . '%', '%' . $booking['booking_number'] . '%']
+            );
+            foreach ($byNotes as $row) {
+                $rowId = intval($row['id'] ?? 0);
+                if ($rowId > 0) {
+                    $invoiceIds[] = $rowId;
+                }
             }
         }
 

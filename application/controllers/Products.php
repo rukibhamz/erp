@@ -33,7 +33,7 @@ class Products extends Base_Controller {
             }
 
             $categories = $this->productModel->getCategories();
-            $paged = $this->paginateList($products);
+            $paged = $this->paginateList($products, null, standard_list_search_fields('product'));
             $products = $paged['items'];
         } catch (Exception $e) {
             $products = [];

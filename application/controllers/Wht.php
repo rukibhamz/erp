@@ -19,7 +19,7 @@ class Wht extends Base_Controller {
     public function index() {
         try {
             $all = $this->whtReturnModel->getRecentReturns(null);
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $whtReturns = $paged['items'];
         } catch (Exception $e) {
             error_log('Wht index error: ' . $e->getMessage());

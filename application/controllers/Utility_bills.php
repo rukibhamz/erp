@@ -59,7 +59,7 @@ class Utility_bills extends Base_Controller {
             }
             unset($bill);
 
-            $paged = $this->paginateList($bills);
+            $paged = $this->paginateList($bills, null, standard_list_search_fields('bill'));
             $bills = $paged['items'];
             
             $overdueBills = $this->billModel->getOverdue();

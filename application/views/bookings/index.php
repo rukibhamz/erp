@@ -64,6 +64,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" action="" class="row g-3 align-items-end">
+            <?php $search_placeholder = 'Booking #, customer, email, facility…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
                 <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
                 <input type="hidden" name="dir" value="<?= htmlspecialchars($sort_dir) ?>">
                 <input type="hidden" name="page" value="1">

@@ -34,7 +34,7 @@ class Fixed_assets extends Base_Controller {
             } else {
                 $all = $this->assetModel->getByCategory($category);
             }
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $assets = $paged['items'];
         } catch (Exception $e) {
             $assets = [];

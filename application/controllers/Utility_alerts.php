@@ -24,7 +24,7 @@ class Utility_alerts extends Base_Controller {
                     return $status === 'all' || ($status === 'resolved' && $a['is_resolved']) || ($status === 'unresolved' && !$a['is_resolved']);
                 }));
             }
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $alerts = $paged['items'];
         } catch (Exception $e) {
             $alerts = [];

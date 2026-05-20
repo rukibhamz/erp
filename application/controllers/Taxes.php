@@ -17,7 +17,7 @@ class Taxes extends Base_Controller {
     public function index() {
         try {
             $all = $this->taxModel->getActive();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $taxes = $paged['items'];
         } catch (Exception $e) {
             $taxes = [];

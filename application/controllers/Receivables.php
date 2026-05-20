@@ -61,7 +61,7 @@ class Receivables extends Base_Controller {
                 $customer['outstanding'] = $this->customerModel->getTotalOutstanding($customer['id']);
             }
             unset($customer);
-            $paged = $this->paginateList($customers);
+            $paged = $this->paginateList($customers, null, standard_list_search_fields('customer'));
             $customers = $paged['items'];
         } catch (Exception $e) {
             $customers = [];
@@ -73,6 +73,7 @@ class Receivables extends Base_Controller {
             'customers'     => $customers,
             'pagination'    => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'source_filter' => $sourceFilter,
+            'search'        => list_search_term(),
             'flash'         => $this->getFlashMessage()
         ];
         
@@ -399,6 +400,15 @@ class Receivables extends Base_Controller {
                 $where[] = "i.customer_id = ?";
                 $params[] = $customerId;
             }
+
+            $search = list_search_term();
+            if ($search !== '') {
+                $like = '%' . $search . '%';
+                $where[] = '(i.invoice_number LIKE ? OR c.company_name LIKE ? OR CAST(i.id AS CHAR) LIKE ?)';
+                $params[] = $like;
+                $params[] = $like;
+                $params[] = $like;
+            }
             
             if (!empty($where)) {
                 $sql .= " WHERE " . implode(' AND ', $where);
@@ -408,7 +418,7 @@ class Receivables extends Base_Controller {
             
             $invoices = $this->db->fetchAll($sql, $params);
             $customers = $this->customerModel->getAll();
-            $paged = $this->paginateList($invoices);
+            $paged = $this->paginateList($invoices, null, standard_list_search_fields('invoice'));
             $invoices = $paged['items'];
         } catch (Exception $e) {
             $invoices = [];
@@ -423,6 +433,7 @@ class Receivables extends Base_Controller {
             'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'selected_customer' => $customerId,
+            'search' => list_search_term(),
             'flash' => $this->getFlashMessage()
         ];
         
@@ -1557,8 +1568,25 @@ class Receivables extends Base_Controller {
         $this->requirePermission('receivables', 'read');
         
         try {
-            $all = $this->paymentModel->getByType('receipt');
-            $paged = $this->paginateList($all);
+            $search = list_search_term();
+            $prefix = $this->db->getPrefix();
+            $sql = "SELECT p.*, c.company_name AS customer_name
+                    FROM `{$prefix}payments` p
+                    LEFT JOIN `{$prefix}customers` c ON p.customer_id = c.id
+                    WHERE p.payment_type = 'receipt'";
+            $params = [];
+            if ($search !== '') {
+                sql_append_search($sql, $params, [
+                    'p.payment_number',
+                    'c.company_name',
+                    'p.payment_method',
+                    'p.notes',
+                    'CAST(p.id AS CHAR)',
+                ], $search);
+            }
+            $sql .= ' ORDER BY p.payment_date DESC, p.id DESC';
+            $all = $this->db->fetchAll($sql, $params);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('payment'));
             $payments = $paged['items'];
         } catch (Exception $e) {
             $payments = [];
@@ -1569,6 +1597,7 @@ class Receivables extends Base_Controller {
             'page_title' => 'Receivables Payments',
             'payments' => $payments,
             'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
+            'search' => list_search_term(),
             'flash' => $this->getFlashMessage()
         ];
         

@@ -20,7 +20,7 @@ class Financial_years extends Base_Controller {
     public function index() {
         try {
             $all = $this->financialYearModel->getAll('start_date DESC');
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $financialYears = $paged['items'];
         } catch (Exception $e) {
             $financialYears = [];

@@ -48,7 +48,7 @@ class Payables extends Base_Controller {
                 $vendor['outstanding'] = $this->vendorModel->getTotalOutstanding($vendor['id']);
             }
             unset($vendor);
-            $paged = $this->paginateList($vendors);
+            $paged = $this->paginateList($vendors, null, standard_list_search_fields('vendor'));
             $vendors = $paged['items'];
         } catch (Exception $e) {
             $vendors = [];
@@ -59,6 +59,7 @@ class Payables extends Base_Controller {
             'page_title' => 'Vendors',
             'vendors' => $vendors,
             'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
+            'search' => list_search_term(),
             'flash' => $this->getFlashMessage()
         ];
         
@@ -277,7 +278,7 @@ class Payables extends Base_Controller {
             }
 
             $vendors = $this->vendorModel->getAll();
-            $paged = $this->paginateList($bills);
+            $paged = $this->paginateList($bills, null, standard_list_search_fields('bill'));
             $bills = $paged['items'];
         } catch (Exception $e) {
             $bills = [];
@@ -292,6 +293,7 @@ class Payables extends Base_Controller {
             'pagination' => $paged['pagination'] ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
             'selected_vendor' => $vendorId,
+            'search' => list_search_term(),
             'flash' => $this->getFlashMessage()
         ];
         

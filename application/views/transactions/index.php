@@ -26,6 +26,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="<?= base_url('transactions') ?>" class="row g-3">
+            <?php $search_placeholder = 'Txn #, description, account, ID…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
             <div class="col-md-3">
                 <label for="account_id" class="form-label">Account</label>
                 <select class="form-select" id="account_id" name="account_id">

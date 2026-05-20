@@ -24,6 +24,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <!-- Status Filter -->
 <div class="card mb-4">
+    <div class="card-header d-flex justify-content-end py-2">
+        <form method="GET" action="" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
+            <input type="search" name="search" class="form-control form-control-sm" style="min-width:200px" value="<?= htmlspecialchars(list_search_term()) ?>" placeholder="Search name, ID, code…">
+            <input type="hidden" name="page" value="1">
+            <label class="small text-muted mb-0">Records</label>
+            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
+            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+        </form>
+    </div>
     <div class="card-body">
         <div class="btn-group" role="group">
             <a href="?status=all" class="btn btn-sm <?= $selected_status === 'all' ? 'btn-dark' : 'btn-primary' ?>">All</a>

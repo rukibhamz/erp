@@ -37,7 +37,7 @@ class Stock_adjustments extends Base_Controller {
             } else {
                 $all = $this->adjustmentModel->getByStatus($status);
             }
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $adjustments = $paged['items'];
         } catch (Exception $e) {
             $adjustments = [];

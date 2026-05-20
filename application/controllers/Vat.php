@@ -18,7 +18,7 @@ class Vat extends Base_Controller {
         
         try {
             $all = $this->vatReturnModel->getRecentReturns(null);
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $vatReturns = $paged['items'];
         } catch (Exception $e) {
             $vatReturns = [];

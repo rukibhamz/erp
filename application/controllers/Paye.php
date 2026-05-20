@@ -39,7 +39,7 @@ class Paye extends Base_Controller {
         }
         unset($deduction);
 
-        $paged = $this->paginateList($payeDeductions);
+        $paged = $this->paginateList($payeDeductions, null, standard_list_search_fields('generic'));
         $payeDeductions = $paged['items'];
         
         $data = [

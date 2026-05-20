@@ -49,7 +49,7 @@ class Utility_payments extends Base_Controller {
             }
             unset($payment);
 
-            $paged = $this->paginateList($allPayments);
+            $paged = $this->paginateList($allPayments, null, standard_list_search_fields('generic'));
             $allPayments = $paged['items'];
         } catch (Exception $e) {
             $allPayments = [];

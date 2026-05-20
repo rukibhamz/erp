@@ -47,7 +47,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="card-header d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
         <span class="fw-semibold">Customer List</span>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <form method="GET" action="<?= base_url('receivables/customers') ?>" class="d-flex align-items-center gap-2 mb-0">
+            <form method="GET" action="<?= base_url('receivables/customers') ?>" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
+                <input type="search" name="search" class="form-control form-control-sm" style="min-width:220px"
+                       value="<?= htmlspecialchars(list_search_term()) ?>"
+                       placeholder="Code, name, email, phone…">
                 <?php if (!empty($source_filter)): ?>
                     <input type="hidden" name="source" value="<?= htmlspecialchars($source_filter) ?>">
                 <?php endif; ?>

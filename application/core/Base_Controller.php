@@ -57,6 +57,7 @@ class Base_Controller {
 
         // Pagination helper (shared list paging across modules)
         require_once BASEPATH . '../application/helpers/pagination_helper.php';
+        require_once BASEPATH . '../application/helpers/list_search_helper.php';
         
         // Initialize database only if installed and config is valid
         if (isset($this->config['installed']) && $this->config['installed'] === true) {
@@ -230,13 +231,22 @@ class Base_Controller {
     /**
      * Paginate an in-memory list using shared request params (page, per_page).
      */
-    protected function paginateList(array $items, $defaultPerPage = null) {
+    protected function paginateList(array $items, $defaultPerPage = null, array $searchFields = []) {
+        $search = list_search_term();
+        if ($search !== '' && !empty($searchFields)) {
+            $items = filter_rows_by_search($items, $searchFields, $search);
+        }
         $params = pagination_resolve_request($defaultPerPage ?? $this->getDefaultItemsPerPage());
         $result = pagination_slice($items, $params['page'], $params['per_page']);
         return [
             'items' => $result['items'],
             'pagination' => $result['pagination'],
+            'search' => $search,
         ];
+    }
+
+    protected function listSearchTerm(): string {
+        return list_search_term();
     }
 
     /**

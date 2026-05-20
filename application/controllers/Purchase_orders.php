@@ -33,7 +33,7 @@ class Purchase_orders extends Base_Controller {
             } else {
                 $all = $this->poModel->getByStatus($status);
             }
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $pos = $paged['items'];
         } catch (Exception $e) {
             $pos = [];

@@ -72,7 +72,7 @@ class Staff_management extends Base_Controller {
     public function employees() {
         try {
             $all = $this->employeeModel->getActiveEmployees();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $employees = $paged['items'];
         } catch (Exception $e) {
             $employees = [];
@@ -267,7 +267,7 @@ class Staff_management extends Base_Controller {
         
         try {
             $all = $this->payrollModel->getByPeriod($period);
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $payrollRuns = $paged['items'];
         } catch (Exception $e) {
             $payrollRuns = [];

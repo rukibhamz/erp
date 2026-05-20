@@ -35,7 +35,7 @@ class Goods_receipts extends Base_Controller {
     public function index() {
         try {
             $all = $this->grnModel->getAll();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $grns = $paged['items'];
         } catch (Exception $e) {
             $grns = [];

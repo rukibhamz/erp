@@ -28,6 +28,7 @@ $perPage = intval($pagination['per_page'] ?? 50);
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" action="<?= base_url('bookings/financialReconciliation') ?>" class="row g-3 align-items-end">
+                <?php $search_placeholder = 'Booking #, customer, facility…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
                 <input type="hidden" name="page" value="1">
                 <div class="col-md-2">
                     <label class="form-label">Status</label>

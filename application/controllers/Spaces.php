@@ -35,7 +35,7 @@ class Spaces extends Base_Controller {
             }
             
             $locations = $this->locationModel->getAll();
-            $paged = $this->paginateList($spaces);
+            $paged = $this->paginateList($spaces, null, standard_list_search_fields('generic'));
             $spaces = $paged['items'];
         } catch (Exception $e) {
             $spaces = [];

@@ -31,7 +31,7 @@ class Stock_takes extends Base_Controller {
             } else {
                 $all = $this->stockTakeModel->getByStatus($status);
             }
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $stockTakes = $paged['items'];
         } catch (Exception $e) {
             $stockTakes = [];

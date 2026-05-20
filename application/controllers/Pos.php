@@ -555,7 +555,7 @@ class Pos extends Base_Controller {
         
         try {
             $all = $this->terminalModel->getAll();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             
             // Load all active accounts and filter in PHP to ensure we catch them regardless of case/pluralization
             $allAccounts = $this->accountModel->getFiltered();

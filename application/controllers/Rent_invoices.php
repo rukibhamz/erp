@@ -45,7 +45,7 @@ class Rent_invoices extends Base_Controller {
                     return $inv['status'] === $status;
                 }));
             }
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $invoices = $paged['items'];
         } catch (Exception $e) {
             $invoices = [];

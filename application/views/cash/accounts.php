@@ -27,7 +27,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-end py-2">
-        <form method="GET" action="<?= base_url('cash/accounts') ?>" class="d-flex align-items-center gap-2 mb-0">
+        <form method="GET" action="<?= base_url('cash/accounts') ?>" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
+            <input type="search" name="search" class="form-control form-control-sm" style="min-width:220px"
+                   value="<?= htmlspecialchars(list_search_term()) ?>"
+                   placeholder="Account name, bank, number…">
             <input type="hidden" name="page" value="1">
             <label class="small text-muted mb-0">Records</label>
             <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>

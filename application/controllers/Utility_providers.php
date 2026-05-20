@@ -25,7 +25,7 @@ class Utility_providers extends Base_Controller {
             }
             
             $utilityTypes = $this->utilityTypeModel->getActive();
-            $paged = $this->paginateList($providers);
+            $paged = $this->paginateList($providers, null, standard_list_search_fields('generic'));
             $providers = $paged['items'];
         } catch (Exception $e) {
             $providers = [];

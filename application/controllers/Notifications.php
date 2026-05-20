@@ -16,7 +16,7 @@ class Notifications extends Base_Controller {
         
         try {
             $all = $this->notificationModel->getUserNotifications($userId, $unreadOnly, null);
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $notifications = $paged['items'];
         } catch (Exception $e) {
             $notifications = [];

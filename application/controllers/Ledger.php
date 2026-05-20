@@ -59,6 +59,7 @@ class Ledger extends Base_Controller {
     
     public function index() {
         $status = $_GET['status'] ?? null;
+        $search = list_search_term();
         
         try {
             $params = $this->paginationParams();
@@ -66,11 +67,24 @@ class Ledger extends Base_Controller {
             $sql = "SELECT * FROM `{$prefix}journal_entries`";
             $countSql = "SELECT COUNT(*) as cnt FROM `{$prefix}journal_entries`";
             $bindParams = [];
+            $where = [];
             
             if ($status) {
-                $sql .= " WHERE status = ?";
-                $countSql .= " WHERE status = ?";
+                $where[] = 'status = ?';
                 $bindParams[] = $status;
+            }
+            if ($search !== '') {
+                $like = '%' . $search . '%';
+                $where[] = '(entry_number LIKE ? OR reference LIKE ? OR description LIKE ? OR CAST(id AS CHAR) LIKE ?)';
+                $bindParams[] = $like;
+                $bindParams[] = $like;
+                $bindParams[] = $like;
+                $bindParams[] = $like;
+            }
+            if (!empty($where)) {
+                $clause = ' WHERE ' . implode(' AND ', $where);
+                $sql .= $clause;
+                $countSql .= $clause;
             }
 
             $total = intval($this->db->fetchOne($countSql, $bindParams)['cnt'] ?? 0);
@@ -88,6 +102,7 @@ class Ledger extends Base_Controller {
             'entries' => $entries,
             'pagination' => $pagination ?? pagination_build_meta(0, 1, 50),
             'selected_status' => $status,
+            'search' => $search,
             'flash' => $this->getFlashMessage()
         ];
         

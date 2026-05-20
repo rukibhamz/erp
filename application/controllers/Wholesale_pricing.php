@@ -19,7 +19,7 @@ class Wholesale_pricing extends Base_Controller {
         $wholesaleItems = array_values(array_filter($items, function($i) {
             return !empty($i['is_wholesale_enabled']);
         }));
-        $paged = $this->paginateList($wholesaleItems);
+        $paged = $this->paginateList($wholesaleItems, null, standard_list_search_fields('generic'));
         
         $data = [
             'page_title' => 'Wholesale Pricing Overview',

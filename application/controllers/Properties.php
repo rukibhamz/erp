@@ -17,7 +17,7 @@ class Properties extends Base_Controller {
     public function index() {
         try {
             $all = $this->propertyModel->getAll();
-            $paged = $this->paginateList($all);
+            $paged = $this->paginateList($all, null, standard_list_search_fields('generic'));
             $properties = $paged['items'];
         } catch (Exception $e) {
             $properties = [];
