@@ -58,7 +58,7 @@ $hasFilters = list_has_active_filters(['source', 'search']);
                 <?php render_list_filter_submit_buttons(base_url('receivables/customers')); ?>
             </div>
 
-            <div class="list-filters-secondary list-source-pills">
+            <div class="list-filters-secondary list-source-pills d-flex flex-row flex-wrap align-items-center gap-2">
                 <span class="filter-group-label">Source</span>
                 <?php
                 $sources = [null => 'All', 'invoice' => 'Invoice', 'booking' => 'Booking', 'tenant' => 'Tenant'];

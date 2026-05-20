@@ -40,13 +40,30 @@
     line-height: 1.25 !important;
 }
 
-.list-filters-form .row.align-items-end .input-group {
+.list-filters-form .row.align-items-end .input-group,
+.list-filters-form .list-filter-input-group {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    width: 100%;
     height: var(--list-filter-control-h);
 }
 
-.list-filters-form .row.align-items-end .input-group .form-control {
+.list-filters-form .row.align-items-end .input-group .form-control,
+.list-filters-form .list-filter-input-group .form-control {
+    flex: 1 1 auto !important;
+    width: 1% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     height: 100% !important;
     min-height: 0 !important;
+}
+
+.list-filters-form .row.align-items-end .input-group-text,
+.list-filters-form .list-filter-input-group .input-group-text {
+    flex: 0 0 auto !important;
+    width: auto !important;
 }
 
 .list-filters-form .row.align-items-end .input-group-text {
@@ -116,9 +133,10 @@
 }
 
 .list-filters-secondary {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
     gap: 0.5rem;
     margin-top: 0.75rem;
     padding-top: 0.75rem;
@@ -135,6 +153,10 @@
 }
 
 .list-source-pills .btn {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: none !important;
     font-size: 0.8125rem;
     padding: 0.25rem 0.75rem;
 }

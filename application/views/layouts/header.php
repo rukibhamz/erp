@@ -16,8 +16,10 @@
     <link href="<?= base_url('assets/css/navigation.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/module-navigation.css') ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/buttons-override.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('assets/css/ui-consistency.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('assets/css/list-filters.css') ?>" rel="stylesheet">
+    <?php $ui_consistency_css = FCPATH . 'assets/css/ui-consistency.css'; ?>
+    <link href="<?= base_url('assets/css/ui-consistency.css') ?>?v=<?= is_file($ui_consistency_css) ? filemtime($ui_consistency_css) : '1' ?>" rel="stylesheet">
+    <?php $list_filters_css = FCPATH . 'assets/css/list-filters.css'; ?>
+    <link href="<?= base_url('assets/css/list-filters.css') ?>?v=<?= is_file($list_filters_css) ? filemtime($list_filters_css) : '1' ?>" rel="stylesheet">
     
     <!-- PWA Support -->
     <link rel="manifest" href="<?= base_url('pwa_manifest.php') ?>">

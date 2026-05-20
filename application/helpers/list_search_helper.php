@@ -161,7 +161,7 @@ if (!function_exists('render_list_search_field')) {
             <?php if ($showLabel): ?>
                 <label class="form-label" for="list_search_<?= htmlspecialchars($name) ?>">Search</label>
             <?php endif; ?>
-            <div class="input-group">
+            <div class="input-group flex-nowrap w-100 list-filter-input-group">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input type="search"
                        class="form-control"
