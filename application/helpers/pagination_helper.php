@@ -103,10 +103,11 @@ if (!function_exists('render_pagination_controls')) {
 }
 
 if (!function_exists('render_pagination_per_page_select')) {
-    function render_pagination_per_page_select($selected = 50, $name = 'per_page', $class = 'form-select') {
+    function render_pagination_per_page_select($selected = 50, $name = 'per_page', $class = 'form-select', $id = '') {
         $options = pagination_per_page_options();
         $selected = intval($selected);
-        echo '<select name="' . htmlspecialchars($name) . '" class="' . htmlspecialchars($class) . '">';
+        $idAttr = $id !== '' ? ' id="' . htmlspecialchars($id) . '"' : '';
+        echo '<select name="' . htmlspecialchars($name) . '"' . $idAttr . ' class="' . htmlspecialchars($class) . '">';
         foreach ($options as $opt) {
             $sel = $selected === intval($opt) ? ' selected' : '';
             echo '<option value="' . intval($opt) . '"' . $sel . '>' . intval($opt) . '</option>';

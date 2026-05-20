@@ -184,10 +184,7 @@ if (!function_exists('render_list_filter_per_page')) {
         ?>
         <div class="<?= htmlspecialchars($colClass) ?>">
             <label class="form-label" for="list_filter_per_page">Records</label>
-            <div class="input-group input-group-sm list-filters-per-page-group">
-                <span class="input-group-text">Records</span>
-                <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select list-filters-per-page'); ?>
-            </div>
+            <?php render_pagination_per_page_select($perPage, 'per_page', 'form-select form-select-sm list-filters-per-page', 'list_filter_per_page'); ?>
         </div>
         <?php
     }

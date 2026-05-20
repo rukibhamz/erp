@@ -25,20 +25,8 @@
 }
 
 /* Records dropdown — fixed width, stays inline in Bootstrap row */
-.list-filters-per-page-group {
-    flex-wrap: nowrap;
-    width: auto;
-}
-
-.list-filters-per-page-group .input-group-text {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.list-filters-per-page-group .form-select,
-.list-filters-per-page-group select.list-filters-per-page {
+.list-filters-form select.list-filters-per-page,
+.list-filters-form .list-filters-per-page {
     width: 4.25rem !important;
     min-width: 4.25rem !important;
     max-width: 4.25rem !important;
