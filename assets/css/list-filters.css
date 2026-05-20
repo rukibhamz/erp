@@ -166,12 +166,39 @@
         margin-bottom: 0;
     }
 
-    /* Full-width inputs on small screens */
-    .list-filters-form .list-filters-row .form-control,
-    .list-filters-form .list-filters-row .form-select,
-    .list-filters-form .list-filters-row select.list-filters-per-page,
-    .list-filters-form .list-filters-row .input-group {
+    /* Full-width controls (except input-group pieces — keep icon beside field) */
+    .list-filters-form .list-filters-row > [class*="col"] .form-select,
+    .list-filters-form .list-filters-row > [class*="col"]:not(.list-filter-search) .form-control {
         width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .list-filters-form .list-filter-search {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .list-filters-form .list-filter-search .input-group {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .list-filters-form .list-filter-search .input-group-text {
+        display: flex !important;
+        align-items: center !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    .list-filters-form .list-filter-search .input-group .form-control {
+        flex: 1 1 auto !important;
+        width: 1% !important;
+        min-width: 0 !important;
         max-width: 100% !important;
     }
 
@@ -210,26 +237,32 @@
         min-height: var(--list-filter-control-h) !important;
     }
 
-    .list-filters-secondary {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
+    /* Source / status pills — stay horizontal on mobile */
+    .list-filters-secondary,
+    .list-filters-secondary.list-source-pills {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+
+    .list-filters-secondary .filter-group-label {
+        flex: 0 0 auto;
+        width: auto;
+        margin-right: 0.25rem;
     }
 
     .list-filters-secondary.list-source-pills .btn {
-        flex: 1 1 calc(50% - 0.25rem);
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: none !important;
         text-align: center;
     }
 
     .list-active-filters {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-}
-
-@media (max-width: 575.98px) {
-    .list-filters-secondary.list-source-pills .btn {
-        flex: 1 1 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
     }
 }
 
