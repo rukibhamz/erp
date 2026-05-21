@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'step=4&data=' + encodeURIComponent(JSON.stringify(data))
+            body: wizardCsrfPrefix('step=4&data=' + encodeURIComponent(JSON.stringify(data)))
         })
         .then(function(response) { return response.json(); })
         .then(function(result) {

@@ -95,9 +95,16 @@ class Custom_report_model extends Base_Model {
             
             $startTime = microtime(true);
             
-            // Get data source model
-            $dataSource = $report['data_source'];
+            $allowedSources = ['invoice', 'customer', 'vendor', 'item', 'transaction', 'booking', 'payment'];
+            $dataSource = $report['data_source'] ?? '';
+            if (!in_array($dataSource, $allowedSources, true)) {
+                return ['success' => false, 'message' => 'Invalid report data source'];
+            }
+
             $modelName = ucfirst($dataSource) . '_model';
+            if (!class_exists($modelName)) {
+                return ['success' => false, 'message' => 'Report data source is not available'];
+            }
             $model = new $modelName();
             
             // Build query based on report configuration

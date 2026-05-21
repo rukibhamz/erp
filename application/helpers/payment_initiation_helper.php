@@ -134,3 +134,78 @@ function get_usable_payment_gateways($gatewayModel) {
     }
     return $gateways;
 }
+
+/**
+ * Resolve payable amount on the server (never trust client POST amount).
+ *
+ * @return array{success:bool,amount?:float,currency?:string,message?:string}
+ */
+function resolve_server_payment_amount(string $paymentType, int $referenceId) {
+    $referenceId = (int) $referenceId;
+    if ($referenceId <= 0) {
+        return ['success' => false, 'message' => 'Invalid payment reference.'];
+    }
+
+    $db = Database::getInstance();
+    $prefix = $db->getPrefix();
+
+    if ($paymentType === 'booking_payment') {
+        $booking = $db->fetchOne(
+            "SELECT balance_amount, total_amount, paid_amount, status FROM `{$prefix}bookings` WHERE id = ?",
+            [$referenceId]
+        );
+        if (!$booking) {
+            return ['success' => false, 'message' => 'Booking not found.'];
+        }
+        if (in_array($booking['status'] ?? '', ['cancelled', 'refunded'], true)) {
+            return ['success' => false, 'message' => 'Cannot pay for this booking.'];
+        }
+        $amount = floatval($booking['balance_amount'] ?? 0);
+        if ($amount <= 0) {
+            $amount = max(0, floatval($booking['total_amount'] ?? 0) - floatval($booking['paid_amount'] ?? 0));
+        }
+        if ($amount <= 0) {
+            return ['success' => false, 'message' => 'This booking has no outstanding balance.'];
+        }
+        return ['success' => true, 'amount' => round($amount, 2), 'currency' => 'NGN'];
+    }
+
+    if ($paymentType === 'invoice_payment') {
+        $invoice = $db->fetchOne(
+            "SELECT balance_amount, total_amount, paid_amount, status FROM `{$prefix}invoices` WHERE id = ?",
+            [$referenceId]
+        );
+        if (!$invoice) {
+            return ['success' => false, 'message' => 'Invoice not found.'];
+        }
+        $amount = floatval($invoice['balance_amount'] ?? 0);
+        if ($amount <= 0) {
+            $amount = max(0, floatval($invoice['total_amount'] ?? 0) - floatval($invoice['paid_amount'] ?? 0));
+        }
+        if ($amount <= 0) {
+            return ['success' => false, 'message' => 'This invoice has no outstanding balance.'];
+        }
+        return ['success' => true, 'amount' => round($amount, 2), 'currency' => 'NGN'];
+    }
+
+    if ($paymentType === 'rent_payment') {
+        $rent = $db->fetchOne(
+            "SELECT balance_amount, total_amount, amount, paid_amount FROM `{$prefix}rent_invoices` WHERE id = ?",
+            [$referenceId]
+        );
+        if (!$rent) {
+            return ['success' => false, 'message' => 'Rent invoice not found.'];
+        }
+        $amount = floatval($rent['balance_amount'] ?? 0);
+        if ($amount <= 0) {
+            $total = floatval($rent['total_amount'] ?? $rent['amount'] ?? 0);
+            $amount = max(0, $total - floatval($rent['paid_amount'] ?? 0));
+        }
+        if ($amount <= 0) {
+            return ['success' => false, 'message' => 'No outstanding rent balance.'];
+        }
+        return ['success' => true, 'amount' => round($amount, 2), 'currency' => 'NGN'];
+    }
+
+    return ['success' => false, 'message' => 'Unsupported payment type.'];
+}

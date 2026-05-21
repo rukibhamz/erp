@@ -25,7 +25,11 @@
     <script nonce="<?= csp_nonce() ?>">
     // Notification functions
     function markNotificationRead(notificationId) {
-        fetch('<?= base_url('notifications/mark-read') ?>/' + notificationId)
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        fetch('<?= base_url('notifications/mark-read') ?>/' + notificationId, {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken }
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -52,7 +56,11 @@
     
     function markAllNotificationsRead(event) {
         event.preventDefault();
-        fetch('<?= base_url('notifications/mark-all-read') ?>')
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        fetch('<?= base_url('notifications/mark-all-read') ?>', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken }
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {

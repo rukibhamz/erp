@@ -2232,7 +2232,25 @@ class Bookings extends Base_Controller {
         }
 
         try {
-            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $date);
+            $excludeId = $excludeBookingId > 0 ? $excludeBookingId : null;
+            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $date, $excludeId);
+            if (($result['success'] ?? false) && $excludeId) {
+                $booking = $this->bookingModel->getById($excludeId);
+                if ($booking) {
+                    $duration = floatval($booking['duration_hours'] ?? 0);
+                    if ($duration <= 0) {
+                        $duration = $this->calculateDuration(
+                            $booking['booking_date'],
+                            $booking['start_time'],
+                            $booking['end_time']
+                        );
+                    }
+                    $result['required_duration_hours'] = max(1, (int) round($duration));
+                    $result['saved_start_time'] = substr((string) ($booking['start_time'] ?? ''), 0, 5);
+                    $result['saved_end_time'] = substr((string) ($booking['end_time'] ?? ''), 0, 5);
+                    $result['saved_booking_date'] = date('Y-m-d', strtotime($booking['booking_date'] ?? $date));
+                }
+            }
             echo json_encode($result);
         } catch (Exception $e) {
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -2292,7 +2310,8 @@ class Bookings extends Base_Controller {
                 $current->modify('+' . $i . ' day');
                 $dateStr = $current->format('Y-m-d');
 
-                $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $dateStr, $dateStr);
+                $excludeId = $excludeBookingId > 0 ? $excludeBookingId : null;
+                $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $dateStr, $dateStr, $excludeId);
                 if (!($result['success'] ?? false)) {
                     continue;
                 }

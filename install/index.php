@@ -7,6 +7,8 @@ if (!defined('ROOTPATH')) {
     define('ROOTPATH', dirname(__DIR__) . '/');
 }
 
+require_once __DIR__ . '/_guard.php';
+
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -604,10 +606,7 @@ function createHtaccess() {
     $htaccess .= "        Require all denied\n";
     $htaccess .= "    </Files>\n";
     $htaccess .= "</FilesMatch>\n\n";
-    $htaccess .= "# Block access to install directory after installation\n";
-    $htaccess .= "# Uncomment the following lines AFTER installation is complete and verified\n";
-    $htaccess .= "# RewriteCond %{REQUEST_URI} ^/install\n";
-    $htaccess .= "# RewriteRule . - [F,L]\n\n";
+    $htaccess .= "# Installer blocked after setup via install/_guard.php (checks config.installed.php)\n\n";
     $htaccess .= "# Route all requests to index.php (allow assets and install to pass through)\n";
     $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-f\n";
     $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-d\n";

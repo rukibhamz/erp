@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
     applyPromoBtn.addEventListener('click', function() {
         const code = promoCodeInput.value.trim();
         if (!code) {
-            promoMessage.innerHTML = '<div class="alert alert-warning">Please enter a promo code</div>';
+            wizardSetAlert(promoMessage, 'alert-warning', 'Please enter a promo code');
             return;
         }
 
@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `csrf_token=<?= csrf_token() ?>&code=${encodeURIComponent(code)}&amount=${encodeURIComponent(<?= json_encode(floatval($booking_data['subtotal'] ?? 0)) ?>)}&base_amount=${encodeURIComponent(pricing.base)}&addons_total=${encodeURIComponent(pricing.addons)}&resource_ids=${encodeURIComponent(JSON.stringify(selectedResourceIds))}&addon_ids=${encodeURIComponent(JSON.stringify(selectedAddonIds))}`
+            body: wizardCsrfPrefix(`code=${encodeURIComponent(code)}&amount=${encodeURIComponent(<?= json_encode(floatval($booking_data['subtotal'] ?? 0)) ?>)}&base_amount=${encodeURIComponent(pricing.base)}&addons_total=${encodeURIComponent(pricing.addons)}&resource_ids=${encodeURIComponent(JSON.stringify(selectedResourceIds))}&addon_ids=${encodeURIComponent(JSON.stringify(selectedAddonIds))}`)
         })
         .then(response => response.json())
         .then(data => {
@@ -369,13 +369,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 appliedPromoCode = code;
                 promoDiscountAmount = Number(data.discount_amount || 0);
                 promoAppliesToAddons = !!data.apply_to_addons;
-                promoMessage.innerHTML = `<div class="alert alert-success">Promo code applied! Discount: ${formatNgn(promoDiscountAmount)}</div>`;
+                wizardSetAlert(promoMessage, 'alert-success', 'Promo code applied! Discount: ' + formatNgn(promoDiscountAmount));
                 updateSummaryTotals();
             } else {
                 appliedPromoCode = '';
                 promoDiscountAmount = 0;
                 promoAppliesToAddons = false;
-                promoMessage.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                wizardSetAlert(promoMessage, 'alert-danger', data.message || 'Invalid promo code.');
                 updateSummaryTotals();
             }
         })
@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
             appliedPromoCode = '';
             promoDiscountAmount = 0;
             promoAppliesToAddons = false;
-            promoMessage.innerHTML = '<div class="alert alert-danger">Could not validate promo code. Please try again.</div>';
+            wizardSetAlert(promoMessage, 'alert-danger', 'Could not validate promo code. Please try again.');
             updateSummaryTotals();
         });
     });

@@ -10,13 +10,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </a>
     </div>
 
-    <?php if ($flash): ?>
-        <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
-            <?= htmlspecialchars($flash['message']) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0">Edit Booking Details</h5>
@@ -58,12 +51,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <input type="hidden" name="end_time" id="end_time_input" value="<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>">
                 <div class="mb-4">
                     <h6 class="mb-2">Time Slots</h6>
-                    <div class="d-flex gap-2 mb-2">
-                        <span class="badge bg-success">Available</span>
+                    <link rel="stylesheet" href="<?= base_url('assets/css/booking-slot-picker.css') ?>">
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span class="badge bg-success">Available block</span>
                         <span class="badge bg-danger">Occupied</span>
-                        <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
+                        <span class="badge bg-warning text-dark">Buffer (1 hr gap)</span>
                     </div>
-                    <div id="time_slots_container" class="row g-2"></div>
+                    <div id="time_slots_container"></div>
                     <div id="selected-slot-display" class="alert alert-success mt-2 d-none">
                         Selected: <strong id="selected-slot-text"></strong>
                     </div>
@@ -192,9 +186,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
+<?php
+$editDurationHours = intval($booking['duration_hours'] ?? 0);
+if ($editDurationHours <= 0 && !empty($booking['start_time']) && !empty($booking['end_time'])) {
+    $editDurationHours = max(1, (int) round((strtotime($booking['booking_date'] . ' ' . $booking['end_time']) - strtotime($booking['booking_date'] . ' ' . $booking['start_time'])) / 3600));
+}
+$editDurationHours = max(1, $editDurationHours);
+?>
+<script src="<?= base_url('assets/js/booking-slot-picker.js') ?>"></script>
 <script nonce="<?= csp_nonce() ?>">
 (function () {
     const bookingId = <?= intval($booking['id'] ?? 0) ?>;
+    const bookingDurationHours = <?= (int) $editDurationHours ?>;
     <?php $savedBookingDateJs = !empty($booking['booking_date']) ? date('Y-m-d', strtotime($booking['booking_date'])) : ''; ?>
     const currentDate = '<?= htmlspecialchars($savedBookingDateJs) ?>';
     const currentStart = '<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>';
@@ -229,13 +232,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             .replace(/'/g, '&#039;');
     }
 
-    function formatTime(t) {
-        const [h, m] = String(t || '').split(':').map(Number);
-        if (isNaN(h) || isNaN(m)) return t;
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const h12 = h % 12 || 12;
-        return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-    }
+    const formatTime = (window.BookingSlotPicker && window.BookingSlotPicker.formatTime12)
+        ? window.BookingSlotPicker.formatTime12
+        : function (t) { return t; };
 
     function getFacilityId() {
         const option = venueSelect?.options?.[venueSelect.selectedIndex];
@@ -253,7 +252,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         }
 
         if (activeBtn) {
-            slotContainer.querySelectorAll('.slot-card').forEach(btn => {
+            slotContainer.querySelectorAll('.available-start-slot').forEach(btn => {
                 btn.classList.remove('btn-success', 'active');
                 btn.classList.add('btn-outline-success');
             });
@@ -340,65 +339,25 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     }
 
     function renderSlots(data, dateValue) {
-        const available = (data.slots || []).filter(s => !!s.available);
-        const occupied = data.occupied || [];
-        const cards = [];
-        const today = (new Date()).toISOString().slice(0, 10);
-
-        available.forEach(slot => {
-            cards.push({
-                start: slot.start,
-                html: `<div class="col-md-6 col-lg-4">
-                        <button type="button" class="btn btn-outline-success w-100 slot-card available-slot" data-start="${escapeHtml(slot.start)}" data-end="${escapeHtml(slot.end)}">
-                            <small class="d-block text-muted">${slot.date === today ? 'Today' : escapeHtml(slot.date)}</small>
-                            <span class="fw-bold">${escapeHtml(formatTime(slot.start))} - ${escapeHtml(formatTime(slot.end))}</span>
-                            <div class="small text-success">Available</div>
-                        </button>
-                    </div>`
-            });
-        });
-
-        occupied.forEach(slot => {
-            const isBuffer = !!slot.is_buffer;
-            cards.push({
-                start: slot.start,
-                html: `<div class="col-md-6 col-lg-4">
-                        <button type="button" class="btn ${isBuffer ? 'btn-warning text-dark' : 'btn-danger'} w-100" disabled>
-                            <small class="d-block ${isBuffer ? 'text-dark' : 'text-white'}">${escapeHtml(slot.date || dateValue)}</small>
-                            <span class="fw-bold">${escapeHtml(formatTime(slot.start))} - ${escapeHtml(formatTime(slot.end))}</span>
-                            <div class="small ${isBuffer ? 'text-dark fw-bold' : 'text-white'}">${isBuffer ? 'Buffer' : 'Occupied'}</div>
-                        </button>
-                    </div>`
-            });
-        });
-
-        cards.sort((a, b) => String(a.start).localeCompare(String(b.start)));
-        if (cards.length === 0) {
-            slotContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning mb-0">No available time slots on this date.</div></div>';
-            setSelectedSlot('', '');
+        const durationHours = data.required_duration_hours || bookingDurationHours;
+        if (!window.BookingSlotPicker) {
+            slotContainer.innerHTML = '<div class="alert alert-danger">Slot picker failed to load.</div>';
             return;
         }
-
-        slotContainer.innerHTML = cards.map(c => c.html).join('');
-        slotContainer.querySelectorAll('.available-slot').forEach(btn => {
-            btn.addEventListener('click', function () {
-                setSelectedSlot(this.dataset.start, this.dataset.end, this);
-            });
+        BookingSlotPicker.renderDurationPicker({
+            container: slotContainer,
+            durationHours: durationHours,
+            date: dateValue,
+            availableSlots: data.slots || [],
+            occupiedSlots: data.occupied || [],
+            savedStart: data.saved_start_time || currentStart,
+            savedEnd: data.saved_end_time || currentEnd,
+            savedDate: data.saved_booking_date || currentDate,
+            formatTime: formatTime,
+            onSelect: function (start, end, btn) {
+                setSelectedSlot(start, end, btn);
+            }
         });
-
-        const normalizeTime = (t) => String(t || '').substring(0, 5);
-        const currentBtn = Array.from(slotContainer.querySelectorAll('.available-slot'))
-            .find(b => normalizeTime(b.dataset.start) === currentStart
-                && normalizeTime(b.dataset.end) === currentEnd
-                && dateValue === currentDate);
-        if (currentBtn) {
-            setSelectedSlot(currentBtn.dataset.start, currentBtn.dataset.end, currentBtn);
-        } else if (dateValue === currentDate && currentStart && currentEnd) {
-            // Editing: keep saved times even if UI shows slot as occupied (e.g. this booking).
-            setSelectedSlot(currentStart, currentEnd, null);
-        } else {
-            setSelectedSlot('', '');
-        }
     }
 
     function loadSlots() {

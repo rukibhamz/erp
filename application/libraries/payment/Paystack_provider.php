@@ -84,7 +84,10 @@ class Paystack_provider extends Abstract_payment_provider {
         $signature = $serverHeaders['HTTP_X_PAYSTACK_SIGNATURE'] ?? '';
         if ($signature === '') {
             error_log('Paystack webhook: missing x-paystack-signature header');
-            // Preserve existing behaviour: allow when header absent (legacy installs)
+            $secret = trim($this->getSecretKey());
+            if ($secret !== '') {
+                return false;
+            }
             return true;
         }
         $computed = hash_hmac('sha512', $rawBody, $this->getSecretKey());

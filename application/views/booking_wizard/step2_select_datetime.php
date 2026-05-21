@@ -746,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     renderTimeSlots(currentSlotsData, occupiedData);
                 } else {
-                     timeSlotsContainer.innerHTML = `<div class="col-12"><div class="alert alert-warning">${data.message || 'No available time slots.'}</div></div>`;
+                     wizardSetGridAlert(timeSlotsContainer, 'alert-warning', data.message || 'No available time slots.');
                      selectedTimeSummary.style.display = 'none';
                 }
             })
@@ -1261,9 +1261,11 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: Object.keys(requestData.data).map(key => 
-                `data[${key}]=${encodeURIComponent(requestData.data[key])}`
-            ).join('&') + `&step=${requestData.step}`
+            body: wizardCsrfPrefix(
+                Object.keys(requestData.data).map(key =>
+                    `data[${key}]=${encodeURIComponent(requestData.data[key])}`
+                ).join('&') + `&step=${requestData.step}`
+            )
         })
         .then(response => {
             const status = response.status;

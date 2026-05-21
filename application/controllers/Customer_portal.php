@@ -195,14 +195,24 @@ class Customer_portal extends Base_Controller {
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // Validate CSRF token
-            
+
+            require_once BASEPATH . 'helpers/security_helper.php';
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
             $email = sanitize_input($_POST['email'] ?? '');
+            if (!rate_limit_allows('customer_login|' . $email . '|' . $ipAddress, 5, 900)) {
+                $this->setFlashMessage('danger', 'Too many login attempts. Please try again in 15 minutes.');
+                redirect('customer-portal/login');
+                return;
+            }
+
             $password = $_POST['password'] ?? '';
             $rememberMe = !empty($_POST['remember_me']);
             
             $result = $this->customerPortalUserModel->authenticate($email, $password, $rememberMe);
             
             if ($result['success']) {
+                session_regenerate_id(true);
+
                 // Clear any existing staff session to prevent concurrent logins
                 unset($this->session['user_id']);
                 unset($this->session['username']);
@@ -216,14 +226,14 @@ class Customer_portal extends Base_Controller {
                 $this->session['customer_user_id'] = $result['user']['id'];
                 $this->session['customer_email'] = $result['user']['email'];
                 $this->session['customer_name'] = trim(($result['user']['first_name'] ?? '') . ' ' . ($result['user']['last_name'] ?? ''));
+                $this->session['customer_last_activity'] = time();
                 
                 // Link existing bookings to account
                 $this->customerPortalUserModel->linkBookingsByEmail($email);
                 
                 // Set remember me cookie
-                if ($rememberMe && isset($result['user']['remember_token'])) {
-                    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-                    setcookie('customer_remember_token', $result['user']['remember_token'], time() + (86400 * 30), '/', '', $isHttps, true); // 30 days, httponly, secure
+                if ($rememberMe && !empty($result['user']['remember_token_plain'])) {
+                    set_remember_token_cookie('customer_remember_token', $result['user']['remember_token_plain']);
                 }
                 
                 $this->setFlashMessage('success', 'Welcome back!');
@@ -233,6 +243,7 @@ class Customer_portal extends Base_Controller {
                 unset($this->session['customer_redirect_url']);
                 redirect($redirectUrl);
             } else {
+                rate_limit_record_failure('customer_login|' . $email . '|' . $ipAddress);
                 $this->setFlashMessage('danger', $result['message']);
                 redirect('customer-portal/login');
             }
@@ -250,10 +261,15 @@ class Customer_portal extends Base_Controller {
      * Logout
      */
     public function logout() {
+        $userId = $this->session['customer_user_id'] ?? null;
+        if ($userId) {
+            $this->customerPortalUserModel->update((int) $userId, ['remember_token' => null]);
+        }
         unset($this->session['customer_user_id']);
         unset($this->session['customer_email']);
         unset($this->session['customer_name']);
-        setcookie('customer_remember_token', '', time() - 3600, '/');
+        require_once BASEPATH . 'helpers/security_helper.php';
+        clear_remember_token_cookie('customer_remember_token');
         
         $this->setFlashMessage('success', 'Logged out successfully.');
         redirect('customer-portal/login');
@@ -349,12 +365,9 @@ class Customer_portal extends Base_Controller {
                 redirect('booking-wizard');
                 return;
             }
-            
-            $booking = $this->bookingModel->getWithFacility($id);
-            
+
+            $booking = $this->getCustomerBookingOrRedirect((int) $id);
             if (!$booking) {
-                $this->setFlashMessage('danger', 'Booking not found. Please check your booking number.');
-                redirect('booking-wizard');
                 return;
             }
             
@@ -804,6 +817,15 @@ class Customer_portal extends Base_Controller {
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf();
+
+            require_once BASEPATH . 'helpers/security_helper.php';
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+            if (!rate_limit_allows('customer_forgot|' . $ipAddress, 10, 3600)) {
+                $this->setFlashMessage('danger', 'Too many reset requests. Please try again later.');
+                redirect('customer-portal/login');
+                return;
+            }
+            rate_limit_record_failure('customer_forgot|' . $ipAddress);
             
             $email = sanitize_input($_POST['email'] ?? '');
             

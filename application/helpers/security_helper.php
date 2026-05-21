@@ -19,51 +19,48 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @param int $windowSeconds Time window in seconds (default: 15 minutes)
  * @return bool True if under limit, false if exceeded or check failed
  */
-function checkRateLimit($identifier, $maxAttempts = 5, $windowSeconds = 900) {
+/**
+ * Check whether an identifier is under the rate limit (does not record an attempt).
+ */
+function rate_limit_allows($identifier, $maxAttempts = 5, $windowSeconds = 900) {
     try {
         $db = Database::getInstance();
         $prefix = $db->getPrefix();
-        
-        // Clean old entries
+
         $db->execute("DELETE FROM `{$prefix}rate_limits` WHERE created_at < DATE_SUB(NOW(), INTERVAL ? SECOND)", [$windowSeconds]);
-        
-        // Count attempts in window
+
         $attempts = $db->fetchOne(
-            "SELECT COUNT(*) as count FROM `{$prefix}rate_limits` 
+            "SELECT COUNT(*) as count FROM `{$prefix}rate_limits`
              WHERE identifier = ? AND created_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)",
             [$identifier, $windowSeconds]
         );
-        
-        if (($attempts['count'] ?? 0) >= $maxAttempts) {
-            return false; // Rate limit exceeded
-        }
-        
-        // Record attempt
+
+        return (($attempts['count'] ?? 0) < $maxAttempts);
+    } catch (Exception $e) {
+        error_log('Rate limiting check failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Record a failed attempt (login, password reset, etc.).
+ */
+function rate_limit_record_failure($identifier) {
+    try {
+        $db = Database::getInstance();
         $db->insert('rate_limits', [
             'identifier' => $identifier,
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
-            'created_at' => date('Y-m-d H:i:s')
+            'created_at' => date('Y-m-d H:i:s'),
         ]);
-        
-        return true;
     } catch (Exception $e) {
-        // SECURITY: Fail closed - block request if rate limit check fails
-        // This prevents attackers from bypassing rate limiting by causing database errors
-        // Log detailed error for monitoring and admin attention
-        error_log('Rate limiting check failed: ' . $e->getMessage());
-        error_log('Rate limiting failure details: ' . print_r([
-            'identifier' => $identifier,
-            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
-            'timestamp' => date('Y-m-d H:i:s')
-        ], true));
-        
-        // TODO: Consider adding admin notification/alerting for persistent failures
-        // This could indicate database issues or potential attack attempts
-        
-        // Fail closed for security - block request if rate limit check fails
-        return false;
+        error_log('Rate limiting record failed: ' . $e->getMessage());
     }
+}
+
+/** @deprecated Use rate_limit_allows() and rate_limit_record_failure() on failed auth only. */
+function checkRateLimit($identifier, $maxAttempts = 5, $windowSeconds = 900) {
+    return rate_limit_allows($identifier, $maxAttempts, $windowSeconds);
 }
 
 /**
@@ -263,6 +260,10 @@ function set_security_headers($strictCsp = false) {
     $frameSrc = "'self' https://checkout.flutterwave.com https://*.flutterwave.com";
     
     header("Content-Security-Policy: default-src 'self'; script-src {$scriptSrc}; style-src {$styleSrc}; font-src {$fontSrc}; img-src {$imgSrc}; connect-src {$connectSrc}; frame-src {$frameSrc}; frame-ancestors 'none';");
+
+    if (is_https_request()) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
 }
 
 /**
@@ -314,6 +315,62 @@ function csp_nonce_attr() {
  * @param bool $isHttps Whether the site uses HTTPS (auto-detect if null)
  * @return void
  */
+function remember_token_hash(string $plainToken): string {
+    return hash('sha256', $plainToken);
+}
+
+function remember_token_issue(): string {
+    return bin2hex(random_bytes(32));
+}
+
+function is_https_request(): bool {
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443)
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+}
+
+function set_remember_token_cookie(string $cookieName, string $plainToken, int $days = 30): void {
+    setcookie(
+        $cookieName,
+        $plainToken,
+        [
+            'expires' => time() + (86400 * $days),
+            'path' => '/',
+            'secure' => is_https_request(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]
+    );
+}
+
+function clear_remember_token_cookie(string $cookieName): void {
+    setcookie(
+        $cookieName,
+        '',
+        [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'secure' => is_https_request(),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]
+    );
+}
+
+/**
+ * Write payment debug lines under logs/ (not web root). Enable with PAYMENT_DEBUG_LOG=1.
+ */
+function payment_debug_log(string $message): void {
+    if (getenv('PAYMENT_DEBUG_LOG') !== '1' && getenv('PAYMENT_DEBUG_LOG') !== 'true') {
+        return;
+    }
+    $dir = (defined('ROOTPATH') ? ROOTPATH : dirname(__DIR__, 2) . '/') . 'logs';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    @file_put_contents($dir . '/payment_debug.log', $message, FILE_APPEND);
+}
+
 function configure_secure_session($isHttps = null) {
     // Auto-detect HTTPS if not specified
     if ($isHttps === null) {

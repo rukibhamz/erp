@@ -817,6 +817,11 @@ class Router {
             }
         }
         
+        // Global CSRF for state-changing requests (before controller instantiation)
+        if (function_exists('enforce_global_csrf')) {
+            enforce_global_csrf($controllerName, $this->method);
+        }
+
         // Use the actual class name (may have been corrected by case-insensitive lookup)
         try {
             $controller = new $controllerName();

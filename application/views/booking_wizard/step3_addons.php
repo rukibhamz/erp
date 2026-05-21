@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: bodyPayload
+            body: wizardCsrfPrefix(bodyPayload)
         })
         .then(response => {
             const status = response.status;

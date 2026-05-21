@@ -66,7 +66,7 @@ class Auth extends Base_Controller {
                 
                 // Rate limiting check
                 require_once BASEPATH . '../application/helpers/security_helper.php';
-                if (!checkRateLimit($username . '|' . $ipAddress, 5, 900)) {
+                if (!rate_limit_allows($username . '|' . $ipAddress, 5, 900)) {
                     $this->setFlashMessage('danger', 'Too many login attempts. Please try again in 15 minutes.');
                     // Log failed attempt
                     if ($this->db) {
@@ -102,8 +102,8 @@ class Auth extends Base_Controller {
                     $this->session['last_activity'] = time(); // Track last activity for timeout
                     
                     // Set remember me cookie
-                    if ($rememberMe && isset($user['remember_token'])) {
-                        setcookie('remember_token', $user['remember_token'], time() + (86400 * 30), '/', '', false, true); // 30 days, httponly
+                    if ($rememberMe && !empty($user['remember_token_plain'])) {
+                        set_remember_token_cookie('remember_token', $user['remember_token_plain']);
                     }
                     
                     // Store session in database
@@ -123,6 +123,7 @@ class Auth extends Base_Controller {
                                 'details' => json_encode(['username' => $username, 'reason' => $result['message'] ?? 'Invalid credentials'])
                             ]);
                         }
+                        rate_limit_record_failure($username . '|' . $ipAddress);
                         $this->setFlashMessage('danger', $result['message'] ?? 'Invalid username or password.');
                     }
                 }
@@ -148,17 +149,27 @@ class Auth extends Base_Controller {
      * @return void Redirects to login page
      */
     public function logout() {
+        require_once BASEPATH . 'helpers/security_helper.php';
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('dashboard');
+            return;
+        }
+
+        check_csrf();
+
         $userId = $this->session['user_id'] ?? null;
         
         // Log activity
         if ($userId && $this->activityModel) {
             $this->activityModel->log($userId, 'logout', 'Auth');
         }
-        
-        // Clear remember me cookie
-        if (isset($_COOKIE['remember_token'])) {
-            setcookie('remember_token', '', time() - 3600, '/', '', false, true);
+
+        if ($userId && $this->userModel) {
+            $this->userModel->clearRememberToken($userId);
         }
+
+        clear_remember_token_cookie('remember_token');
         
         // Destroy database session
         if ($userId && $this->sessionModel) {
@@ -184,6 +195,15 @@ class Auth extends Base_Controller {
     public function forgotPassword() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // Validate CSRF token
+
+            require_once BASEPATH . 'helpers/security_helper.php';
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+            if (!rate_limit_allows('forgot_password|' . $ipAddress, 10, 3600)) {
+                $this->setFlashMessage('danger', 'Too many reset requests. Please try again later.');
+                redirect('login');
+                return;
+            }
+            rate_limit_record_failure('forgot_password|' . $ipAddress);
             
             $email = sanitize_input($_POST['email'] ?? '');
             
@@ -319,6 +339,7 @@ class Auth extends Base_Controller {
                 $this->session['role'] = $user['role'] ?? 'user';
                 $this->session['first_name'] = $user['first_name'] ?? '';
                 $this->session['last_name'] = $user['last_name'] ?? '';
+                $this->session['last_activity'] = time();
                 
                 $this->storeSession($user['id']);
             }

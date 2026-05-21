@@ -117,7 +117,12 @@ require_once BASEPATH . 'helpers/permission_helper.php';
 require_once BASEPATH . 'helpers/currency_helper.php';
 require_once BASEPATH . 'helpers/module_helper.php';
 require_once BASEPATH . 'helpers/csrf_helper.php';
+require_once BASEPATH . 'helpers/settings_helper.php';
 require_once BASEPATH . 'helpers/number_helper.php';
+
+if (session_status() === PHP_SESSION_ACTIVE && is_file(BASEPATH . 'config/config.installed.php')) {
+    ini_set('session.gc_maxlifetime', (string) get_session_timeout_seconds());
+}
 
 // Initialize and run application
 try {

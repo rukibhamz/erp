@@ -7,13 +7,6 @@
     </a>
 </div>
 
-<?php if ($flash): ?>
-    <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
-        <?= htmlspecialchars($flash['message']) ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-<?php endif; ?>
-
 <div class="row">
     <div class="col-lg-5">
         <!-- Current schedule -->
@@ -58,10 +51,11 @@
                     <!-- Time slot picker -->
                     <div class="mb-3" id="slot-section" style="display:none;">
                         <label class="form-label fw-bold">Available Time Slots</label>
-                        <div class="d-flex gap-2 mb-2">
-                            <span class="badge bg-success">Available</span>
+                        <link rel="stylesheet" href="<?= base_url('assets/css/booking-slot-picker.css') ?>">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="badge bg-success">Available block</span>
                             <span class="badge bg-danger">Occupied</span>
-                            <span class="badge bg-warning text-dark">Buffer (1 hour gap)</span>
+                            <span class="badge bg-warning text-dark">Buffer (1 hr gap)</span>
                         </div>
                         <div id="slot-container">
                             <div class="text-center py-3">
@@ -110,10 +104,19 @@
     </div>
 </div>
 
+<?php
+$rescheduleDurationHours = intval($booking['duration_hours'] ?? 0);
+if ($rescheduleDurationHours <= 0 && !empty($booking['start_time']) && !empty($booking['end_time'])) {
+    $rescheduleDurationHours = max(1, (int) round((strtotime($booking['booking_date'] . ' ' . $booking['end_time']) - strtotime($booking['booking_date'] . ' ' . $booking['start_time'])) / 3600));
+}
+$rescheduleDurationHours = max(1, $rescheduleDurationHours);
+?>
+<script src="<?= base_url('assets/js/booking-slot-picker.js') ?>"></script>
 <script nonce="<?= csp_nonce() ?>">
 (function() {
     const bookingId   = <?= intval($booking['id']) ?>;
-    const currentDate = '<?= htmlspecialchars($booking['booking_date'] ?? '') ?>';
+    const bookingDurationHours = <?= (int) $rescheduleDurationHours ?>;
+    const currentDate = '<?= htmlspecialchars(!empty($booking['booking_date']) ? date('Y-m-d', strtotime($booking['booking_date'])) : '') ?>';
     const currentStart = '<?= htmlspecialchars(substr((string)($booking['start_time'] ?? ''), 0, 5)) ?>';
     const currentEnd = '<?= htmlspecialchars(substr((string)($booking['end_time'] ?? ''), 0, 5)) ?>';
 
@@ -159,66 +162,31 @@
                     throw new Error(data.message || 'Failed to load slots.');
                 }
 
-                const availableSlots = data.slots || [];
-                const occupiedSlots = data.occupied || [];
-                if (availableSlots.length === 0 && occupiedSlots.length === 0) {
-                    slotContainer.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-circle"></i> No available time slots on this date. Please try another date.</div>';
+                if (!window.BookingSlotPicker) {
+                    slotContainer.innerHTML = '<div class="alert alert-danger">Slot picker failed to load.</div>';
                     return;
                 }
 
-                let rendered = [];
-                availableSlots.forEach(slot => {
-                    rendered.push({
-                        start: slot.start,
-                        html: `<div class="col-6 col-md-4">
-                                <button type="button" class="btn btn-outline-success w-100 slot-btn available-slot"
-                                        data-start="${slot.start}" data-end="${slot.end}">
-                                    <small class="d-block text-muted">${slot.date || date}</small>
-                                    <span class="fw-bold">${formatTime(slot.start)} - ${formatTime(slot.end)}</span>
-                                    <div class="small text-success">Available</div>
-                                </button>
-                            </div>`
-                    });
-                });
-                occupiedSlots.forEach(slot => {
-                    const isBuffer = !!slot.is_buffer;
-                    rendered.push({
-                        start: slot.start,
-                        html: `<div class="col-6 col-md-4">
-                                <button type="button" class="btn ${isBuffer ? 'btn-warning text-dark' : 'btn-danger'} w-100" disabled>
-                                    <small class="d-block ${isBuffer ? 'text-dark' : 'text-white'}">${slot.date || date}</small>
-                                    <span class="fw-bold">${formatTime(slot.start)} - ${formatTime(slot.end)}</span>
-                                    <div class="small ${isBuffer ? 'text-dark fw-bold' : 'text-white'}">${isBuffer ? 'Buffer' : 'Occupied'}</div>
-                                </button>
-                            </div>`
-                    });
-                });
-                rendered.sort((a,b) => String(a.start).localeCompare(String(b.start)));
-                let html = '<div class="row g-2">' + rendered.map(r => r.html).join('');
-                html += '</div>';
-                slotContainer.innerHTML = html;
-
-                slotContainer.querySelectorAll('.available-slot').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        slotContainer.querySelectorAll('.slot-btn').forEach(b => {
-                            b.classList.remove('btn-success', 'active');
-                            b.classList.add('btn-outline-success');
-                        });
-                        this.classList.remove('btn-outline-success');
-                        this.classList.add('btn-success', 'active');
-                        hiddenStart.value = this.dataset.start;
-                        hiddenEnd.value   = this.dataset.end;
-                        selectedText.textContent = formatTime(this.dataset.start) + ' – ' + formatTime(this.dataset.end);
+                const durationHours = data.required_duration_hours || bookingDurationHours;
+                BookingSlotPicker.renderDurationPicker({
+                    container: slotContainer,
+                    durationHours: durationHours,
+                    date: date,
+                    availableSlots: data.slots || [],
+                    occupiedSlots: data.occupied || [],
+                    savedStart: data.saved_start_time || currentStart,
+                    savedEnd: data.saved_end_time || currentEnd,
+                    savedDate: data.saved_booking_date || currentDate,
+                    formatTime: formatTime,
+                    onSelect: function (start, end) {
+                        hiddenStart.value = start;
+                        hiddenEnd.value = end;
+                        selectedText.textContent = formatTime(start) + ' – ' + formatTime(end);
                         selectedDisplay.style.display = 'block';
                         submitBtn.disabled = false;
                         updateQuote();
-                    });
+                    }
                 });
-                const currentBtn = Array.from(slotContainer.querySelectorAll('.available-slot'))
-                    .find(b => b.dataset.start === currentStart && b.dataset.end === currentEnd && date === currentDate);
-                if (currentBtn) {
-                    currentBtn.click();
-                }
             })
             .catch(() => {
                 slotContainer.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Failed to load time slots. Please try again.</div>';

@@ -83,12 +83,18 @@ class Notification_model extends Base_Model {
     /**
      * Mark notification as read
      */
-    public function markAsRead($notificationId) {
+    public function markAsRead($notificationId, $userId = null) {
         try {
-            return $this->update($notificationId, [
-                'is_read' => 1,
-                'read_at' => date('Y-m-d H:i:s')
-            ]);
+            if ($userId === null) {
+                return false;
+            }
+            $stmt = $this->db->execute(
+                "UPDATE `" . $this->db->getPrefix() . $this->table . "`
+                 SET is_read = 1, read_at = ?
+                 WHERE id = ? AND user_id = ?",
+                [date('Y-m-d H:i:s'), (int) $notificationId, (int) $userId]
+            );
+            return $stmt && $stmt->rowCount() > 0;
         } catch (Exception $e) {
             error_log('Notification_model markAsRead error: ' . $e->getMessage());
             return false;

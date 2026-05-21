@@ -892,8 +892,8 @@ document.addEventListener('DOMContentLoaded', function() {
             spaceSelect.value = '<?= $selected_space['id'] ?>';
             loadSpaceDetails();
             
-            <?php if (!empty($_GET['date'])): ?>
-            document.getElementById('booking_date').value = '<?= $_GET['date'] ?>';
+            <?php if (!empty($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date'])): ?>
+            document.getElementById('booking_date').value = <?= json_encode($_GET['date']) ?>;
             loadTimeSlots();
             <?php endif; ?>
         }

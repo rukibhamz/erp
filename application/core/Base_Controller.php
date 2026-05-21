@@ -42,6 +42,7 @@ class Base_Controller {
         
         // Load security helper (for security headers and session config)
         require_once BASEPATH . '../application/helpers/security_helper.php';
+        require_once BASEPATH . '../application/helpers/settings_helper.php';
         
         // Set security headers on all responses
         set_security_headers();
@@ -80,18 +81,32 @@ class Base_Controller {
             }
         }
         
-        // Check session timeout (30 minutes inactivity) - Only for logged in users
-        if (isset($this->session['user_id']) && isset($this->session['last_activity']) && 
-            (time() - $this->session['last_activity'] > 1800)) {
+        $sessionTimeout = $this->getSessionTimeoutSeconds();
+        if ($sessionTimeout > 0 && function_exists('ini_set')) {
+            ini_set('session.gc_maxlifetime', (string) $sessionTimeout);
+        }
+
+        // Session idle timeout (staff ERP session)
+        if (isset($this->session['user_id']) && isset($this->session['last_activity'])
+            && (time() - $this->session['last_activity'] > $sessionTimeout)) {
             error_log("Base_Controller: Session expired for user " . $this->session['user_id']);
-            // Session expired
             session_destroy();
             redirect('login?timeout=1');
         }
-        
-        // Update last activity timestamp
+
+        // Session idle timeout (customer portal)
+        if (isset($this->session['customer_user_id']) && isset($this->session['customer_last_activity'])
+            && (time() - $this->session['customer_last_activity'] > $sessionTimeout)) {
+            error_log('Base_Controller: Customer session expired for user ' . $this->session['customer_user_id']);
+            session_destroy();
+            redirect('customer-portal/login?timeout=1');
+        }
+
         if (isset($this->session['user_id'])) {
             $this->session['last_activity'] = time();
+        }
+        if (isset($this->session['customer_user_id'])) {
+            $this->session['customer_last_activity'] = time();
         }
         
         // Check module activation (unless super admin)
@@ -438,7 +453,7 @@ class Base_Controller {
         if ($maintenanceMode && intval($maintenanceMode) === 1) {
             $currentClass = strtolower(get_class($this));
             
-            // Exemptions: Auth (so admins can login) and Booking_wizard (per request)
+            // Exemptions: Auth (staff login) and public booking wizard during maintenance
             $exemptions = ['auth', 'booking_wizard', 'error404'];
             
             if (!in_array($currentClass, $exemptions)) {
@@ -494,6 +509,13 @@ class Base_Controller {
      * @param string $column Column name
      * @return bool True if column exists, false otherwise
      */
+    protected function getSessionTimeoutSeconds(): int {
+        if ($this->db && function_exists('get_session_timeout_seconds')) {
+            return get_session_timeout_seconds();
+        }
+        return 1800;
+    }
+
     protected function checkColumnExists($table, $column) {
         try {
             if (!$this->db) {

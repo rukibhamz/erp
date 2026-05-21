@@ -14,10 +14,8 @@ Options -Indexes
     </Files>
 </FilesMatch>
 
-# Block access to install directory after installation
-# Uncomment the following lines AFTER installation is complete and verified
-# RewriteCond %{REQUEST_URI} ^/install
-# RewriteRule . - [F,L]
+# Installer access: allowed on fresh deploy; blocked after install via install/_guard.php
+# (checks application/config/config.installed.php). No manual uncomment needed.
 
 # Route all requests to index.php (allow assets, install, and debug tools to pass through)
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -36,11 +34,13 @@ AddDefaultCharset UTF-8
     Require all denied
 </Files>
 
-# Security headers
+# Security headers (PHP also sets headers via set_security_headers())
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Frame-Options "DENY"
     Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
 </IfModule>
 
 # Enable compression

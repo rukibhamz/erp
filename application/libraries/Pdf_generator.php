@@ -38,7 +38,7 @@ class Pdf_generator {
             try {
                 $options = new \Dompdf\Options();
                 $options->set('isHtml5ParserEnabled', true);
-                $options->set('isRemoteEnabled', true);
+                $options->set('isRemoteEnabled', false);
                 
                 $dompdf = new \Dompdf\Dompdf($options);
                 $dompdf->loadHtml($html);
@@ -134,7 +134,7 @@ class Pdf_generator {
             try {
                 $options = new \Dompdf\Options();
                 $options->set('isHtml5ParserEnabled', true);
-                $options->set('isRemoteEnabled', true);
+                $options->set('isRemoteEnabled', false);
                 
                 $dompdf = new \Dompdf\Dompdf($options);
                 $dompdf->loadHtml($html);

@@ -18,6 +18,8 @@ class Payment extends Base_Controller {
         $this->gatewayModel = $this->loadModel('Payment_gateway_model');
         $this->paymentTransactionModel = $this->loadModel('Payment_transaction_model');
         require_once BASEPATH . 'helpers/payment_config_helper.php';
+        require_once BASEPATH . 'helpers/payment_initiation_helper.php';
+        require_once BASEPATH . 'helpers/security_helper.php';
     }
     
     protected function checkAuth() {
@@ -40,17 +42,33 @@ class Payment extends Base_Controller {
             exit;
         }
 
-        $logFile = ROOTPATH . 'debug_log.txt';
-        $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logFile, "[$timestamp] PAYMENT INIT: " . print_r($_POST, true) . "\n", FILE_APPEND);
-        
         try {
+            $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+            if (!rate_limit_allows('payment_init|' . $ipAddress, 30, 900)) {
+                echo json_encode(['success' => false, 'message' => 'Too many payment requests. Please try again later.']);
+                exit;
+            }
+
             $requestedGatewayCode = sanitize_input($_POST['gateway_code'] ?? '');
-            $amount = floatval($_POST['amount'] ?? 0);
             $currency = sanitize_input($_POST['currency'] ?? 'NGN');
             $paymentType = sanitize_input($_POST['payment_type'] ?? 'booking_payment');
             $referenceId = intval($_POST['reference_id'] ?? 0);
-            
+
+            $resolvedAmount = resolve_server_payment_amount($paymentType, $referenceId);
+            if (empty($resolvedAmount['success'])) {
+                rate_limit_record_failure('payment_init|' . $ipAddress);
+                echo json_encode(['success' => false, 'message' => $resolvedAmount['message'] ?? 'Invalid payment parameters']);
+                exit;
+            }
+
+            $amount = floatval($resolvedAmount['amount']);
+            $currency = $resolvedAmount['currency'] ?? $currency;
+
+            $clientAmount = floatval($_POST['amount'] ?? 0);
+            if ($clientAmount > 0 && abs($clientAmount - $amount) > 0.02) {
+                error_log("Payment initialize amount mismatch: client={$clientAmount} server={$amount} type={$paymentType} ref={$referenceId}");
+            }
+
             if ($amount <= 0) {
                 echo json_encode(['success' => false, 'message' => 'Invalid payment parameters']);
                 exit;
@@ -154,7 +172,6 @@ class Payment extends Base_Controller {
  * Payment callback (redirect after payment)
  */
 public function callback() {
-    $logFile = ROOTPATH . 'payment_callback_debug.log';
     $timestamp = date('Y-m-d H:i:s');
     
     // DIAGNOSTIC: Log everything at entry
@@ -164,16 +181,16 @@ public function callback() {
     $diagEntry .= "  GET params: " . json_encode($_GET) . "\n";
     $diagEntry .= "  HTTP Method: " . ($_SERVER['REQUEST_METHOD'] ?? 'unknown') . "\n";
     $diagEntry .= "  User Agent: " . ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown') . "\n";
-    file_put_contents($logFile, $diagEntry, FILE_APPEND);
+    payment_debug_log($diagEntry);
     
     $transactionRef = $_GET['tx_ref'] ?? $_GET['reference'] ?? $_GET['trxref'] ?? '';
     $flutterwaveTransactionId = $_GET['transaction_id'] ?? '';
     $gatewayCode = $this->resolveCallbackGatewayCode($transactionRef);
     
-    file_put_contents($logFile, "[$timestamp] Extracted ref: '$transactionRef', gateway: '$gatewayCode', flw_id: '$flutterwaveTransactionId'\n", FILE_APPEND);
+    payment_debug_log("[$timestamp] Extracted ref: '$transactionRef', gateway: '$gatewayCode', flw_id: '$flutterwaveTransactionId'\n");
     
     if (!$transactionRef) {
-        file_put_contents($logFile, "[$timestamp] ERROR: Empty reference! Cannot proceed.\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] ERROR: Empty reference! Cannot proceed.\n");
         $this->setFlashMessage('danger', 'Invalid payment reference.');
         redirect('payment/confirmation?status=failed');
         return;
@@ -182,10 +199,10 @@ public function callback() {
     try {
         // DIAGNOSTIC: Check if transaction exists in DB BEFORE verifying
         $existingTxn = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
-        file_put_contents($logFile, "[$timestamp] DB lookup for ref '$transactionRef': " . ($existingTxn ? 'FOUND (ID: ' . $existingTxn['id'] . ', status: ' . $existingTxn['status'] . ')' : 'NOT FOUND') . "\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] DB lookup for ref '$transactionRef': " . ($existingTxn ? 'FOUND (ID: ' . $existingTxn['id'] . ', status: ' . $existingTxn['status'] . ')' : 'NOT FOUND') . "\n");
         
         // Verify payment
-        file_put_contents($logFile, "[$timestamp] Calling verifyPayment()...\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] Calling verifyPayment()...\n");
         $verifyOptions = [];
         if ($gatewayCode === 'flutterwave') {
             $verifyOptions['tx_ref'] = $transactionRef;
@@ -203,17 +220,17 @@ public function callback() {
                 $verifyResult = $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
             }
         }
-        file_put_contents($logFile, "[$timestamp] verifyPayment() completed\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] verifyPayment() completed\n");
         
         // Get transaction for confirmation page
         $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
         $status = $transaction ? $transaction['status'] : 'pending';
         
-        file_put_contents($logFile, "[$timestamp] Final transaction status: $status\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] Final transaction status: $status\n");
         
         redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=' . $status);
     } catch (Exception $e) {
-        file_put_contents($logFile, "[$timestamp] CALLBACK EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] CALLBACK EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n");
         error_log('Payment callback error: ' . $e->getMessage());
         redirect('payment/confirmation?ref=' . urlencode($transactionRef) . '&status=failed');
     }
@@ -474,38 +491,37 @@ public function callback() {
  * Verify payment with gateway
  */
 private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = false, array $verifyOptions = []) {
-    $logFile = ROOTPATH . 'payment_callback_debug.log';
     $timestamp = date('Y-m-d H:i:s');
     
     try {
-        file_put_contents($logFile, "[$timestamp] verifyPayment: Looking up transaction ref '$transactionRef'\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] verifyPayment: Looking up transaction ref '$transactionRef'\n");
         
         $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
         if (!$transaction) {
-            file_put_contents($logFile, "[$timestamp] verifyPayment: TRANSACTION NOT FOUND in payment_transactions table!\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: TRANSACTION NOT FOUND in payment_transactions table!\n");
             
             // DIAGNOSTIC: Check if table exists and has any records
             try {
                 $prefix = $this->db->getPrefix();
                 $count = $this->db->fetchOne("SELECT COUNT(*) as cnt FROM {$prefix}payment_transactions");
-                file_put_contents($logFile, "[$timestamp] verifyPayment: payment_transactions table has " . ($count['cnt'] ?? '?') . " records\n", FILE_APPEND);
+                payment_debug_log("[$timestamp] verifyPayment: payment_transactions table has " . ($count['cnt'] ?? '?') . " records\n");
                 
                 // Show recent transactions for comparison
                 $recent = $this->db->fetchAll("SELECT id, transaction_ref, status, created_at FROM {$prefix}payment_transactions ORDER BY id DESC LIMIT 5");
-                file_put_contents($logFile, "[$timestamp] verifyPayment: Recent transactions: " . json_encode($recent) . "\n", FILE_APPEND);
+                payment_debug_log("[$timestamp] verifyPayment: Recent transactions: " . json_encode($recent) . "\n");
             } catch (Exception $diagEx) {
-                file_put_contents($logFile, "[$timestamp] verifyPayment: Could not query payment_transactions: " . $diagEx->getMessage() . "\n", FILE_APPEND);
+                payment_debug_log("[$timestamp] verifyPayment: Could not query payment_transactions: " . $diagEx->getMessage() . "\n");
             }
             
             throw new Exception('Transaction not found for ref: ' . $transactionRef);
         }
         
-        file_put_contents($logFile, "[$timestamp] verifyPayment: Found transaction ID={$transaction['id']}, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, status={$transaction['status']}\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] verifyPayment: Found transaction ID={$transaction['id']}, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, status={$transaction['status']}\n");
         
         if ($transaction['status'] === 'success') {
-            file_put_contents($logFile, "[$timestamp] verifyPayment: Transaction already success — checking fulfillment\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: Transaction already success — checking fulfillment\n");
             if ($this->bookingFulfillmentStillNeeded($transaction)) {
-                file_put_contents($logFile, "[$timestamp] verifyPayment: Re-running processPaymentSuccess (reconciliation)\n", FILE_APPEND);
+                payment_debug_log("[$timestamp] verifyPayment: Re-running processPaymentSuccess (reconciliation)\n");
                 $this->processPaymentSuccess($transaction);
             }
             return ['already_verified' => true];
@@ -513,11 +529,11 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
         
         $gateway = $this->gatewayModel->getByCode($gatewayCode);
         if (!$gateway) {
-            file_put_contents($logFile, "[$timestamp] verifyPayment: GATEWAY NOT FOUND for code '$gatewayCode'\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: GATEWAY NOT FOUND for code '$gatewayCode'\n");
             throw new Exception('Gateway not found');
         }
         
-        file_put_contents($logFile, "[$timestamp] verifyPayment: Gateway found: {$gateway['gateway_name']}, test_mode={$gateway['test_mode']}\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] verifyPayment: Gateway found: {$gateway['gateway_name']}, test_mode={$gateway['test_mode']}\n");
         
         require_once BASEPATH . 'libraries/Payment_gateway.php';
         
@@ -531,18 +547,18 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
             }
         }
         
-        file_put_contents($logFile, "[$timestamp] verifyPayment: Calling {$gatewayCode} verify API for ref '$transactionRef'...\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] verifyPayment: Calling {$gatewayCode} verify API for ref '$transactionRef'...\n");
         $verification = $paymentGateway->verify($transactionRef, $verifyOptions);
-        file_put_contents($logFile, "[$timestamp] verifyPayment: Gateway verify result success=" . (($verification['success'] ?? false) ? 'yes' : 'no') . "\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] verifyPayment: Gateway verify result success=" . (($verification['success'] ?? false) ? 'yes' : 'no') . "\n");
 
         if (!empty($verification['pending'])) {
-            file_put_contents($logFile, "[$timestamp] verifyPayment: Payment still pending\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: Payment still pending\n");
             return ['pending' => true];
         }
 
         if ($verification['success']) {
             $this->assertVerifiedAmountMatchesTransaction($transaction, $verification);
-            file_put_contents($logFile, "[$timestamp] verifyPayment: Payment VERIFIED SUCCESS. Updating transaction status...\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: Payment VERIFIED SUCCESS. Updating transaction status...\n");
             
             // Update transaction status
             $this->paymentTransactionModel->updateStatus(
@@ -552,16 +568,16 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 $verification
             );
             
-            file_put_contents($logFile, "[$timestamp] verifyPayment: Transaction status updated. Calling processPaymentSuccess...\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: Transaction status updated. Calling processPaymentSuccess...\n");
             
             // Process payment based on type
             $this->processPaymentSuccess($transaction);
             
-            file_put_contents($logFile, "[$timestamp] verifyPayment: processPaymentSuccess completed.\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: processPaymentSuccess completed.\n");
             
             return $verification;
         } else {
-            file_put_contents($logFile, "[$timestamp] verifyPayment: Payment VERIFICATION FAILED: " . ($verification['message'] ?? 'no message') . "\n", FILE_APPEND);
+            payment_debug_log("[$timestamp] verifyPayment: Payment VERIFICATION FAILED: " . ($verification['message'] ?? 'no message') . "\n");
             
             // Update as failed
             $this->paymentTransactionModel->updateStatus(
@@ -590,7 +606,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
         }
         
     } catch (Exception $e) {
-        file_put_contents($logFile, "[$timestamp] verifyPayment EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
+        payment_debug_log("[$timestamp] verifyPayment EXCEPTION: " . $e->getMessage() . "\n");
         error_log('Payment verification error: ' . $e->getMessage());
         throw $e;
     }
@@ -600,10 +616,9 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
      * Process successful payment
      */
     private function processPaymentSuccess($transaction) {
-        $logFile = ROOTPATH . 'payment_callback_debug.log';
         $ts = date('Y-m-d H:i:s');
         
-        file_put_contents($logFile, "[$ts] processPaymentSuccess: ENTERED, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, amount={$transaction['amount']}\n", FILE_APPEND);
+        payment_debug_log("[$ts] processPaymentSuccess: ENTERED, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, amount={$transaction['amount']}\n");
         
         try {
             // Load models and assign to class properties
@@ -617,39 +632,39 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
             $this->invoiceModel = $this->loadModel('Invoice_model');
             $this->notificationModel = $this->loadModel('Notification_model');
             
-            file_put_contents($logFile, "[$ts] processPaymentSuccess: Models loaded OK\n", FILE_APPEND);
+            payment_debug_log("[$ts] processPaymentSuccess: Models loaded OK\n");
             
             if ($transaction['payment_type'] === 'booking_payment') {
-                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 1 - Looking up booking ID={$transaction['reference_id']}\n", FILE_APPEND);
+                payment_debug_log("[$ts] processPaymentSuccess: STEP 1 - Looking up booking ID={$transaction['reference_id']}\n");
                 
                 $booking = $this->bookingModel->getById($transaction['reference_id']);
                 
                 if (!$booking) {
-                    file_put_contents($logFile, "[$ts] processPaymentSuccess: BOOKING NOT FOUND for ID={$transaction['reference_id']}! Checking bookings table...\n", FILE_APPEND);
+                    payment_debug_log("[$ts] processPaymentSuccess: BOOKING NOT FOUND for ID={$transaction['reference_id']}! Checking bookings table...\n");
                     // Diagnostic: check what's in the bookings table
                     try {
                         $prefix = $this->db->getPrefix();
                         $recent = $this->db->fetchAll("SELECT id, booking_number, status, payment_status FROM {$prefix}bookings ORDER BY id DESC LIMIT 5");
-                        file_put_contents($logFile, "[$ts] processPaymentSuccess: Recent bookings: " . json_encode($recent) . "\n", FILE_APPEND);
+                        payment_debug_log("[$ts] processPaymentSuccess: Recent bookings: " . json_encode($recent) . "\n");
                     } catch (Exception $diagEx) {
-                        file_put_contents($logFile, "[$ts] processPaymentSuccess: Cannot query bookings: " . $diagEx->getMessage() . "\n", FILE_APPEND);
+                        payment_debug_log("[$ts] processPaymentSuccess: Cannot query bookings: " . $diagEx->getMessage() . "\n");
                     }
                     return;
                 }
                 
-                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 2 - Booking found: #{$booking['booking_number']}, status={$booking['status']}, payment_status=" . ($booking['payment_status'] ?? 'N/A') . ", paid_amount=" . ($booking['paid_amount'] ?? '0') . ", total=" . ($booking['total_amount'] ?? '0') . "\n", FILE_APPEND);
+                payment_debug_log("[$ts] processPaymentSuccess: STEP 2 - Booking found: #{$booking['booking_number']}, status={$booking['status']}, payment_status=" . ($booking['payment_status'] ?? 'N/A') . ", paid_amount=" . ($booking['paid_amount'] ?? '0') . ", total=" . ($booking['total_amount'] ?? '0') . "\n");
                 
                 // IDEMPOTENCY: skip only if this gateway transaction was already recorded on the booking.
                 $this->bookingPaymentModel = $this->bookingPaymentModel ?? $this->loadModel('Booking_payment_model');
                 $existingPayment = $this->bookingPaymentModel->getByGatewayReference($transaction['transaction_ref']);
                 if ($existingPayment) {
-                    file_put_contents($logFile, "[$ts] processPaymentSuccess: SKIPPED - Payment already recorded for ref {$transaction['transaction_ref']}\n", FILE_APPEND);
+                    payment_debug_log("[$ts] processPaymentSuccess: SKIPPED - Payment already recorded for ref {$transaction['transaction_ref']}\n");
                     $this->bookingPaymentModel->syncBookingBalance($booking['id']);
                     return;
                 }
                 
                 // Create booking payment record
-                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3 - Creating booking payment record...\n", FILE_APPEND);
+                payment_debug_log("[$ts] processPaymentSuccess: STEP 3 - Creating booking payment record...\n");
                 
                 // Use ONLY columns guaranteed to exist in the base table schema
                 $paymentData = [
@@ -664,7 +679,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 ];
                 
                 $paymentId = $this->bookingPaymentModel->create($paymentData);
-                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3 RESULT - Payment record ID: " . var_export($paymentId, true) . "\n", FILE_APPEND);
+                payment_debug_log("[$ts] processPaymentSuccess: STEP 3 RESULT - Payment record ID: " . var_export($paymentId, true) . "\n");
                 
                 // Try to set optional columns (may not exist on older schemas)
                 if ($paymentId) {
@@ -675,9 +690,9 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                             'gateway_transaction_id' => $transaction['transaction_ref']
                         ];
                         $this->bookingPaymentModel->update($paymentId, $optionalPaymentData);
-                        file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3b - Optional payment columns updated OK\n", FILE_APPEND);
+                        payment_debug_log("[$ts] processPaymentSuccess: STEP 3b - Optional payment columns updated OK\n");
                     } catch (Exception $optEx) {
-                        file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 3b - Optional payment columns skipped: " . $optEx->getMessage() . "\n", FILE_APPEND);
+                        payment_debug_log("[$ts] processPaymentSuccess: STEP 3b - Optional payment columns skipped: " . $optEx->getMessage() . "\n");
                         // Not critical - the base payment record was created successfully
                     }
                 }
@@ -702,16 +717,16 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     $updateData['payment_status'] = 'partial';
                 }
                 
-                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 - Updating booking #{$booking['id']}: " . json_encode($updateData) . "\n", FILE_APPEND);
+                payment_debug_log("[$ts] processPaymentSuccess: STEP 4 - Updating booking #{$booking['id']}: " . json_encode($updateData) . "\n");
                 
                 // Perform CORE update first (these columns always exist)
                 $updateResult = $this->bookingModel->update($booking['id'], $updateData);
                 
-                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 RESULT - Update returned: " . var_export($updateResult, true) . " (rows affected)\n", FILE_APPEND);
+                payment_debug_log("[$ts] processPaymentSuccess: STEP 4 RESULT - Update returned: " . var_export($updateResult, true) . " (rows affected)\n");
                 
                 // DIAGNOSTIC: Verify the update actually persisted
                 $verifyBooking = $this->bookingModel->getById($booking['id']);
-                file_put_contents($logFile, "[$ts] processPaymentSuccess: STEP 4 VERIFY - After update: status=" . ($verifyBooking['status'] ?? 'NULL') . ", payment_status=" . ($verifyBooking['payment_status'] ?? 'NULL') . ", paid_amount=" . ($verifyBooking['paid_amount'] ?? 'NULL') . ", balance=" . ($verifyBooking['balance_amount'] ?? 'NULL') . "\n", FILE_APPEND);
+                payment_debug_log("[$ts] processPaymentSuccess: STEP 4 VERIFY - After update: status=" . ($verifyBooking['status'] ?? 'NULL') . ", payment_status=" . ($verifyBooking['payment_status'] ?? 'NULL') . ", paid_amount=" . ($verifyBooking['paid_amount'] ?? 'NULL') . ", balance=" . ($verifyBooking['balance_amount'] ?? 'NULL') . "\n");
 
                 $this->bookingPaymentModel->syncBookingBalance($booking['id']);
 
@@ -727,9 +742,9 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                         $optionalData['confirmed_at'] = date('Y-m-d H:i:s');
                     }
                     $this->bookingModel->update($booking['id'], $optionalData);
-                    file_put_contents($logFile, "[$ts] processPaymentSuccess: Optional columns updated OK\n", FILE_APPEND);
+                    payment_debug_log("[$ts] processPaymentSuccess: Optional columns updated OK\n");
                 } catch (Exception $ex) {
-                    file_put_contents($logFile, "[$ts] processPaymentSuccess: Optional columns skipped: " . $ex->getMessage() . "\n", FILE_APPEND);
+                    payment_debug_log("[$ts] processPaymentSuccess: Optional columns skipped: " . $ex->getMessage() . "\n");
                     // Columns may not exist yet - that's OK, core update already succeeded
                     error_log("processPaymentSuccess: Optional columns update skipped: " . $ex->getMessage());
                 }
@@ -794,7 +809,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                         
                         if ($invoiceId) {
                             $this->syncBookingReceivablesInvoice($booking['id'], $verifyBooking ?: $booking);
-                            file_put_contents($logFile, "[$ts] processPaymentSuccess: Invoice payment synced via financial sync service\n", FILE_APPEND);
+                            payment_debug_log("[$ts] processPaymentSuccess: Invoice payment synced via financial sync service\n");
                         } else {
                             // NO INVOICE EXISTS - Create one now
                             // This handles the case where the booking wizard's invoice creation failed
@@ -1130,8 +1145,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 }
             }
         } catch (Exception $e) {
-            $logFile = ROOTPATH . 'payment_callback_debug.log';
-            file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] processPaymentSuccess OUTER CATCH: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+            payment_debug_log("[" . date('Y-m-d H:i:s') . "] processPaymentSuccess OUTER CATCH: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n");
             error_log('Process payment success error: ' . $e->getMessage());
         }
     }

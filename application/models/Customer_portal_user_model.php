@@ -79,11 +79,11 @@ class Customer_portal_user_model extends Base_Model {
             // Update last login
             $this->update($user['id'], ['last_login' => date('Y-m-d H:i:s')]);
             
-            // Generate remember token if needed
             if ($rememberMe) {
-                $rememberToken = bin2hex(random_bytes(32));
-                $this->update($user['id'], ['remember_token' => $rememberToken]);
-                $user['remember_token'] = $rememberToken;
+                require_once BASEPATH . 'helpers/security_helper.php';
+                $plainToken = remember_token_issue();
+                $this->update($user['id'], ['remember_token' => remember_token_hash($plainToken)]);
+                $user['remember_token_plain'] = $plainToken;
             }
             
             unset($user['password']);

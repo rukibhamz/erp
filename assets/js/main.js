@@ -1,5 +1,29 @@
 // Main JavaScript for Business Management System
 
+(function () {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (!meta || typeof window.fetch !== 'function') {
+        return;
+    }
+    const token = meta.getAttribute('content');
+    const originalFetch = window.fetch;
+    window.fetch = function (input, init) {
+        init = init || {};
+        const method = (init.method || 'GET').toUpperCase();
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+            init.headers = init.headers || {};
+            if (init.headers instanceof Headers) {
+                if (!init.headers.has('X-CSRF-Token')) {
+                    init.headers.set('X-CSRF-Token', token);
+                }
+            } else {
+                init.headers['X-CSRF-Token'] = init.headers['X-CSRF-Token'] || token;
+            }
+        }
+        return originalFetch.call(this, input, init);
+    };
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-dismiss alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');

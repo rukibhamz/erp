@@ -49,12 +49,20 @@ class Report_builder extends Base_Controller {
         }
         
         try {
+            $allowedSources = array_keys($this->getDataSources());
+            $dataSource = sanitize_input($_POST['data_source'] ?? '');
+            if (!in_array($dataSource, $allowedSources, true)) {
+                $this->setFlashMessage('danger', 'Invalid report data source.');
+                redirect('report-builder/create');
+                return;
+            }
+
             $reportData = [
                 'report_name' => sanitize_input($_POST['report_name'] ?? ''),
                 'description' => sanitize_input($_POST['description'] ?? ''),
                 'module' => sanitize_input($_POST['module'] ?? ''),
                 'report_type' => sanitize_input($_POST['report_type'] ?? 'table'),
-                'data_source' => sanitize_input($_POST['data_source'] ?? ''),
+                'data_source' => $dataSource,
                 'fields' => json_decode($_POST['fields_json'] ?? '[]', true),
                 'filters' => json_decode($_POST['filters_json'] ?? '[]', true),
                 'grouping' => json_decode($_POST['grouping_json'] ?? '[]', true),

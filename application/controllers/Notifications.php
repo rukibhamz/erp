@@ -74,9 +74,15 @@ class Notifications extends Base_Controller {
      */
     public function markRead($id) {
         header('Content-Type: application/json');
+
+        if (empty($this->session['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
         
         try {
-            if ($this->notificationModel->markAsRead($id)) {
+            if ($this->notificationModel->markAsRead($id, (int) $this->session['user_id'])) {
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to mark as read']);
@@ -92,6 +98,12 @@ class Notifications extends Base_Controller {
      */
     public function markAllRead() {
         header('Content-Type: application/json');
+
+        if (empty($this->session['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
         
         $userId = $this->session['user_id'] ?? null;
         

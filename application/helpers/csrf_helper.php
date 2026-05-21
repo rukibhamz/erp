@@ -167,3 +167,39 @@ function check_csrf($allowGet = false) {
     return true;
 }
 
+/**
+ * Enforce CSRF on state-changing requests (called from Router before controller runs).
+ */
+function enforce_global_csrf(string $controller, string $method): void {
+    $httpMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+    if (!in_array($httpMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+        return;
+    }
+
+    $controllerKey = strtolower(str_replace('_', '', $controller));
+    $methodKey = strtolower($method);
+
+    // Entire controllers exempt (public flows / webhooks)
+    $exemptControllers = [
+        'payment',
+        'error404',
+    ];
+    if (in_array($controllerKey, $exemptControllers, true)) {
+        return;
+    }
+
+    // Auth & customer portal: forms already include tokens; avoid double-fail on edge routes
+    if ($controllerKey === 'auth' && in_array($methodKey, ['login', 'forgotpassword', 'resetpassword', 'logout', 'index'], true)) {
+        return;
+    }
+    if ($controllerKey === 'customerportal' && in_array($methodKey, [
+        'login', 'register', 'verify', 'verifyemail', 'forgotpassword', 'resetpassword', 'logout', 'index',
+    ], true)) {
+        return;
+    }
+
+    // Payment webhooks hit Payment controller — already exempt above
+
+    check_csrf(true);
+}
+

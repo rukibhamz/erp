@@ -220,12 +220,14 @@ document.getElementById('notificationPreferencesForm').addEventListener('submit'
     });
     
     try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const response = await fetch('<?= base_url("notifications/save-preferences") ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-Token': csrfToken,
             },
-            body: 'preferences=' + encodeURIComponent(JSON.stringify(preferences))
+            body: 'csrf_token=' + encodeURIComponent(csrfToken) + '&preferences=' + encodeURIComponent(JSON.stringify(preferences))
         });
         
         const result = await response.json();

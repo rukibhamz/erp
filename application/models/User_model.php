@@ -60,11 +60,12 @@ class User_model extends Base_Model {
         // Update last login
         $this->updateLastLogin($user['id']);
         
-        // Generate remember token if needed
+        // Generate remember token if needed (store hash only; plain token goes to HttpOnly cookie)
         if ($rememberMe) {
-            $rememberToken = bin2hex(random_bytes(32));
-            $this->update($user['id'], ['remember_token' => $rememberToken]);
-            $user['remember_token'] = $rememberToken;
+            require_once BASEPATH . 'helpers/security_helper.php';
+            $plainToken = remember_token_issue();
+            $this->update($user['id'], ['remember_token' => remember_token_hash($plainToken)]);
+            $user['remember_token_plain'] = $plainToken;
         }
         
         unset($user['password']);
@@ -105,11 +106,31 @@ class User_model extends Base_Model {
     }
     
     public function getByRememberToken($token) {
+        $token = trim((string) $token);
+        if ($token === '') {
+            return null;
+        }
+
         try {
+            require_once BASEPATH . 'helpers/security_helper.php';
+            $hashed = remember_token_hash($token);
+
             $user = $this->db->fetchOne(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE remember_token = ? AND status = 'active'",
-                [$token]
+                [$hashed]
             );
+
+            // Legacy installs may still have plaintext tokens in DB
+            if (!$user && strlen($token) === 64 && ctype_xdigit($token)) {
+                $user = $this->db->fetchOne(
+                    "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` WHERE remember_token = ? AND status = 'active'",
+                    [$token]
+                );
+                if ($user) {
+                    $this->update($user['id'], ['remember_token' => $hashed]);
+                }
+            }
+
             if ($user) {
                 unset($user['password']);
             }
@@ -118,6 +139,10 @@ class User_model extends Base_Model {
             error_log('User_model getByRememberToken error: ' . $e->getMessage());
             return null;
         }
+    }
+
+    public function clearRememberToken($userId) {
+        return $this->update((int) $userId, ['remember_token' => null]);
     }
     
     public function getByPasswordResetToken($token) {
@@ -185,6 +210,7 @@ class User_model extends Base_Model {
             'password' => $hashedPassword,
             'password_reset_token' => null,
             'password_reset_expires' => null,
+            'remember_token' => null,
             'failed_login_attempts' => 0,
             'locked_until' => null,
             'status' => 'active' // Ensure account is active after password reset
@@ -269,7 +295,7 @@ class User_model extends Base_Model {
                 // Hash the password
                 $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
             }
-            // If already hashed, use as-is (allows resetPassword to pass hashed password)
+            $data['remember_token'] = null;
         } else {
             unset($data['password']);
         }

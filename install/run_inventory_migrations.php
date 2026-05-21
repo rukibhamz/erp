@@ -12,6 +12,8 @@ if (!defined('ROOTPATH')) {
     define('ROOTPATH', dirname(__DIR__) . '/');
 }
 
+require_once __DIR__ . '/_guard.php';
+
 // Enable error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);

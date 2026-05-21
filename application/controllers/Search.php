@@ -55,7 +55,7 @@ class Search extends Base_Controller {
         $queryLike = '%' . $query . '%';
         
         try {
-            if ($module === 'all' || $module === 'customers') {
+            if (($module === 'all' || $module === 'customers') && hasPermission('receivables', 'read')) {
                 $customers = $this->db->fetchAll(
                     "SELECT id, name, customer_code, email, phone, 'customer' as type 
                      FROM `" . $this->db->getPrefix() . "customers` 
@@ -67,7 +67,7 @@ class Search extends Base_Controller {
                 $results = array_merge($results, $customers);
             }
             
-            if ($module === 'all' || $module === 'invoices') {
+            if (($module === 'all' || $module === 'invoices') && hasPermission('receivables', 'read')) {
                 $invoices = $this->db->fetchAll(
                     "SELECT id, invoice_number, total_amount, invoice_date, 'invoice' as type 
                      FROM `" . $this->db->getPrefix() . "invoices` 
@@ -78,7 +78,7 @@ class Search extends Base_Controller {
                 $results = array_merge($results, $invoices);
             }
             
-            if ($module === 'all' || $module === 'bookings') {
+            if (($module === 'all' || $module === 'bookings') && hasPermission('bookings', 'read')) {
                 $bookings = $this->db->fetchAll(
                     "SELECT id, booking_number, booking_date, total_amount, 'booking' as type 
                      FROM `" . $this->db->getPrefix() . "bookings` 
@@ -89,7 +89,7 @@ class Search extends Base_Controller {
                 $results = array_merge($results, $bookings);
             }
             
-            if ($module === 'all' || $module === 'items') {
+            if (($module === 'all' || $module === 'items') && hasPermission('inventory', 'read')) {
                 $items = $this->db->fetchAll(
                     "SELECT id, name, item_code, 'item' as type 
                      FROM `" . $this->db->getPrefix() . "items` 
@@ -100,7 +100,7 @@ class Search extends Base_Controller {
                 $results = array_merge($results, $items);
             }
             
-            if ($module === 'all' || $module === 'vendors') {
+            if (($module === 'all' || $module === 'vendors') && hasPermission('payables', 'read')) {
                 $vendors = $this->db->fetchAll(
                     "SELECT id, name, vendor_code, email, 'vendor' as type 
                      FROM `" . $this->db->getPrefix() . "vendors` 
@@ -112,7 +112,7 @@ class Search extends Base_Controller {
                 $results = array_merge($results, $vendors);
             }
             
-            if ($module === 'all' || $module === 'transactions') {
+            if (($module === 'all' || $module === 'transactions') && hasPermission('accounting', 'read')) {
                 $transactions = $this->db->fetchAll(
                     "SELECT t.id, t.reference, t.amount, t.date, 'transaction' as type 
                      FROM `" . $this->db->getPrefix() . "transactions` t
@@ -123,7 +123,7 @@ class Search extends Base_Controller {
                 $results = array_merge($results, $transactions);
             }
             
-            if ($module === 'all' || $module === 'properties') {
+            if (($module === 'all' || $module === 'properties') && hasPermission('locations', 'read')) {
                 $properties = $this->db->fetchAll(
                     "SELECT id, name, property_code, 'property' as type 
                      FROM `" . $this->db->getPrefix() . "properties` 

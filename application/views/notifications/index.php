@@ -63,7 +63,7 @@ function markAsRead(id) {
     fetch('<?= base_url('notifications/mark-read/') ?>' + id, {
         method: 'POST',
         headers: {
-            'X-CSRF-Token': '<?= $this->security->get_csrf_hash() ?>'
+            'X-CSRF-Token': '<?= csrf_token() ?>'
         }
     })
     .then(response => response.json())
@@ -84,7 +84,7 @@ function markAllRead() {
     fetch('<?= base_url('notifications/mark-all-read') ?>', {
         method: 'POST',
         headers: {
-            'X-CSRF-Token': '<?= $this->security->get_csrf_hash() ?>'
+            'X-CSRF-Token': '<?= csrf_token() ?>'
         }
     })
     .then(response => response.json())

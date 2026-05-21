@@ -345,7 +345,6 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['booking-wizard/validate-promo'] = 'Booking_wizard/validatePromoCode';
         $route['booking-wizard/finalize'] = 'Booking_wizard/finalize';
         $route['booking-wizard/confirmation/(:num)'] = 'Booking_wizard/confirmation/$1';
-        $route['booking-wizard/fix-db'] = 'Booking_wizard/fix_db';
         
         // Booking Reports
         $route['booking-reports'] = 'Booking_reports/index';

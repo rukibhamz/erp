@@ -95,6 +95,7 @@ class Booking_wizard extends Base_Controller {
         $data['is_super_admin'] = isset($this->session['role']) && $this->session['role'] === 'super_admin';
         
         $this->loader->view('layouts/header_public', $data);
+        $this->loader->view('booking_wizard/_csrf_init', $data);
         $this->loader->view($view, $data);
         $this->loader->view('layouts/footer_public', $data);
     }
@@ -325,7 +326,7 @@ class Booking_wizard extends Base_Controller {
             echo json_encode(['success' => true, 'spaces' => $spacesData]);
         } catch (Exception $e) {
             error_log('getSpacesForLocation error: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            echo json_encode(['success' => false, 'error' => 'Unable to load spaces. Please try again.']);
         }
         exit;
     }
@@ -514,7 +515,7 @@ class Booking_wizard extends Base_Controller {
 
         } catch (Exception $e) {
             error_log('Booking_wizard getTimeSlots error: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Error loading time slots: ' . $e->getMessage()]);
+            echo json_encode(['success' => false, 'message' => 'Unable to load time slots. Please try again.']);
         }
         exit;
     }
@@ -837,6 +838,10 @@ class Booking_wizard extends Base_Controller {
      */
     public function saveStep() {
         header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(true);
+        }
         
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -966,6 +971,10 @@ class Booking_wizard extends Base_Controller {
      */
     public function validatePromoCode() {
         header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf(true);
+        }
         
         $code = sanitize_input($_POST['code'] ?? '');
         $amount = floatval($_POST['amount'] ?? 0);
@@ -1000,6 +1009,8 @@ class Booking_wizard extends Base_Controller {
             $this->setFlashMessage('danger', 'Invalid request.');
             redirect('booking-wizard/step1');
         }
+
+        check_csrf();
         
         $bookingData = $_SESSION['booking_data'] ?? [];
         
@@ -2437,9 +2448,11 @@ class Booking_wizard extends Base_Controller {
     }
 
     /**
-     * TEMPORARY: Fix database schema
+     * Removed from production routes — schema changes belong in migrations only.
      */
     public function fix_db() {
+        http_response_code(404);
+        exit;
         echo "<h1>Database Fix Tool</h1>";
         echo "<div style='font-family: monospace; background: #f5f5f5; padding: 20px; border: 1px solid #ccc;'>";
         
