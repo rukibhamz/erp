@@ -1048,13 +1048,13 @@ class Bookings extends Base_Controller {
                     || intval($booking['facility_id'] ?? 0) !== $resourceId;
 
                 if ($dateTimeChanged || $venueChanged) {
-                    $isAvailable = $this->facilityModel->checkAdvancedAvailability(
+                    if (!$this->facilityModel->isTimeRangeBookable(
                         $resourceId,
-                        $newBookingDate . ' ' . $newStartTime,
-                        $newBookingDate . ' ' . $newEndTime,
+                        $newBookingDate,
+                        $newStartTime,
+                        $newEndTime,
                         $id
-                    );
-                    if (!$isAvailable) {
+                    )) {
                         throw new Exception('The selected date/time slot is not available.');
                     }
                 }
@@ -1740,8 +1740,7 @@ class Bookings extends Base_Controller {
                 }
                 $resourceId = intval($selectedSpace['facility_id']);
 
-                // Check new availability
-                if (!$this->facilityModel->checkAdvancedAvailability($resourceId, $newDate . ' ' . $newStartTime, $newDate . ' ' . $newEndTime, $id)) {
+                if (!$this->facilityModel->isTimeRangeBookable($resourceId, $newDate, $newStartTime, $newEndTime, $id)) {
                     $this->setFlashMessage('danger', 'The selected time slot is not available.');
                     redirect('bookings/reschedule/' . $id);
                 }

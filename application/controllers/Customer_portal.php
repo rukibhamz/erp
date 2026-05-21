@@ -544,7 +544,7 @@ class Customer_portal extends Base_Controller {
                     return;
                 }
                 $resourceId = intval($selectedSpace['facility_id']);
-                if (!$this->facilityModel->checkAdvancedAvailability($resourceId, $newDate . ' ' . $newStartTime, $newDate . ' ' . $newEndTime, $id)) {
+                if (!$this->facilityModel->isTimeRangeBookable($resourceId, $newDate, $newStartTime, $newEndTime, $id)) {
                     $this->setFlashMessage('danger', 'The selected time slot is no longer available. Please choose another.');
                     redirect('customer-portal/reschedule-booking/' . $id);
                     return;

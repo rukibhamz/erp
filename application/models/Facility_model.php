@@ -1023,10 +1023,85 @@ class Facility_model extends Base_Model {
         }
     }
     
+    /**
+     * Parse HH:MM or HH:MM:SS to minutes since midnight.
+     */
+    private function timeToMinutes($time) {
+        if (preg_match('/^(\d{1,2}):(\d{2})/', (string) $time, $m)) {
+            return ((int) $m[1]) * 60 + (int) $m[2];
+        }
+        return 0;
+    }
+
+    private function isFacilityBookableStatus($facility) {
+        if (!$facility) {
+            return false;
+        }
+        $status = strtolower(trim((string) ($facility['status'] ?? '')));
+        return in_array($status, ['available', 'active'], true);
+    }
+
+    /**
+     * Validate a time range using the same slot data as the reschedule/edit UI.
+     */
+    public function isTimeRangeBookable($facilityId, $bookingDate, $startTime, $endTime, $excludeBookingId = null) {
+        $startMin = $this->timeToMinutes($startTime);
+        $endMin = $this->timeToMinutes($endTime);
+        if ($endMin <= $startMin) {
+            return false;
+        }
+
+        $result = $this->getAvailableTimeSlots(
+            $facilityId,
+            $bookingDate,
+            $bookingDate,
+            $excludeBookingId ? (int) $excludeBookingId : null
+        );
+        if (!($result['success'] ?? false)) {
+            return false;
+        }
+
+        $available = $result['slots'] ?? [];
+        $occupied = $result['occupied'] ?? [];
+
+        foreach ($occupied as $occ) {
+            if (($occ['date'] ?? $bookingDate) !== $bookingDate) {
+                continue;
+            }
+            $oStart = $this->timeToMinutes($occ['start'] ?? '');
+            $oEnd = $this->timeToMinutes($occ['end'] ?? '');
+            if ($startMin < $oEnd && $endMin > $oStart) {
+                return false;
+            }
+        }
+
+        for ($cursor = $startMin; $cursor < $endMin; $cursor += 60) {
+            $cursorEnd = $cursor + 60;
+            $slotStart = sprintf('%02d:%02d', intdiv($cursor, 60), $cursor % 60);
+            $slotEnd = sprintf('%02d:%02d', intdiv($cursorEnd, 60), $cursorEnd % 60);
+            $found = false;
+            foreach ($available as $slot) {
+                if (($slot['date'] ?? $bookingDate) !== $bookingDate) {
+                    continue;
+                }
+                if ($this->timeToMinutes($slot['start'] ?? '') === $cursor
+                    && $this->timeToMinutes($slot['end'] ?? '') === $cursorEnd) {
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function checkAdvancedAvailability($facilityId, $startDateTime, $endDateTime, $excludeBookingId = null, $quantity = 1) {
         try {
             $facility = $this->getById($facilityId);
-            if (!$facility || $facility['status'] !== 'available') {
+            if (!$this->isFacilityBookableStatus($facility)) {
                 return false;
             }
             
@@ -1034,6 +1109,8 @@ class Facility_model extends Base_Model {
             $endDate = date('Y-m-d', strtotime($endDateTime));
             $startTime = date('H:i:s', strtotime($startDateTime));
             $endTime = date('H:i:s', strtotime($endDateTime));
+            $startMin = $this->timeToMinutes($startTime);
+            $endMin = $this->timeToMinutes($endTime);
             
             // Check blockouts
             $blockoutCheck = $this->db->fetchOne(
@@ -1062,14 +1139,17 @@ class Facility_model extends Base_Model {
             }
             
             if ($dayAvailability && $dayAvailability['start_time'] && $dayAvailability['end_time']) {
-                if ($startTime < $dayAvailability['start_time'] || $endTime > $dayAvailability['end_time']) {
+                $dayStartMin = $this->timeToMinutes($dayAvailability['start_time']);
+                $dayEndMin = $this->timeToMinutes($dayAvailability['end_time']);
+                if ($startMin < $dayStartMin || $endMin > $dayEndMin) {
                     return false;
                 }
-                
-                // Check break times
+
                 if ($dayAvailability['break_start'] && $dayAvailability['break_end']) {
-                    if (($startTime >= $dayAvailability['break_start'] && $startTime < $dayAvailability['break_end']) ||
-                        ($endTime > $dayAvailability['break_start'] && $endTime <= $dayAvailability['break_end'])) {
+                    $breakStartMin = $this->timeToMinutes($dayAvailability['break_start']);
+                    $breakEndMin = $this->timeToMinutes($dayAvailability['break_end']);
+                    if (($startMin >= $breakStartMin && $startMin < $breakEndMin)
+                        || ($endMin > $breakStartMin && $endMin <= $breakEndMin)) {
                         return false;
                     }
                 }
