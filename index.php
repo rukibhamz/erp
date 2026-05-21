@@ -80,20 +80,30 @@ if ($debugMode || $environment === 'development') {
 // Set timezone
 date_default_timezone_set('UTC');
 
+// Session lifetime from admin settings (must be set before session_start)
+$sessionTimeoutSeconds = 1800;
+if (!empty($config['installed']) && !empty($config['db']['hostname']) && !empty($config['db']['database'])) {
+    require_once BASEPATH . 'core/Database.php';
+    require_once BASEPATH . 'helpers/settings_helper.php';
+    try {
+        $sessionTimeoutSeconds = get_session_timeout_seconds();
+    } catch (Throwable $e) {
+        error_log('index.php session timeout lookup: ' . $e->getMessage());
+    }
+}
+
 // Start session with secure configuration
 if (session_status() === PHP_SESSION_NONE) {
-    // Configure secure session settings
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.cookie_samesite', 'Lax'); // Changed from 'Strict' to 'Lax' for better compatibility
-    ini_set('session.use_strict_mode', 1);
-    ini_set('session.gc_maxlifetime', 1800); // 30 minutes
-    
-    // Only set secure flag if using HTTPS
-    if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
-        (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
-        ini_set('session.cookie_secure', 1);
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.gc_maxlifetime', (string) $sessionTimeoutSeconds);
+
+    if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
+        ini_set('session.cookie_secure', '1');
     }
-    
+
     session_start();
 }
 
@@ -119,10 +129,6 @@ require_once BASEPATH . 'helpers/module_helper.php';
 require_once BASEPATH . 'helpers/csrf_helper.php';
 require_once BASEPATH . 'helpers/settings_helper.php';
 require_once BASEPATH . 'helpers/number_helper.php';
-
-if (session_status() === PHP_SESSION_ACTIVE && is_file(BASEPATH . 'config/config.installed.php')) {
-    ini_set('session.gc_maxlifetime', (string) get_session_timeout_seconds());
-}
 
 // Initialize and run application
 try {

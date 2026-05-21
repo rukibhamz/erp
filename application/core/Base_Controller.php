@@ -82,9 +82,6 @@ class Base_Controller {
         }
         
         $sessionTimeout = $this->getSessionTimeoutSeconds();
-        if ($sessionTimeout > 0 && function_exists('ini_set')) {
-            ini_set('session.gc_maxlifetime', (string) $sessionTimeout);
-        }
 
         // Session idle timeout (staff ERP session)
         if (isset($this->session['user_id']) && isset($this->session['last_activity'])
