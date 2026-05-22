@@ -293,6 +293,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <button type="button" id="continue-btn" class="btn btn-primary float-end" disabled>
                         Continue <i class="bi bi-arrow-right"></i>
                     </button>
+                    <p id="continue-hint" class="text-muted small text-end mt-2 mb-0" style="display:none;"></p>
                 </div>
             </div>
         </div>
@@ -329,6 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const durationContainer = document.getElementById('duration-container');
     const durationSelect = document.getElementById('duration');
     const bookingDate = document.getElementById('booking_date');
+    const OPERATING_END_MINUTES = 20 * 60; // 8:00 PM
     const endDateContainer = document.getElementById('end-date-container');
     const bookingEndDate = document.getElementById('booking_end_date');
     const recurringOption = document.getElementById('recurring-option');
@@ -491,7 +493,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 wizardSetGridAlert(timeSlotsContainer, 'alert-info', 'Multi-Day Booking — please select a start date and end date to continue.');
             }
         } else if (selectedBookingType === 'picnic' || selectedBookingType === 'photoshoot' || selectedBookingType === 'videoshoot') {
-            if (!selectedDate && timeSlotsContainer) {
+            if (selectedDate) {
+                const legendEl = document.getElementById('time-slot-legend');
+                if (legendEl) legendEl.style.display = 'block';
+                loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
+            } else if (timeSlotsContainer) {
                 wizardSetGridAlert(timeSlotsContainer, 'alert-info', 'Please select a date, then choose a duration and time slot.');
             }
         } else if (selectedBookingType && selectedDate) {
@@ -510,6 +516,131 @@ document.addEventListener('DOMContentLoaded', function() {
         bookingDate.disabled = true;
     }
     
+    const continueHint = document.getElementById('continue-hint');
+
+    function setContinueHint(message) {
+        if (!continueHint) {
+            return;
+        }
+        if (message) {
+            continueHint.textContent = message;
+            continueHint.style.display = 'block';
+        } else {
+            continueHint.textContent = '';
+            continueHint.style.display = 'none';
+        }
+    }
+
+    function updateContinueButtonState() {
+        if (!continueBtn) {
+            return;
+        }
+        const type = bookingTypeSelect ? bookingTypeSelect.value : '';
+        if (!type) {
+            continueBtn.disabled = true;
+            setContinueHint('Select a booking type to continue.');
+            return;
+        }
+        if (!selectedDate) {
+            continueBtn.disabled = true;
+            setContinueHint('Select a start date to continue.');
+            return;
+        }
+        if (type === 'full_day') {
+            if (!selectedStartTime || !selectedEndTime) {
+                selectedStartTime = '09:00';
+                selectedEndTime = '20:00';
+            }
+            continueBtn.disabled = false;
+            setContinueHint('');
+            return;
+        }
+        if (type === 'half_day') {
+            const ready = !!(selectedStartTime && selectedEndTime);
+            continueBtn.disabled = !ready;
+            setContinueHint(ready ? '' : 'Choose a morning or afternoon session.');
+            return;
+        }
+        if (type === 'multi_day' || type === 'weekly') {
+            const ready = !!(selectedEndDate && selectedEndDate > selectedDate && selectedStartTime && selectedEndTime);
+            continueBtn.disabled = !ready;
+            setContinueHint(ready ? '' : 'Select an end date after the start date, then pick a daily time slot.');
+            return;
+        }
+        const ready = !!(selectedStartTime && selectedEndTime);
+        continueBtn.disabled = !ready;
+        setContinueHint(ready ? '' : 'Pick an available time slot (or wait for slots to finish loading).');
+    }
+
+    function applySlotSelection(btn) {
+        if (!btn) {
+            return;
+        }
+        document.querySelectorAll('.time-slot-btn').forEach(function(b) {
+            b.classList.remove('active', 'btn-success', 'btn-info');
+            if (b.classList.contains('available-slot')) {
+                b.classList.add(b.dataset.duration === '1' ? 'btn-outline-info' : 'btn-outline-success');
+            }
+        });
+        btn.classList.remove('btn-outline-success', 'btn-outline-info');
+        btn.classList.add('btn-success', 'active');
+
+        selectedStartTime = btn.dataset.start || '';
+        selectedEndTime = btn.dataset.end || '';
+        if (btn.dataset.duration) {
+            selectedDuration = parseInt(btn.dataset.duration, 10) || selectedDuration;
+            if (durationSelect) {
+                durationSelect.value = String(selectedDuration);
+            }
+        }
+
+        const slotDate = btn.dataset.date || selectedDate;
+        const typeEl = document.getElementById('selected-type');
+        if (typeEl && bookingTypeSelect) {
+            typeEl.textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex]?.text || '';
+        }
+        if (selectedDateSpan) {
+            selectedDateSpan.textContent = new Date(slotDate).toLocaleDateString();
+        }
+        if (selectedTimeSpan && selectedStartTime && selectedEndTime) {
+            const parseTime = function(t) {
+                const parts = t.split(':').map(Number);
+                return parts[0] * 60 + (parts[1] || 0);
+            };
+            const formatDisplayTime = function(minutes) {
+                let h = Math.floor(minutes / 60);
+                const m = minutes % 60;
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12;
+                h = h || 12;
+                return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+            };
+            selectedTimeSpan.textContent = formatDisplayTime(parseTime(selectedStartTime)) + ' - ' + formatDisplayTime(parseTime(selectedEndTime));
+        }
+        if (selectedEndDate && selectedEndDate !== selectedDate) {
+            const endEl = document.getElementById('selected-end-date');
+            if (endEl) endEl.textContent = new Date(selectedEndDate).toLocaleDateString();
+            const endWrap = document.getElementById('selected-end-date-container');
+            if (endWrap) endWrap.style.display = 'block';
+        } else {
+            const endWrap = document.getElementById('selected-end-date-container');
+            if (endWrap) endWrap.style.display = 'none';
+        }
+        if (selectedTimeSummary) {
+            selectedTimeSummary.style.display = 'block';
+        }
+        updateContinueButtonState();
+    }
+
+    function selectFirstAvailableSlot() {
+        const btn = document.querySelector('.time-slot-btn.available-slot');
+        if (btn) {
+            applySlotSelection(btn);
+        } else {
+            updateContinueButtonState();
+        }
+    }
+
     // Reset booking state when changing booking type
     function resetBookingState() {
         selectedStartTime = '';
@@ -517,44 +648,49 @@ document.addEventListener('DOMContentLoaded', function() {
         currentSlotsData = [];
         
         // Hide and reset summary
-        selectedTimeSummary.style.display = 'none';
-        continueBtn.disabled = true;
+        if (selectedTimeSummary) {
+            selectedTimeSummary.style.display = 'none';
+        }
+        updateContinueButtonState();
         
-        // Show time slot section and legend by default
-        document.getElementById('time-slots-section').style.display = 'block';
-        document.getElementById('time-slot-legend').style.display = 'block';
-        
-        // Clear end date container
-        document.getElementById('selected-end-date-container').style.display = 'none';
+        const slotsSection = document.getElementById('time-slots-section');
+        const legendEl = document.getElementById('time-slot-legend');
+        if (slotsSection) slotsSection.style.display = 'block';
+        if (legendEl) legendEl.style.display = 'block';
+        const endWrap = document.getElementById('selected-end-date-container');
+        if (endWrap) endWrap.style.display = 'none';
     }
 
-    durationSelect.addEventListener('change', function() {
-        selectedDuration = parseInt(this.value);
-        
-        // Reset time selection when duration changes
-        selectedStartTime = '';
-        selectedEndTime = '';
-        selectedTimeSummary.style.display = 'none';
-        continueBtn.disabled = true;
-        
-        // Check if full-day (24 hours) is selected
-        if (selectedDuration === 24) {
-            handleFullDayBooking();
-        } else {
-            // Show time slots section for partial day bookings
-            document.getElementById('time-slots-section').style.display = 'block';
-            document.getElementById('time-slot-legend').style.display = 'block';
-            
-            if (selectedBookingType && selectedDate) {
-                loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
+    if (durationSelect) {
+        durationSelect.addEventListener('change', function() {
+            selectedDuration = parseInt(this.value, 10) || 1;
+
+            selectedStartTime = '';
+            selectedEndTime = '';
+            if (selectedTimeSummary) {
+                selectedTimeSummary.style.display = 'none';
             }
-        }
-    });
+            updateContinueButtonState();
+
+            if (selectedDuration === 24) {
+                handleFullDayBooking();
+            } else {
+                const slotsSection = document.getElementById('time-slots-section');
+                const legendEl = document.getElementById('time-slot-legend');
+                if (slotsSection) slotsSection.style.display = 'block';
+                if (legendEl) legendEl.style.display = 'block';
+
+                if (selectedBookingType && selectedDate) {
+                    loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
+                }
+            }
+        });
+    }
 
     function updateDurationOptions(type) {
         let options = '';
         if (type === 'hourly') {
-            durationContainer.style.display = 'block';
+            if (durationContainer) durationContainer.style.display = 'block';
             options += '<option value="1">1 Hour</option>';
             options += '<option value="2">2 Hours</option>';
             options += '<option value="3">3 Hours</option>';
@@ -564,15 +700,14 @@ document.addEventListener('DOMContentLoaded', function() {
             options += '<option value="7">7 Hours</option>';
             options += '<option value="8">8 Hours</option>';
         } else if (type === 'daily') {
-            durationContainer.style.display = 'block';
+            if (durationContainer) durationContainer.style.display = 'block';
             options += '<option value="4">4 Hours</option>';
             options += '<option value="6">6 Hours</option>';
             options += '<option value="8">8 Hours</option>';
             options += '<option value="12">12 Hours</option>';
             options += '<option value="24">Full Day (24 Hours)</option>';
         } else if (type === 'multi_day' || type === 'weekly') {
-            // Multi-day and weekly bookings - allow selecting hours per day (1 hour upward)
-            durationContainer.style.display = 'block';
+            if (durationContainer) durationContainer.style.display = 'block';
             options += '<option value="1">1 Hour/day</option>';
             options += '<option value="2">2 Hours/day</option>';
             options += '<option value="3">3 Hours/day</option>';
@@ -584,51 +719,56 @@ document.addEventListener('DOMContentLoaded', function() {
             options += '<option value="12">12 Hours/day</option>';
             options += '<option value="24">Full Day (24 Hours/day)</option>';
         } else if (type === 'full_day') {
-            // Full day booking type - hide duration, it's always 24 hours
-            durationContainer.style.display = 'none';
+            if (durationContainer) durationContainer.style.display = 'none';
             selectedDuration = 24;
         } else if (type === 'half_day') {
-            // Half day booking type - hide duration, it's 4 hours
-            durationContainer.style.display = 'none';
+            if (durationContainer) durationContainer.style.display = 'none';
             selectedDuration = 4;
         } else if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') {
-            durationContainer.style.display = 'block';
+            if (durationContainer) durationContainer.style.display = 'block';
             options += '<option value="4">4 Hours</option>';
             options += '<option value="5">5 Hours</option>';
             options += '<option value="6">6 Hours</option>';
             options += '<option value="7">7 Hours</option>';
             options += '<option value="8">8 Hours</option>';
         } else {
-            durationContainer.style.display = 'none';
-            selectedDuration = 1; // Default to 1 hour instead of 0
+            if (durationContainer) durationContainer.style.display = 'none';
+            selectedDuration = 1;
         }
-        durationSelect.innerHTML = options;
-        
-        // Set defaults
-        if (type === 'hourly') selectedDuration = 1;
-        if (type === 'daily') selectedDuration = 8;
-        if (type === 'multi_day' || type === 'weekly') selectedDuration = 8;
-        if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') selectedDuration = 4;
-        durationSelect.value = selectedDuration;
+        if (durationSelect) {
+            durationSelect.innerHTML = options;
+            if (type === 'hourly') selectedDuration = 1;
+            if (type === 'daily') selectedDuration = 8;
+            if (type === 'multi_day' || type === 'weekly') selectedDuration = 8;
+            if (type === 'picnic' || type === 'photoshoot' || type === 'videoshoot') selectedDuration = 4;
+            durationSelect.value = String(selectedDuration);
+        }
     }
 
-    // Handle recurring booking checkbox
-    isRecurringCheckbox.addEventListener('change', function() {
-        isRecurring = this.checked;
-        recurringDetails.style.display = isRecurring ? 'block' : 'none';
-        if (!isRecurring) {
-            recurringPattern = '';
-            recurringEndDate = '';
-        }
-    });
+    if (isRecurringCheckbox) {
+        isRecurringCheckbox.addEventListener('change', function() {
+            isRecurring = this.checked;
+            if (recurringDetails) {
+                recurringDetails.style.display = isRecurring ? 'block' : 'none';
+            }
+            if (!isRecurring) {
+                recurringPattern = '';
+                recurringEndDate = '';
+            }
+        });
+    }
 
-    recurringPatternSelect.addEventListener('change', function() {
-        recurringPattern = this.value;
-    });
+    if (recurringPatternSelect) {
+        recurringPatternSelect.addEventListener('change', function() {
+            recurringPattern = this.value;
+        });
+    }
 
-    recurringEndDateInput.addEventListener('change', function() {
-        recurringEndDate = this.value;
-    });
+    if (recurringEndDateInput) {
+        recurringEndDateInput.addEventListener('change', function() {
+            recurringEndDate = this.value;
+        });
+    }
 
     // Load time slots when date changes (change = calendar pick, input = manual typing)
     function onBookingDateChange(date) {
@@ -638,7 +778,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // For multi-day/weekly bookings, respect the end date input
         // For all other types, end date = start date (single day)
         const isMultiDay = selectedBookingType === 'multi_day' || selectedBookingType === 'weekly';
-        if (isMultiDay && bookingEndDate.value && bookingEndDate.value >= date) {
+        if (isMultiDay && bookingEndDate && bookingEndDate.value && bookingEndDate.value >= date) {
             selectedEndDate = bookingEndDate.value;
         } else {
             selectedEndDate = date;
@@ -646,18 +786,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset time selection when date changes (but keep booking type)
         selectedStartTime = '';
         selectedEndTime = '';
-        selectedTimeSummary.style.display = 'none';
-        continueBtn.disabled = true;
-        // Reset duration to default when date changes (prevents stale duration issues)
-        if (selectedBookingType === 'hourly') {
-            selectedDuration = 1;
-            durationSelect.value = '1';
-        } else if (selectedBookingType === 'daily' || selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
-            selectedDuration = 8;
-            durationSelect.value = '8';
-        } else if (selectedBookingType === 'picnic' || selectedBookingType === 'photoshoot' || selectedBookingType === 'videoshoot') {
-            selectedDuration = 4;
-            durationSelect.value = '4';
+        if (selectedTimeSummary) {
+            selectedTimeSummary.style.display = 'none';
+        }
+        updateContinueButtonState();
+        if (durationSelect) {
+            if (selectedBookingType === 'hourly') {
+                selectedDuration = 1;
+                durationSelect.value = '1';
+            } else if (selectedBookingType === 'daily' || selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
+                selectedDuration = 8;
+                durationSelect.value = '8';
+            } else if (selectedBookingType === 'picnic' || selectedBookingType === 'photoshoot' || selectedBookingType === 'videoshoot') {
+                selectedDuration = 4;
+                durationSelect.value = '4';
+            }
         }
         // Handle different booking types
         if (selectedBookingType === 'full_day') {
@@ -681,20 +824,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let bookingDateDebounce = null;
-    bookingDate.addEventListener('change', function() {
-        onBookingDateChange(this.value);
-    });
-    bookingDate.addEventListener('input', function() {
-        const val = this.value;
-        // Only fire when a complete YYYY-MM-DD date has been typed
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
-        clearTimeout(bookingDateDebounce);
-        bookingDateDebounce = setTimeout(() => onBookingDateChange(val), 400);
-    });
-    // Open date picker on click anywhere in the input box
-    bookingDate.addEventListener('click', function() {
-        if (typeof this.showPicker === 'function') this.showPicker();
-    });
+    if (bookingDate) {
+        bookingDate.addEventListener('change', function() {
+            onBookingDateChange(this.value);
+        });
+        bookingDate.addEventListener('input', function() {
+            const val = this.value;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+            clearTimeout(bookingDateDebounce);
+            bookingDateDebounce = setTimeout(() => onBookingDateChange(val), 400);
+        });
+        bookingDate.addEventListener('click', function() {
+            if (typeof this.showPicker === 'function') this.showPicker();
+        });
+    }
 
     function onBookingEndDateChange(val) {
         selectedEndDate = val;
@@ -704,19 +847,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let endDateDebounce = null;
-    bookingEndDate.addEventListener('change', function() {
-        onBookingEndDateChange(this.value);
-    });
-    bookingEndDate.addEventListener('input', function() {
-        const val = this.value;
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
-        clearTimeout(endDateDebounce);
-        endDateDebounce = setTimeout(() => onBookingEndDateChange(val), 400);
-    });
-    // Open date picker on click anywhere in the input box
-    bookingEndDate.addEventListener('click', function() {
-        if (typeof this.showPicker === 'function') this.showPicker();
-    });
+    if (bookingEndDate) {
+        bookingEndDate.addEventListener('change', function() {
+            onBookingEndDateChange(this.value);
+        });
+        bookingEndDate.addEventListener('input', function() {
+            const val = this.value;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+            clearTimeout(endDateDebounce);
+            endDateDebounce = setTimeout(() => onBookingEndDateChange(val), 400);
+        });
+        bookingEndDate.addEventListener('click', function() {
+            if (typeof this.showPicker === 'function') this.showPicker();
+        });
+    }
 
     // No auto-load — user must select a date to see available slots
 
@@ -757,12 +901,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderTimeSlots(currentSlotsData, occupiedData);
                 } else {
                      wizardSetGridAlert(timeSlotsContainer, 'alert-warning', data.message || 'No available time slots.');
-                     selectedTimeSummary.style.display = 'none';
+                     if (selectedTimeSummary) selectedTimeSummary.style.display = 'none';
+                     updateContinueButtonState();
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error loading time slots. Please try again.</div></div>';
+                updateContinueButtonState();
             });
     }
     
@@ -784,7 +930,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
-                continueBtn.disabled = true;
+                updateContinueButtonState();
                 return;
             }
         }
@@ -825,8 +971,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
                 console.error('Error updating summary:', e);
             }
-            
-            continueBtn.disabled = false;
+
+            updateContinueButtonState();
         }
     }
     
@@ -881,10 +1027,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedTimeSpan.textContent = session;
                 document.getElementById('selected-end-date-container').style.display = 'none';
                 
-                selectedTimeSummary.style.display = 'block';
-                continueBtn.disabled = false;
+                updateContinueButtonState();
             });
         });
+
+        const defaultHalfDay = document.querySelector('.half-day-btn');
+        if (defaultHalfDay && selectedDate) {
+            defaultHalfDay.click();
+        } else {
+            updateContinueButtonState();
+        }
     }
     
     function handleMultiDayBooking() {
@@ -900,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
+            updateContinueButtonState();
             return;
         }
         
@@ -984,10 +1137,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('selected-end-date-container').style.display = 'block';
         selectedTimeSpan.textContent = `${hoursPerDay} Hours/day (8 AM - 5 PM)`;
         
-        selectedTimeSummary.style.display = 'block';
-        continueBtn.disabled = false;
-        
-        // Add click handlers for time selection
+        if (selectedTimeSummary) {
+            selectedTimeSummary.style.display = 'block';
+        }
+        updateContinueButtonState();
+
         document.querySelectorAll('.multi-day-time-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 // Remove active from all
@@ -1019,7 +1173,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderTimeSlots(slots, occupiedSlots = []) {
-        let html = '';
+        slots = Array.isArray(slots) ? slots : [];
+        occupiedSlots = Array.isArray(occupiedSlots) ? occupiedSlots : [];
         let availableCount = 0;
         let renderedBoxes = [];
         
@@ -1066,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            if (isFeasible && targetEndMin <= 24 * 60) { // must end within same day logic
+            if (isFeasible && targetEndMin <= OPERATING_END_MINUTES) {
                 availableCount++;
                 const endDisplay = formatDisplayTime(targetEndMin);
                 const endDbStr = formatTime(targetEndMin);
@@ -1168,41 +1323,23 @@ document.addEventListener('DOMContentLoaded', function() {
         renderedBoxes.sort((a, b) => a.startMin - b.startMin);
         
         timeSlotsContainer.innerHTML = renderedBoxes.map(b => b.html).join('');
-        
-        // Add click handlers
-         document.querySelectorAll('.available-slot').forEach(btn => {
+
+        document.querySelectorAll('.available-slot').forEach(btn => {
             btn.addEventListener('click', function() {
-                // Remove active class from all
-                document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('active', 'btn-success'));
-                document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.add('btn-outline-success'));
-                
-                // Add active
-                this.classList.remove('btn-outline-success');
-                this.classList.add('btn-success', 'active');
-                
-                selectedStartTime = this.dataset.start;
-                selectedEndTime = this.dataset.end;
-                const slotDate = this.dataset.date || selectedDate;
-                
-                // Update summary
-                document.getElementById('selected-type').textContent = bookingTypeSelect.options[bookingTypeSelect.selectedIndex].text;
-                selectedDateSpan.textContent = new Date(slotDate).toLocaleDateString();
-                selectedTimeSpan.textContent = `${formatDisplayTime(parseTime(selectedStartTime))} - ${formatDisplayTime(parseTime(selectedEndTime))}`;
-                
-                if (selectedEndDate && selectedEndDate !== selectedDate) {
-                    document.getElementById('selected-end-date').textContent = new Date(selectedEndDate).toLocaleDateString();
-                    document.getElementById('selected-end-date-container').style.display = 'block';
-                } else {
-                    document.getElementById('selected-end-date-container').style.display = 'none';
-                }
-                
-                selectedTimeSummary.style.display = 'block';
-                continueBtn.disabled = false;
+                applySlotSelection(this);
             });
         });
+
+        if (document.querySelector('.time-slot-btn.available-slot')) {
+            selectFirstAvailableSlot();
+        } else {
+            updateContinueButtonState();
+        }
     }
 
-    // Continue button handler
+    updateContinueButtonState();
+
+    if (continueBtn) {
     continueBtn.addEventListener('click', function() {
         console.log('Continue clicked. Values:', {
             bookingType: bookingTypeSelect.value,
@@ -1307,6 +1444,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Connection error. Please check your internet and try again.');
         });
     });
+    }
 });
 </script>
 
