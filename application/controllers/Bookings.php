@@ -1641,16 +1641,15 @@ class Bookings extends Base_Controller {
             $this->bookingModel->update($bookingId, $updateData);
 
             // Create double-entry accounting entries for ALL payment methods
-            if ($this->cashAccountModel && $this->transactionModel) {
+            if ($this->accountModel && $this->transactionModel) {
                 try {
-                    $activeCashAccounts = $this->cashAccountModel->getActive();
-                    $defaultCashAccount = !empty($activeCashAccounts) ? $activeCashAccounts[0] : null;
-                    if ($defaultCashAccount) {
-                        // Debit Cash/Bank (asset increases)
+                    $cashGlAccount = $this->accountModel->getByPaymentMethod($paymentMethod);
+                    if ($cashGlAccount) {
+                        // Debit Cash/Bank (asset increases) on GL 1000/1010
                         $payTxnBase = 'PAY-' . date('Ymd', strtotime($paymentDate)) . '-' . str_pad($bookingId, 6, '0', STR_PAD_LEFT);
                         $this->transactionModel->create([
                             'transaction_number' => $payTxnBase . '-CASH',
-                            'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
+                            'account_id' => (int) $cashGlAccount['id'],
                             'debit' => $amount,
                             'credit' => 0,
                             'description' => ucfirst($paymentMethod) . ' payment for booking: ' . ($booking['booking_number'] ?? $bookingId) . ' (Service Date: ' . $booking['booking_date'] . ')',
@@ -1661,8 +1660,16 @@ class Bookings extends Base_Controller {
                             'created_by' => $this->session['user_id']
                         ]);
 
-                        // Update cash account balance
-                        $this->cashAccountModel->updateBalance($defaultCashAccount['id'], $amount, 'deposit');
+                        // Update linked cash sub-ledger when configured
+                        if ($this->cashAccountModel) {
+                            $activeCashAccounts = $this->cashAccountModel->getActive();
+                            foreach ($activeCashAccounts as $ca) {
+                                if ((int) ($ca['account_id'] ?? 0) === (int) $cashGlAccount['id']) {
+                                    $this->cashAccountModel->updateBalance($ca['id'], $amount, 'deposit');
+                                    break;
+                                }
+                            }
+                        }
 
                         // Credit Accounts Receivable (liability decreases)
                         if ($this->accountModel) {

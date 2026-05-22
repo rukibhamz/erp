@@ -25,69 +25,144 @@ class Balance_calculator {
      * @return float Calculated balance
      */
     public function calculateBalance($accountId, $asOfDate = null, $useCache = true) {
-        // Try to get cached balance first
         if ($useCache && $asOfDate) {
             $cached = $this->getCachedBalance($accountId, $asOfDate);
             if ($cached !== null) {
                 return $cached;
             }
         }
-        
-        // Get account details
+
         $account = $this->db->fetchOne(
             "SELECT * FROM `" . $this->db->getPrefix() . "accounts` WHERE id = ?",
             [$accountId]
         );
-        
+
         if (!$account) {
             return 0.00;
         }
-        
-        // Start with opening balance
-        $balance = floatval($account['opening_balance'] ?? 0);
-        
-        // Build date filter
-        $dateFilter = '';
-        $params = [$accountId];
-        if ($asOfDate) {
-            $dateFilter = " AND je.entry_date <= ?";
-            $params[] = $asOfDate;
+
+        $journalBal = $this->calculateJournalBalance($account, $asOfDate);
+        $txnBal = $this->calculateTransactionBalance($account, $asOfDate);
+
+        $journalCount = $this->countPostedJournalLines($accountId, $asOfDate);
+        $txnCount = $this->countPostedTransactions($accountId, $asOfDate);
+
+        // Prefer journals when they carry a real balance; many booking payments only hit legacy transactions.
+        if ($journalCount === 0) {
+            $balance = $txnBal;
+        } elseif (abs($journalBal) >= 0.01) {
+            $balance = $journalBal;
+        } elseif ($txnCount > 0 && abs($txnBal) >= 0.01) {
+            $balance = $txnBal;
+        } else {
+            $balance = $journalBal;
         }
-        
-        // Get all posted journal entry lines for this account
-        $sql = "SELECT jel.debit, jel.credit
-                FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-                JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                WHERE jel.account_id = ? 
-                AND je.status = 'posted'
-                {$dateFilter}
-                ORDER BY je.entry_date ASC";
-        
-        $entries = $this->db->fetchAll($sql, $params);
-        
-        // Calculate balance based on account type
-        $accountType = $account['account_type'];
-        
-        foreach ($entries as $entry) {
-            $debit = floatval($entry['debit']);
-            $credit = floatval($entry['credit']);
-            
-            // For Assets and Expenses: Debit increases, Credit decreases
-            if (in_array(strtolower($accountType), ['assets', 'asset', 'expenses', 'expense'])) {
-                $balance += $debit - $credit;
-            }
-            // For Liabilities, Equity, Revenue: Credit increases, Debit decreases
-            else {
-                $balance += $credit - $debit;
-            }
-        }
-        
-        // Cache the result if date is specified
+
         if ($asOfDate) {
             $this->cacheBalance($accountId, $balance, $asOfDate);
         }
-        
+
         return $balance;
+    }
+
+    /**
+     * Balance from posted journal entry lines only.
+     */
+    public function calculateJournalBalance(array $account, $asOfDate = null) {
+        $accountId = (int) $account['id'];
+        $balance = floatval($account['opening_balance'] ?? 0);
+
+        $dateFilter = '';
+        $params = [$accountId];
+        if ($asOfDate) {
+            $dateFilter = ' AND je.entry_date <= ?';
+            $params[] = $asOfDate;
+        }
+
+        $sql = "SELECT jel.debit, jel.credit
+                FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                WHERE jel.account_id = ?
+                AND je.status = 'posted'
+                {$dateFilter}
+                ORDER BY je.entry_date ASC";
+
+        $entries = $this->db->fetchAll($sql, $params);
+        $accountType = $account['account_type'];
+        $increasesWithDebit = in_array(strtolower($accountType), ['assets', 'asset', 'expenses', 'expense']);
+
+        foreach ($entries as $entry) {
+            $debit = floatval($entry['debit']);
+            $credit = floatval($entry['credit']);
+            $balance += $increasesWithDebit ? ($debit - $credit) : ($credit - $debit);
+        }
+
+        return $balance;
+    }
+
+    /**
+     * Balance from legacy posted transactions (booking payments, manual entries).
+     */
+    public function calculateTransactionBalance(array $account, $asOfDate = null) {
+        $accountId = (int) $account['id'];
+        $balance = floatval($account['opening_balance'] ?? 0);
+
+        $dateFilter = '';
+        $params = [$accountId];
+        if ($asOfDate) {
+            $dateFilter = ' AND transaction_date <= ?';
+            $params[] = $asOfDate;
+        }
+
+        $row = $this->db->fetchOne(
+            "SELECT COALESCE(SUM(debit - credit), 0) AS movement
+             FROM `" . $this->db->getPrefix() . "transactions`
+             WHERE account_id = ? AND status = 'posted'{$dateFilter}",
+            $params
+        );
+
+        $accountType = $account['account_type'];
+        $increasesWithDebit = in_array(strtolower($accountType), ['assets', 'asset', 'expenses', 'expense']);
+        $movement = floatval($row['movement'] ?? 0);
+
+        return $balance + ($increasesWithDebit ? $movement : -$movement);
+    }
+
+    private function countPostedJournalLines($accountId, $asOfDate = null) {
+        $dateFilter = '';
+        $params = [$accountId];
+        if ($asOfDate) {
+            $dateFilter = ' AND je.entry_date <= ?';
+            $params[] = $asOfDate;
+        }
+
+        $row = $this->db->fetchOne(
+            "SELECT COUNT(*) AS cnt
+             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+             WHERE jel.account_id = ? AND je.status = 'posted'{$dateFilter}",
+            $params
+        );
+
+        return intval($row['cnt'] ?? 0);
+    }
+
+    private function countPostedTransactions($accountId, $asOfDate = null) {
+        $dateFilter = '';
+        $params = [$accountId];
+        if ($asOfDate) {
+            $dateFilter = ' AND transaction_date <= ?';
+            $params[] = $asOfDate;
+        }
+
+        $row = $this->db->fetchOne(
+            "SELECT COUNT(*) AS cnt
+             FROM `" . $this->db->getPrefix() . "transactions`
+             WHERE account_id = ? AND status = 'posted'{$dateFilter}",
+            $params
+        );
+
+        return intval($row['cnt'] ?? 0);
     }
     
     /**

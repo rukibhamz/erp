@@ -901,15 +901,14 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                     // Proper flow: Debit Cash, Credit Accounts Receivable (clearing the receivable)
                     // Note: Revenue was already credited when invoice was created
                     try {
-                        if ($this->cashAccountModel && $this->transactionModel) {
-                            $activeAccounts = $this->cashAccountModel->getActive();
-                            $defaultCashAccount = !empty($activeAccounts) ? $activeAccounts[0] : null;
-                            if ($defaultCashAccount) {
-                                // Debit cash account (cash increases)
+                        if ($this->accountModel && $this->transactionModel) {
+                            $cashGlAccount = $this->accountModel->getByPaymentMethod('paystack');
+                            if ($cashGlAccount) {
+                                // Debit cash account (cash increases) on GL 1010 for online payments
                                 $payTxnBase = 'PAY-' . date('Ymd') . '-' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT);
                                 $this->transactionModel->create([
                                     'transaction_number' => $payTxnBase . '-CASH',
-                                    'account_id' => $defaultCashAccount['account_id'] ?? $defaultCashAccount['id'],
+                                    'account_id' => (int) $cashGlAccount['id'],
                                     'debit' => $transaction['amount'],
                                     'credit' => 0,
                                     'description' => 'Online payment received for booking: ' . ($booking['booking_number'] ?? $booking['id']),
@@ -919,10 +918,17 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                                     'status' => 'posted',
                                     'created_by' => null
                                 ]);
-                                
-                                // Update cash account balance
-                                $this->cashAccountModel->updateBalance($defaultCashAccount['id'], $transaction['amount'], 'deposit');
-                                
+
+                                if ($this->cashAccountModel) {
+                                    $activeAccounts = $this->cashAccountModel->getActive();
+                                    foreach ($activeAccounts as $ca) {
+                                        if ((int) ($ca['account_id'] ?? 0) === (int) $cashGlAccount['id']) {
+                                            $this->cashAccountModel->updateBalance($ca['id'], $transaction['amount'], 'deposit');
+                                            break;
+                                        }
+                                    }
+                                }
+
                                 // Credit Accounts Receivable (clearing the customer's debt)
                                 if ($this->accountModel) {
                                     try {

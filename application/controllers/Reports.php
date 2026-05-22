@@ -64,6 +64,9 @@ class Reports extends Base_Controller {
         $totalRevenue = 0;
         
         foreach ($revenueAccounts as $account) {
+            if (!$this->isProfitLossRevenueAccount($account)) {
+                continue;
+            }
             $balance = $this->db->fetchOne(
                 "SELECT COALESCE(SUM(credit - debit), 0) as balance
                  FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
@@ -90,9 +93,9 @@ class Reports extends Base_Controller {
         $totalCOGS = 0;
         
         foreach ($cogsAccounts as $account) {
-            // Only include accounts starting with 5 (COGS range)
-            $code = $account['account_code'] ?? '';
-            if (substr($code, 0, 1) !== '5') continue;
+            if (!$this->isProfitLossExpenseAccount($account, true)) {
+                continue;
+            }
             
             $balance = $this->db->fetchOne(
                 "SELECT COALESCE(SUM(debit - credit), 0) as balance
@@ -122,8 +125,9 @@ class Reports extends Base_Controller {
         $totalExpenses = 0;
         
         foreach ($expenseAccounts as $account) {
-            // Skip COGS accounts
-            if (substr($account['account_code'], 0, 1) == '5') continue;
+            if (!$this->isProfitLossExpenseAccount($account, false)) {
+                continue;
+            }
             
             $balance = $this->db->fetchOne(
                 "SELECT COALESCE(SUM(debit - credit), 0) as balance
@@ -339,17 +343,33 @@ class Reports extends Base_Controller {
                     date('Y-m-d', strtotime($startDate . ' -1 day'))
                 );
                 
-                $transactions = $this->db->fetchAll(
-                    "SELECT je.entry_date, je.description, je.reference_type, je.reference_id,
-                            jel.debit, jel.credit, jel.description as line_description
+                $journalRows = $this->db->fetchAll(
+                    "SELECT je.entry_date, je.description, je.reference AS reference_type, je.reference AS reference_id,
+                            jel.debit, jel.credit, jel.description AS line_description, 'journal' AS source
                      FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
                      JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                     WHERE jel.account_id = ? 
+                     WHERE jel.account_id = ?
                      AND je.entry_date BETWEEN ? AND ?
                      AND je.status = 'posted'
                      ORDER BY je.entry_date, je.id",
                     [$accountId, $startDate, $endDate]
                 );
+
+                $legacyRows = $this->db->fetchAll(
+                    "SELECT transaction_date AS entry_date, description, reference_type, reference_id,
+                            debit, credit, description AS line_description, 'transaction' AS source
+                     FROM `" . $this->db->getPrefix() . "transactions`
+                     WHERE account_id = ?
+                     AND transaction_date BETWEEN ? AND ?
+                     AND status = 'posted'
+                     ORDER BY transaction_date, id",
+                    [$accountId, $startDate, $endDate]
+                );
+
+                $transactions = array_merge($journalRows, $legacyRows);
+                usort($transactions, function ($a, $b) {
+                    return strcmp((string) ($a['entry_date'] ?? ''), (string) ($b['entry_date'] ?? ''));
+                });
             }
         }
         
@@ -452,6 +472,18 @@ class Reports extends Base_Controller {
             $beginningCash += $this->getGlCashBalance((int) $account['id'], $dayBeforeStart);
             $endingCash += $this->getGlCashBalance((int) $account['id'], $endDate);
         }
+        if (abs($endingCash) < 0.01) {
+            $altEnding = $this->sumBookingPaymentsCashPosition($cashAccountIds, $endDate);
+            if (abs($altEnding) >= 0.01) {
+                $endingCash = $altEnding;
+            }
+        }
+        if (abs($beginningCash) < 0.01) {
+            $altBeginning = $this->sumBookingPaymentsCashPosition($cashAccountIds, $dayBeforeStart);
+            if (abs($altBeginning) >= 0.01) {
+                $beginningCash = $altBeginning;
+            }
+        }
 
         $bookingCash = $this->buildBookingCashReceipts($startDate, $endDate, $cashAccountIds);
         $activities = $this->buildCashFlowActivities($cashAccountIds, $startDate, $endDate);
@@ -496,6 +528,9 @@ class Reports extends Base_Controller {
     private function calculateNetIncomeForPeriod($startDate, $endDate) {
         $totalRevenue = 0;
         foreach ($this->accountModel->getByType('Revenue') as $account) {
+            if (!$this->isProfitLossRevenueAccount($account)) {
+                continue;
+            }
             $balance = $this->db->fetchOne(
                 "SELECT COALESCE(SUM(credit - debit), 0) as balance
                  FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
@@ -509,7 +544,10 @@ class Reports extends Base_Controller {
         $totalCogs = 0;
         $totalExpenses = 0;
         foreach ($this->accountModel->getByType('Expenses') as $account) {
-            $code = $account['account_code'] ?? '';
+            $isCogs = $this->isProfitLossExpenseAccount($account, true);
+            if (!$isCogs && !$this->isProfitLossExpenseAccount($account, false)) {
+                continue;
+            }
             $balance = $this->db->fetchOne(
                 "SELECT COALESCE(SUM(debit - credit), 0) as balance
                  FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
@@ -518,7 +556,7 @@ class Reports extends Base_Controller {
                 [$account['id'], $startDate, $endDate]
             );
             $amount = floatval($balance['balance'] ?? 0);
-            if (substr($code, 0, 1) === '5') {
+            if ($isCogs) {
                 $totalCogs += $amount;
             } else {
                 $totalExpenses += $amount;
@@ -529,32 +567,85 @@ class Reports extends Base_Controller {
     }
 
     /**
-     * Cash GL balance from journals, with legacy transactions table fallback.
+     * Cash GL balance (journals + legacy transactions via Balance_calculator).
      */
     private function getGlCashBalance(int $accountId, string $asOfDate): float {
-        $journalBal = $this->balanceCalculator->calculateBalance($accountId, $asOfDate, false);
+        return $this->balanceCalculator->calculateBalance($accountId, $asOfDate, false);
+    }
 
-        $journalCount = $this->db->fetchOne(
-            "SELECT COUNT(*) AS cnt
-             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-             WHERE jel.account_id = ? AND je.status = 'posted' AND je.entry_date <= ?",
-            [$accountId, $asOfDate]
-        );
-        if (intval($journalCount['cnt'] ?? 0) > 0) {
-            return $journalBal;
+    /**
+     * Cumulative cash from booking_payments mapped to 1000/1010 when GL balances are empty.
+     */
+    private function sumBookingPaymentsCashPosition(array $cashAccountIds, string $asOfDate): float {
+        if (empty($cashAccountIds)) {
+            return 0.0;
         }
 
-        $account = $this->accountModel->getById($accountId);
-        $opening = floatval($account['opening_balance'] ?? 0);
-        $txnRow = $this->db->fetchOne(
-            "SELECT COALESCE(SUM(debit - credit), 0) AS movement
-             FROM `" . $this->db->getPrefix() . "transactions`
-             WHERE account_id = ? AND status = 'posted' AND transaction_date <= ?",
-            [$accountId, $asOfDate]
-        );
+        $codeById = [];
+        foreach ($this->accountModel->getCashGlAccounts() as $acc) {
+            if (in_array((int) $acc['id'], $cashAccountIds, true)) {
+                $codeById[(int) $acc['id']] = intval(preg_replace('/\D/', '', $acc['account_code'] ?? ''));
+            }
+        }
+        if (empty($codeById)) {
+            return 0.0;
+        }
 
-        return $opening + floatval($txnRow['movement'] ?? 0);
+        $bankMethods = ['bank_transfer', 'bank transfer', 'transfer', 'online', 'card', 'paystack', 'flutterwave', 'pos_card', 'gateway'];
+        $total = 0.0;
+        $prefix = $this->db->getPrefix();
+
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT bp.amount, bp.payment_method, bp.payment_type, bp.status
+                 FROM `{$prefix}booking_payments` bp
+                 WHERE bp.status IN ('completed', 'refunded')
+                 AND bp.payment_date <= ?",
+                [$asOfDate]
+            );
+            foreach ($rows as $row) {
+                $amt = floatval($row['amount'] ?? 0);
+                if ($amt <= 0) {
+                    continue;
+                }
+                $method = strtolower(trim((string) ($row['payment_method'] ?? 'cash')));
+                $targetCode = in_array($method, $bankMethods, true) ? 1010 : 1000;
+                if (!in_array($targetCode, array_values($codeById), true)) {
+                    continue;
+                }
+                $isRefund = in_array($row['payment_type'] ?? '', ['refund', 'deposit_refund'], true)
+                    || ($row['status'] ?? '') === 'refunded';
+                $total += $isRefund ? -$amt : $amt;
+            }
+        } catch (Exception $e) {
+            error_log('sumBookingPaymentsCashPosition: ' . $e->getMessage());
+        }
+
+        foreach ($codeById as $glId => $codeNum) {
+            $account = $this->accountModel->getById($glId);
+            if ($account) {
+                $total += floatval($account['opening_balance'] ?? 0);
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    private function accountCodeNumber(array $account): int {
+        return intval(preg_replace('/\D/', '', $account['account_code'] ?? ''));
+    }
+
+    private function isProfitLossRevenueAccount(array $account): bool {
+        $code = $this->accountCodeNumber($account);
+        return $code >= 4000 && $code <= 4999;
+    }
+
+    private function isProfitLossExpenseAccount(array $account, bool $cogs): bool {
+        $code = $this->accountCodeNumber($account);
+        if ($cogs) {
+            return $code >= 5000 && $code <= 5999;
+        }
+        return $code >= 6000 && $code <= 9999;
     }
 
     /**
