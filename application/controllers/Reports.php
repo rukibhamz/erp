@@ -449,12 +449,17 @@ class Reports extends Base_Controller {
         $endingCash = 0;
         $dayBeforeStart = date('Y-m-d', strtotime($startDate . ' -1 day'));
         foreach ($cashAccounts as $account) {
-            $beginningCash += $this->balanceCalculator->calculateBalance($account['id'], $dayBeforeStart, false);
-            $endingCash += $this->balanceCalculator->calculateBalance($account['id'], $endDate, false);
+            $beginningCash += $this->getGlCashBalance((int) $account['id'], $dayBeforeStart);
+            $endingCash += $this->getGlCashBalance((int) $account['id'], $endDate);
         }
 
+        $bookingCash = $this->buildBookingCashReceipts($startDate, $endDate, $cashAccountIds);
         $activities = $this->buildCashFlowActivities($cashAccountIds, $startDate, $endDate);
+        $netCashFromOperations = $bookingCash['total'] + $activities['total_operating'];
         $netCashFlow = $endingCash - $beginningCash;
+        if (abs($netCashFlow) < 0.005 && abs($netCashFromOperations) >= 0.005) {
+            $netCashFlow = $netCashFromOperations;
+        }
 
         $data = [
             'page_title' => 'Cash Flow Statement',
@@ -465,10 +470,12 @@ class Reports extends Base_Controller {
             'ending_cash' => $endingCash,
             'net_cash_flow' => $netCashFlow,
             'cash_accounts' => $cashAccounts,
-            'operating' => $activities['operating'],
+            'booking_receipts' => $bookingCash['lines'],
+            'total_booking_cash' => $bookingCash['total'],
+            'other_operating' => $activities['operating'],
             'investing' => $activities['investing'],
             'financing' => $activities['financing'],
-            'total_operating' => $activities['total_operating'],
+            'total_operating' => $netCashFromOperations,
             'total_investing' => $activities['total_investing'],
             'total_financing' => $activities['total_financing'],
             'flash' => $this->getFlashMessage(),
@@ -519,6 +526,208 @@ class Reports extends Base_Controller {
         }
 
         return $totalRevenue - $totalCogs - $totalExpenses;
+    }
+
+    /**
+     * Cash GL balance from journals, with legacy transactions table fallback.
+     */
+    private function getGlCashBalance(int $accountId, string $asOfDate): float {
+        $journalBal = $this->balanceCalculator->calculateBalance($accountId, $asOfDate, false);
+
+        $journalCount = $this->db->fetchOne(
+            "SELECT COUNT(*) AS cnt
+             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+             WHERE jel.account_id = ? AND je.status = 'posted' AND je.entry_date <= ?",
+            [$accountId, $asOfDate]
+        );
+        if (intval($journalCount['cnt'] ?? 0) > 0) {
+            return $journalBal;
+        }
+
+        $account = $this->accountModel->getById($accountId);
+        $opening = floatval($account['opening_balance'] ?? 0);
+        $txnRow = $this->db->fetchOne(
+            "SELECT COALESCE(SUM(debit - credit), 0) AS movement
+             FROM `" . $this->db->getPrefix() . "transactions`
+             WHERE account_id = ? AND status = 'posted' AND transaction_date <= ?",
+            [$accountId, $asOfDate]
+        );
+
+        return $opening + floatval($txnRow['movement'] ?? 0);
+    }
+
+    /**
+     * Cash received from venue bookings (booking_payments + booking-linked GL).
+     */
+    private function buildBookingCashReceipts(string $startDate, string $endDate, array $cashAccountIds = []): array {
+        $prefix = $this->db->getPrefix();
+        $lines = [];
+        $total = 0.0;
+        $seen = [];
+
+        try {
+            $payments = $this->db->fetchAll(
+                "SELECT bp.id, bp.payment_date, bp.amount, bp.payment_method, bp.payment_number,
+                        bp.payment_type, bp.status,
+                        b.booking_number, b.customer_name, b.id AS booking_id
+                 FROM `{$prefix}booking_payments` bp
+                 INNER JOIN `{$prefix}bookings` b ON b.id = bp.booking_id
+                 WHERE bp.status IN ('completed', 'refunded')
+                 AND bp.payment_date BETWEEN ? AND ?
+                 ORDER BY bp.payment_date ASC, bp.id ASC",
+                [$startDate, $endDate]
+            );
+
+            foreach ($payments as $row) {
+                $amt = floatval($row['amount'] ?? 0);
+                if ($amt <= 0) {
+                    continue;
+                }
+                $isRefund = in_array($row['payment_type'] ?? '', ['refund', 'deposit_refund'], true)
+                    || ($row['status'] ?? '') === 'refunded';
+                $key = 'bp:' . (int) $row['id'];
+                $seen[$key] = true;
+
+                $typeLabel = ucfirst(str_replace('_', ' ', (string) ($row['payment_type'] ?? 'payment')));
+                $methodLabel = ucfirst(str_replace('_', ' ', (string) ($row['payment_method'] ?? 'cash')));
+
+                if ($isRefund) {
+                    $lines[] = [
+                        'transaction_date' => $row['payment_date'],
+                        'account_name' => 'Booking ' . ($row['booking_number'] ?? ('#' . $row['booking_id'])),
+                        'description' => 'Refund — ' . ($row['customer_name'] ?? '') . ' (' . $methodLabel . ')',
+                        'debit' => $amt,
+                        'credit' => 0,
+                        'amount' => -$amt,
+                    ];
+                    $total -= $amt;
+                } else {
+                    $lines[] = [
+                        'transaction_date' => $row['payment_date'],
+                        'account_name' => 'Booking ' . ($row['booking_number'] ?? ('#' . $row['booking_id'])),
+                        'description' => ($row['customer_name'] ?? 'Guest') . ' — ' . $typeLabel . ' via ' . $methodLabel,
+                        'debit' => 0,
+                        'credit' => $amt,
+                        'amount' => $amt,
+                    ];
+                    $total += $amt;
+                }
+            }
+        } catch (Exception $e) {
+            error_log('buildBookingCashReceipts booking_payments: ' . $e->getMessage());
+        }
+
+        // Journal / legacy transactions tagged as booking payments (when not already in booking_payments)
+        try {
+            $extra = $this->db->fetchAll(
+                "SELECT t.transaction_date, t.debit, t.credit, t.description, t.reference_type, t.reference_id,
+                        b.booking_number, b.customer_name
+                 FROM `{$prefix}transactions` t
+                 LEFT JOIN `{$prefix}bookings` b ON b.id = t.reference_id
+                 WHERE t.reference_type = 'booking_payment'
+                 AND t.status = 'posted'
+                 AND t.transaction_date BETWEEN ? AND ?
+                 ORDER BY t.transaction_date ASC, t.id ASC",
+                [$startDate, $endDate]
+            );
+            foreach ($extra as $row) {
+                $key = 'txn:' . (int) ($row['reference_id'] ?? 0) . ':' . ($row['transaction_date'] ?? '');
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $net = floatval($row['debit'] ?? 0) - floatval($row['credit'] ?? 0);
+                if (abs($net) < 0.005) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $bookingNum = $row['booking_number'] ?? ('#' . ($row['reference_id'] ?? ''));
+                $lines[] = [
+                    'transaction_date' => $row['transaction_date'],
+                    'account_name' => 'Booking ' . $bookingNum,
+                    'description' => $row['description'] ?? ('Payment — ' . ($row['customer_name'] ?? '')),
+                    'debit' => $net < 0 ? abs($net) : 0,
+                    'credit' => $net > 0 ? $net : 0,
+                    'amount' => $net,
+                ];
+                $total += $net;
+            }
+        } catch (Exception $e) {
+            error_log('buildBookingCashReceipts transactions: ' . $e->getMessage());
+        }
+
+        if (!empty($cashAccountIds)) {
+            try {
+                $placeholders = implode(',', array_fill(0, count($cashAccountIds), '?'));
+                $params = array_merge($cashAccountIds, [$startDate, $endDate]);
+                $journalCash = $this->db->fetchAll(
+                    "SELECT je.entry_date, je.description, je.reference, jel.debit, jel.credit
+                     FROM `" . $prefix . "journal_entry_lines` jel
+                     JOIN `" . $prefix . "journal_entries` je ON jel.journal_entry_id = je.id
+                     WHERE jel.account_id IN ({$placeholders})
+                     AND je.entry_date BETWEEN ? AND ?
+                     AND je.status = 'posted'
+                     AND (je.reference LIKE 'booking_payment:%' OR je.reference LIKE 'booking_revenue:%')
+                     ORDER BY je.entry_date ASC, je.id ASC",
+                    $params
+                );
+                foreach ($journalCash as $row) {
+                    $net = floatval($row['debit'] ?? 0) - floatval($row['credit'] ?? 0);
+                    if (abs($net) < 0.005) {
+                        continue;
+                    }
+                    $bookingId = 0;
+                    if (preg_match('/booking_(?:payment|revenue):(\d+)/i', (string) ($row['reference'] ?? ''), $m)) {
+                        $bookingId = (int) $m[1];
+                    }
+                    $key = 'je:' . $bookingId . ':' . ($row['entry_date'] ?? '') . ':' . round($net, 2);
+                    if (isset($seen[$key])) {
+                        continue;
+                    }
+                    $seen[$key] = true;
+                    $bookingNum = '#' . $bookingId;
+                    $customerName = '';
+                    if ($bookingId > 0) {
+                        $b = $this->db->fetchOne(
+                            "SELECT booking_number, customer_name FROM `{$prefix}bookings` WHERE id = ?",
+                            [$bookingId]
+                        );
+                        if ($b) {
+                            $bookingNum = $b['booking_number'] ?? $bookingNum;
+                            $customerName = $b['customer_name'] ?? '';
+                        }
+                    }
+                    $lines[] = [
+                        'transaction_date' => $row['entry_date'],
+                        'account_name' => 'Booking ' . $bookingNum,
+                        'description' => $row['description'] ?? ($row['reference'] ?? 'Booking payment'),
+                        'debit' => $net < 0 ? abs($net) : 0,
+                        'credit' => $net > 0 ? $net : 0,
+                        'amount' => $net,
+                    ];
+                    $total += $net;
+                }
+            } catch (Exception $e) {
+                error_log('buildBookingCashReceipts journal: ' . $e->getMessage());
+            }
+        }
+
+        usort($lines, function ($a, $b) {
+            return strcmp((string) ($a['transaction_date'] ?? ''), (string) ($b['transaction_date'] ?? ''));
+        });
+
+        return ['lines' => $lines, 'total' => round($total, 2)];
+    }
+
+    /**
+     * True when a journal entry is booking-related.
+     */
+    private function isBookingJournalReference(?string $reference, ?string $description): bool {
+        $ref = strtolower((string) $reference);
+        if (strpos($ref, 'booking_') === 0 || strpos($ref, 'bkg-') === 0) {
+            return true;
+        }
+        return stripos((string) $description, 'booking') !== false;
     }
 
     /**
@@ -601,6 +810,11 @@ class Reports extends Base_Controller {
                  WHERE jel.journal_entry_id = ? AND jel.id != ?",
                 [(int) $line['entry_id'], (int) $line['line_id']]
             );
+
+            // Booking-related cash journals belong in the booking section, not investing/financing.
+            if ($this->isBookingJournalReference($line['reference'] ?? '', $line['description'] ?? '')) {
+                continue;
+            }
 
             $category = 'operating';
             $counterName = '';
@@ -886,21 +1100,27 @@ class Reports extends Base_Controller {
         $html .= '<p class="subtitle">Period: ' . htmlspecialchars($data['start_date']) . ' to ' . htmlspecialchars($data['end_date']) . '</p>';
 
         $html .= '<table><tr><td>Beginning Cash</td><td class="text-right">₦' . number_format($data['beginning_cash'], 2) . '</td></tr>';
-        $html .= '<tr><td>Net Income</td><td class="text-right">₦' . number_format($data['net_income'], 2) . '</td></tr></table>';
+        $html .= '<tr><td>Net Income (accrual)</td><td class="text-right">₦' . number_format($data['net_income'], 2) . '</td></tr></table>';
 
-        foreach ([
-            'Operating Activities' => ['rows' => $data['operating'] ?? [], 'total' => $data['total_operating'] ?? 0],
-            'Investing Activities' => ['rows' => $data['investing'] ?? [], 'total' => $data['total_investing'] ?? 0],
-            'Financing Activities' => ['rows' => $data['financing'] ?? [], 'total' => $data['total_financing'] ?? 0],
-        ] as $title => $section) {
-            $html .= '<h2>' . htmlspecialchars($title) . '</h2><table>';
-            foreach ($section['rows'] as $item) {
-                $html .= '<tr><td>' . htmlspecialchars($item['transaction_date'] . ' — ' . ($item['account_name'] ?? '') . ' — ' . ($item['description'] ?? '')) . '</td>';
+        $html .= '<h2>Cash received from bookings</h2><table>';
+        foreach ($data['booking_receipts'] ?? [] as $item) {
+            $html .= '<tr><td>' . htmlspecialchars(($item['transaction_date'] ?? '') . ' — ' . ($item['account_name'] ?? '') . ' — ' . ($item['description'] ?? '')) . '</td>';
+            $html .= '<td class="text-right">₦' . number_format($item['amount'] ?? 0, 2) . '</td></tr>';
+        }
+        $html .= '<tr class="total-row"><td><strong>Total cash from bookings</strong></td>';
+        $html .= '<td class="text-right"><strong>₦' . number_format($data['total_booking_cash'] ?? 0, 2) . '</strong></td></tr></table>';
+
+        if (!empty($data['other_operating'])) {
+            $html .= '<h2>Other operating cash</h2><table>';
+            foreach ($data['other_operating'] as $item) {
+                $html .= '<tr><td>' . htmlspecialchars(($item['transaction_date'] ?? '') . ' — ' . ($item['account_name'] ?? '')) . '</td>';
                 $html .= '<td class="text-right">₦' . number_format($item['amount'] ?? 0, 2) . '</td></tr>';
             }
-            $html .= '<tr class="total-row"><td><strong>Net cash from ' . htmlspecialchars($title) . '</strong></td>';
-            $html .= '<td class="text-right"><strong>₦' . number_format($section['total'], 2) . '</strong></td></tr></table>';
+            $html .= '</table>';
         }
+
+        $html .= '<table><tr class="total-row"><td><strong>Net cash from operating activities</strong></td>';
+        $html .= '<td class="text-right"><strong>₦' . number_format($data['total_operating'] ?? 0, 2) . '</strong></td></tr></table>';
 
         $html .= '<h2>Cash Summary</h2><table>';
         $html .= '<tr><td>Net Change in Cash</td><td class="text-right">₦' . number_format($data['net_cash_flow'], 2) . '</td></tr>';
@@ -997,27 +1217,21 @@ class Reports extends Base_Controller {
         $csvData[] = ['Cash Flow Statement'];
         $csvData[] = ['Period:', $data['start_date'] . ' to ' . $data['end_date']];
         $csvData[] = ['Beginning Cash', $data['beginning_cash']];
-        $csvData[] = ['Net Income', $data['net_income']];
+        $csvData[] = ['Net Income (accrual)', $data['net_income']];
         $csvData[] = [];
-
-        foreach ([
-            'Operating Activities' => ['rows' => $data['operating'] ?? [], 'total' => $data['total_operating'] ?? 0],
-            'Investing Activities' => ['rows' => $data['investing'] ?? [], 'total' => $data['total_investing'] ?? 0],
-            'Financing Activities' => ['rows' => $data['financing'] ?? [], 'total' => $data['total_financing'] ?? 0],
-        ] as $title => $section) {
-            $csvData[] = [$title];
-            $csvData[] = ['Date', 'Account', 'Description', 'Amount'];
-            foreach ($section['rows'] as $item) {
-                $csvData[] = [
-                    $item['transaction_date'] ?? '',
-                    $item['account_name'] ?? '',
-                    $item['description'] ?? '',
-                    $item['amount'] ?? 0,
-                ];
-            }
-            $csvData[] = ['Net cash from ' . $title, '', '', $section['total']];
-            $csvData[] = [];
+        $csvData[] = ['Cash received from bookings'];
+        $csvData[] = ['Date', 'Booking', 'Details', 'Amount'];
+        foreach ($data['booking_receipts'] ?? [] as $item) {
+            $csvData[] = [
+                $item['transaction_date'] ?? '',
+                $item['account_name'] ?? '',
+                $item['description'] ?? '',
+                $item['amount'] ?? 0,
+            ];
         }
+        $csvData[] = ['Total cash from bookings', '', '', $data['total_booking_cash'] ?? 0];
+        $csvData[] = ['Net cash from operating', '', '', $data['total_operating'] ?? 0];
+        $csvData[] = [];
 
         $csvData[] = ['Net Change in Cash', $data['net_cash_flow']];
         $csvData[] = ['Ending Cash', $data['ending_cash']];

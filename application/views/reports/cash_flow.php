@@ -55,21 +55,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-md-3">
         <div class="card border-primary h-100">
             <div class="card-body py-3">
-                <div class="small text-muted">Net Income (period)</div>
+                <div class="small text-muted">Net Income (accrual)</div>
                 <div class="h5 mb-0"><?= format_currency($net_income ?? 0) ?></div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-info h-100">
+        <div class="card border-success h-100">
             <div class="card-body py-3">
-                <div class="small text-muted">Net Change in Cash</div>
-                <div class="h5 mb-0"><?= format_currency($net_cash_flow ?? 0) ?></div>
+                <div class="small text-muted">Cash from Bookings</div>
+                <div class="h5 mb-0"><?= format_currency($total_booking_cash ?? 0) ?></div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-success h-100">
+        <div class="card border-info h-100">
             <div class="card-body py-3">
                 <div class="small text-muted">Ending Cash</div>
                 <div class="h5 mb-0"><?= format_currency($ending_cash ?? 0) ?></div>
@@ -92,77 +92,142 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <?php endif; ?>
     </div>
     <div class="card-body">
-        <?php
-        $sections = [
-            'Operating Activities' => [
-                'rows' => $operating ?? [],
-                'total' => $total_operating ?? 0,
-                'show_net_income' => true,
-            ],
-            'Investing Activities' => [
-                'rows' => $investing ?? [],
-                'total' => $total_investing ?? 0,
-                'show_net_income' => false,
-            ],
-            'Financing Activities' => [
-                'rows' => $financing ?? [],
-                'total' => $total_financing ?? 0,
-                'show_net_income' => false,
-            ],
-        ];
-        ?>
+        <h6 class="fw-bold">Operating Activities</h6>
+        <p class="small text-muted">
+            Net income is from revenue/expense accounts (accrual). <strong>Cash from bookings</strong> shows actual customer payments recorded for venue bookings.
+        </p>
 
-        <?php foreach ($sections as $title => $section): ?>
-            <h6 class="fw-bold <?= $title !== 'Operating Activities' ? 'mt-4' : '' ?>"><?= htmlspecialchars($title) ?></h6>
-            <?php if (!empty($section['show_net_income'])): ?>
-                <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                    <span>Net income</span>
-                    <span class="fw-semibold"><?= format_currency($net_income ?? 0) ?></span>
-                </div>
-            <?php endif; ?>
+        <div class="d-flex justify-content-between border-bottom py-2 mb-3">
+            <span>Net income (profit &amp; loss)</span>
+            <span class="fw-semibold"><?= format_currency($net_income ?? 0) ?></span>
+        </div>
 
-            <?php if (!empty($section['rows'])): ?>
-                <div class="table-responsive mb-2">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead>
+        <h6 class="fw-semibold text-success mb-2"><i class="bi bi-calendar-check"></i> Cash received from bookings</h6>
+        <?php if (!empty($booking_receipts)): ?>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Booking</th>
+                            <th>Details</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($booking_receipts as $txn): ?>
                             <tr>
-                                <th>Date</th>
-                                <th>Account</th>
-                                <th>Description</th>
-                                <th class="text-end">Cash movement</th>
+                                <td><?= format_date($txn['transaction_date'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['account_name'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['description'] ?? '-') ?></td>
+                                <td class="text-end">
+                                    <?php if (($txn['debit'] ?? 0) > 0): ?>
+                                        <span class="text-danger">−<?= format_currency($txn['debit']) ?></span>
+                                    <?php elseif (($txn['credit'] ?? 0) > 0): ?>
+                                        <span class="text-success">+<?= format_currency($txn['credit']) ?></span>
+                                    <?php else: ?>
+                                        <?= format_currency($txn['amount'] ?? 0) ?>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($section['rows'] as $txn): ?>
-                                <tr>
-                                    <td><?= format_date($txn['transaction_date'] ?? '') ?></td>
-                                    <td><?= htmlspecialchars($txn['account_name'] ?? '') ?></td>
-                                    <td><?= htmlspecialchars($txn['description'] ?? '-') ?></td>
-                                    <td class="text-end">
-                                        <?php if (($txn['debit'] ?? 0) > 0): ?>
-                                            <span class="text-danger">−<?= format_currency($txn['debit']) ?></span>
-                                        <?php elseif (($txn['credit'] ?? 0) > 0): ?>
-                                            <span class="text-success">+<?= format_currency($txn['credit']) ?></span>
-                                        <?php else: ?>
-                                            <span class="text-muted"><?= format_currency($txn['amount'] ?? 0) ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <p class="text-muted small mb-2">No <?= strtolower(htmlspecialchars($title)) ?> in this period.</p>
-            <?php endif; ?>
-
-            <div class="d-flex justify-content-between fw-bold border-top pt-2 mb-3">
-                <span>Net cash from <?= strtolower(htmlspecialchars($title)) ?></span>
-                <span class="<?= ($section['total'] ?? 0) >= 0 ? 'text-success' : 'text-danger' ?>">
-                    <?= format_currency($section['total'] ?? 0) ?>
-                </span>
+                        <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light fw-bold">
+                            <td colspan="3" class="text-end">Total cash from bookings</td>
+                            <td class="text-end text-success"><?= format_currency($total_booking_cash ?? 0) ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
-        <?php endforeach; ?>
+        <?php else: ?>
+            <p class="text-muted small mb-3">No booking payments recorded in this period.</p>
+        <?php endif; ?>
+
+        <?php if (!empty($other_operating)): ?>
+            <h6 class="fw-semibold mb-2">Other operating cash movements</h6>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Account</th>
+                            <th>Description</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($other_operating as $txn): ?>
+                            <tr>
+                                <td><?= format_date($txn['transaction_date'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['account_name'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['description'] ?? '-') ?></td>
+                                <td class="text-end">
+                                    <?php if (($txn['debit'] ?? 0) > 0): ?>
+                                        <span class="text-danger">−<?= format_currency($txn['debit']) ?></span>
+                                    <?php elseif (($txn['credit'] ?? 0) > 0): ?>
+                                        <span class="text-success">+<?= format_currency($txn['credit']) ?></span>
+                                    <?php else: ?>
+                                        <?= format_currency($txn['amount'] ?? 0) ?>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+        <div class="d-flex justify-content-between fw-bold border-top pt-2 mb-4">
+            <span>Net cash from operating activities</span>
+            <span class="<?= ($total_operating ?? 0) >= 0 ? 'text-success' : 'text-danger' ?>">
+                <?= format_currency($total_operating ?? 0) ?>
+            </span>
+        </div>
+
+        <?php if (!empty($investing) && abs($total_investing ?? 0) >= 0.01): ?>
+            <h6 class="fw-bold mt-4">Investing Activities</h6>
+            <div class="table-responsive mb-2">
+                <table class="table table-sm">
+                    <tbody>
+                        <?php foreach ($investing as $txn): ?>
+                            <tr>
+                                <td><?= format_date($txn['transaction_date'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['account_name'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['description'] ?? '-') ?></td>
+                                <td class="text-end"><?= format_currency($txn['amount'] ?? 0) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between fw-bold border-top pt-2 mb-3">
+                <span>Net cash from investing</span>
+                <span><?= format_currency($total_investing ?? 0) ?></span>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($financing) && abs($total_financing ?? 0) >= 0.01): ?>
+            <h6 class="fw-bold mt-4">Financing Activities</h6>
+            <div class="table-responsive mb-2">
+                <table class="table table-sm">
+                    <tbody>
+                        <?php foreach ($financing as $txn): ?>
+                            <tr>
+                                <td><?= format_date($txn['transaction_date'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['account_name'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($txn['description'] ?? '-') ?></td>
+                                <td class="text-end"><?= format_currency($txn['amount'] ?? 0) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between fw-bold border-top pt-2 mb-3">
+                <span>Net cash from financing</span>
+                <span><?= format_currency($total_financing ?? 0) ?></span>
+            </div>
+        <?php endif; ?>
 
         <div class="table-responsive mt-4">
             <table class="table table-bordered mb-0">
