@@ -64,32 +64,14 @@ class Financial_year_model extends Base_Model {
             if (!$year) {
                 return 0;
             }
-            
-            // Calculate P&L: Revenue - Expenses
-            $revenue = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(credit - debit), 0) as total
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE a.account_type = 'Revenue' 
-                 AND t.transaction_date >= ? AND t.transaction_date <= ?
-                 AND t.status = 'posted'",
-                [$year['start_date'], $year['end_date']]
+
+            require_once BASEPATH . 'services/Financial_reporting_service.php';
+            $reporting = new Financial_reporting_service();
+
+            return $reporting->calculateNetIncomeForPeriod(
+                $year['start_date'],
+                $year['end_date']
             );
-            
-            $expenses = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(debit - credit), 0) as total
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE a.account_type = 'Expenses' 
-                 AND t.transaction_date >= ? AND t.transaction_date <= ?
-                 AND t.status = 'posted'",
-                [$year['start_date'], $year['end_date']]
-            );
-            
-            $revenueTotal = $revenue ? floatval($revenue['total']) : 0;
-            $expenseTotal = $expenses ? floatval($expenses['total']) : 0;
-            
-            return $revenueTotal - $expenseTotal;
         } catch (Exception $e) {
             error_log('Financial_year_model calculateRetainedEarnings error: ' . $e->getMessage());
             return 0;

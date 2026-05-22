@@ -10,6 +10,8 @@ class Accounting extends Base_Controller {
     private $vendorModel;
     private $cashAccountModel;
     private $activityModel;
+    private $balanceCalculator;
+    private $financialReporting;
     
     public function __construct() {
         parent::__construct();
@@ -22,10 +24,14 @@ class Accounting extends Base_Controller {
         $this->vendorModel = $this->loadModel('Vendor_model');
         $this->cashAccountModel = $this->loadModel('Cash_account_model');
         $this->activityModel = $this->loadModel('Activity_model');
+
+        require_once BASEPATH . 'services/Balance_calculator.php';
+        $this->balanceCalculator = new Balance_calculator();
+        require_once BASEPATH . 'services/Financial_reporting_service.php';
+        $this->financialReporting = new Financial_reporting_service();
     }
     
     public function index() {
-        // Initialize with safe defaults
         $cashBalance = 0;
         $receivables = 0;
         $payables = 0;
@@ -35,16 +41,13 @@ class Accounting extends Base_Controller {
         $overdueBills = [];
         
         try {
-            // Get financial KPIs
             $cashBalance = $this->getCashBalance();
             $receivables = $this->getTotalReceivables();
             $payables = $this->getTotalPayables();
             $profitLoss = $this->getProfitLoss();
             
-            // Recent transactions
             $recentTransactions = $this->getRecentTransactions(10);
             
-            // Overdue invoices and bills
             $overdueInvoices = $this->getOverdueInvoices(5);
             $overdueBills = $this->getOverdueBills(5);
         } catch (Exception $e) {
@@ -68,11 +71,12 @@ class Accounting extends Base_Controller {
     
     private function getCashBalance() {
         try {
-            $result = $this->db->fetchOne(
-                "SELECT SUM(current_balance) as total FROM `" . $this->db->getPrefix() . "cash_accounts` WHERE status = 'active'"
+            return $this->financialReporting->getTotalCashGlBalance(
+                date('Y-m-d'),
+                $this->balanceCalculator
             );
-            return $result ? floatval($result['total'] ?? 0) : 0;
         } catch (Exception $e) {
+            error_log('Accounting getCashBalance error: ' . $e->getMessage());
             return 0;
         }
     }
@@ -105,26 +109,7 @@ class Accounting extends Base_Controller {
         try {
             $monthStart = date('Y-m-01');
             $monthEnd = date('Y-m-t');
-            
-            $revenueResult = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(t.credit - t.debit), 0) as total 
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE a.account_type = 'Revenue' AND t.transaction_date >= ? AND t.transaction_date <= ? AND t.status = 'posted'",
-                [$monthStart, $monthEnd]
-            );
-            $revenue = ($revenueResult && isset($revenueResult['total'])) ? floatval($revenueResult['total']) : 0;
-            
-            $expenseResult = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(t.debit - t.credit), 0) as total 
-                 FROM `" . $this->db->getPrefix() . "transactions` t
-                 JOIN `" . $this->db->getPrefix() . "accounts` a ON t.account_id = a.id
-                 WHERE a.account_type = 'Expenses' AND t.transaction_date >= ? AND t.transaction_date <= ? AND t.status = 'posted'",
-                [$monthStart, $monthEnd]
-            );
-            $expenses = ($expenseResult && isset($expenseResult['total'])) ? floatval($expenseResult['total']) : 0;
-            
-            return $revenue - $expenses;
+            return $this->financialReporting->calculateNetIncomeForPeriod($monthStart, $monthEnd);
         } catch (Exception $e) {
             return 0;
         }
@@ -190,4 +175,3 @@ class Accounting extends Base_Controller {
         }
     }
 }
-

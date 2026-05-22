@@ -37,13 +37,19 @@ class Booking_reports extends Base_Controller {
             // Revenue by facility
             $revenueByFacility = $this->bookingModel->getRevenueByFacility($startDate, $endDate);
             
-            // Bookings by status
+            $periodBookings = $this->bookingModel->getByDateRange($startDate, $endDate);
             $bookingsByStatus = [
-                'pending' => count($this->bookingModel->getByStatus('pending')),
-                'confirmed' => count($this->bookingModel->getByStatus('confirmed')),
-                'completed' => count($this->bookingModel->getByStatus('completed')),
-                'cancelled' => count($this->bookingModel->getByStatus('cancelled'))
+                'pending' => 0,
+                'confirmed' => 0,
+                'completed' => 0,
+                'cancelled' => 0,
             ];
+            foreach ($periodBookings as $booking) {
+                $status = $booking['status'] ?? '';
+                if (isset($bookingsByStatus[$status])) {
+                    $bookingsByStatus[$status]++;
+                }
+            }
         } catch (Exception $e) {
             $totalBookings = 0;
             $totalRevenue = 0;

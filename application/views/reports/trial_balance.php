@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title">Trial Balance</h1>
     </div>
     <div class="d-flex gap-2">
-         <a href="<?= base_url('reports/trial-balance?start_date=' . ($start_date ?? date('Y-m-01')) . '&end_date=' . ($end_date ?? date('Y-m-t')) . '&format=pdf') ?>" class="btn btn-danger btn-sm">
+         <a href="<?= base_url('reports/trial-balance?as_of_date=' . urlencode($as_of_date ?? date('Y-m-d')) . '&format=pdf') ?>" class="btn btn-danger btn-sm">
             <i class="bi bi-file-pdf"></i> Export PDF
         </a>
         <a href="<?= base_url('reports') ?>" class="btn btn-secondary btn-sm">
@@ -19,13 +19,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label for="start_date" class="form-label">Start Date</label>
-                <input type="date" class="form-control" id="start_date" name="start_date" value="<?= htmlspecialchars($start_date ?? date('Y-m-01')) ?>">
-            </div>
-            <div class="col-md-4">
-                <label for="end_date" class="form-label">End Date</label>
-                <input type="date" class="form-control" id="end_date" name="end_date" value="<?= htmlspecialchars($end_date ?? date('Y-m-t')) ?>">
+            <div class="col-md-8">
+                <label for="as_of_date" class="form-label">As Of Date</label>
+                <input type="date" class="form-control" id="as_of_date" name="as_of_date" value="<?= htmlspecialchars($as_of_date ?? date('Y-m-d')) ?>">
             </div>
             <div class="col-md-4 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Generate Report</button>
@@ -40,6 +36,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">Trial Balance Report</h5>
+        <small class="text-muted">As of: <?= format_date($as_of_date ?? '') ?></small>
     </div>
     <div class="card-body">
         <?php if (!empty($trial_balance)): ?>

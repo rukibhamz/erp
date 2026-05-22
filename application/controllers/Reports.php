@@ -7,6 +7,7 @@ class Reports extends Base_Controller {
     private $invoiceModel;
     private $billModel;
     private $balanceCalculator;
+    private $financialReporting;
     
     private $companyModel;
 
@@ -19,9 +20,10 @@ class Reports extends Base_Controller {
         $this->billModel = $this->loadModel('Bill_model');
         $this->companyModel = $this->loadModel('Company_model');
         
-        // Load Balance Calculator
         require_once BASEPATH . 'services/Balance_calculator.php';
         $this->balanceCalculator = new Balance_calculator();
+        require_once BASEPATH . 'services/Financial_reporting_service.php';
+        $this->financialReporting = new Financial_reporting_service();
         
         // Load export helper
         $this->load->helper('export');
@@ -64,7 +66,7 @@ class Reports extends Base_Controller {
         $totalRevenue = 0;
         
         foreach ($revenueAccounts as $account) {
-            if (!$this->isProfitLossRevenueAccount($account)) {
+            if (!$this->financialReporting->isProfitLossRevenueAccount($account)) {
                 continue;
             }
             $balance = $this->db->fetchOne(
@@ -93,7 +95,7 @@ class Reports extends Base_Controller {
         $totalCOGS = 0;
         
         foreach ($cogsAccounts as $account) {
-            if (!$this->isProfitLossExpenseAccount($account, true)) {
+            if (!$this->financialReporting->isProfitLossExpenseAccount($account, true)) {
                 continue;
             }
             
@@ -125,7 +127,7 @@ class Reports extends Base_Controller {
         $totalExpenses = 0;
         
         foreach ($expenseAccounts as $account) {
-            if (!$this->isProfitLossExpenseAccount($account, false)) {
+            if (!$this->financialReporting->isProfitLossExpenseAccount($account, false)) {
                 continue;
             }
             
@@ -231,14 +233,16 @@ class Reports extends Base_Controller {
             }
         }
         
-        // Calculate retained earnings (Net Income)
-        $retainedEarnings = $totalAssets - $totalLiabilities - $totalEquity;
-        $equity[] = [
-            'account' => 'Retained Earnings',
-            'amount' => $retainedEarnings
-        ];
-        $totalEquity += $retainedEarnings;
-        
+        $periodStart = date('Y-01-01', strtotime($asOfDate));
+        $currentYearEarnings = $this->financialReporting->calculateNetIncomeForPeriod($periodStart, $asOfDate);
+        if (abs($currentYearEarnings) >= 0.01) {
+            $equity[] = [
+                'account' => 'Current Year Earnings (YTD)',
+                'amount' => $currentYearEarnings,
+            ];
+            $totalEquity += $currentYearEarnings;
+        }
+
         $data = [
             'page_title' => 'Balance Sheet',
             'as_of_date' => $asOfDate,
@@ -248,6 +252,7 @@ class Reports extends Base_Controller {
             'total_liabilities' => $totalLiabilities,
             'equity' => $equity,
             'total_equity' => $totalEquity,
+            'is_balanced' => abs($totalAssets - ($totalLiabilities + $totalEquity)) < 0.01,
             'flash' => $this->getFlashMessage()
         ];
         
@@ -334,6 +339,7 @@ class Reports extends Base_Controller {
         $accounts = $this->accountModel->getAll();
         $transactions = [];
         $selectedAccount = null;
+        $closingBalance = 0;
         
         if ($accountId) {
             $selectedAccount = $this->accountModel->getById($accountId);
@@ -368,8 +374,25 @@ class Reports extends Base_Controller {
 
                 $transactions = array_merge($journalRows, $legacyRows);
                 usort($transactions, function ($a, $b) {
-                    return strcmp((string) ($a['entry_date'] ?? ''), (string) ($b['entry_date'] ?? ''));
+                    $cmp = strcmp((string) ($a['entry_date'] ?? ''), (string) ($b['entry_date'] ?? ''));
+                    if ($cmp !== 0) {
+                        return $cmp;
+                    }
+                    return strcmp((string) ($a['source'] ?? ''), (string) ($b['source'] ?? ''));
                 });
+
+                $runningBalance = $openingBalance;
+                $accountType = $selectedAccount['account_type'] ?? 'asset';
+                foreach ($transactions as $idx => $txn) {
+                    $runningBalance = $this->balanceCalculator->applyMovement(
+                        $runningBalance,
+                        floatval($txn['debit'] ?? 0),
+                        floatval($txn['credit'] ?? 0),
+                        $accountType
+                    );
+                    $transactions[$idx]['running_balance'] = $runningBalance;
+                }
+                $closingBalance = $runningBalance;
             }
         }
         
@@ -381,6 +404,7 @@ class Reports extends Base_Controller {
             'selected_account_id' => $accountId,
             'selected_account' => $selectedAccount,
             'opening_balance' => $openingBalance ?? 0,
+            'closing_balance' => $closingBalance ?? ($openingBalance ?? 0),
             'transactions' => $transactions,
             'flash' => $this->getFlashMessage()
         ];
@@ -407,8 +431,16 @@ class Reports extends Base_Controller {
         $html .= '<tr><th>Date</th><th>Description</th><th class="text-right">Debit</th><th class="text-right">Credit</th><th class="text-right">Balance</th></tr>';
         
         $runningBalance = $data['opening_balance'];
+        $accountType = $data['selected_account']['account_type'] ?? 'asset';
         foreach ($data['transactions'] as $txn) {
-            $runningBalance += $txn['debit'] - $txn['credit'];
+            $runningBalance = isset($txn['running_balance'])
+                ? floatval($txn['running_balance'])
+                : $this->balanceCalculator->applyMovement(
+                    $runningBalance,
+                    floatval($txn['debit'] ?? 0),
+                    floatval($txn['credit'] ?? 0),
+                    $accountType
+                );
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($txn['entry_date']) . '</td>';
             $html .= '<td>' . htmlspecialchars($txn['description'] . ($txn['line_description'] ? ' - ' . $txn['line_description'] : '')) . '</td>';
@@ -435,8 +467,16 @@ class Reports extends Base_Controller {
         $csvData[] = ['Date', 'Description', 'Debit', 'Credit', 'Balance'];
         
         $runningBalance = $data['opening_balance'];
+        $accountType = $data['selected_account']['account_type'] ?? 'asset';
         foreach ($data['transactions'] as $txn) {
-            $runningBalance += $txn['debit'] - $txn['credit'];
+            $runningBalance = isset($txn['running_balance'])
+                ? floatval($txn['running_balance'])
+                : $this->balanceCalculator->applyMovement(
+                    $runningBalance,
+                    floatval($txn['debit'] ?? 0),
+                    floatval($txn['credit'] ?? 0),
+                    $accountType
+                );
             $csvData[] = [
                 $txn['entry_date'],
                 $txn['description'],
@@ -522,48 +562,8 @@ class Reports extends Base_Controller {
         }
     }
 
-    /**
-     * Net income for a period (aligned with P&L logic).
-     */
     private function calculateNetIncomeForPeriod($startDate, $endDate) {
-        $totalRevenue = 0;
-        foreach ($this->accountModel->getByType('Revenue') as $account) {
-            if (!$this->isProfitLossRevenueAccount($account)) {
-                continue;
-            }
-            $balance = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(credit - debit), 0) as balance
-                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                 WHERE jel.account_id = ? AND je.entry_date BETWEEN ? AND ? AND je.status = 'posted'",
-                [$account['id'], $startDate, $endDate]
-            );
-            $totalRevenue += floatval($balance['balance'] ?? 0);
-        }
-
-        $totalCogs = 0;
-        $totalExpenses = 0;
-        foreach ($this->accountModel->getByType('Expenses') as $account) {
-            $isCogs = $this->isProfitLossExpenseAccount($account, true);
-            if (!$isCogs && !$this->isProfitLossExpenseAccount($account, false)) {
-                continue;
-            }
-            $balance = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(debit - credit), 0) as balance
-                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                 WHERE jel.account_id = ? AND je.entry_date BETWEEN ? AND ? AND je.status = 'posted'",
-                [$account['id'], $startDate, $endDate]
-            );
-            $amount = floatval($balance['balance'] ?? 0);
-            if ($isCogs) {
-                $totalCogs += $amount;
-            } else {
-                $totalExpenses += $amount;
-            }
-        }
-
-        return $totalRevenue - $totalCogs - $totalExpenses;
+        return $this->financialReporting->calculateNetIncomeForPeriod($startDate, $endDate);
     }
 
     /**
@@ -629,23 +629,6 @@ class Reports extends Base_Controller {
         }
 
         return round($total, 2);
-    }
-
-    private function accountCodeNumber(array $account): int {
-        return intval(preg_replace('/\D/', '', $account['account_code'] ?? ''));
-    }
-
-    private function isProfitLossRevenueAccount(array $account): bool {
-        $code = $this->accountCodeNumber($account);
-        return $code >= 4000 && $code <= 4999;
-    }
-
-    private function isProfitLossExpenseAccount(array $account, bool $cogs): bool {
-        $code = $this->accountCodeNumber($account);
-        if ($cogs) {
-            return $code >= 5000 && $code <= 5999;
-        }
-        return $code >= 6000 && $code <= 9999;
     }
 
     /**
@@ -972,33 +955,62 @@ class Reports extends Base_Controller {
             );
         }
         
-        // Net Income for the period
-        $netIncomeData = $this->calculateNetIncome($startDate, $endDate);
-        $periodNetIncome = $netIncomeData['net_income'];
-        
-        // Period Transactions (Excluding transfers between equity accounts)
+        $periodNetIncome = $this->financialReporting->calculateNetIncomeForPeriod($startDate, $endDate);
+
         $equityChanges = [];
         $totalAdjustments = 0;
-        
+        $prefix = $this->db->getPrefix();
+
         foreach ($equityAccounts as $account) {
-            $txns = $this->db->fetchAll(
+            $journalRows = $this->db->fetchAll(
                 "SELECT je.entry_date, je.description, jel.debit, jel.credit
-                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                 WHERE jel.account_id = ? 
+                 FROM `{$prefix}journal_entry_lines` jel
+                 JOIN `{$prefix}journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ?
                  AND je.entry_date BETWEEN ? AND ?
                  AND je.status = 'posted'
-                 AND je.reference_type NOT IN ('net_income_close')", // Avoid closing entries if any
+                 AND (je.reference IS NULL OR je.reference NOT LIKE 'net_income_close%')",
                 [$account['id'], $startDate, $endDate]
             );
-            
-            foreach ($txns as $txn) {
-                $amount = $txn['credit'] - $txn['debit'];
-                if ($amount != 0) {
+
+            foreach ($journalRows as $txn) {
+                $amount = $this->financialReporting->applyMovement(
+                    0,
+                    floatval($txn['debit'] ?? 0),
+                    floatval($txn['credit'] ?? 0),
+                    $account['account_type']
+                );
+                if (abs($amount) >= 0.01) {
                     $equityChanges[] = [
                         'date' => $txn['entry_date'],
                         'description' => $txn['description'],
-                        'amount' => $amount
+                        'amount' => $amount,
+                    ];
+                    $totalAdjustments += $amount;
+                }
+            }
+
+            $legacyRows = $this->db->fetchAll(
+                "SELECT transaction_date AS entry_date, description, debit, credit
+                 FROM `{$prefix}transactions`
+                 WHERE account_id = ?
+                 AND transaction_date BETWEEN ? AND ?
+                 AND status = 'posted'",
+                [$account['id'], $startDate, $endDate]
+            );
+
+            foreach ($legacyRows as $txn) {
+                $amount = $this->financialReporting->applyMovement(
+                    0,
+                    floatval($txn['debit'] ?? 0),
+                    floatval($txn['credit'] ?? 0),
+                    $account['account_type']
+                );
+                if (abs($amount) >= 0.01) {
+                    $equityChanges[] = [
+                        'date' => $txn['entry_date'],
+                        'description' => $txn['description'] ?: 'Transaction',
+                        'amount' => $amount,
                     ];
                     $totalAdjustments += $amount;
                 }
@@ -1024,39 +1036,6 @@ class Reports extends Base_Controller {
         } else {
             $this->loadView('reports/equity_statement', $data);
         }
-    }
-    
-    /**
-     * Helper to calculate net income for a period
-     */
-    private function calculateNetIncome($startDate, $endDate) {
-        $revenueTotal = $this->db->fetchOne(
-            "SELECT COALESCE(SUM(credit - debit), 0) as total
-             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-             JOIN `" . $this->db->getPrefix() . "accounts` a ON jel.account_id = a.id
-             WHERE a.account_type IN ('Revenue', 'income') 
-             AND je.entry_date BETWEEN ? AND ?
-             AND je.status = 'posted'",
-            [$startDate, $endDate]
-        );
-        
-        $expenseTotal = $this->db->fetchOne(
-            "SELECT COALESCE(SUM(debit - credit), 0) as total
-             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-             JOIN `" . $this->db->getPrefix() . "accounts` a ON jel.account_id = a.id
-             WHERE a.account_type IN ('Expenses', 'expense') 
-             AND je.entry_date BETWEEN ? AND ?
-             AND je.status = 'posted'",
-            [$startDate, $endDate]
-        );
-        
-        return [
-            'revenue' => floatval($revenueTotal['total'] ?? 0),
-            'expenses' => floatval($expenseTotal['total'] ?? 0),
-            'net_income' => floatval($revenueTotal['total'] ?? 0) - floatval($expenseTotal['total'] ?? 0)
-        ];
     }
     
     private function exportEquityPDF($data) {

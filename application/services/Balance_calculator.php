@@ -68,6 +68,19 @@ class Balance_calculator {
     /**
      * Balance from posted journal entry lines only.
      */
+    public function accountIncreasesWithDebit($accountType): bool {
+        return in_array(strtolower((string) $accountType), ['assets', 'asset', 'expenses', 'expense'], true);
+    }
+
+    public function applyMovement(float $balance, float $debit, float $credit, $accountType): float {
+        $debit = floatval($debit);
+        $credit = floatval($credit);
+        if ($this->accountIncreasesWithDebit($accountType)) {
+            return $balance + $debit - $credit;
+        }
+        return $balance + $credit - $debit;
+    }
+
     public function calculateJournalBalance(array $account, $asOfDate = null) {
         $accountId = (int) $account['id'];
         $balance = floatval($account['opening_balance'] ?? 0);

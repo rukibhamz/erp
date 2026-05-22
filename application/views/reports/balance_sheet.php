@@ -115,12 +115,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         
         <div class="row">
             <div class="col-md-12">
-                <div class="alert alert-<?= abs(($total_assets ?? 0) - (($total_liabilities ?? 0) + ($total_equity ?? 0))) < 0.01 ? 'success' : 'warning' ?>">
+                <div class="alert alert-<?= !empty($is_balanced) ? 'success' : 'warning' ?>">
                     <h5 class="mb-0">
                         Total Assets: <?= format_currency($total_assets ?? 0) ?><br>
                         Total Liabilities + Equity: <?= format_currency(($total_liabilities ?? 0) + ($total_equity ?? 0)) ?>
                     </h5>
-                    <?php if (abs(($total_assets ?? 0) - (($total_liabilities ?? 0) + ($total_equity ?? 0))) < 0.01): ?>
+                    <?php if (!empty($is_balanced)): ?>
                         <p class="mb-0 mt-2"><i class="bi bi-check-circle"></i> Balance sheet is balanced.</p>
                     <?php else: ?>
                         <p class="mb-0 mt-2"><i class="bi bi-exclamation-triangle"></i> Balance sheet is not balanced!</p>

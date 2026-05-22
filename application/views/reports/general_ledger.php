@@ -108,16 +108,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </tr>
                     </thead>
                     <tbody>
-                        <?php
-                        $runningBalance = $opening_balance ?? 0;
-                        ?>
                         <tr class="table-light">
                             <td colspan="4"><strong>Opening Balance</strong></td>
-                            <td class="text-end"><strong><?= format_currency($runningBalance) ?></strong></td>
+                            <td class="text-end"><strong><?= format_currency($opening_balance ?? 0) ?></strong></td>
                         </tr>
                         <?php if (!empty($transactions)): ?>
-                            <?php foreach ($transactions as $txn): 
-                                $runningBalance += floatval($txn['debit']) - floatval($txn['credit']);
+                            <?php foreach ($transactions as $txn):
+                                $runningBalance = isset($txn['running_balance'])
+                                    ? floatval($txn['running_balance'])
+                                    : floatval($opening_balance ?? 0);
                             ?>
                                 <tr>
                                     <td><?= htmlspecialchars($txn['entry_date']) ?></td>
@@ -149,7 +148,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endif; ?>
                         <tr class="table-light fw-bold">
                             <td colspan="4">Closing Balance</td>
-                            <td class="text-end"><?= format_currency($runningBalance) ?></td>
+                            <td class="text-end"><?= format_currency($closing_balance ?? ($runningBalance ?? $opening_balance ?? 0)) ?></td>
                         </tr>
                     </tbody>
                 </table>
