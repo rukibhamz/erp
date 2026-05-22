@@ -438,88 +438,24 @@ class Reports extends Base_Controller {
         $startDate = $_GET['start_date'] ?? date('Y-m-01');
         $endDate = $_GET['end_date'] ?? date('Y-m-t');
         $format = $_GET['format'] ?? 'html';
-        
-        // Get net income from P&L
-        $revenueAccounts = $this->accountModel->getByType('Revenue');
-        $totalRevenue = 0;
-        foreach ($revenueAccounts as $account) {
-            $balance = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(credit - debit), 0) as balance
-                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                 WHERE jel.account_id = ? 
-                 AND je.entry_date BETWEEN ? AND ?
-                 AND je.status = 'posted'",
-                [$account['id'], $startDate, $endDate]
-            );
-            $totalRevenue += $balance['balance'];
-        }
-        
-        $expenseAccounts = $this->accountModel->getByType('Expenses');
-        $totalExpenses = 0;
-        foreach ($expenseAccounts as $account) {
-            $balance = $this->db->fetchOne(
-                "SELECT COALESCE(SUM(debit - credit), 0) as balance
-                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                 WHERE jel.account_id = ? 
-                 AND je.entry_date BETWEEN ? AND ?
-                 AND je.status = 'posted'",
-                [$account['id'], $startDate, $endDate]
-            );
-            $totalExpenses += $balance['balance'];
-        }
-        
-        $netIncome = $totalRevenue - $totalExpenses;
-        
-        // Get cash accounts (1000-1999)
-        $cashAccounts = $this->accountModel->getByType('Assets');
-        $cashAccount = null;
-        foreach ($cashAccounts as $account) {
-            $code = $account['account_code'] ?? '';
-            if (substr($code, 0, 1) === '1') { // Assets start with 1
-                $cashAccount = $account;
-                break;
-            }
-        }
-        
+
+        $netIncome = $this->calculateNetIncomeForPeriod($startDate, $endDate);
+        $cashAccounts = $this->accountModel->getCashGlAccounts();
+        $cashAccountIds = array_map(function ($a) {
+            return (int) $a['id'];
+        }, $cashAccounts);
+
         $beginningCash = 0;
         $endingCash = 0;
-        $operatingActivities = [];
-        
-        if ($cashAccount) {
-            // Calculate beginning balance (before start date)
-            $beginningCash = $this->balanceCalculator->calculateBalance(
-                $cashAccount['id'], 
-                date('Y-m-d', strtotime($startDate . ' -1 day'))
-            );
-            
-            // Calculate ending balance
-            $endingCash = $this->balanceCalculator->calculateBalance($cashAccount['id'], $endDate);
-            
-            // Get cash transactions for operating activities
-            $transactions = $this->db->fetchAll(
-                "SELECT je.entry_date, je.description, jel.debit, jel.credit
-                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
-                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
-                 WHERE jel.account_id = ? 
-                 AND je.entry_date BETWEEN ? AND ?
-                 AND je.status = 'posted'
-                 ORDER BY je.entry_date",
-                [$cashAccount['id'], $startDate, $endDate]
-            );
-            
-            foreach ($transactions as $txn) {
-                $operatingActivities[] = [
-                    'date' => $txn['entry_date'],
-                    'description' => $txn['description'],
-                    'amount' => $txn['debit'] - $txn['credit']
-                ];
-            }
+        $dayBeforeStart = date('Y-m-d', strtotime($startDate . ' -1 day'));
+        foreach ($cashAccounts as $account) {
+            $beginningCash += $this->balanceCalculator->calculateBalance($account['id'], $dayBeforeStart, false);
+            $endingCash += $this->balanceCalculator->calculateBalance($account['id'], $endDate, false);
         }
-        
+
+        $activities = $this->buildCashFlowActivities($cashAccountIds, $startDate, $endDate);
         $netCashFlow = $endingCash - $beginningCash;
-        
+
         $data = [
             'page_title' => 'Cash Flow Statement',
             'start_date' => $startDate,
@@ -528,20 +464,189 @@ class Reports extends Base_Controller {
             'beginning_cash' => $beginningCash,
             'ending_cash' => $endingCash,
             'net_cash_flow' => $netCashFlow,
-            'operating_activities' => $operatingActivities,
-            'investing' => [],
-            'financing' => [],
-            'flash' => $this->getFlashMessage()
+            'cash_accounts' => $cashAccounts,
+            'operating' => $activities['operating'],
+            'investing' => $activities['investing'],
+            'financing' => $activities['financing'],
+            'total_operating' => $activities['total_operating'],
+            'total_investing' => $activities['total_investing'],
+            'total_financing' => $activities['total_financing'],
+            'flash' => $this->getFlashMessage(),
         ];
-        
-        // Handle export formats
-        if ($format == 'pdf') {
+
+        if ($format === 'pdf') {
             $this->exportCashFlowPDF($data);
-        } elseif ($format == 'excel') {
+        } elseif ($format === 'excel') {
             $this->exportCashFlowExcel($data);
         } else {
             $this->loadView('reports/cash_flow', $data);
         }
+    }
+
+    /**
+     * Net income for a period (aligned with P&L logic).
+     */
+    private function calculateNetIncomeForPeriod($startDate, $endDate) {
+        $totalRevenue = 0;
+        foreach ($this->accountModel->getByType('Revenue') as $account) {
+            $balance = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(credit - debit), 0) as balance
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? AND je.entry_date BETWEEN ? AND ? AND je.status = 'posted'",
+                [$account['id'], $startDate, $endDate]
+            );
+            $totalRevenue += floatval($balance['balance'] ?? 0);
+        }
+
+        $totalCogs = 0;
+        $totalExpenses = 0;
+        foreach ($this->accountModel->getByType('Expenses') as $account) {
+            $code = $account['account_code'] ?? '';
+            $balance = $this->db->fetchOne(
+                "SELECT COALESCE(SUM(debit - credit), 0) as balance
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+                 WHERE jel.account_id = ? AND je.entry_date BETWEEN ? AND ? AND je.status = 'posted'",
+                [$account['id'], $startDate, $endDate]
+            );
+            $amount = floatval($balance['balance'] ?? 0);
+            if (substr($code, 0, 1) === '5') {
+                $totalCogs += $amount;
+            } else {
+                $totalExpenses += $amount;
+            }
+        }
+
+        return $totalRevenue - $totalCogs - $totalExpenses;
+    }
+
+    /**
+     * Classify journal counter-accounts into operating / investing / financing.
+     */
+    private function classifyCashFlowCategory(array $account, array $cashAccountIds) {
+        if (in_array((int) ($account['id'] ?? 0), $cashAccountIds, true)) {
+            return 'operating';
+        }
+
+        $type = strtolower(trim($account['account_type'] ?? ''));
+        $codeNum = intval(preg_replace('/\D/', '', $account['account_code'] ?? ''));
+
+        if (in_array($type, ['equity'], true)) {
+            return 'financing';
+        }
+        if (in_array($type, ['liability', 'liabilities'], true)) {
+            return ($codeNum >= 2500) ? 'financing' : 'operating';
+        }
+        if (in_array($type, ['asset', 'assets'], true)) {
+            if ($codeNum >= 1500 && $codeNum < 2000) {
+                return 'investing';
+            }
+            return 'operating';
+        }
+        return 'operating';
+    }
+
+    /**
+     * Build cash flow activity lines from posted journal entries on cash GL accounts.
+     */
+    private function buildCashFlowActivities(array $cashAccountIds, $startDate, $endDate) {
+        $operating = [];
+        $investing = [];
+        $financing = [];
+        $totalOperating = 0.0;
+        $totalInvesting = 0.0;
+        $totalFinancing = 0.0;
+
+        if (empty($cashAccountIds)) {
+            return [
+                'operating' => [],
+                'investing' => [],
+                'financing' => [],
+                'total_operating' => 0,
+                'total_investing' => 0,
+                'total_financing' => 0,
+            ];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($cashAccountIds), '?'));
+        $params = array_merge($cashAccountIds, [$startDate, $endDate]);
+
+        $cashLines = $this->db->fetchAll(
+            "SELECT je.id AS entry_id, je.entry_date, je.description, je.reference,
+                    jel.id AS line_id, jel.account_id AS cash_account_id, jel.debit, jel.credit,
+                    ca.account_code AS cash_code, ca.account_name AS cash_name
+             FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+             JOIN `" . $this->db->getPrefix() . "journal_entries` je ON jel.journal_entry_id = je.id
+             JOIN `" . $this->db->getPrefix() . "accounts` ca ON jel.account_id = ca.id
+             WHERE jel.account_id IN ({$placeholders})
+             AND je.entry_date BETWEEN ? AND ?
+             AND je.status = 'posted'
+             ORDER BY je.entry_date ASC, je.id ASC, jel.id ASC",
+            $params
+        );
+
+        foreach ($cashLines as $line) {
+            $cashDebit = floatval($line['debit'] ?? 0);
+            $cashCredit = floatval($line['credit'] ?? 0);
+            $netCash = $cashDebit - $cashCredit;
+            if (abs($netCash) < 0.005) {
+                continue;
+            }
+
+            $counterLines = $this->db->fetchAll(
+                "SELECT jel.debit, jel.credit, a.id, a.account_code, a.account_name, a.account_type
+                 FROM `" . $this->db->getPrefix() . "journal_entry_lines` jel
+                 JOIN `" . $this->db->getPrefix() . "accounts` a ON jel.account_id = a.id
+                 WHERE jel.journal_entry_id = ? AND jel.id != ?",
+                [(int) $line['entry_id'], (int) $line['line_id']]
+            );
+
+            $category = 'operating';
+            $counterName = '';
+            $bestWeight = 0.0;
+            foreach ($counterLines as $counter) {
+                $weight = abs(floatval($counter['debit'] ?? 0) - floatval($counter['credit'] ?? 0));
+                if ($weight >= $bestWeight) {
+                    $bestWeight = $weight;
+                    $counterName = trim(($counter['account_code'] ?? '') . ' ' . ($counter['account_name'] ?? ''));
+                    $category = $this->classifyCashFlowCategory($counter, $cashAccountIds);
+                }
+            }
+
+            if ($counterName === '' && !empty($line['description'])) {
+                $counterName = $line['description'];
+            }
+
+            $row = [
+                'transaction_date' => $line['entry_date'],
+                'account_name' => $counterName ?: ($line['cash_name'] ?? '—'),
+                'description' => $line['description'] ?? $line['reference'] ?? '—',
+                'debit' => $cashCredit,
+                'credit' => $cashDebit,
+                'amount' => $netCash,
+            ];
+
+            if ($category === 'investing') {
+                $investing[] = $row;
+                $totalInvesting += $netCash;
+            } elseif ($category === 'financing') {
+                $financing[] = $row;
+                $totalFinancing += $netCash;
+            } else {
+                $operating[] = $row;
+                $totalOperating += $netCash;
+            }
+        }
+
+        return [
+            'operating' => $operating,
+            'investing' => $investing,
+            'financing' => $financing,
+            'total_operating' => $totalOperating,
+            'total_investing' => $totalInvesting,
+            'total_financing' => $totalFinancing,
+        ];
     }
     
     /**
@@ -778,24 +883,30 @@ class Reports extends Base_Controller {
         $businessName = $this->getBusinessName();
         $html = '<h1>' . htmlspecialchars($businessName) . '</h1>';
         $html .= '<h2>Cash Flow Statement</h2>';
-        $html .= '<p class="subtitle">Period: ' . $data['start_date'] . ' to ' . $data['end_date'] . '</p>';
-        
-        $html .= '<table>';
-        $html .= '<tr><td>Net Income</td><td class="text-right">₦' . number_format($data['net_income'], 2) . '</td></tr>';
-        $html .= '</table>';
-        
-        $html .= '<h2>Operating Activities</h2><table>';
-        foreach ($data['operating_activities'] as $item) {
-            $html .= '<tr><td>' . htmlspecialchars($item['description']) . '</td><td class="text-right">₦' . number_format($item['amount'], 2) . '</td></tr>';
+        $html .= '<p class="subtitle">Period: ' . htmlspecialchars($data['start_date']) . ' to ' . htmlspecialchars($data['end_date']) . '</p>';
+
+        $html .= '<table><tr><td>Beginning Cash</td><td class="text-right">₦' . number_format($data['beginning_cash'], 2) . '</td></tr>';
+        $html .= '<tr><td>Net Income</td><td class="text-right">₦' . number_format($data['net_income'], 2) . '</td></tr></table>';
+
+        foreach ([
+            'Operating Activities' => ['rows' => $data['operating'] ?? [], 'total' => $data['total_operating'] ?? 0],
+            'Investing Activities' => ['rows' => $data['investing'] ?? [], 'total' => $data['total_investing'] ?? 0],
+            'Financing Activities' => ['rows' => $data['financing'] ?? [], 'total' => $data['total_financing'] ?? 0],
+        ] as $title => $section) {
+            $html .= '<h2>' . htmlspecialchars($title) . '</h2><table>';
+            foreach ($section['rows'] as $item) {
+                $html .= '<tr><td>' . htmlspecialchars($item['transaction_date'] . ' — ' . ($item['account_name'] ?? '') . ' — ' . ($item['description'] ?? '')) . '</td>';
+                $html .= '<td class="text-right">₦' . number_format($item['amount'] ?? 0, 2) . '</td></tr>';
+            }
+            $html .= '<tr class="total-row"><td><strong>Net cash from ' . htmlspecialchars($title) . '</strong></td>';
+            $html .= '<td class="text-right"><strong>₦' . number_format($section['total'], 2) . '</strong></td></tr></table>';
         }
-        $html .= '</table>';
-        
+
         $html .= '<h2>Cash Summary</h2><table>';
-        $html .= '<tr><td>Beginning Cash</td><td class="text-right">₦' . number_format($data['beginning_cash'], 2) . '</td></tr>';
-        $html .= '<tr><td>Net Cash Flow</td><td class="text-right">₦' . number_format($data['net_cash_flow'], 2) . '</td></tr>';
+        $html .= '<tr><td>Net Change in Cash</td><td class="text-right">₦' . number_format($data['net_cash_flow'], 2) . '</td></tr>';
         $html .= '<tr class="total-row"><td><strong>Ending Cash</strong></td><td class="text-right"><strong>₦' . number_format($data['ending_cash'], 2) . '</strong></td></tr>';
         $html .= '</table>';
-        
+
         exportToPDF(wrapPdfHtml('Cash Flow Statement', $html), 'cash_flow_' . date('Y-m-d') . '.pdf');
     }
     
@@ -885,22 +996,32 @@ class Reports extends Base_Controller {
         $csvData = [];
         $csvData[] = ['Cash Flow Statement'];
         $csvData[] = ['Period:', $data['start_date'] . ' to ' . $data['end_date']];
-        $csvData[] = [];
-        
+        $csvData[] = ['Beginning Cash', $data['beginning_cash']];
         $csvData[] = ['Net Income', $data['net_income']];
         $csvData[] = [];
-        
-        $csvData[] = ['Operating Activities'];
-        foreach ($data['operating_activities'] as $item) {
-            $csvData[] = [$item['description'], $item['amount']];
+
+        foreach ([
+            'Operating Activities' => ['rows' => $data['operating'] ?? [], 'total' => $data['total_operating'] ?? 0],
+            'Investing Activities' => ['rows' => $data['investing'] ?? [], 'total' => $data['total_investing'] ?? 0],
+            'Financing Activities' => ['rows' => $data['financing'] ?? [], 'total' => $data['total_financing'] ?? 0],
+        ] as $title => $section) {
+            $csvData[] = [$title];
+            $csvData[] = ['Date', 'Account', 'Description', 'Amount'];
+            foreach ($section['rows'] as $item) {
+                $csvData[] = [
+                    $item['transaction_date'] ?? '',
+                    $item['account_name'] ?? '',
+                    $item['description'] ?? '',
+                    $item['amount'] ?? 0,
+                ];
+            }
+            $csvData[] = ['Net cash from ' . $title, '', '', $section['total']];
+            $csvData[] = [];
         }
-        $csvData[] = [];
-        
-        $csvData[] = ['Cash Summary'];
-        $csvData[] = ['Beginning Cash', $data['beginning_cash']];
-        $csvData[] = ['Net Cash Flow', $data['net_cash_flow']];
+
+        $csvData[] = ['Net Change in Cash', $data['net_cash_flow']];
         $csvData[] = ['Ending Cash', $data['ending_cash']];
-        
+
         exportToExcel($csvData, 'cash_flow_' . date('Y-m-d') . '.csv');
     }
 }

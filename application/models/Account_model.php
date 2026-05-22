@@ -434,6 +434,35 @@ class Account_model extends Base_Model {
     }
 
     /**
+     * GL accounts used for cash and bank (typically 1000–1099).
+     */
+    public function getCashGlAccounts() {
+        try {
+            $accounts = $this->getByType('Assets');
+            $cash = [];
+            foreach ($accounts as $account) {
+                $codeNum = intval(preg_replace('/\D/', '', $account['account_code'] ?? ''));
+                if ($codeNum >= 1000 && $codeNum < 1100) {
+                    $cash[] = $account;
+                }
+            }
+            if (!empty($cash)) {
+                return $cash;
+            }
+            foreach (['1000', '1010'] as $code) {
+                $row = $this->getByCode($code);
+                if ($row) {
+                    $cash[] = $row;
+                }
+            }
+            return $cash;
+        } catch (Exception $e) {
+            error_log('Account_model getCashGlAccounts error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Get the appropriate cash/bank account based on payment method.
      * Cash payments → 1000 (Cash on Hand)
      * Bank/card/online/transfer payments → 1010 (Cash in Bank)
