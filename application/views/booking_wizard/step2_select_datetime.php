@@ -62,7 +62,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 </div>
                             </div>
 
-                            <div id="picnic-notice" class="mb-4 alert alert-success d-flex align-items-start" style="display: none !important;">
+                            <div id="picnic-notice" class="mb-4 alert alert-success d-flex align-items-start" style="display: none;">
                                 <i class="bi bi-gift-fill me-2 fs-5 mt-1"></i>
                                 <div>
                                     <strong>Picnic Pricing Notice:</strong> Groups of fewer than 5 people enjoy the space for free — no booking charge applies.
@@ -88,8 +88,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             'hourly' => 'Hourly',
                                             'daily' => 'Daily',
                                             'half_day' => 'Half Day',
+                                            'full_day' => 'Full Day',
                                             'weekly' => 'Weekly',
-                                            'multi_day' => 'Multi-Day'
+                                            'multi_day' => 'Multi-Day',
+                                            'picnic' => 'Picnic',
+                                            'photoshoot' => 'Photoshoot',
+                                            'videoshoot' => 'Videoshoot',
+                                            'workspace' => 'Workspace',
                                         ];
                                         foreach ($booking_types ?? [] as $type): ?>
                                             <option value="<?= htmlspecialchars($type) ?>">
@@ -367,6 +372,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTierDisclaimer() {
         const tierDisclaimer = document.getElementById('tier-disclaimer');
         const tierText = document.getElementById('tier-disclaimer-text');
+        if (!equipmentTierSelect) {
+            return;
+        }
         const val = equipmentTierSelect.value;
         const disclaimers = {
             'basic': 'This tier covers the use of a mobile phone only.',
@@ -386,119 +394,121 @@ document.addEventListener('DOMContentLoaded', function() {
         equipmentTierSelect.addEventListener('change', updateTierDisclaimer);
     }
     
-    // Initially disable date input until booking type is selected
-    // But if a booking type is already selected (e.g. page reload), enable it
-    if (bookingDate) {
-        if (bookingTypeSelect && bookingTypeSelect.value) {
-            bookingDate.disabled = false;
-            const hint = document.getElementById('date-hint');
-            if (hint) hint.textContent = 'Click to select a date and see available slots';
-        } else {
-            bookingDate.disabled = true;
+    function applyBookingTypeSelection() {
+        if (!bookingTypeSelect) {
+            return;
+        }
+
+        const selectedType = bookingTypeSelect.value;
+        selectedBookingType = selectedType;
+        const isMultiDay = selectedType === 'multi_day' || selectedType === 'weekly';
+
+        const bookingNotices = document.getElementById('booking-notices');
+        if (bookingNotices) {
+            bookingNotices.style.display = (selectedType === 'wedding' || selectedType === 'birthday') ? 'block' : 'none';
+        }
+
+        resetBookingState();
+
+        if (endDateContainer) {
+            endDateContainer.style.display = isMultiDay ? 'block' : 'none';
+        }
+        if (recurringOption) {
+            recurringOption.style.display = (['hourly', 'daily', 'multi_day'].includes(selectedType)) ? 'block' : 'none';
+        }
+
+        const guestRequiredTypes = ['picnic', 'workspace'];
+        const typeRequiredTypes = ['photoshoot', 'videoshoot'];
+
+        if (guestsContainer) {
+            guestsContainer.style.display = guestRequiredTypes.includes(selectedType) ? 'block' : 'none';
+        }
+        if (equipmentTierContainer) {
+            equipmentTierContainer.style.display = typeRequiredTypes.includes(selectedType) ? 'block' : 'none';
+        }
+
+        if (selectedType === 'picnic' && guestsInput) {
+            guestsInput.min = 5;
+            if (parseInt(guestsInput.value, 10) < 5) {
+                guestsInput.value = 5;
+            }
+            const guestsHint = document.getElementById('guests-hint');
+            if (guestsHint) guestsHint.style.display = 'block';
+            const picnicTierBadge = document.getElementById('picnic-tier-badge');
+            if (picnicTierBadge) picnicTierBadge.style.display = 'block';
+            updatePicnicTierBadge(parseInt(guestsInput.value, 10) || 5);
+            const picnicNotice = document.getElementById('picnic-notice');
+            if (picnicNotice) picnicNotice.style.display = 'flex';
+        } else if (guestsInput) {
+            guestsInput.min = 1;
+            const guestsHint = document.getElementById('guests-hint');
+            if (guestsHint) guestsHint.style.display = 'none';
+            const picnicTierBadge = document.getElementById('picnic-tier-badge');
+            if (picnicTierBadge) picnicTierBadge.style.display = 'none';
+            const picnicNotice = document.getElementById('picnic-notice');
+            if (picnicNotice) picnicNotice.style.display = 'none';
+        }
+
+        updateTierDisclaimer();
+        updateDurationOptions(selectedBookingType);
+
+        if (bookingDate) {
+            if (selectedBookingType) {
+                bookingDate.disabled = false;
+                bookingDate.removeAttribute('disabled');
+                const hint = document.getElementById('date-hint');
+                if (hint) hint.textContent = 'Click to select a date and see available slots';
+            } else {
+                bookingDate.disabled = true;
+                const hint = document.getElementById('date-hint');
+                if (hint) hint.textContent = 'Select booking type first';
+                if (timeSlotsContainer) {
+                    wizardSetGridAlert(timeSlotsContainer, 'alert-warning', 'Please select a booking type first.');
+                }
+            }
+        }
+
+        if (selectedBookingType === 'full_day') {
+            if (durationContainer) durationContainer.style.display = 'none';
+            selectedDuration = 24;
+            if (selectedDate) {
+                handleFullDayBooking();
+            } else if (timeSlotsContainer) {
+                wizardSetGridAlert(timeSlotsContainer, 'alert-info', 'Full Day Booking — please select a date to continue.');
+            }
+        } else if (selectedBookingType === 'half_day') {
+            if (durationContainer) durationContainer.style.display = 'none';
+            selectedDuration = 4;
+            if (selectedDate) {
+                handleHalfDayBooking();
+            } else if (timeSlotsContainer) {
+                wizardSetGridAlert(timeSlotsContainer, 'alert-info', 'Half Day Booking — please select a date to continue.');
+            }
+        } else if (selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
+            if (selectedDate) {
+                handleMultiDayBooking();
+            } else if (timeSlotsContainer) {
+                wizardSetGridAlert(timeSlotsContainer, 'alert-info', 'Multi-Day Booking — please select a start date and end date to continue.');
+            }
+        } else if (selectedBookingType === 'picnic' || selectedBookingType === 'photoshoot' || selectedBookingType === 'videoshoot') {
+            if (!selectedDate && timeSlotsContainer) {
+                wizardSetGridAlert(timeSlotsContainer, 'alert-info', 'Please select a date, then choose a duration and time slot.');
+            }
+        } else if (selectedBookingType && selectedDate) {
+            const legendEl = document.getElementById('time-slot-legend');
+            if (legendEl) legendEl.style.display = 'block';
+            loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
         }
     }
 
-        // Show/hide end date and duration based on booking type
-        bookingTypeSelect.addEventListener('change', function() {
-            const selectedType = this.value;
-            
-            // Show/hide Wedding/Birthday notice
-            const bookingNotices = document.getElementById('booking-notices');
-            if (bookingNotices) {
-                bookingNotices.style.display = 'block';
-            }
-            
-            // Clear current selections
-            selectedBookingType = this.value;
-            const isMultiDay = this.value === 'multi_day' || this.value === 'weekly';
-            
-            // Reset state when changing booking type
-            resetBookingState();
-            
-            endDateContainer.style.display = isMultiDay ? 'block' : 'none';
-            recurringOption.style.display = (this.value === 'hourly' || this.value === 'daily' || this.value === 'multi_day') ? 'block' : 'none';
-            
-            // Per-Person & Type (Equipment Tiers) Visibility
-            const guestRequiredTypes = ['picnic', 'workspace'];
-            const typeRequiredTypes = ['photoshoot', 'videoshoot'];
-            
-            guestsContainer.style.display = guestRequiredTypes.includes(selectedType) ? 'block' : 'none';
-            // Picnic: tier is auto-determined by guest count — hide equipment tier selector
-            equipmentTierContainer.style.display = typeRequiredTypes.includes(selectedType) ? 'block' : 'none';
-
-            if (selectedType === 'picnic') {
-                guestsInput.min = 5;
-                if (parseInt(guestsInput.value) < 5) guestsInput.value = 5;
-                const guestsHint = document.getElementById('guests-hint');
-                if (guestsHint) guestsHint.style.display = 'block';
-                const picnicTierBadge = document.getElementById('picnic-tier-badge');
-                if (picnicTierBadge) picnicTierBadge.style.display = 'block';
-                updatePicnicTierBadge(parseInt(guestsInput.value));
-                const picnicNotice = document.getElementById('picnic-notice');
-                if (picnicNotice) picnicNotice.style.display = 'flex';
-            } else {
-                guestsInput.min = 1;
-                const guestsHint = document.getElementById('guests-hint');
-                if (guestsHint) guestsHint.style.display = 'none';
-                const picnicTierBadge = document.getElementById('picnic-tier-badge');
-                if (picnicTierBadge) picnicTierBadge.style.display = 'none';
-                const picnicNotice = document.getElementById('picnic-notice');
-                if (picnicNotice) picnicNotice.style.display = 'none';
-            }
-            
-            // Trigger disclaimer update
-            updateTierDisclaimer();
-            
-            // Handle Duration Logic
-            updateDurationOptions(selectedBookingType);
-        
-        // Enable date input
-        if (selectedBookingType) {
-            bookingDate.removeAttribute('disabled');
-            const hint = document.getElementById('date-hint');
-            if (hint) hint.textContent = 'Click to select a date and see available slots';
-        } else {
-            bookingDate.setAttribute('disabled', 'disabled');
-            const hint = document.getElementById('date-hint');
-            if (hint) hint.textContent = 'Select booking type first';
-            timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning">Please select a booking type first.</div></div>';
+    if (bookingTypeSelect) {
+        bookingTypeSelect.addEventListener('change', applyBookingTypeSelection);
+        if (bookingTypeSelect.value) {
+            applyBookingTypeSelection();
         }
-        
-        // Check if full_day, half_day, or multi_day booking type is selected
-        if (selectedBookingType === 'full_day') {
-            // Hide duration container for full_day type
-            durationContainer.style.display = 'none';
-            selectedDuration = 24; // Set to 24 hours
-            
-            if (selectedDate) {
-                handleFullDayBooking();
-            } else {
-                // Show message to select date
-                timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="bi bi-calendar-check"></i> <strong>Full Day Booking</strong><br>Please select a date to continue.</div></div>';
-            }
-        } else if (selectedBookingType === 'half_day') {
-            // Half day booking - hide duration, set to 4 hours
-            durationContainer.style.display = 'none';
-            selectedDuration = 4;
-            
-            if (selectedDate) {
-                handleHalfDayBooking();
-            } else {
-                timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="bi bi-clock"></i> <strong>Half Day Booking</strong><br>Please select a date to continue.</div></div>';
-            }
-        } else if (selectedBookingType === 'multi_day' || selectedBookingType === 'weekly') {
-            // Multi-day or weekly booking
-            if (selectedDate) {
-                handleMultiDayBooking();
-            } else {
-                timeSlotsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="bi bi-calendar-range"></i> <strong>Multi-Day Booking</strong><br>Please select a start date and end date to continue.</div></div>';
-            }
-        } else if (selectedBookingType && selectedDate) {
-            // Show time slot legend for other types
-            document.getElementById('time-slot-legend').style.display = 'block';
-            loadTimeSlots(spaceId, selectedDate, selectedEndDate || selectedDate);
-        }
-    });
+    } else if (bookingDate) {
+        bookingDate.disabled = true;
+    }
     
     // Reset booking state when changing booking type
     function resetBookingState() {
