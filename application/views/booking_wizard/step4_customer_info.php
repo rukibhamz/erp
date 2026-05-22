@@ -229,6 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
             },
             body: wizardCsrfPrefix('step=4&data=' + encodeURIComponent(JSON.stringify(data)))
         })

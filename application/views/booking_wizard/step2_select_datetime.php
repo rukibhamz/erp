@@ -302,8 +302,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedTimeSpan = document.getElementById('selected-time');
     const selectedTimeSummary = document.getElementById('selected-time-summary');
     
-    const spaceId = <?= $space['id'] ?? 0 ?>;
-    const resourceId = <?= $space['facility_id'] ?? $space['id'] ?>;
+    const spaceId = <?= (int) ($space['id'] ?? 0) ?>;
+    const resourceId = <?= (int) ($wizard_resource_id ?? $space['facility_id'] ?? $space['id'] ?? 0) ?>;
     let selectedDate = '';
     let selectedEndDate = '';
     let selectedStartTime = '';
@@ -1260,6 +1260,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
             },
             body: wizardCsrfPrefix(
                 Object.keys(requestData.data).map(key =>
@@ -1280,12 +1281,16 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const data = JSON.parse(text);
                 if (data.success) {
-                    window.location.href = `<?= base_url('booking-wizard/step3/') ?>${resourceId}`; 
+                    window.location.href = `<?= base_url('booking-wizard/step3/') ?>${resourceId}`;
                 } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
+                    alert(data.message || data.error || 'Could not save your selection. Please try again.');
                 }
             } catch (e) {
-                alert('Invalid server response (HTTP ' + status + ').');
+                if (status === 403) {
+                    alert('Your session expired. Please refresh the page and try again.');
+                } else {
+                    alert('Invalid server response (HTTP ' + status + '). Please refresh and try again.');
+                }
             }
         })
         .catch(error => {

@@ -368,7 +368,14 @@ class Booking_wizard extends Base_Controller {
                 $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
             }
             
-            // Get facility if synced
+            // Ensure space is linked to a bookable facility (required for step 3+ and availability)
+            if (empty($space['facility_id'])) {
+                $syncedFacilityId = $this->spaceModel->syncToBookingModule((int) $spaceId);
+                if ($syncedFacilityId) {
+                    $space['facility_id'] = $syncedFacilityId;
+                }
+            }
+
             $facility = null;
             if (!empty($space['facility_id'])) {
                 $facility = $this->facilityModel->getById($space['facility_id']);
@@ -407,9 +414,12 @@ class Booking_wizard extends Base_Controller {
             redirect('booking-wizard/step1');
         }
 
+        $wizardResourceId = (int) ($space['facility_id'] ?? $space['id']);
+
         $data = [
             'page_title' => 'Select Date, Time & Booking Type',
             'space' => $space,
+            'wizard_resource_id' => $wizardResourceId,
             'location' => $location,
             'facility' => $facility,
             'photos' => $photos,
@@ -525,7 +535,23 @@ class Booking_wizard extends Base_Controller {
      */
     public function step3($resourceId) {
         try {
+            $resourceId = (int) $resourceId;
             $resource = $this->facilityModel->getById($resourceId);
+            if (!$resource) {
+                $bookingData = $_SESSION['booking_data'] ?? [];
+                $spaceId = (int) ($bookingData['space_id'] ?? 0);
+                if ($spaceId) {
+                    $space = $this->spaceModel->getById($spaceId);
+                    $facilityId = (int) ($space['facility_id'] ?? 0);
+                    if (!$facilityId) {
+                        $facilityId = (int) ($this->spaceModel->syncToBookingModule($spaceId) ?: 0);
+                    }
+                    if ($facilityId) {
+                        $resourceId = $facilityId;
+                        $resource = $this->facilityModel->getById($resourceId);
+                    }
+                }
+            }
             if (!$resource) {
                 redirect('booking-wizard/step1');
             }
@@ -911,40 +937,39 @@ class Booking_wizard extends Base_Controller {
                 $bookingData = $_SESSION['booking_data'];
                 if (!empty($bookingData['date']) && !empty($bookingData['start_time']) && !empty($bookingData['end_time'])) {
                     try {
-                        // Ensure Facility Model is loaded
                         if (!$this->facilityModel) {
-                             $this->facilityModel = $this->loadModel('Facility_model');
+                            $this->facilityModel = $this->loadModel('Facility_model');
                         }
-                        
-                        $resourceId = $bookingData['resource_id'] ?? 0;
-                        // Get facility_id (might be different from space_id)
-                        $space = $this->spaceModel ? $this->spaceModel->getById($resourceId) : null;
-                        $facilityId = $space['facility_id'] ?? $resourceId;
-                        
-                        // Check availability
-                        // Note: end_date might be different for multi-day
-                        $checkEndDate = $bookingData['end_date'] ?? $bookingData['date'];
-                        
-                        // Skip expensive availability check for multi-day bookings at step 2
-                        // to prevent server timeouts on slow environments. 
-                        // It will be fully validated at step 5 (finalization).
-                        if (($bookingData['booking_type'] ?? '') !== 'multi_day') {
-                            $isAvailable = $this->facilityModel->checkAvailability(
+
+                        $spaceId = (int) ($bookingData['space_id'] ?? 0);
+                        $space = $spaceId && $this->spaceModel ? $this->spaceModel->getById($spaceId) : null;
+                        $facilityId = (int) ($space['facility_id'] ?? 0);
+                        if (!$facilityId) {
+                            $facilityId = (int) ($bookingData['resource_id'] ?? 0);
+                        }
+                        if (!$facilityId && $spaceId) {
+                            $facilityId = (int) ($this->spaceModel->syncToBookingModule($spaceId) ?: 0);
+                        }
+
+                        $bookingType = $bookingData['booking_type'] ?? '';
+                        $skipSlotRecheck = in_array($bookingType, ['multi_day', 'weekly', 'full_day', 'half_day'], true);
+
+                        if ($facilityId && !$skipSlotRecheck) {
+                            $startTime = substr((string) $bookingData['start_time'], 0, 5);
+                            $endTime = substr((string) $bookingData['end_time'], 0, 5);
+                            $isAvailable = $this->facilityModel->isTimeRangeBookable(
                                 $facilityId,
                                 $bookingData['date'],
-                                $bookingData['start_time'],
-                                $bookingData['end_time'],
-                                null, // No exclude ID (new booking)
-                                $checkEndDate
+                                $startTime,
+                                $endTime
                             );
-                            
+
                             if (!$isAvailable) {
-                                echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available.']);
+                                echo json_encode(['success' => false, 'message' => 'Selected time slot is no longer available. Please choose another time.']);
                                 exit;
                             }
                         }
                     } catch (Exception $availEx) {
-                        // Log availability check error but don't block booking (fail open)
                         error_log('Booking wizard saveStep: Availability check error - ' . $availEx->getMessage());
                     }
                 }
