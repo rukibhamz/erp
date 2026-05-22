@@ -1362,8 +1362,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // For types that auto-set times, ensure they're set
         if (bookingType === 'full_day' && (!selectedStartTime || !selectedEndTime)) {
-            selectedStartTime = '00:00';
-            selectedEndTime = '23:59';
+            selectedStartTime = '09:00';
+            selectedEndTime = '20:00';
         }
         if (bookingType === 'half_day' && (!selectedStartTime || !selectedEndTime)) {
             alert('Please select a morning or afternoon session');

@@ -609,6 +609,7 @@ class Booking_wizard extends Base_Controller {
             'addons' => $addons,
             'rentable_items' => $rentableItems,
             'booking_data' => $bookingData,
+            'space_id' => (int) ($bookingData['space_id'] ?? 0),
             'resource_cost' => $resourceCost,
             'flash' => $this->getFlashMessage()
         ];

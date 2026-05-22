@@ -14,7 +14,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?= base_url('booking-wizard/step2/' . $resource['id']) ?>">
+                        <a class="nav-link" href="<?= base_url('booking-wizard/step2/' . (int) ($space_id ?? $booking_data['space_id'] ?? 0)) ?>">
                             <span class="step-num">2</span>
                             <span class="step-text">DateTime</span>
                         </a>
@@ -206,7 +206,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <!-- Navigation Buttons -->
             <div class="row mt-4">
                 <div class="col-12">
-                    <a href="<?= base_url('booking-wizard/step2/' . $resource['id']) ?>" class="btn btn-outline-dark">
+                    <a href="<?= base_url('booking-wizard/step2/' . (int) ($space_id ?? $booking_data['space_id'] ?? 0)) ?>" class="btn btn-outline-dark">
                         <i class="bi bi-arrow-left"></i> Back
                     </a>
                     <button type="button" id="continue-btn" class="btn btn-primary float-end">
