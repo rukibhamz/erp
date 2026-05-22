@@ -1,4 +1,5 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
+<link rel="stylesheet" href="<?= base_url('assets/css/booking-slot-picker.css') ?>">
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0">Reschedule: <?= htmlspecialchars($booking['booking_number'] ?? '') ?></h1>
@@ -7,10 +8,9 @@
     </a>
 </div>
 
-<div class="row">
-    <div class="col-lg-5">
-        <!-- Current schedule -->
-        <div class="card mb-4">
+<div class="row g-4">
+    <div class="col-12 col-xl-4">
+        <div class="card mb-4 mb-xl-0 h-100">
             <div class="card-header"><h6 class="mb-0">Current Schedule</h6></div>
             <div class="card-body">
                 <p class="mb-1"><strong>Date:</strong> <?= date('M d, Y', strtotime($booking['booking_date'])) ?></p>
@@ -18,81 +18,82 @@
                 <p class="mb-0"><strong>Space:</strong> <?= htmlspecialchars($booking['facility_name'] ?? $booking['space_name'] ?? '—') ?></p>
             </div>
         </div>
+    </div>
 
-        <!-- Reschedule form -->
+    <div class="col-12 col-xl-8">
         <div class="card shadow-sm">
             <div class="card-header bg-warning"><h6 class="mb-0">New Schedule</h6></div>
-            <!-- Debug: facility_id=<?= $booking['facility_id'] ?? 'NULL' ?>, space_id=<?= $booking['space_id'] ?? 'NULL' ?> -->
             <div class="card-body">
                 <form method="POST" id="rescheduleForm">
                     <?= csrf_field() ?>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Venue <span class="text-danger">*</span></label>
-                        <select name="space_id" id="space_select" class="form-select" required>
-                            <?php foreach (($venue_options ?? []) as $venue): ?>
-                                <option value="<?= intval($venue['space_id']) ?>"
-                                        data-facility-id="<?= intval($venue['facility_id']) ?>"
-                                        <?= intval($booking['space_id'] ?? 0) === intval($venue['space_id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($venue['space_name']) ?><?= !empty($venue['property_name']) ? ' - ' . htmlspecialchars($venue['property_name']) : '' ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Venue <span class="text-danger">*</span></label>
+                            <select name="space_id" id="space_select" class="form-select" required>
+                                <?php foreach (($venue_options ?? []) as $venue): ?>
+                                    <option value="<?= intval($venue['space_id']) ?>"
+                                            data-facility-id="<?= intval($venue['facility_id']) ?>"
+                                            <?= intval($booking['space_id'] ?? 0) === intval($venue['space_id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($venue['space_name']) ?><?= !empty($venue['property_name']) ? ' - ' . htmlspecialchars($venue['property_name']) : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">New Date <span class="text-danger">*</span></label>
+                            <input type="date" id="reschedule_date" name="booking_date" class="form-control"
+                                   min="<?= date('Y-m-d') ?>" required>
+                            <small class="text-muted">Select a date to see available slots</small>
+                        </div>
                     </div>
                     <input type="hidden" name="start_time" id="hidden_start_time">
-                    <input type="hidden" name="end_time"   id="hidden_end_time">
+                    <input type="hidden" name="end_time" id="hidden_end_time">
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">New Date <span class="text-danger">*</span></label>
-                        <input type="date" id="reschedule_date" name="booking_date" class="form-control"
-                               min="<?= date('Y-m-d') ?>" required>
-                        <small class="text-muted">Select a date to see available slots</small>
-                    </div>
-
-                    <!-- Time slot picker -->
-                    <div class="mb-3" id="slot-section" style="display:none;">
+                    <div class="mb-4" id="slot-section" style="display:none;">
                         <label class="form-label fw-bold">Available Time Slots</label>
-                        <link rel="stylesheet" href="<?= base_url('assets/css/booking-slot-picker.css') ?>">
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <span class="badge bg-success">Available block</span>
                             <span class="badge bg-danger">Occupied</span>
                             <span class="badge bg-warning text-dark">Buffer (1 hr gap)</span>
                         </div>
-                        <div id="slot-container">
+                        <div id="slot-container" class="reschedule-slot-area">
                             <div class="text-center py-3">
                                 <div class="spinner-border spinner-border-sm" role="status"></div>
                                 <span class="ms-2 text-muted">Loading slots…</span>
                             </div>
                         </div>
-                        <div id="selected-slot-display" class="alert alert-success mt-2" style="display:none;">
+                        <div id="selected-slot-display" class="alert alert-success mt-3" style="display:none;">
                             <i class="bi bi-check-circle"></i> Selected: <strong id="selected-slot-text"></strong>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <div class="card border-info">
-                            <div class="card-header bg-light"><strong>Updated Price Preview</strong></div>
-                            <div class="card-body py-2">
-                                <div id="quote_preview_status" class="small text-muted">Select venue, date and slot to preview.</div>
-                                <div class="row mt-2">
-                                    <div class="col-6 small">Base:</div><div class="col-6 small text-end" id="quote_base">-</div>
-                                    <div class="col-6 small">Subtotal:</div><div class="col-6 small text-end" id="quote_subtotal">-</div>
-                                    <div class="col-6 small">Tax:</div><div class="col-6 small text-end" id="quote_tax">-</div>
-                                    <div class="col-6 small fw-bold">Total:</div><div class="col-6 small fw-bold text-end" id="quote_total">-</div>
-                                    <div class="col-6 small">Balance:</div><div class="col-6 small text-end" id="quote_balance">-</div>
-                                    <div class="col-12"><hr class="my-2"></div>
-                                    <div class="col-6 small">Total vs saved booking:</div><div class="col-6 small text-end" id="quote_delta_total">-</div>
-                                    <div class="col-6 small">Balance vs saved:</div><div class="col-6 small text-end" id="quote_delta_balance">-</div>
+
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="card border-info h-100">
+                                <div class="card-header bg-light"><strong>Updated Price Preview</strong></div>
+                                <div class="card-body py-2">
+                                    <div id="quote_preview_status" class="small text-muted">Select venue, date and slot to preview.</div>
+                                    <div class="row mt-2">
+                                        <div class="col-6 small">Base:</div><div class="col-6 small text-end" id="quote_base">-</div>
+                                        <div class="col-6 small">Subtotal:</div><div class="col-6 small text-end" id="quote_subtotal">-</div>
+                                        <div class="col-6 small">Tax:</div><div class="col-6 small text-end" id="quote_tax">-</div>
+                                        <div class="col-6 small fw-bold">Total:</div><div class="col-6 small fw-bold text-end" id="quote_total">-</div>
+                                        <div class="col-6 small">Balance:</div><div class="col-6 small text-end" id="quote_balance">-</div>
+                                        <div class="col-12"><hr class="my-2"></div>
+                                        <div class="col-6 small">Total vs saved booking:</div><div class="col-6 small text-end" id="quote_delta_total">-</div>
+                                        <div class="col-6 small">Balance vs saved:</div><div class="col-6 small text-end" id="quote_delta_balance">-</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <div class="col-lg-6">
+                            <label class="form-label">Reason for Rescheduling</label>
+                            <textarea name="reason" class="form-control" rows="4"
+                                      placeholder="Optional — enter reason…"></textarea>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Reason for Rescheduling</label>
-                        <textarea name="reason" class="form-control" rows="2"
-                                  placeholder="Optional — enter reason…"></textarea>
-                    </div>
-
-                    <div class="d-flex justify-content-end gap-2">
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                         <a href="<?= base_url('bookings/view/' . $booking['id']) ?>" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-warning" id="submitBtn" disabled>
                             <i class="bi bi-calendar-check"></i> Confirm Reschedule

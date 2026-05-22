@@ -101,7 +101,7 @@
             const btnClass = isBuffer ? 'btn-warning text-dark' : 'btn-danger';
             const label = isBuffer ? 'Buffer' : 'Occupied';
             const textClass = isBuffer ? 'text-dark' : 'text-white';
-            return '<div class="col-6 col-md-4 col-lg-3">' +
+            return '<div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">' +
                 '<div class="booking-slot-btn ' + btnClass + ' disabled" aria-disabled="true">' +
                 '<span class="booking-slot-time">' + fmt(slot.start) + ' – ' + fmt(slot.end) + '</span>' +
                 '<span class="booking-slot-status ' + textClass + '">' + label + '</span>' +
@@ -142,7 +142,7 @@
             '<i class="bi bi-info-circle"></i> Select a <strong>' + durationHours + '-hour</strong> start time. The full block will be reserved.</p></div>';
 
         validStarts.forEach(function (block) {
-            html += '<div class="col-6 col-md-4 col-lg-3">' +
+            html += '<div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">' +
                 '<button type="button" class="booking-slot-btn btn btn-outline-success w-100 available-start-slot" ' +
                 'data-start="' + block.start + '" data-end="' + block.end + '">' +
                 '<span class="booking-slot-time">' + fmt(block.start) + ' – ' + fmt(block.end) + '</span>' +

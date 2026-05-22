@@ -1,16 +1,30 @@
 /* Reschedule / edit booking time slot grid */
+.reschedule-slot-area {
+    width: 100%;
+}
+
+.booking-slot-grid {
+    width: 100%;
+}
+
+.booking-slot-grid > [class*="col-"] {
+    min-width: 0;
+}
+
 .booking-slot-grid .booking-slot-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 4.25rem;
-    padding: 0.5rem 0.35rem;
+    width: 100%;
+    min-height: 4.5rem;
+    padding: 0.55rem 0.5rem;
     border-radius: 0.375rem;
     text-align: center;
-    line-height: 1.25;
+    line-height: 1.3;
     position: relative;
     z-index: 1;
+    overflow: hidden;
 }
 
 .booking-slot-grid .booking-slot-btn.disabled {
@@ -21,23 +35,34 @@
 
 .booking-slot-grid .booking-slot-time {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     display: block;
+    width: 100%;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.25;
 }
 
 .booking-slot-grid .booking-slot-status {
-    font-size: 0.7rem;
-    margin-top: 0.15rem;
+    font-size: 0.68rem;
+    margin-top: 0.2rem;
     display: block;
+    width: 100%;
 }
 
 .booking-slot-grid .available-start-slot.active {
     box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.35);
 }
 
-@media (max-width: 576px) {
-    .booking-slot-grid .col-6 {
-        flex: 0 0 50%;
-        max-width: 50%;
+@media (min-width: 1200px) {
+    .booking-slot-grid .booking-slot-time {
+        font-size: 0.78rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .booking-slot-grid .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
     }
 }
