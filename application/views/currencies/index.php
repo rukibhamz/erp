@@ -38,10 +38,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = has_permission('settings', 'delete');
+        bulk_delete_render_toolbar($bulk_delete_enabled, $currencies, base_url('currencies/bulk-delete'), 'currency');
+        ?>
         <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                             <th>Code</th>
                             <th>Name</th>
                             <th>Symbol</th>
@@ -56,6 +61,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php if (!empty($currencies)): ?>
                             <?php foreach ($currencies as $currency): ?>
                                 <tr>
+                                    <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$currency['id'], 'currency ' . ($currency['currency_name'])); ?>
                                     <td><strong><?= htmlspecialchars($currency['currency_code']) ?></strong></td>
                                     <td><?= htmlspecialchars($currency['currency_name']) ?></td>
                                     <td><?= htmlspecialchars($currency['symbol']) ?></td>
@@ -98,7 +104,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="8" class="text-center text-muted">No currencies found.</td>
+                                <td colspan="<?= bulk_delete_colspan(8, $bulk_delete_enabled) ?>" class="text-center text-muted">No currencies found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>

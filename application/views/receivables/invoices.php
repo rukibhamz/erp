@@ -74,10 +74,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="card-title mb-0">All Invoices</h5>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = isSuperAdmin();
+        bulk_delete_render_toolbar($bulk_delete_enabled, $invoices, base_url('receivables/bulk-delete-invoices'), 'invoice', 'Are you sure you want to delete the selected invoices? This will also delete associated transactions and journal entries!');
+        ?>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>Invoice #</th>
                         <th>Customer</th>
                         <th>Date</th>
@@ -93,6 +98,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php if (!empty($invoices)): ?>
                         <?php foreach ($invoices as $invoice): ?>
                             <tr>
+                                <?php if ($bulk_delete_enabled && !empty($invoice['id'])): ?>
+                                    <?php bulk_delete_render_checkbox_td(true, (int)$invoice['id'], 'invoice ' . ($invoice['invoice_number'] ?? $invoice['id'])); ?>
+                                <?php elseif ($bulk_delete_enabled): ?>
+                                    <td></td>
+                                <?php endif; ?>
                                 <td><strong><?= htmlspecialchars($invoice['invoice_number'] ?? 'N/A') ?></strong></td>
                                 <td><?= htmlspecialchars($invoice['company_name'] ?? '-') ?></td>
                                 <td><?= format_date($invoice['invoice_date'] ?? '') ?></td>
@@ -161,7 +171,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="<?= bulk_delete_colspan(9, $bulk_delete_enabled) ?>" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-file-earmark-text"></i>
                                     <p class="mb-0">No invoices found.</p>

@@ -241,5 +241,24 @@ class Tenants extends Base_Controller {
 
         redirect('tenants');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('locations', 'delete');
+
+        $this->runBulkDeleteLoop('tenants', 'tenant', function (int $id) {
+            $tenant = $this->tenantModel->getById($id);
+            if (!$tenant) {
+                throw new Exception('Tenant not found.');
+            }
+            $activeLeases = $this->leaseModel->getActiveByTenantId($id);
+            if (!empty($activeLeases)) {
+                throw new Exception('Cannot delete tenant with active leases. Please end all leases first.');
+            }
+            if (!$this->tenantModel->delete($id)) {
+                throw new Exception('Failed to delete tenant.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Tenants', 'Deleted tenant: ' . ($tenant['business_name'] ?: $tenant['contact_person']));
+        });
+    }
 }
 

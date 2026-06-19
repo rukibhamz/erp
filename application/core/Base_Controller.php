@@ -59,6 +59,7 @@ class Base_Controller {
         // Pagination helper (shared list paging across modules)
         require_once BASEPATH . '../application/helpers/pagination_helper.php';
         require_once BASEPATH . '../application/helpers/list_search_helper.php';
+        require_once BASEPATH . '../application/helpers/bulk_delete_view_helper.php';
         
         // Initialize database only if installed and config is valid
         if (isset($this->config['installed']) && $this->config['installed'] === true) {
@@ -528,6 +529,66 @@ class Base_Controller {
             error_log("Error checking column {$table}.{$column}: " . $e->getMessage());
             return false;
         }
+    }
+
+    protected function collectBulkIds(): array {
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        return array_values(array_unique(array_filter(array_map('intval', $ids))));
+    }
+
+    protected function beginBulkDeleteRequest(): bool {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            return false;
+        }
+        check_csrf();
+        return true;
+    }
+
+    /**
+     * @param callable(int):void $deleteOne Throws on failure
+     */
+    protected function runBulkDeleteLoop(string $redirectUrl, string $itemLabel, callable $deleteOne): void {
+        if (!$this->beginBulkDeleteRequest()) {
+            redirect($redirectUrl);
+            return;
+        }
+
+        $ids = $this->collectBulkIds();
+        if (empty($ids)) {
+            $this->setFlashMessage('warning', 'No ' . $itemLabel . '(s) selected.');
+            redirect($redirectUrl);
+            return;
+        }
+
+        $deleted = 0;
+        $failed = [];
+
+        foreach ($ids as $id) {
+            try {
+                $deleteOne((int) $id);
+                $deleted++;
+            } catch (Throwable $e) {
+                $failed[] = '#' . $id . ': ' . $e->getMessage();
+                error_log('Bulk delete failed for ID ' . $id . ': ' . $e->getMessage());
+            }
+        }
+
+        if ($deleted > 0 && empty($failed)) {
+            $this->setFlashMessage('success', $deleted . ' ' . $itemLabel . '(s) deleted successfully.');
+        } elseif ($deleted > 0) {
+            $this->setFlashMessage(
+                'warning',
+                $deleted . ' deleted. ' . count($failed) . ' failed: ' . implode('; ', array_slice($failed, 0, 5))
+            );
+        } else {
+            $this->setFlashMessage('danger', 'Nothing deleted. ' . implode('; ', array_slice($failed, 0, 5)));
+        }
+
+        redirect($redirectUrl);
     }
 }
 

@@ -428,5 +428,27 @@ class Accounts extends Base_Controller {
             redirect('accounts');
         }
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('accounts', 'delete');
+
+        $this->runBulkDeleteLoop('accounts', 'account', function (int $id) {
+            if ($id <= 0) {
+                throw new Exception('Invalid account ID.');
+            }
+            $account = $this->accountModel->getById($id);
+            if (!$account) {
+                throw new Exception('Account not found.');
+            }
+            $transactions = $this->transactionModel->getByAccount($id);
+            if (!empty($transactions)) {
+                throw new Exception('Cannot delete account with existing transactions. Deactivate it instead.');
+            }
+            if (!$this->accountModel->delete($id)) {
+                throw new Exception('Failed to delete account.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Accounts', 'Deleted account: ' . $account['account_name']);
+        });
+    }
 }
 

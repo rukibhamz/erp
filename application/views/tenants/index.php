@@ -80,69 +80,71 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </div>
 <?php else: ?>
-    <div class="row g-4">
-        <?php foreach ($tenants as $tenant): ?>
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="bi bi-people"></i> <?= htmlspecialchars($tenant['business_name'] ?: $tenant['contact_person']) ?></h6>
-                        <span class="badge bg-<?= $tenant['status'] === 'active' ? 'success' : 'secondary' ?>">
-                            <?= ucfirst($tenant['status']) ?>
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <small class="text-muted d-block mb-2">
-                                <i class="bi bi-hash"></i> Code: <strong><?= htmlspecialchars($tenant['tenant_code']) ?></strong>
-                            </small>
-                            <p class="mb-1">
-                                <strong><i class="bi bi-person"></i> Contact:</strong><br>
-                                <small class="text-muted"><?= htmlspecialchars($tenant['contact_person']) ?></small>
-                            </p>
-                            <p class="mb-1 text-muted small">
-                                <i class="bi bi-envelope"></i> <?= htmlspecialchars($tenant['email']) ?>
-                            </p>
-                            <p class="mb-1 text-muted small">
-                                <i class="bi bi-telephone"></i> <?= htmlspecialchars($tenant['phone']) ?>
-                            </p>
-                            <?php if ($tenant['city'] || $tenant['state']): ?>
-                                <p class="mb-0 text-muted small">
-                                    <i class="bi bi-geo-alt"></i> 
-                                    <?= htmlspecialchars($tenant['city'] ?? '') ?><?= $tenant['city'] && $tenant['state'] ? ', ' : '' ?><?= htmlspecialchars($tenant['state'] ?? '') ?>
-                                </p>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="badge bg-info"><?= ucfirst(str_replace('_', ' ', $tenant['tenant_type'])) ?></span>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <a href="<?= base_url('tenants/view/' . $tenant['id']) ?>" class="btn btn-primary btn-sm">
-                                <i class="bi bi-eye"></i> View Details
-                            </a>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <?php if (has_permission('locations', 'update')): ?>
-                                    <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                <?php endif; ?>
-                                <a href="<?= base_url('leases/create?tenant_id=' . $tenant['id']) ?>" class="btn btn-outline-primary" title="Create Lease">
-                                    <i class="bi bi-file-earmark-plus"></i>
-                                </a>
-                                <?php if (has_permission('locations', 'delete')): ?>
-                                    <a href="<?= base_url('tenants/delete/' . $tenant['id']) ?>" class="btn btn-danger" 
-                                       title="Delete" onclick="return confirm('Are you sure you want to delete this tenant?')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="card">
+        <div class="card-body">
+            <?php
+            $bulk_delete_enabled = has_permission('locations', 'delete');
+            bulk_delete_render_toolbar($bulk_delete_enabled, $tenants, base_url('tenants/bulk-delete'), 'tenant');
+            ?>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($tenants as $tenant): ?>
+                            <?php $tenantName = $tenant['business_name'] ?: $tenant['contact_person']; ?>
+                            <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$tenant['id'], 'tenant ' . $tenantName); ?>
+                                <td><?= htmlspecialchars($tenant['tenant_code']) ?></td>
+                                <td><strong><?= htmlspecialchars($tenantName) ?></strong></td>
+                                <td><?= htmlspecialchars($tenant['contact_person']) ?></td>
+                                <td><?= htmlspecialchars($tenant['email']) ?></td>
+                                <td><?= htmlspecialchars($tenant['phone']) ?></td>
+                                <td><span class="badge bg-info"><?= ucfirst(str_replace('_', ' ', $tenant['tenant_type'])) ?></span></td>
+                                <td>
+                                    <span class="badge bg-<?= $tenant['status'] === 'active' ? 'success' : 'secondary' ?>">
+                                        <?= ucfirst($tenant['status']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="<?= base_url('tenants/view/' . $tenant['id']) ?>" class="btn btn-primary" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <?php if (has_permission('locations', 'update')): ?>
+                                            <a href="<?= base_url('tenants/edit/' . $tenant['id']) ?>" class="btn btn-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="<?= base_url('leases/create?tenant_id=' . $tenant['id']) ?>" class="btn btn-outline-primary" title="Create Lease">
+                                            <i class="bi bi-file-earmark-plus"></i>
+                                        </a>
+                                        <?php if (has_permission('locations', 'delete')): ?>
+                                            <a href="<?= base_url('tenants/delete/' . $tenant['id']) ?>" class="btn btn-danger"
+                                               title="Delete" onclick="return confirm('Are you sure you want to delete this tenant?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        <?php endforeach; ?>
-    <?php render_pagination_controls($pagination ?? null); ?>
+            <?php render_pagination_controls($pagination ?? null); ?>
+        </div>
     </div>
 <?php endif; ?>
 

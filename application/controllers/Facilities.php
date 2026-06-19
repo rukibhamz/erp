@@ -56,4 +56,10 @@ class Facilities extends Base_Controller {
         $this->setFlashMessage('info', 'Facilities have been moved to Locations. You are being redirected.');
         redirect('locations');
     }
+
+    public function bulkDelete() {
+        $this->runBulkDeleteLoop('facilities', 'facility', function (int $id) {
+            throw new Exception('Facilities have been moved to Locations.');
+        });
+    }
 }

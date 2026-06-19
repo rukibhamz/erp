@@ -480,5 +480,26 @@ class Ledger extends Base_Controller {
         
         redirect('ledger');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('ledger', 'delete');
+
+        $this->runBulkDeleteLoop('ledger', 'journal entry', function (int $id) {
+            if ($id <= 0) {
+                throw new Exception('Invalid journal entry ID.');
+            }
+            $entry = $this->journalModel->getById($id);
+            if (!$entry) {
+                throw new Exception('Journal entry not found.');
+            }
+            if ($entry['status'] === 'posted') {
+                throw new Exception('Cannot delete posted journal entries.');
+            }
+            if (!$this->journalModel->delete($id)) {
+                throw new Exception('Failed to delete journal entry.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Ledger', 'Deleted journal entry: ' . $entry['entry_number']);
+        });
+    }
 }
 

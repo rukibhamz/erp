@@ -316,6 +316,8 @@ $route['ledger/post/(:num)'] = 'Ledger/post/$1';
         $route['bookings/getSpacesForLocation'] = 'Bookings/getSpacesForLocation';
         $route['bookings/calendar'] = 'Bookings/calendar';
         $route['bookings/view/(:num)'] = 'Bookings/view/$1';
+        $route['bookings/delete/(:num)'] = 'Bookings/delete/$1';
+        $route['bookings/bulk-delete'] = 'Bookings/bulkDelete';
         // Keep advanced booking features in original controller for now
         $route['bookings/payment'] = 'Bookings/recordPayment';
         $route['bookings/createCustomerInline'] = 'Bookings/createCustomerInline';
@@ -559,6 +561,24 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['inventory/reports/reorder'] = 'Inventory_reports/reorder';
         $route['inventory/reports/movement-analysis'] = 'Inventory_reports/movementAnalysis';
         $route['inventory/reports/purchases'] = 'Inventory_reports/purchases';
+
+        // Bulk delete (list multi-select)
+        $route['taxes/bulk-delete'] = 'Taxes/bulkDelete';
+        $route['entities/bulk-delete'] = 'Entities/bulkDelete';
+        $route['currencies/bulk-delete'] = 'Currencies/bulkDelete';
+        $route['products/bulk-delete'] = 'Products/bulkDelete';
+        $route['tenants/bulk-delete'] = 'Tenants/bulkDelete';
+        $route['facilities/bulk-delete'] = 'Facilities/bulkDelete';
+        $route['promo-codes/bulk-delete'] = 'Promo_codes/bulkDelete';
+        $route['ledger/bulk-delete'] = 'Ledger/bulkDelete';
+        $route['accounts/bulk-delete'] = 'Accounts/bulkDelete';
+        $route['transactions/bulk-delete'] = 'Transactions/bulkDelete';
+        $route['inventory/suppliers/bulk-delete'] = 'Suppliers/bulkDelete';
+        $route['receivables/bulk-delete-customers'] = 'Receivables/bulkDeleteCustomers';
+        $route['receivables/bulk-delete-invoices'] = 'Receivables/bulkDeleteInvoices';
+        $route['payables/bulk-delete-vendors'] = 'Payables/bulkDeleteVendors';
+        $route['cash/accounts/bulk-delete'] = 'Cash/bulkDeleteAccounts';
+        $route['locations/bulk-delete'] = 'Locations/bulkDelete';
 
         return $route;
 

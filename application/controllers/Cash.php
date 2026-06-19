@@ -538,65 +538,74 @@ class Cash extends Base_Controller {
     }
     
     public function deleteAccount($id) {
-        // Only allow admin and super_admin
         if (!isset($this->session['role']) || !in_array($this->session['role'], ['admin', 'super_admin'])) {
             $this->setFlashMessage('danger', 'You do not have permission to delete cash accounts.');
             redirect('cash/accounts');
             return;
         }
-        
+
         $this->requirePermission('cash', 'delete');
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->setFlashMessage('danger', 'Invalid request method.');
             redirect('cash/accounts');
             return;
         }
-        
+
         check_csrf();
-        
-        // Validate ID parameter
-        $id = intval($id);
-        if ($id <= 0) {
-            $this->setFlashMessage('danger', 'Invalid account ID.');
-            redirect('cash/accounts');
-            return;
-        }
-        
+
         try {
-            $cashAccount = $this->cashAccountModel->getById($id);
-            if (!$cashAccount) {
-                $this->setFlashMessage('danger', 'Cash account not found.');
-                redirect('cash/accounts');
-                return;
-            }
-            
-            // Check if account has transactions
-            $transactions = $this->transactionModel->getByAccount($cashAccount['account_id'] ?? 0);
-            if (!empty($transactions)) {
-                $this->setFlashMessage('danger', 'Cannot delete cash account with existing transactions. Please deactivate it instead.');
-                redirect('cash/accounts');
-                return;
-            }
-            
-            // Delete cash account
-            if ($this->cashAccountModel->delete($id)) {
-                // Also delete linked account if account_id exists
-                if (!empty($cashAccount['account_id'])) {
-                    $this->accountModel->delete($cashAccount['account_id']);
-                }
-                
-                $this->activityModel->log($this->session['user_id'], 'delete', 'Cash', 'Deleted cash account: ' . $cashAccount['account_name']);
-                $this->setFlashMessage('success', 'Cash account deleted successfully.');
-            } else {
-                $this->setFlashMessage('danger', 'Failed to delete cash account.');
-            }
+            $this->performCashAccountDelete((int) $id);
+            $this->setFlashMessage('success', 'Cash account deleted successfully.');
         } catch (Exception $e) {
             error_log('Cash deleteAccount error: ' . $e->getMessage());
             $this->setFlashMessage('danger', 'Error deleting cash account: ' . $e->getMessage());
         }
-        
+
         redirect('cash/accounts');
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function performCashAccountDelete(int $id): void {
+        if ($id <= 0) {
+            throw new Exception('Invalid account ID.');
+        }
+
+        $cashAccount = $this->cashAccountModel->getById($id);
+        if (!$cashAccount) {
+            throw new Exception('Cash account not found.');
+        }
+
+        $transactions = $this->transactionModel->getByAccount($cashAccount['account_id'] ?? 0);
+        if (!empty($transactions)) {
+            throw new Exception('Cannot delete cash account with existing transactions. Please deactivate it instead.');
+        }
+
+        if (!$this->cashAccountModel->delete($id)) {
+            throw new Exception('Failed to delete cash account.');
+        }
+
+        if (!empty($cashAccount['account_id'])) {
+            $this->accountModel->delete($cashAccount['account_id']);
+        }
+
+        $this->activityModel->log($this->session['user_id'], 'delete', 'Cash', 'Deleted cash account: ' . $cashAccount['account_name']);
+    }
+
+    public function bulkDeleteAccounts() {
+        if (!isset($this->session['role']) || !in_array($this->session['role'], ['admin', 'super_admin'])) {
+            $this->setFlashMessage('danger', 'You do not have permission to delete cash accounts.');
+            redirect('cash/accounts');
+            return;
+        }
+
+        $this->requirePermission('cash', 'delete');
+
+        $this->runBulkDeleteLoop('cash/accounts', 'cash account', function (int $id) {
+            $this->performCashAccountDelete($id);
+        });
     }
 }
 

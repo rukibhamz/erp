@@ -22,10 +22,15 @@ $page_title = $page_title ?? 'Entities';
         </form>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = has_permission('entities', 'delete');
+        bulk_delete_render_toolbar($bulk_delete_enabled, $entities, base_url('entities/bulk-delete'), 'entity');
+        ?>
         <div class="table-responsive">
             <table class="table">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>ID</th>
                         <th>Name</th>
                         <th>Address</th>
@@ -40,6 +45,7 @@ $page_title = $page_title ?? 'Entities';
                     <?php if (!empty($entities)): ?>
                         <?php foreach ($entities as $entity): ?>
                             <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$entity['id'], 'entity ' . ($entity['name'] ?? '')); ?>
                                 <td><?= htmlspecialchars($entity['id'] ?? '') ?></td>
                                 <td><strong><?= htmlspecialchars($entity['name'] ?? '') ?></strong></td>
                                 <td><?= htmlspecialchars($entity['address'] ?? '') ?></td>
@@ -72,7 +78,7 @@ $page_title = $page_title ?? 'Entities';
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted">No entities found.</td>
+                            <td colspan="<?= bulk_delete_colspan(8, $bulk_delete_enabled) ?>" class="text-center text-muted">No entities found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

@@ -401,5 +401,37 @@ class Transactions extends Base_Controller {
         $nextNum = ($result['max_num'] ?? 0) + 1;
         return 'TXN-' . $year . '-' . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('accounting', 'delete');
+
+        $this->runBulkDeleteLoop('transactions', 'transaction', function (int $id) {
+            if ($id <= 0) {
+                throw new Exception('Invalid transaction ID.');
+            }
+            $transaction = $this->transactionModel->getById($id);
+            if (!$transaction) {
+                throw new Exception('Transaction not found.');
+            }
+            if ($transaction['status'] === 'posted') {
+                if (($this->session['role'] ?? '') !== 'super_admin') {
+                    throw new Exception('Cannot delete posted transactions.');
+                }
+                try {
+                    $this->accountModel->updateBalance(
+                        $transaction['account_id'],
+                        $transaction['debit'] > 0 ? $transaction['debit'] : $transaction['credit'],
+                        $transaction['debit'] > 0 ? 'credit' : 'debit'
+                    );
+                } catch (Exception $accEx) {
+                    error_log('Transactions delete balance reversal error: ' . $accEx->getMessage());
+                }
+            }
+            if (!$this->transactionModel->delete($id)) {
+                throw new Exception('Failed to delete transaction.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Transactions', 'Deleted transaction: ' . $transaction['transaction_number']);
+        });
+    }
 }
 

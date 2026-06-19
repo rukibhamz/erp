@@ -203,5 +203,24 @@ class Currencies extends Base_Controller {
 
         redirect('currencies');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('settings', 'delete');
+
+        $this->runBulkDeleteLoop('currencies', 'currency', function (int $id) {
+            $currency = $this->currencyModel->getById($id);
+            if (!$currency) {
+                throw new Exception('Currency not found.');
+            }
+            $baseCurrency = $this->currencyModel->getBaseCurrency();
+            if ($baseCurrency && $baseCurrency['id'] == $id) {
+                throw new Exception('Cannot delete base currency. Please set another currency as base first.');
+            }
+            if (!$this->currencyModel->delete($id)) {
+                throw new Exception('Failed to delete currency.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Currencies', 'Deleted currency: ' . $currency['currency_code']);
+        });
+    }
 }
 

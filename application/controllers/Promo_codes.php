@@ -155,4 +155,19 @@ class Promo_codes extends Base_Controller {
         }
         redirect('promo-codes');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('bookings', 'delete');
+
+        $this->runBulkDeleteLoop('promo-codes', 'promo code', function (int $id) {
+            $code = $this->promoModel->getById($id);
+            if (!$code) {
+                throw new Exception('Promo code not found.');
+            }
+            if (!$this->promoModel->delete($id)) {
+                throw new Exception('Failed to delete promo code.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Promo Codes', 'Deleted promo code: ' . $code['code']);
+        });
+    }
 }

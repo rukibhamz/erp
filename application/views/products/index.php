@@ -45,10 +45,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <!-- Products Table -->
     <div class="card">
         <div class="card-body">
+            <?php
+            $bulk_delete_enabled = has_permission('products', 'delete');
+            bulk_delete_render_toolbar($bulk_delete_enabled, $products, base_url('products/bulk-delete'), 'product');
+            ?>
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                             <th>Code</th>
                             <th>Name</th>
                             <th>Type</th>
@@ -64,6 +69,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php if (!empty($products)): ?>
                             <?php foreach ($products as $product): ?>
                                 <tr>
+                                    <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$product['id'], 'product ' . ($product['product_name'])); ?>
                                     <td><?= htmlspecialchars($product['product_code']) ?></td>
                                     <td><?= htmlspecialchars($product['product_name']) ?></td>
                                     <td><span class="badge bg-info"><?= ucfirst($product['type']) ?></span></td>
@@ -110,7 +116,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="9" class="text-center text-muted">No products found.</td>
+                                <td colspan="<?= bulk_delete_colspan(9, $bulk_delete_enabled) ?>" class="text-center text-muted">No products found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>

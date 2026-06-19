@@ -2886,12 +2886,9 @@ class Bookings extends Base_Controller {
 
     /**
      * Delete a booking - Super Admin only
-     * Exhaustive cleanup of all related records
      */
     public function delete($id) {
-        if (($this->session['role'] ?? '') !== 'super_admin') {
-            $this->setFlashMessage('danger', 'Access denied. Super Admin only.');
-            redirect('bookings');
+        if (!$this->requireSuperAdminForBookingDelete()) {
             return;
         }
 
@@ -2902,22 +2899,99 @@ class Bookings extends Base_Controller {
         }
 
         check_csrf();
-        $id = intval($id);
-        
+
         try {
-            $booking = $this->bookingModel->getById($id);
-            if (!$booking) {
-                $this->setFlashMessage('danger', 'Booking not found.');
-                redirect('bookings');
-                return;
+            $bookingNumber = $this->performBookingDelete((int) $id);
+            $this->setFlashMessage('success', 'Booking ' . $bookingNumber . ' and all associated records deleted successfully.');
+        } catch (Exception $e) {
+            error_log('Bookings delete error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting booking: ' . $e->getMessage());
+        }
+
+        redirect('bookings');
+    }
+
+    /**
+     * Delete multiple bookings - Super Admin only
+     */
+    public function bulkDelete() {
+        if (!$this->requireSuperAdminForBookingDelete()) {
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('bookings');
+            return;
+        }
+
+        check_csrf();
+
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+
+        if (empty($ids)) {
+            $this->setFlashMessage('warning', 'No bookings selected.');
+            redirect('bookings');
+            return;
+        }
+
+        $deleted = [];
+        $failed = [];
+
+        foreach ($ids as $id) {
+            try {
+                $deleted[] = $this->performBookingDelete($id);
+            } catch (Exception $e) {
+                $failed[] = '#' . $id . ': ' . $e->getMessage();
+                error_log('Bookings bulkDelete error for ID ' . $id . ': ' . $e->getMessage());
             }
+        }
 
-            $this->db->beginTransaction();
+        if (!empty($deleted) && empty($failed)) {
+            $this->setFlashMessage('success', count($deleted) . ' booking(s) deleted: ' . implode(', ', $deleted) . '.');
+        } elseif (!empty($deleted) && !empty($failed)) {
+            $this->setFlashMessage('warning', count($deleted) . ' deleted (' . implode(', ', $deleted) . '). ' . count($failed) . ' failed: ' . implode('; ', $failed));
+        } else {
+            $this->setFlashMessage('danger', 'No bookings were deleted. ' . implode('; ', $failed));
+        }
 
-            // 1. Handle Invoices and related accounting
+        redirect('bookings');
+    }
+
+    private function requireSuperAdminForBookingDelete(): bool {
+        if (($this->session['role'] ?? '') !== 'super_admin') {
+            $this->setFlashMessage('danger', 'Access denied. Super Admin only.');
+            redirect('bookings');
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Exhaustive cleanup of a booking and related records.
+     *
+     * @return string Booking number on success
+     * @throws Exception
+     */
+    private function performBookingDelete(int $id): string {
+        if ($id <= 0) {
+            throw new Exception('Invalid booking ID.');
+        }
+
+        $booking = $this->bookingModel->getById($id);
+        if (!$booking) {
+            throw new Exception('Booking not found.');
+        }
+
+        $this->db->beginTransaction();
+
+        try {
             $invoiceId = $booking['invoice_id'] ?? null;
             if (!$invoiceId) {
-                // Try finding by reference if invoice_id is null
                 $invoice = $this->db->fetchOne(
                     "SELECT id FROM `" . $this->db->getPrefix() . "invoices` WHERE reference = ?",
                     ['BKG-' . $id]
@@ -2926,54 +3000,40 @@ class Bookings extends Base_Controller {
             }
 
             if ($invoiceId) {
-                // Delete Invoice Items
                 $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "invoice_items` WHERE invoice_id = ?", [$invoiceId]);
-                
-                // Delete Transactions linked to invoice
                 $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "transactions` WHERE reference_type = 'invoice' AND reference_id = ?", [$invoiceId]);
-                
-                // Delete Journal Entries linked to invoice
+
                 $journals = $this->db->fetchAll("SELECT id FROM `" . $this->db->getPrefix() . "journal_entries` WHERE reference = ?", ['booking_invoice:' . $invoiceId]);
                 foreach ($journals as $j) {
                     $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entry_lines` WHERE journal_entry_id = ?", [$j['id']]);
                     $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "journal_entries` WHERE id = ?", [$j['id']]);
                 }
-                
-                // Finally delete invoice
+
                 $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "invoices` WHERE id = ?", [$invoiceId]);
             }
 
-            // 2. Handle Booking Payments and related accounting
             $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "transactions` WHERE reference_type = 'booking_payment' AND reference_id = ?", [$id]);
-            
             $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_payments` WHERE booking_id = ?", [$id]);
-
-            // 3. Delete Metadata
             $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_slots` WHERE booking_id = ?", [$id]);
             $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_resources` WHERE booking_id = ?", [$id]);
             $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_addons` WHERE booking_id = ?", [$id]);
             $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "payment_schedule` WHERE booking_id = ?", [$id]);
             $this->db->query("DELETE FROM `" . $this->db->getPrefix() . "booking_rentals` WHERE booking_id = ?", [$id]);
 
-            // 4. Delete Booking
-            if ($this->bookingModel->delete($id)) {
-                $this->activityModel->log($this->session['user_id'], 'delete', 'Bookings', 'Exhaustive delete for booking: ' . $booking['booking_number']);
-                $this->db->commit();
-                $this->setFlashMessage('success', 'Booking and all associated records deleted successfully.');
-            } else {
-                $this->db->rollBack();
-                $this->setFlashMessage('danger', 'Failed to delete booking record.');
+            if (!$this->bookingModel->delete($id)) {
+                throw new Exception('Failed to delete booking record.');
             }
 
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Bookings', 'Exhaustive delete for booking: ' . $booking['booking_number']);
+            $this->db->commit();
+
+            return (string) $booking['booking_number'];
         } catch (Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            error_log('Bookings delete error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error deleting booking: ' . $e->getMessage());
+            throw $e;
         }
-
-        redirect('bookings');
     }
 }
 

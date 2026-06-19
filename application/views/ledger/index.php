@@ -55,10 +55,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="card-title mb-0">All Journal Entries</h5>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = hasPermission('ledger', 'delete');
+        $ledger_deletable = array_values(array_filter($entries ?? [], function ($e) {
+            return ($e['status'] ?? '') === 'draft';
+        }));
+        bulk_delete_render_toolbar($bulk_delete_enabled, $ledger_deletable, base_url('ledger/bulk-delete'), 'journal entry', 'Are you sure you want to delete the selected journal entries?');
+        ?>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>Entry #</th>
                         <th>Date</th>
                         <th>Reference</th>
@@ -72,6 +80,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php if (!empty($entries)): ?>
                         <?php foreach ($entries as $entry): ?>
                             <tr>
+                                <?php if ($bulk_delete_enabled && ($entry['status'] ?? '') === 'draft'): ?>
+                                    <?php bulk_delete_render_checkbox_td(true, (int)$entry['id'], 'journal entry ' . ($entry['entry_number'] ?? $entry['id'])); ?>
+                                <?php elseif ($bulk_delete_enabled): ?>
+                                    <td></td>
+                                <?php endif; ?>
                                 <td><strong><?= htmlspecialchars($entry['entry_number'] ?? 'N/A') ?></strong></td>
                                 <td><?= format_date($entry['entry_date'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($entry['reference'] ?? '-') ?></td>
@@ -118,7 +131,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="<?= bulk_delete_colspan(7, $bulk_delete_enabled) ?>" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-journal-text"></i>
                                     <p class="mb-0">No journal entries found.</p>

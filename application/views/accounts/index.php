@@ -72,10 +72,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="card-title mb-0">Accounts</h5>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = hasPermission('accounts', 'delete');
+        $accounts_base_cols = ($account_number_enabled ?? false) ? 9 : 8;
+        bulk_delete_render_toolbar($bulk_delete_enabled, $accounts, base_url('accounts/bulk-delete'), 'account', 'Are you sure you want to delete the selected accounts? This action cannot be undone.');
+        ?>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>Code</th>
                         <th>Account Name</th>
                         <?php if ($account_number_enabled ?? false): ?>
@@ -93,6 +99,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php if (!empty($accounts)): ?>
                         <?php foreach ($accounts as $account): ?>
                             <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$account['id'], 'account ' . ($account['account_name'] ?? '')); ?>
                                 <td><strong><?= htmlspecialchars($account['account_code'] ?? '') ?></strong></td>
                                 <td style="padding-left: <?= (($account['depth'] ?? 0) * 30) + 12 ?>px">
                                     <?php if (($account['depth'] ?? 0) > 0): ?>
@@ -141,7 +148,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="<?= ($account_number_enabled ?? false) ? 9 : 8 ?>" class="text-center py-5">
+                            <td colspan="<?= bulk_delete_colspan($accounts_base_cols, $bulk_delete_enabled) ?>" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-list-ul"></i>
                                     <p class="mb-0">No accounts found.</p>

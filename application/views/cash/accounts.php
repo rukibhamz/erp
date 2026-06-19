@@ -38,10 +38,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = isset($session['role']) && in_array($session['role'], ['admin', 'super_admin'], true);
+        bulk_delete_render_toolbar($bulk_delete_enabled, $cash_accounts, base_url('cash/accounts/bulk-delete'), 'cash account', 'Are you sure you want to delete the selected cash accounts? This action cannot be undone.');
+        ?>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>Account Name</th>
                         <th>Type</th>
                         <th>Bank</th>
@@ -57,6 +62,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php if (!empty($cash_accounts)): ?>
                         <?php foreach ($cash_accounts as $account): ?>
                             <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$account['id'], 'cash account ' . $account['account_name']); ?>
                                 <td><strong><?= htmlspecialchars($account['account_name']) ?></strong></td>
                                 <td>
                                     <?php
@@ -107,7 +113,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="<?= bulk_delete_colspan(9, $bulk_delete_enabled) ?>" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-wallet2"></i>
                                     <p class="mb-0">No cash accounts found.</p>

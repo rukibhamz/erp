@@ -118,10 +118,21 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
     <!-- Bookings Table -->
     <div class="card">
         <div class="card-body">
+            <?php
+            $bulk_delete_enabled = isSuperAdmin();
+            bulk_delete_render_toolbar(
+                $bulk_delete_enabled,
+                $bookings ?? [],
+                base_url('bookings/bulk-delete'),
+                'booking',
+                'Delete the selected booking(s)? This will also remove associated invoices, payments, and transactions.'
+            );
+            ?>
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                             <?= $sortableTh('booking_number', 'Booking #') ?>
                             <?= $sortableTh('facility', 'Facility') ?>
                             <?= $sortableTh('customer', 'Customer') ?>
@@ -137,6 +148,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                         <?php if (!empty($bookings)): ?>
                             <?php foreach ($bookings as $booking): ?>
                                 <tr>
+                                    <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int) $booking['id'], 'booking ' . $booking['booking_number']); ?>
                                     <td><strong><?= htmlspecialchars($booking['booking_number']) ?></strong></td>
                                     <td><?= htmlspecialchars($booking['facility_name']) ?></td>
                                     <td>
@@ -185,7 +197,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="9" class="text-center py-4 text-muted">
+                                <td colspan="<?= bulk_delete_colspan(9, $bulk_delete_enabled) ?>" class="text-center py-4 text-muted">
                                     <?php if ($bookingHasFilters): ?>
                                         No bookings match your filters.
                                         <a href="<?= base_url('bookings') ?>" class="d-block mt-2">Clear filters</a>

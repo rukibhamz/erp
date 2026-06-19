@@ -225,5 +225,20 @@ class Products extends Base_Controller {
 
         redirect('products');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('products', 'delete');
+
+        $this->runBulkDeleteLoop('products', 'product', function (int $id) {
+            $product = $this->productModel->getById($id);
+            if (!$product) {
+                throw new Exception('Product not found.');
+            }
+            if (!$this->productModel->delete($id)) {
+                throw new Exception('Failed to delete product.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Products', 'Deleted product: ' . $product['product_name']);
+        });
+    }
 }
 

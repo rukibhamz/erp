@@ -213,89 +213,93 @@ class Locations extends Base_Controller {
     
     public function delete($id) {
         $this->requirePermission('locations', 'delete');
-        
+
         try {
-            $location = $this->locationModel->getById($id);
-            if (!$location) {
-                $this->setFlashMessage('danger', 'Location not found.');
-                redirect('locations');
-            }
-            
-            // Check if location has spaces
-            // Cascade delete spaces
-            $spaces = $this->spaceModel->getByProperty($id);
-            if (!empty($spaces)) {
-                foreach ($spaces as $space) {
-                    // Reuse Space delete logic (including bookable config cleanup) by calling Space Model delete
-                    // But Space Model delete is simple DB delete.
-                    // The Controller delete has the heavy logic (bookings check, leases check).
-                    // We must replicate that logic or risk deleting spaces with active bookings.
-                    
-                    // Check for active bookings/leases for THIS space before deleting
-                    // If ANY space has active booking, we block the WHOLE location delete to be safe.
-                    
-                    // Check bookings
-                    if (!empty($space['facility_id'])) {
-                        $activeBookings = $this->db->fetchAll(
-                            "SELECT id FROM `" . $this->db->getPrefix() . "bookings` 
-                             WHERE facility_id = ? AND status IN ('pending', 'confirmed', 'checked_in')",
-                            [$space['facility_id']]
-                        );
-                        
-                        if (!empty($activeBookings)) {
-                            $this->setFlashMessage('danger', "Cannot delete location. Space '{$space['space_name']}' has active bookings.");
-                            redirect('locations/view/' . $id);
-                        }
-                    }
-                    
-                    // Check leases
-                    $activeLeases = $this->db->fetchAll(
-                        "SELECT id FROM `" . $this->db->getPrefix() . "leases` 
-                         WHERE space_id = ? AND status = 'active'",
-                        [$space['id']]
-                    );
-                    
-                    if (!empty($activeLeases)) {
-                         $this->setFlashMessage('danger', "Cannot delete location. Space '{$space['space_name']}' has an active lease.");
-                         redirect('locations/view/' . $id);
-                    }
-                }
-                
-                // If we get here, safe to delete all spaces
-                foreach ($spaces as $space) {
-                    // Delete bookable config
-                    $this->db->delete('bookable_config', "`space_id` = ?", [$space['id']]);
-                    
-                    // Deactivate facility if synced
-                    if (!empty($space['facility_id'])) {
-                        $this->facilityModel->update($space['facility_id'], ['status' => 'inactive', 'is_bookable' => 0]);
-                    }
-                    
-                    // Delete space
-                    $this->spaceModel->delete($space['id']);
-                }
-            }
-            
-            // Cascade delete meters
-            $meters = $this->meterModel->getByProperty($id);
-            if (!empty($meters)) {
-                foreach ($meters as $meter) {
-                    $this->meterModel->delete($meter['id']);
-                }
-            }
-            
-            if ($this->locationModel->delete($id)) {
-                $this->activityModel->log($this->session['user_id'], 'delete', 'Locations', 'Deleted location: ' . ($location['property_name'] ?? $location['Location_name'] ?? ''));
-                $this->setFlashMessage('success', 'Location deleted successfully.');
-            } else {
-                $this->setFlashMessage('danger', 'Failed to delete location.');
-            }
+            $this->performLocationDelete((int) $id);
+            $this->setFlashMessage('success', 'Location deleted successfully.');
         } catch (Exception $e) {
             error_log('Locations delete error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error deleting location: ' . $e->getMessage());
+            $this->setFlashMessage('danger', $e->getMessage());
         }
-        
+
         redirect('locations');
+    }
+
+    /**
+     * @return string Location name on success
+     * @throws Exception
+     */
+    private function performLocationDelete(int $id): string {
+        if ($id <= 0) {
+            throw new Exception('Invalid location ID.');
+        }
+
+        $location = $this->locationModel->getById($id);
+        if (!$location) {
+            throw new Exception('Location not found.');
+        }
+
+        $locationName = (string) ($location['property_name'] ?? $location['Location_name'] ?? '');
+
+        $spaces = $this->spaceModel->getByProperty($id);
+        if (!empty($spaces)) {
+            foreach ($spaces as $space) {
+                if (!empty($space['facility_id'])) {
+                    $activeBookings = $this->db->fetchAll(
+                        "SELECT id FROM `" . $this->db->getPrefix() . "bookings`
+                         WHERE facility_id = ? AND status IN ('pending', 'confirmed', 'checked_in')",
+                        [$space['facility_id']]
+                    );
+
+                    if (!empty($activeBookings)) {
+                        throw new Exception("Cannot delete location. Space '{$space['space_name']}' has active bookings.");
+                    }
+                }
+
+                $activeLeases = $this->db->fetchAll(
+                    "SELECT id FROM `" . $this->db->getPrefix() . "leases`
+                     WHERE space_id = ? AND status = 'active'",
+                    [$space['id']]
+                );
+
+                if (!empty($activeLeases)) {
+                    throw new Exception("Cannot delete location. Space '{$space['space_name']}' has an active lease.");
+                }
+            }
+
+            foreach ($spaces as $space) {
+                $this->db->delete('bookable_config', "`space_id` = ?", [$space['id']]);
+
+                if (!empty($space['facility_id'])) {
+                    $this->facilityModel->update($space['facility_id'], ['status' => 'inactive', 'is_bookable' => 0]);
+                }
+
+                $this->spaceModel->delete($space['id']);
+            }
+        }
+
+        $meters = $this->meterModel->getByProperty($id);
+        if (!empty($meters)) {
+            foreach ($meters as $meter) {
+                $this->meterModel->delete($meter['id']);
+            }
+        }
+
+        if (!$this->locationModel->delete($id)) {
+            throw new Exception('Failed to delete location.');
+        }
+
+        $this->activityModel->log($this->session['user_id'], 'delete', 'Locations', 'Deleted location: ' . $locationName);
+
+        return $locationName;
+    }
+
+    public function bulkDelete() {
+        $this->requirePermission('locations', 'delete');
+
+        $this->runBulkDeleteLoop('locations', 'location', function (int $id) {
+            $this->performLocationDelete($id);
+        });
     }
     
     /**

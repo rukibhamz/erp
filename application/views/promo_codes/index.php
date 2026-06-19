@@ -31,10 +31,15 @@
                 <?php endif; ?>
             </div>
         <?php else: ?>
+            <?php
+            $bulk_delete_enabled = hasPermission('bookings', 'delete');
+            bulk_delete_render_toolbar($bulk_delete_enabled, $codes, base_url('promo-codes/bulk-delete'), 'promo code');
+            ?>
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                             <th>Code</th>
                             <th>Description</th>
                             <th>Discount</th>
@@ -52,6 +57,7 @@
                             $notStarted = $c['valid_from'] > $now;
                             ?>
                             <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$c['id'], 'promo code ' . $c['code']); ?>
                                 <td><code class="fs-6"><?= htmlspecialchars($c['code']) ?></code></td>
                                 <td class="text-muted small"><?= htmlspecialchars($c['description'] ?? '—') ?></td>
                                 <td>

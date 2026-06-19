@@ -1067,21 +1067,38 @@ class Payables extends Base_Controller {
             return;
         }
 
-        check_csrf(); // CSRF Protection
-
-        $id = intval($id);
-        $vendor = $this->vendorModel->getById($id);
-        if (!$vendor) {
-            $this->setFlashMessage('danger', 'Vendor not found.');
-            redirect('payables/vendors');
-            return;
-        }
+        check_csrf();
 
         try {
-            $this->db->beginTransaction();
+            $this->performVendorDelete((int) $id);
+            $this->setFlashMessage('success', 'Vendor and all associated records permanently deleted.');
+        } catch (Exception $e) {
+            error_log('Payables deleteVendor error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error deleting vendor: ' . $e->getMessage());
+        }
+
+        redirect('payables/vendors');
+    }
+
+    /**
+     * @return string Company name on success
+     * @throws Exception
+     */
+    private function performVendorDelete(int $id): string {
+        if ($id <= 0) {
+            throw new Exception('Invalid vendor ID.');
+        }
+
+        $vendor = $this->vendorModel->getById($id);
+        if (!$vendor) {
+            throw new Exception('Vendor not found.');
+        }
+
+        $this->db->beginTransaction();
+
+        try {
             $prefix = $this->db->getPrefix();
 
-            // Cascade delete bills and related records
             $bills = $this->db->fetchAll("SELECT id FROM `{$prefix}bills` WHERE vendor_id = ?", [$id]);
             foreach ($bills as $bill) {
                 $bId = $bill['id'];
@@ -1096,7 +1113,6 @@ class Payables extends Base_Controller {
             }
             $this->db->query("DELETE FROM `{$prefix}bills` WHERE vendor_id = ?", [$id]);
 
-            // Delete vendor payments (stored in erp_payments with vendor_id)
             $vendorPayments = $this->db->fetchAll("SELECT id FROM `{$prefix}payments` WHERE vendor_id = ?", [$id]);
             foreach ($vendorPayments as $vp) {
                 $this->db->query("DELETE FROM `{$prefix}payment_allocations` WHERE payment_id = ?", [$vp['id']]);
@@ -1104,27 +1120,35 @@ class Payables extends Base_Controller {
             }
             $this->db->query("DELETE FROM `{$prefix}payments` WHERE vendor_id = ?", [$id]);
 
-            // Free up vendor code so it can be reassigned
             $this->db->query("UPDATE `{$prefix}vendors` SET vendor_code = NULL WHERE id = ?", [$id]);
 
-            // Delete the vendor record
-            if ($this->vendorModel->delete($id)) {
-                $this->activityModel->log($this->session['user_id'], 'delete', 'Payables', 'Deleted vendor: ' . $vendor['company_name']);
-                $this->db->commit();
-                $this->setFlashMessage('success', 'Vendor and all associated records permanently deleted.');
-            } else {
-                $this->db->rollBack();
-                $this->setFlashMessage('danger', 'Failed to delete vendor record.');
+            if (!$this->vendorModel->delete($id)) {
+                throw new Exception('Failed to delete vendor record.');
             }
+
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Payables', 'Deleted vendor: ' . $vendor['company_name']);
+            $this->db->commit();
+
+            return (string) $vendor['company_name'];
         } catch (Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            error_log('Payables deleteVendor error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error deleting vendor: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function bulkDeleteVendors() {
+        $userRole = $this->session['role'] ?? '';
+        if (!in_array($userRole, ['super_admin', 'admin'])) {
+            $this->setFlashMessage('danger', 'You do not have permission to delete vendors.');
+            redirect('payables/vendors');
+            return;
         }
 
-        redirect('payables/vendors');
+        $this->runBulkDeleteLoop('payables/vendors', 'vendor', function (int $id) {
+            $this->performVendorDelete($id);
+        });
     }
     
     /**

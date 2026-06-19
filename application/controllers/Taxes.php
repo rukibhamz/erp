@@ -146,5 +146,20 @@ class Taxes extends Base_Controller {
 
         redirect('taxes');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('taxes', 'delete');
+
+        $this->runBulkDeleteLoop('taxes', 'tax rate', function (int $id) {
+            $tax = $this->taxModel->getById($id);
+            if (!$tax) {
+                throw new Exception('Tax rate not found.');
+            }
+            if (!$this->taxModel->delete($id)) {
+                throw new Exception('Failed to delete tax rate.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Taxes', 'Deleted tax: ' . $tax['tax_name']);
+        });
+    }
 }
 

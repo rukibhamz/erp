@@ -255,5 +255,24 @@ class Suppliers extends Base_Controller {
         
         redirect('inventory/suppliers');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('inventory', 'delete');
+
+        $this->runBulkDeleteLoop('inventory/suppliers', 'supplier', function (int $id) {
+            $supplier = $this->supplierModel->getById($id);
+            if (!$supplier) {
+                throw new Exception('Supplier not found.');
+            }
+            $bills = $this->billModel->getBySupplier($id);
+            if (!empty($bills)) {
+                throw new Exception('Cannot delete supplier with associated bills.');
+            }
+            if (!$this->supplierModel->delete($id)) {
+                throw new Exception('Failed to delete supplier.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Suppliers', 'Deleted supplier: ' . $supplier['supplier_name']);
+        });
+    }
 }
 

@@ -20,71 +20,77 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     <?php endif; ?>
 
-    <div class="row">
-        <?php if (!empty($facilities)): ?>
-            <?php foreach ($facilities as $facility): ?>
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <?= htmlspecialchars($facility['facility_name']) ?>
-                                <span class="badge bg-<?= $facility['status'] === 'active' ? 'success' : 'secondary' ?> float-end">
-                                    <?= ucfirst($facility['status']) ?>
-                                </span>
-                            </h5>
-                            <p class="text-muted mb-2"><?= htmlspecialchars($facility['facility_code']) ?></p>
-                            <?php if ($facility['description']): ?>
-                                <p class="card-text"><?= htmlspecialchars(substr($facility['description'], 0, 100)) ?><?= strlen($facility['description']) > 100 ? '...' : '' ?></p>
-                            <?php endif; ?>
-                            
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="bi bi-people"></i> Capacity: <?= $facility['capacity'] ?><br>
-                                    <i class="bi bi-clock"></i> Min Duration: <?= $facility['minimum_duration'] ?> hour(s)
-                                </small>
-                            </div>
-                            
-                            <div class="mb-2">
-                                <strong>Rates:</strong><br>
-                                <small>Hourly: <?= format_currency($facility['hourly_rate']) ?></small><br>
-                                <small>Daily: <?= format_currency($facility['daily_rate']) ?></small>
-                                <?php if ($facility['weekend_rate'] > 0): ?>
-                                    <br><small>Weekend: <?= format_currency($facility['weekend_rate']) ?></small>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="btn-group btn-group-sm mt-3">
-                                <?php if (has_permission('bookings', 'read')): ?>
-                                    <a href="<?= base_url('facilities/view/' . $facility['id']) ?>" class="btn btn-primary" title="View">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                <?php endif; ?>
-                                <?php if (has_permission('bookings', 'update')): ?>
-                                    <a href="<?= base_url('facilities/edit/' . $facility['id']) ?>" class="btn btn-primary" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                <?php endif; ?>
-                                <?php if (has_permission('bookings', 'delete')): ?>
-                                    <a href="<?= base_url('facilities/delete/' . $facility['id']) ?>" class="btn btn-danger" 
-                                       title="Delete" onclick="return confirm('Are you sure you want to delete this facility?')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                <?php endif; ?>
-                                <a href="<?= base_url('bookings?facility_id=' . $facility['id']) ?>" class="btn btn-outline-info" title="View Bookings">
-                                    <i class="bi bi-calendar"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <div class="col-12">
-                <div class="alert alert-info">
-                    No facilities found. <a href="<?= base_url('facilities/create') ?>">Create your first facility</a>.
-                </div>
+    <div class="card">
+        <div class="card-body">
+            <?php
+            $bulk_delete_enabled = has_permission('bookings', 'delete');
+            bulk_delete_render_toolbar($bulk_delete_enabled, $facilities, base_url('facilities/bulk-delete'), 'facility');
+            ?>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Capacity</th>
+                            <th>Hourly Rate</th>
+                            <th>Daily Rate</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($facilities)): ?>
+                            <?php foreach ($facilities as $facility): ?>
+                                <tr>
+                                    <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$facility['id'], 'facility ' . ($facility['facility_name'])); ?>
+                                    <td><?= htmlspecialchars($facility['facility_code']) ?></td>
+                                    <td><strong><?= htmlspecialchars($facility['facility_name']) ?></strong></td>
+                                    <td><?= (int) $facility['capacity'] ?></td>
+                                    <td><?= format_currency($facility['hourly_rate']) ?></td>
+                                    <td><?= format_currency($facility['daily_rate']) ?></td>
+                                    <td>
+                                        <span class="badge bg-<?= $facility['status'] === 'active' ? 'success' : 'secondary' ?>">
+                                            <?= ucfirst($facility['status']) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <?php if (has_permission('bookings', 'read')): ?>
+                                                <a href="<?= base_url('facilities/view/' . $facility['id']) ?>" class="btn btn-primary" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <?php if (has_permission('bookings', 'update')): ?>
+                                                <a href="<?= base_url('facilities/edit/' . $facility['id']) ?>" class="btn btn-primary" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <?php if (has_permission('bookings', 'delete')): ?>
+                                                <a href="<?= base_url('facilities/delete/' . $facility['id']) ?>" class="btn btn-danger"
+                                                   title="Delete" onclick="return confirm('Are you sure you want to delete this facility?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <a href="<?= base_url('bookings?facility_id=' . $facility['id']) ?>" class="btn btn-outline-info" title="View Bookings">
+                                                <i class="bi bi-calendar"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="<?= bulk_delete_colspan(7, $bulk_delete_enabled) ?>" class="text-center text-muted">
+                                    No facilities found. <a href="<?= base_url('facilities/create') ?>">Create your first facility</a>.
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
-        <?php endif; ?>
+        </div>
     </div>
 </div>
 

@@ -74,10 +74,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h5 class="card-title mb-0">All Transactions</h5>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = hasPermission('accounting', 'delete');
+        bulk_delete_render_toolbar($bulk_delete_enabled, $transactions, base_url('transactions/bulk-delete'), 'transaction', 'Are you sure you want to delete the selected transactions?');
+        ?>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>Date</th>
                         <th>Transaction #</th>
                         <th>Account</th>
@@ -91,7 +96,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <tbody>
                     <?php if (!empty($transactions)): ?>
                         <?php foreach ($transactions as $txn): ?>
+                            <?php $txn_deletable = ($txn['status'] ?? '') !== 'posted' || isSuperAdmin(); ?>
                             <tr>
+                                <?php if ($bulk_delete_enabled && $txn_deletable): ?>
+                                    <?php bulk_delete_render_checkbox_td(true, (int)$txn['id'], 'transaction ' . ($txn['transaction_number'] ?? $txn['id'])); ?>
+                                <?php elseif ($bulk_delete_enabled): ?>
+                                    <td></td>
+                                <?php endif; ?>
                                 <td><?= format_date($txn['transaction_date'] ?? '') ?></td>
                                 <td><strong><?= htmlspecialchars($txn['transaction_number'] ?? 'N/A') ?></strong></td>
                                 <td><?= htmlspecialchars(($txn['account_code'] ?? '') . ' - ' . ($txn['account_name'] ?? '')) ?></td>
@@ -142,7 +153,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center py-5">
+                            <td colspan="<?= bulk_delete_colspan(8, $bulk_delete_enabled) ?>" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-arrow-left-right"></i>
                                     <p class="mb-0">No transactions found.</p>

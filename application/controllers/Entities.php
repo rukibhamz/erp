@@ -186,5 +186,20 @@ class Entities extends Base_Controller {
 
         redirect('entities');
     }
+
+    public function bulkDelete() {
+        $this->requirePermission('entities', 'delete');
+
+        $this->runBulkDeleteLoop('entities', 'entity', function (int $id) {
+            $entity = $this->entityModel->getById($id);
+            if (!$entity) {
+                throw new Exception('Entity not found.');
+            }
+            if (!$this->entityModel->delete($id)) {
+                throw new Exception('Failed to delete entity.');
+            }
+            $this->activityModel->log($this->session['user_id'], 'delete', 'Entities', 'Deleted entity: ' . $entity['name']);
+        });
+    }
 }
 

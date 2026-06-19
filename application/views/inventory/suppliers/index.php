@@ -42,10 +42,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = has_permission('inventory', 'delete');
+        bulk_delete_render_toolbar($bulk_delete_enabled, $suppliers, base_url('inventory/suppliers/bulk-delete'), 'supplier', 'Are you sure you want to delete the selected suppliers?');
+        ?>
         <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                             <th>Code</th>
                             <th>Supplier Name</th>
                             <th>Contact Person</th>
@@ -60,6 +65,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <tbody>
                         <?php foreach ($suppliers as $supplier): ?>
                             <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$supplier['id'], 'supplier ' . $supplier['supplier_name']); ?>
                                 <td><strong><?= htmlspecialchars($supplier['supplier_code']) ?></strong></td>
                                 <td><?= htmlspecialchars($supplier['supplier_name']) ?></td>
                                 <td><?= htmlspecialchars($supplier['contact_person'] ?: '-') ?></td>

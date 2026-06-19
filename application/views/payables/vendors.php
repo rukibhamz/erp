@@ -34,10 +34,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
     <div class="card-body">
+        <?php
+        $vendor_role = $_SESSION['role'] ?? '';
+        $bulk_delete_enabled = in_array($vendor_role, ['super_admin', 'admin'], true);
+        bulk_delete_render_toolbar($bulk_delete_enabled, $vendors, base_url('payables/bulk-delete-vendors'), 'vendor', 'Permanently delete the selected vendors and all associated records? This cannot be undone.');
+        ?>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>Code</th>
                         <th>Company Name</th>
                         <th>Contact</th>
@@ -52,6 +58,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php if (!empty($vendors)): ?>
                         <?php foreach ($vendors as $vendor): ?>
                             <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$vendor['id'], 'vendor ' . $vendor['company_name']); ?>
                                 <td><strong><?= htmlspecialchars($vendor['vendor_code']) ?></strong></td>
                                 <td>
                                     <a href="<?= base_url('payables/vendors/history/' . intval($vendor['id'])) ?>">
@@ -97,7 +104,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center py-5">
+                            <td colspan="<?= bulk_delete_colspan(8, $bulk_delete_enabled) ?>" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-building"></i>
                                     <p class="mb-0">No vendors found.</p>

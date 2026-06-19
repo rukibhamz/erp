@@ -31,10 +31,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = has_permission('taxes', 'delete');
+        bulk_delete_render_toolbar($bulk_delete_enabled, $taxes, base_url('taxes/bulk-delete'), 'tax rate');
+        ?>
         <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                             <th>Tax Name</th>
                             <th>Tax Code</th>
                             <th>Type</th>
@@ -48,6 +53,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <?php if (!empty($taxes)): ?>
                             <?php foreach ($taxes as $tax): ?>
                                 <tr>
+                                    <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$tax['id'], 'tax rate ' . ($tax['tax_name'])); ?>
                                     <td><?= htmlspecialchars($tax['tax_name']) ?></td>
                                     <td><?= htmlspecialchars($tax['tax_code'] ?? '-') ?></td>
                                     <td><span class="badge bg-info"><?= ucfirst($tax['tax_type']) ?></span></td>
@@ -93,7 +99,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center text-muted">No tax rates found.</td>
+                                <td colspan="<?= bulk_delete_colspan(7, $bulk_delete_enabled) ?>" class="text-center text-muted">No tax rates found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>

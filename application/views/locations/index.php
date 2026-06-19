@@ -80,61 +80,82 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     </div>
 <?php else: ?>
-    <div class="row g-4">
-        <?php foreach ($locations as $Location): ?>
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm border-0">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="bi bi-building"></i> <?= htmlspecialchars($Location['Location_name']) ?></h6>
-                        <span class="badge bg-<?= $Location['status'] === 'operational' ? 'success' : ($Location['status'] === 'under_construction' ? 'warning' : 'secondary') ?>">
-                            <?= ucfirst(str_replace('_', ' ', $Location['status'])) ?>
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <small class="text-muted d-block mb-2">
-                                <i class="bi bi-hash"></i> Code: <strong><?= htmlspecialchars($Location['Location_code']) ?></strong>
-                            </small>
-                            <?php if ($Location['city'] || $Location['state']): ?>
-                                <p class="mb-1 text-muted small">
-                                    <i class="bi bi-geo-alt"></i> 
-                                    <?= htmlspecialchars($Location['city'] ?? '') ?><?= $Location['city'] && $Location['state'] ? ', ' : '' ?><?= htmlspecialchars($Location['state'] ?? '') ?>
-                                </p>
-                            <?php endif; ?>
-                            <?php if ($Location['built_area']): ?>
-                                <p class="mb-1 text-muted small">
-                                    <i class="bi bi-rulers"></i> 
-                                    <?= number_format($Location['built_area'], 2) ?> sqm
-                                </p>
-                            <?php endif; ?>
-                            <?php if ($Location['Location_type']): ?>
-                                <p class="mb-0 text-muted small">
-                                    <i class="bi bi-tag"></i> 
-                                    <?= ucfirst(str_replace('_', ' ', $Location['Location_type'])) ?>
-                                </p>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-primary btn-sm">
-                                <i class="bi bi-eye"></i> View Details
-                            </a>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-primary" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                    <i class="bi bi-door-open"></i>
-                                </a>
-                                <a href="<?= base_url('locations/delete/' . $Location['id']) ?>" class="btn btn-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this location?');">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <?php
+            $bulk_delete_enabled = has_permission('locations', 'delete');
+            bulk_delete_render_toolbar($bulk_delete_enabled, $locations, base_url('locations/bulk-delete'), 'location', 'Are you sure you want to delete the selected locations?');
+            ?>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
+                            <th>Name</th>
+                            <th>Code</th>
+                            <th>Location</th>
+                            <th>Built Area</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($locations as $Location): ?>
+                            <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$Location['id'], 'location ' . ($Location['Location_name'] ?? '')); ?>
+                                <td><strong><?= htmlspecialchars($Location['Location_name']) ?></strong></td>
+                                <td><?= htmlspecialchars($Location['Location_code']) ?></td>
+                                <td>
+                                    <?php if ($Location['city'] || $Location['state']): ?>
+                                        <?= htmlspecialchars($Location['city'] ?? '') ?><?= $Location['city'] && $Location['state'] ? ', ' : '' ?><?= htmlspecialchars($Location['state'] ?? '') ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($Location['built_area']): ?>
+                                        <?= number_format($Location['built_area'], 2) ?> sqm
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($Location['Location_type']): ?>
+                                        <?= ucfirst(str_replace('_', ' ', $Location['Location_type'])) ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="badge bg-<?= $Location['status'] === 'operational' ? 'success' : ($Location['status'] === 'under_construction' ? 'warning' : 'secondary') ?>">
+                                        <?= ucfirst(str_replace('_', ' ', $Location['status'])) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="<?= base_url('locations/view/' . $Location['id']) ?>" class="btn btn-primary" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="<?= base_url('locations/edit/' . $Location['id']) ?>" class="btn btn-primary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="<?= base_url('spaces?location_id=' . $Location['id']) ?>" class="btn btn-primary" title="Spaces">
+                                            <i class="bi bi-door-open"></i>
+                                        </a>
+                                        <?php if (has_permission('locations', 'delete')): ?>
+                                            <a href="<?= base_url('locations/delete/' . $Location['id']) ?>" class="btn btn-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this location?');">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        <?php endforeach; ?>
-    <?php render_pagination_controls($pagination ?? null); ?>
+            <?php render_pagination_controls($pagination ?? null); ?>
+        </div>
     </div>
 <?php endif; ?>
-

@@ -90,10 +90,15 @@ $hasFilters = list_has_active_filters(['source', 'search']);
         <span class="fw-semibold">Customer List</span>
     </div>
     <div class="card-body">
+        <?php
+        $bulk_delete_enabled = isSuperAdmin();
+        bulk_delete_render_toolbar($bulk_delete_enabled, $customers, base_url('receivables/bulk-delete-customers'), 'customer', 'Are you sure you want to delete the selected customers?');
+        ?>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <?php bulk_delete_render_checkbox_th($bulk_delete_enabled); ?>
                         <th>Code</th>
                         <th>Company Name</th>
                         <th>Email</th>
@@ -107,6 +112,7 @@ $hasFilters = list_has_active_filters(['source', 'search']);
                     <?php if (!empty($customers)): ?>
                         <?php foreach ($customers as $customer): ?>
                             <tr>
+                                <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int)$customer['id'], 'customer ' . $customer['company_name']); ?>
                                 <td><strong><?= htmlspecialchars($customer['customer_code']) ?></strong></td>
                                 <td>
                                     <a href="<?= base_url('receivables/customers/history/' . intval($customer['id'])) ?>">
@@ -155,7 +161,7 @@ $hasFilters = list_has_active_filters(['source', 'search']);
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="<?= bulk_delete_colspan(7, $bulk_delete_enabled) ?>" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-people"></i>
                                     <?php if (list_search_term() !== '' || !empty($source_filter)): ?>
