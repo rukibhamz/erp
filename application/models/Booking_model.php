@@ -74,14 +74,87 @@ class Booking_model extends Base_Model {
         return $result;
     }
     
+    /**
+     * Facility label for list/report queries: prefer facility_id over space_id
+     * (wizard historically stored facility id in space_id, which breaks space joins).
+     */
+    private function facilityListSelectSql(): string {
+        return "COALESCE(NULLIF(f.facility_name, ''), s.space_name, 'Unknown Space') as facility_name,
+                COALESCE(NULLIF(f.facility_code, ''), s.space_number) as facility_code";
+    }
+
+    private function facilityListJoinSql(): string {
+        $prefix = $this->db->getPrefix();
+        return "LEFT JOIN `{$prefix}facilities` f ON b.facility_id = f.id
+                LEFT JOIN `{$prefix}spaces` s ON b.space_id = s.id";
+    }
+
+    /**
+     * Resolve canonical space id for a facility (used when saving bookings).
+     */
+    public function resolveSpaceIdForFacility(int $spaceId, int $facilityId): int {
+        if ($facilityId <= 0) {
+            return $spaceId > 0 ? $spaceId : 0;
+        }
+        if ($spaceId > 0) {
+            $space = $this->db->fetchOne(
+                "SELECT id, facility_id FROM `" . $this->db->getPrefix() . "spaces` WHERE id = ? LIMIT 1",
+                [$spaceId]
+            );
+            if ($space && (int) ($space['facility_id'] ?? 0) === $facilityId) {
+                return $spaceId;
+            }
+        }
+        $linked = $this->db->fetchOne(
+            "SELECT id FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ? ORDER BY id ASC LIMIT 1",
+            [$facilityId]
+        );
+        return (int) ($linked['id'] ?? ($spaceId > 0 ? $spaceId : 0));
+    }
+
+    /**
+     * Fix bookings where space_id was stored as facility_id (legacy wizard bug).
+     */
+    public function repairMisassignedSpaceIds(): int {
+        try {
+            $prefix = $this->db->getPrefix();
+            $rows = $this->db->fetchAll(
+                "SELECT b.id, b.space_id, b.facility_id
+                 FROM `{$prefix}{$this->table}` b
+                 LEFT JOIN `{$prefix}spaces` s ON s.id = b.space_id
+                 WHERE b.facility_id IS NOT NULL AND b.facility_id > 0
+                   AND (
+                       b.space_id = b.facility_id
+                       OR s.id IS NULL
+                       OR s.facility_id IS NULL
+                       OR s.facility_id <> b.facility_id
+                   )"
+            );
+
+            $fixed = 0;
+            foreach ($rows as $row) {
+                $newSpaceId = $this->resolveSpaceIdForFacility(
+                    (int) ($row['space_id'] ?? 0),
+                    (int) ($row['facility_id'] ?? 0)
+                );
+                if ($newSpaceId > 0 && $newSpaceId !== (int) ($row['space_id'] ?? 0)) {
+                    $this->update((int) $row['id'], ['space_id' => $newSpaceId]);
+                    $fixed++;
+                }
+            }
+
+            return $fixed;
+        } catch (Exception $e) {
+            error_log('Booking_model repairMisassignedSpaceIds error: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
     public function getAllBookings($status = null) {
         try {
-            $sql = "SELECT b.*, 
-                COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name, 
-                COALESCE(s.space_number, f.facility_code) as facility_code 
+            $sql = "SELECT b.*, " . $this->facilityListSelectSql() . "
                 FROM `" . $this->db->getPrefix() . $this->table . "` b
-                LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
-                LEFT JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                " . $this->facilityListJoinSql() . "
                 WHERE 1=1";
             
             $params = [];
@@ -103,12 +176,9 @@ class Booking_model extends Base_Model {
         try {
             // Updated to use LEFT JOIN and prefer Spaces table but fallback to Facilities
             // This ensures robustness if one relation is missing
-            $sql = "SELECT b.*, 
-                    COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name, 
-                    COALESCE(s.space_number, f.facility_code) as facility_code 
+            $sql = "SELECT b.*, " . $this->facilityListSelectSql() . "
                     FROM `" . $this->db->getPrefix() . $this->table . "` b
-                    LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
-                    LEFT JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                    " . $this->facilityListJoinSql() . "
                     WHERE (
                         (b.booking_date >= ? AND b.booking_date <= ?)
                         OR (b.booking_date <= ? AND DATE_ADD(b.booking_date, INTERVAL TIME_TO_SEC(b.end_time) - TIME_TO_SEC(b.start_time) SECOND) >= ?)
@@ -287,12 +357,9 @@ class Booking_model extends Base_Model {
     public function getByStatus($status) {
         try {
             return $this->db->fetchAll(
-                "SELECT b.*, 
-                 COALESCE(s.space_name, f.facility_name, 'Unknown Space') as facility_name,
-                 COALESCE(s.space_number, f.facility_code) as facility_code
+                "SELECT b.*, " . $this->facilityListSelectSql() . "
                  FROM `" . $this->db->getPrefix() . $this->table . "` b
-                 LEFT JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
-                 LEFT JOIN `" . $this->db->getPrefix() . "facilities` f ON b.facility_id = f.id
+                 " . $this->facilityListJoinSql() . "
                  WHERE b.status = ? 
                  ORDER BY b.booking_date DESC, b.created_at DESC",
                 [$status]
@@ -307,7 +374,21 @@ class Booking_model extends Base_Model {
         try {
             $prefix = $this->db->getPrefix();
             
-            // First try joining with facilities table using facility_id
+            // Prefer facility name; fall back to space linked to facility_id or space_id
+            $result = $this->db->fetchOne(
+                "SELECT b.*, " . $this->facilityListSelectSql() . ",
+                        f.hourly_rate, f.daily_rate, f.half_day_rate
+                 FROM `{$prefix}{$this->table}` b
+                 " . $this->facilityListJoinSql() . "
+                 WHERE b.id = ?",
+                [$bookingId]
+            );
+
+            if ($result && !empty($result['facility_name']) && $result['facility_name'] !== 'Unknown Space') {
+                return $result;
+            }
+
+            // Legacy fallback
             $result = $this->db->fetchOne(
                 "SELECT b.*, f.facility_name as facility_name, f.facility_code as facility_code, 
                         f.hourly_rate, f.daily_rate, f.half_day_rate
@@ -317,12 +398,10 @@ class Booking_model extends Base_Model {
                 [$bookingId]
             );
             
-            // If facility_name is populated, return the result
             if ($result && !empty($result['facility_name'])) {
                 return $result;
             }
             
-            // Fallback: try joining with spaces table using space_id or facility_id
             $result = $this->db->fetchOne(
                 "SELECT b.*, 
                         COALESCE(s.space_name, s2.space_name) as facility_name, 

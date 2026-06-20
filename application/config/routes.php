@@ -407,6 +407,7 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['webhooks/flutterwave'] = 'Payment/flutterwaveWebhook';
         $route['payment/verify'] = 'Payment/verify';
         $route['payment/verify/(:any)'] = 'Payment/verify/$1';
+        $route['payment/reconcile-gateway-payments'] = 'Payment/reconcileGatewayPaymentsAdmin';
         
         // Customer Portal
         $route['customer-portal'] = 'Customer_portal/login';

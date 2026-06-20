@@ -212,12 +212,21 @@ public function callback() {
         }
         $verifyResult = $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
 
-        // Flutterwave may redirect before the verify API reports "successful" — retry once.
-        if (!empty($verifyResult['pending']) && $gatewayCode === 'flutterwave') {
+        // Gateway APIs may lag behind the customer redirect — retry before showing pending.
+        if (!empty($verifyResult['pending'])) {
             $redirectStatus = strtolower((string) ($_GET['status'] ?? ''));
-            if (in_array($redirectStatus, ['successful', 'success', 'completed', 'paid'], true)) {
-                sleep(2);
-                $verifyResult = $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
+            $shouldRetry = in_array($redirectStatus, ['successful', 'success', 'completed', 'paid'], true)
+                || $gatewayCode === 'paystack'
+                || $gatewayCode === 'flutterwave';
+
+            if ($shouldRetry) {
+                for ($attempt = 1; $attempt <= 3; $attempt++) {
+                    sleep($attempt === 1 ? 1 : 2);
+                    $verifyResult = $this->verifyPayment($transactionRef, $gatewayCode, false, $verifyOptions);
+                    if (empty($verifyResult['pending'])) {
+                        break;
+                    }
+                }
             }
         }
         payment_debug_log("[$timestamp] verifyPayment() completed\n");
@@ -249,6 +258,23 @@ public function callback() {
         if ($transactionRef) {
             $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
             if ($transaction) {
+                $gatewayCode = $transaction['gateway_code'] ?? 'paystack';
+                $needsVerify = $transaction['status'] === 'pending';
+                if (!$needsVerify && $transaction['status'] === 'success') {
+                    $needsVerify = $this->bookingFulfillmentStillNeeded($transaction);
+                }
+
+                if ($needsVerify) {
+                    try {
+                        payment_debug_log('[' . date('Y-m-d H:i:s') . "] confirmation: re-verifying ref {$transactionRef}\n");
+                        $this->verifyPayment($transactionRef, $gatewayCode);
+                        $transaction = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
+                    } catch (Exception $verifyEx) {
+                        payment_debug_log('[' . date('Y-m-d H:i:s') . '] confirmation verify error: ' . $verifyEx->getMessage() . "\n");
+                        error_log('Payment confirmation re-verify: ' . $verifyEx->getMessage());
+                    }
+                }
+
                 $status = $transaction['status'];
                 if ($transaction['payment_type'] === 'booking_payment') {
                     $bookingId = $transaction['reference_id'];
@@ -1276,8 +1302,121 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
 
         $balance = floatval($booking['balance_amount'] ?? 0);
         $expectedPaid = floatval($booking['paid_amount'] ?? 0) + floatval($transaction['amount']);
+        $paymentStatus = strtolower((string) ($booking['payment_status'] ?? ''));
+
+        if (in_array($paymentStatus, ['unpaid', ''], true) && floatval($booking['paid_amount'] ?? 0) < 0.01) {
+            return true;
+        }
 
         return $balance > 0.01 || floatval($booking['paid_amount'] ?? 0) + 0.01 < $expectedPaid;
+    }
+
+    /**
+     * Re-verify pending gateway transactions and fulfill successful ones missing booking payments.
+     */
+    public function reconcileStaleGatewayPayments(int $limit = 100): array {
+        $stats = [
+            'pending_checked' => 0,
+            'pending_verified' => 0,
+            'fulfillment_retried' => 0,
+            'errors' => [],
+        ];
+
+        try {
+            $prefix = $this->db->getPrefix();
+            $pending = $this->db->fetchAll(
+                "SELECT * FROM `{$prefix}payment_transactions`
+                 WHERE status = 'pending'
+                   AND payment_type = 'booking_payment'
+                   AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                 ORDER BY id DESC
+                 LIMIT " . max(1, min(500, $limit))
+            );
+
+            foreach ($pending as $txn) {
+                $stats['pending_checked']++;
+                $ref = $txn['transaction_ref'] ?? '';
+                if ($ref === '') {
+                    continue;
+                }
+                try {
+                    $gatewayCode = $txn['gateway_code'] ?? 'paystack';
+                    $result = $this->verifyPayment($ref, $gatewayCode);
+                    if (empty($result['pending'])) {
+                        $stats['pending_verified']++;
+                    }
+                } catch (Exception $e) {
+                    $stats['errors'][] = $ref . ': ' . $e->getMessage();
+                }
+            }
+
+            $unfulfilled = $this->db->fetchAll(
+                "SELECT pt.*
+                 FROM `{$prefix}payment_transactions` pt
+                 INNER JOIN `{$prefix}bookings` b ON b.id = pt.reference_id
+                 LEFT JOIN `{$prefix}booking_payments` bp
+                    ON bp.booking_id = b.id
+                   AND bp.status = 'completed'
+                   AND (bp.reference = pt.transaction_ref OR bp.gateway_transaction_id = pt.transaction_ref)
+                 WHERE pt.status = 'success'
+                   AND pt.payment_type = 'booking_payment'
+                   AND bp.id IS NULL
+                 ORDER BY pt.id DESC
+                 LIMIT " . max(1, min(500, $limit))
+            );
+
+            foreach ($unfulfilled as $txn) {
+                try {
+                    if ($this->bookingFulfillmentStillNeeded($txn)) {
+                        $this->processPaymentSuccess($txn);
+                        $stats['fulfillment_retried']++;
+                    }
+                } catch (Exception $e) {
+                    $stats['errors'][] = ($txn['transaction_ref'] ?? '?') . ': ' . $e->getMessage();
+                }
+            }
+        } catch (Exception $e) {
+            $stats['errors'][] = $e->getMessage();
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Admin: re-verify stale gateway transactions and repair misassigned space_id values.
+     */
+    public function reconcileGatewayPaymentsAdmin() {
+        $this->requirePermission('bookings', 'update');
+
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            redirect('bookings');
+            return;
+        }
+
+        check_csrf();
+
+        $stats = $this->reconcileStaleGatewayPayments(200);
+        $fixedSpaces = 0;
+        if (!empty($_POST['repair_space_ids'])) {
+            $bookingModel = $this->loadModel('Booking_model');
+            $fixedSpaces = $bookingModel->repairMisassignedSpaceIds();
+        }
+
+        $message = sprintf(
+            'Gateway sync finished: %d pending checked, %d verified at gateway, %d booking payments applied.',
+            $stats['pending_checked'],
+            $stats['pending_verified'],
+            $stats['fulfillment_retried']
+        );
+        if ($fixedSpaces > 0) {
+            $message .= ' Repaired ' . $fixedSpaces . ' booking space assignment(s).';
+        }
+        if (!empty($stats['errors'])) {
+            $message .= ' ' . count($stats['errors']) . ' error(s) — check payment debug log.';
+        }
+
+        $this->setFlashMessage(empty($stats['errors']) ? 'success' : 'warning', $message);
+        redirect('bookings');
     }
 
     private function assertVerifiedAmountMatchesTransaction(array $transaction, array $verification) {

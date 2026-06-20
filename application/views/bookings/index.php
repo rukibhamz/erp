@@ -41,6 +41,14 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                 <a href="<?= base_url('bookings/financialReconciliation') ?>" class="btn btn-primary">
                     <i class="bi bi-arrow-repeat"></i> Reconcile Finances
                 </a>
+                <form method="POST" action="<?= base_url('payment/reconcile-gateway-payments') ?>" class="d-inline"
+                      onsubmit="return confirm('Re-verify pending online payments and fix facility name mismatches on existing bookings?');">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="repair_space_ids" value="1">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-credit-card"></i> Sync Gateway Payments
+                    </button>
+                </form>
                 <a href="<?= base_url('resource-management/addons') ?>" class="btn btn-primary">
                     <i class="bi bi-puzzle"></i> Manage Add-ons
                 </a>

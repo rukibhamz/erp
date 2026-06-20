@@ -31,9 +31,10 @@ class Booking_payment_model extends Base_Model {
         try {
             return $this->db->fetchOne(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`
-                 WHERE reference = ? AND status = 'completed'
+                 WHERE (reference = ? OR gateway_transaction_id = ?)
+                   AND status = 'completed'
                  LIMIT 1",
-                [$reference]
+                [$reference, $reference]
             ) ?: null;
         } catch (Exception $e) {
             return null;
