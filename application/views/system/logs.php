@@ -166,9 +166,14 @@
                 </div>
                 
                 <div class="card-footer">
-                    <button type="button" class="btn btn-sm btn-danger" onclick="cleanOldLogs()">
-                        <i class="fas fa-trash"></i> Clean Old Logs
-                    </button>
+                    <form method="post" action="<?= base_url('system_logs/clean') ?>" class="d-inline"
+                          onsubmit="return confirm('Are you sure you want to delete logs older than 90 days?')">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="days" value="90">
+                        <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="fas fa-trash"></i> Clean Old Logs
+                        </button>
+                    </form>
                     <small class="text-muted ml-3">Showing logs from last 24 hours in statistics</small>
                 </div>
             </div>
@@ -187,14 +192,6 @@
 <script nonce="<?= csp_nonce() ?>">
 function refreshLogs() {
     location.reload();
-}
-
-function cleanOldLogs() {
-    if (confirm('Are you sure you want to delete logs older than 90 days?')) {
-        $.post('<?= base_url('system_logs/clean') ?>', {days: 90}, function() {
-            location.reload();
-        });
-    }
 }
 
 // Auto-refresh every 30 seconds

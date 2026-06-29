@@ -6,9 +6,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Database Migrations</h1>
         <div>
-            <a href="<?= base_url('system_migrate/up') ?>" class="btn btn-primary" onclick="return confirm('Ensure you have backed up your database before running migrations. Continue?')">
-                <i class="bi bi-arrow-up-circle"></i> Run Pending Migrations
-            </a>
+            <form method="post" action="<?= base_url('system_migrate/up') ?>" class="d-inline"
+                  onsubmit="return confirm('Ensure you have backed up your database before running migrations. Continue?')">
+                <?= csrf_field() ?>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-arrow-up-circle"></i> Run Pending Migrations
+                </button>
+            </form>
         </div>
     </div>
 </div>

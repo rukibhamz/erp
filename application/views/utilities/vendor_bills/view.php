@@ -7,11 +7,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title mb-0">Vendor Bill: <?= htmlspecialchars($bill['vendor_bill_number']) ?></h1>
         <div class="d-flex gap-2">
             <?php if ($bill['status'] === 'pending' || $bill['status'] === 'verified'): ?>
-                <a href="<?= base_url('utilities/vendor-bills/approve/' . $bill['id']) ?>" 
-                   class="btn btn-success"
-                   onclick="return confirm('Approve this vendor bill and post to accounting?')">
-                    <i class="bi bi-check-circle"></i> Approve
-                </a>
+                <form method="post" action="<?= base_url('utilities/vendor-bills/approve/' . $bill['id']) ?>" class="d-inline"
+                      onsubmit="return confirm('Approve this vendor bill and post to accounting?')">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Approve
+                    </button>
+                </form>
             <?php endif; ?>
             <a href="<?= base_url('utilities/vendor-bills') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back
@@ -120,11 +122,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="card-body">
                 <?php if ($bill['status'] === 'pending' || $bill['status'] === 'verified'): ?>
-                    <a href="<?= base_url('utilities/vendor-bills/approve/' . $bill['id']) ?>" 
-                       class="btn btn-success w-100 mb-2"
-                       onclick="return confirm('Approve this vendor bill and post to accounting?')">
-                        <i class="bi bi-check-circle"></i> Approve & Post to Accounting
-                    </a>
+                    <form method="post" action="<?= base_url('utilities/vendor-bills/approve/' . $bill['id']) ?>" class="mb-2"
+                          onsubmit="return confirm('Approve this vendor bill and post to accounting?')">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-circle"></i> Approve & Post to Accounting
+                        </button>
+                    </form>
                 <?php endif; ?>
                 
                 <a href="<?= base_url('utilities/vendor-bills') ?>" class="btn btn-primary w-100 mb-2">

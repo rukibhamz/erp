@@ -195,11 +195,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="col-6 col-md-3 col-lg-2">
                                     <div class="card h-100 shadow-sm border-0">
                                         <div class="position-absolute top-0 end-0 p-1">
-                                            <a href="<?= base_url('spaces/delete_photo/' . $photo['id']) ?>" 
-                                               class="btn btn-sm btn-danger rounded-circle" 
-                                               onclick="return confirm('Delete this photo?')">
-                                                <i class="bi bi-x"></i>
-                                            </a>
+                                            <form method="post" action="<?= base_url('spaces/delete_photo/' . $photo['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Delete this photo?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-danger rounded-circle">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </form>
                                         </div>
                                         <img src="<?= base_url($photo['photo_url']) ?>" class="card-img-top rounded" style="height: 120px; object-fit: cover;">
                                         <?php if ($photo['is_primary']): ?>

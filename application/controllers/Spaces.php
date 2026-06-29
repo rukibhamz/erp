@@ -303,6 +303,14 @@ class Spaces extends Base_Controller {
     public function syncToBooking($id) {
         $this->requirePermission('locations', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('spaces/view/' . $id);
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $facilityId = $this->spaceModel->syncToBookingModule($id);
             
@@ -699,6 +707,14 @@ class Spaces extends Base_Controller {
      */
     public function delete_photo($photoId) {
         $this->requirePermission('locations', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('spaces');
+            return;
+        }
+        
+        check_csrf();
         
         try {
             // Get photo to get space_id for redirect

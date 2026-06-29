@@ -24,6 +24,14 @@ class System_migrate extends Base_Controller {
     }
     
     public function up() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('Invalid request method.', 'danger');
+            redirect('system_migrate/status');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             // Set time limit to 0 for long-running migrations
             set_time_limit(0);

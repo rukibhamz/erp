@@ -141,6 +141,14 @@ class Vendor_utility_bills extends Base_Controller {
     public function approve($id) {
         $this->requirePermission('utilities', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('utilities/vendor-bills/view/' . $id);
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $bill = $this->vendorBillModel->getById($id);
             if (!$bill) {

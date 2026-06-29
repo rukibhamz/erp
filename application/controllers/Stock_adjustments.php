@@ -158,6 +158,14 @@ class Stock_adjustments extends Base_Controller {
     public function approve($id) {
         $this->requirePermission('inventory', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('inventory/adjustments/view/' . $id);
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $adjustment = $this->adjustmentModel->getById($id);
             if (!$adjustment) {

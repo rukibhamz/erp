@@ -106,9 +106,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <?php if ($adj['status'] === 'pending' && hasPermission('inventory', 'update')): ?>
-                                            <a href="<?= base_url('inventory/adjustments/approve/' . $adj['id']) ?>" class="btn btn-outline-success" title="Approve" onclick="return confirm('Approve this adjustment?')">
-                                                <i class="bi bi-check-circle"></i>
-                                            </a>
+                                            <form method="post" action="<?= base_url('inventory/adjustments/approve/' . $adj['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Approve this adjustment?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-outline-success" title="Approve">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
                                     </div>
 

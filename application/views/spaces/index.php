@@ -171,9 +171,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <?php if ($space['is_bookable']): ?>
-                                    <a href="<?= base_url('spaces/syncToBooking/' . $space['id']) ?>" class="btn btn-primary" title="Sync to Booking">
-                                        <i class="bi bi-arrow-repeat"></i>
-                                    </a>
+                                    <form method="post" action="<?= base_url('spaces/syncToBooking/' . $space['id']) ?>" class="d-inline"
+                                          onsubmit="return confirm('Sync this space to booking module?')">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn btn-primary" title="Sync to Booking">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                    </form>
                                 <?php endif; ?>
                             </div>
                         </div>

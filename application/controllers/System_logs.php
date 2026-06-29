@@ -131,6 +131,14 @@ class System_logs extends Base_Controller {
     public function clean() {
         $this->requirePermission('settings', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->session->set_flashdata('error', 'Invalid request method');
+            redirect('system_logs');
+            return;
+        }
+        
+        check_csrf();
+        
         $days = $this->input->post('days') ?? 90;
         $deleted = $this->error_logger->cleanOldLogs($days);
         

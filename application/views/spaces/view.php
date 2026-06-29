@@ -10,9 +10,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <i class="bi bi-pencil"></i> Edit
             </a>
             <?php if ($space['is_bookable']): ?>
-                <a href="<?= base_url('spaces/sync/' . $space['id']) ?>" class="btn btn-primary">
-                    <i class="bi bi-arrow-repeat"></i> Sync to Booking
-                </a>
+                <form method="post" action="<?= base_url('spaces/sync/' . $space['id']) ?>" class="d-inline"
+                      onsubmit="return confirm('Sync this space to booking module?')">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat"></i> Sync to Booking
+                    </button>
+                </form>
             <?php endif; ?>
             <a href="<?= base_url('spaces') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
@@ -247,9 +251,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <?php endif; ?>
                 
                 <?php if ($space['is_bookable']): ?>
-                    <a href="<?= base_url('spaces/sync/' . $space['id']) ?>" class="btn btn-info w-100 mb-2" title="Sync space with booking module">
-                        <i class="bi bi-arrow-repeat"></i> Sync to Booking
-                    </a>
+                    <form method="post" action="<?= base_url('spaces/sync/' . $space['id']) ?>" class="mb-2"
+                          onsubmit="return confirm('Sync this space to booking module?')">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn btn-info w-100" title="Sync space with booking module">
+                            <i class="bi bi-arrow-repeat"></i> Sync to Booking
+                        </button>
+                    </form>
                     <a href="<?= base_url('locations/create-booking/' . $space['property_id'] . '/' . $space['id'] . '?from=spaces') ?>" class="btn btn-primary w-100 mb-2">
                         <i class="bi bi-calendar-plus"></i> Book Space
                     </a>

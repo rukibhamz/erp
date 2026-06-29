@@ -126,12 +126,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <?php if ($bill['status'] === 'pending' || $bill['status'] === 'verified'): ?>
-                                            <a href="<?= base_url('utilities/vendor-bills/approve/' . $bill['id']) ?>" 
-                                               class="btn btn-outline-success" 
-                                               title="Approve"
-                                               onclick="return confirm('Approve this vendor bill and post to accounting?')">
-                                                <i class="bi bi-check-circle"></i>
-                                            </a>
+                                            <form method="post" action="<?= base_url('utilities/vendor-bills/approve/' . $bill['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Approve this vendor bill and post to accounting?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-outline-success" title="Approve">
+                                                    <i class="bi bi-check-circle"></i>
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
                                     </div>
 
