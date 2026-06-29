@@ -21,12 +21,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-3">
+        <form method="GET" action="<?= base_url('inventory/items') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
+            <div class="col-md-2">
                 <label class="form-label">Filter</label>
-                <select name="filter" class="form-select" onchange="this.form.submit()">
+                <select name="filter" class="form-select">
                     <option value="all" <?= $selected_filter === 'all' ? 'selected' : '' ?>>All Items</option>
                     <option value="low_stock" <?= $selected_filter === 'low_stock' ? 'selected' : '' ?>>Low Stock</option>
                     <option value="out_of_stock" <?= $selected_filter === 'out_of_stock' ? 'selected' : '' ?>>Out of Stock</option>
@@ -34,7 +35,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="col-md-2">
                 <label class="form-label">Type</label>
-                <select name="item_type" class="form-select" onchange="this.form.submit()">
+                <select name="item_type" class="form-select">
                     <option value="">All Types</option>
                     <option value="inventory" <?= $selected_item_type === 'inventory' ? 'selected' : '' ?>>Inventory</option>
                     <option value="non_inventory" <?= $selected_item_type === 'non_inventory' ? 'selected' : '' ?>>Non-Inventory</option>
@@ -44,7 +45,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="col-md-2">
                 <label class="form-label">Category</label>
-                <select name="category" class="form-select" onchange="this.form.submit()">
+                <select name="category" class="form-select">
                     <option value="">All Categories</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?= htmlspecialchars($cat) ?>" <?= $selected_category === $cat ? 'selected' : '' ?>>
@@ -53,20 +54,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Search</label>
-                <input type="text" name="search" class="form-control" value="<?= htmlspecialchars($search_term ?? '') ?>" 
-                       placeholder="SKU, Name, Barcode">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Search
-                </button>
-            </div>
-            <div class="col-md-12">
-                <a href="<?= base_url('inventory/items') ?>" class="btn btn-primary btn-sm">
-                    <i class="bi bi-x-circle"></i> Clear Filters
-                </a>
+                <?php
+                $search_col_class = 'col-12 col-md';
+                $search_placeholder = 'SKU, name, barcode…';
+                include(BASEPATH . 'views/partials/list_search_field.php');
+                ?>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('inventory/items')); ?>
             </div>
         </form>
     </div>

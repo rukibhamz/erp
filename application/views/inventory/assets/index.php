@@ -22,27 +22,31 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<!-- Category Filter -->
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-end py-2">
-        <form method="GET" action="" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
-            <input type="search" name="search" class="form-control form-control-sm" style="min-width:200px" value="<?= htmlspecialchars(list_search_term()) ?>" placeholder="Search name, ID, code…">
-            <input type="hidden" name="page" value="1">
-            <label class="small text-muted mb-0">Records</label>
-            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
-            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-        </form>
-    </div>
-    <div class="card-body">
-        <div class="btn-group" role="group">
-            <a href="?category=all" class="btn btn-sm <?= $selected_category === 'all' ? 'btn-dark' : 'btn-primary' ?>">All</a>
-            <a href="?category=equipment" class="btn btn-sm <?= $selected_category === 'equipment' ? 'btn-dark' : 'btn-primary' ?>">Equipment</a>
-            <a href="?category=vehicle" class="btn btn-sm <?= $selected_category === 'vehicle' ? 'btn-dark' : 'btn-primary' ?>">Vehicles</a>
-            <a href="?category=furniture" class="btn btn-sm <?= $selected_category === 'furniture' ? 'btn-dark' : 'btn-primary' ?>">Furniture</a>
-            <a href="?category=it" class="btn btn-sm <?= $selected_category === 'it' ? 'btn-dark' : 'btn-primary' ?>">IT</a>
-        </div>
-    </div>
+<?php
+$list_filter_action = base_url('inventory/assets');
+$search_placeholder = 'Asset tag, name, location…';
+$list_filter_extra_keys = ['search', 'category'];
+$selected_category = $selected_category ?? 'all';
+if ($selected_category !== 'all') {
+    $list_filter_active_badges = '<span class="badge bg-secondary">Category: ' . htmlspecialchars(ucfirst($selected_category)) . '</span>';
+}
+ob_start();
+?>
+<div class="list-filters-secondary d-flex flex-row flex-wrap align-items-center gap-2 mt-2">
+    <span class="filter-group-label">Category</span>
+    <?php
+    $categories = ['all' => 'All', 'equipment' => 'Equipment', 'vehicle' => 'Vehicles', 'furniture' => 'Furniture', 'it' => 'IT'];
+    foreach ($categories as $val => $label):
+        $active = ($selected_category === $val);
+        $href = base_url('inventory/assets') . list_filter_query(['category' => $val === 'all' ? null : $val]);
+    ?>
+    <a href="<?= htmlspecialchars($href) ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>"><?= htmlspecialchars($label) ?></a>
+    <?php endforeach; ?>
 </div>
+<?php
+$list_filter_secondary = ob_get_clean();
+include(BASEPATH . 'views/partials/list_filters_bar.php');
+?>
 
 <?php if (empty($assets)): ?>
     <div class="card">

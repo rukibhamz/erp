@@ -43,7 +43,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <?php if (empty($bookings)): ?>
-    <div class="card shadow-sm">
+    <?php
+$list_filter_action = base_url('space_bookings');
+$search_placeholder = 'Booking #, customer, space…';
+include(BASEPATH . 'views/partials/list_filters_bar.php');
+?>
+
+<div class="card shadow-sm">
         <div class="card-body text-center py-5">
             <i class="bi bi-calendar-check" style="font-size: 4rem; color: #dee2e6;"></i>
             <h5 class="mt-3 text-muted">No Bookings Found</h5>
@@ -55,15 +61,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php else: ?>
     <div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-end py-2">
-        <form method="GET" action="" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
-            <input type="search" name="search" class="form-control form-control-sm" style="min-width:200px" value="<?= htmlspecialchars(list_search_term()) ?>" placeholder="Search name, ID, code…">
-            <input type="hidden" name="page" value="1">
-            <label class="small text-muted mb-0">Records</label>
-            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
-            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-        </form>
-    </div>
+
     <div class="card-body">
         <div class="table-responsive">
                 <table class="table table-hover">

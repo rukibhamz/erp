@@ -22,7 +22,13 @@ include(BASEPATH . 'views/tax/_nav.php');
 <?php endif; ?>
 
 <?php if (empty($vat_returns)): ?>
-    <div class="card">
+    <?php
+$list_filter_action = base_url('tax/vat');
+$search_placeholder = 'Period, reference…';
+include(BASEPATH . 'views/partials/list_filters_bar.php');
+?>
+
+<div class="card shadow-sm">
         <div class="card-body text-center py-5">
             <i class="bi bi-receipt" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No VAT returns found.</p>
@@ -35,15 +41,7 @@ include(BASEPATH . 'views/tax/_nav.php');
     </div>
 <?php else: ?>
     <div class="card">
-    <div class="card-header d-flex justify-content-end py-2">
-        <form method="GET" action="" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
-            <input type="search" name="search" class="form-control form-control-sm" style="min-width:200px" value="<?= htmlspecialchars(list_search_term()) ?>" placeholder="Search name, ID, code…">
-            <input type="hidden" name="page" value="1">
-            <label class="small text-muted mb-0">Records</label>
-            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
-            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-        </form>
-    </div>
+
     <div class="card-body">
         <div class="table-responsive">
                 <table class="table table-hover">

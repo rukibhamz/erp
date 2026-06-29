@@ -21,12 +21,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" class="row g-3 align-items-end">
+        <form method="GET" action="<?= base_url('utilities/readings') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
             <div class="col-md-3">
-                <label class="form-label">Filter by Meter</label>
-                <select name="meter_id" class="form-select" onchange="this.form.submit()">
+                <label class="form-label">Meter</label>
+                <select name="meter_id" class="form-select">
                     <option value="">All Meters</option>
                     <?php foreach ($meters as $m): ?>
                         <option value="<?= $m['id'] ?>" <?= ($selected_meter_id ?? null) == $m['id'] ? 'selected' : '' ?>>
@@ -37,21 +38,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="col-md-2">
                 <label class="form-label">Start Date</label>
-                <input type="date" name="start_date" class="form-control" value="<?= (string)$start_date ?>" onchange="this.form.submit()">
+                <input type="date" name="start_date" class="form-control" value="<?= (string)$start_date ?>">
             </div>
             <div class="col-md-2">
                 <label class="form-label">End Date</label>
-                <input type="date" name="end_date" class="form-control" value="<?= (string)$end_date ?>" onchange="this.form.submit()">
+                <input type="date" name="end_date" class="form-control" value="<?= (string)$end_date ?>">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <div class="col-md-3">
-                <a href="<?= base_url('utilities/readings') ?>" class="btn btn-primary w-100">
-                    <i class="bi bi-x-circle"></i> Clear
-                </a>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('utilities/readings')); ?>
             </div>
         </form>
     </div>

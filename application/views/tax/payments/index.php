@@ -22,12 +22,13 @@ include(BASEPATH . 'views/tax/_nav.php');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" class="row g-3">
+        <form method="GET" action="<?= base_url('tax/payments') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
             <div class="col-md-4">
                 <label class="form-label">Tax Type</label>
-                <select name="tax_type" class="form-select" onchange="this.form.submit()">
+                <select name="tax_type" class="form-select">
                     <option value="all" <?= $selected_tax_type === 'all' ? 'selected' : '' ?>>All Types</option>
                     <?php foreach ($tax_types as $type): ?>
                         <option value="<?= htmlspecialchars($type['code']) ?>" <?= $selected_tax_type === $type['code'] ? 'selected' : '' ?>>
@@ -44,14 +45,8 @@ include(BASEPATH . 'views/tax/_nav.php');
                 <label class="form-label">Period End</label>
                 <input type="date" name="period_end" class="form-control" value="<?= htmlspecialchars($period_end) ?>">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">&nbsp;</label>
-                <button type="submit" class="btn btn-dark w-100">Filter</button>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('tax/payments')); ?>
             </div>
         </form>
     </div>

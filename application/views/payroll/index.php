@@ -27,22 +27,16 @@ include(BASEPATH . 'views/accounting/_nav.php');
 <?php endif; ?>
 
 <!-- Period Filter -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" class="row g-3">
+        <form method="GET" action="<?= base_url('payroll') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
             <div class="col-md-3">
                 <label class="form-label">Period (YYYY-MM)</label>
-                <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($selected_period ?? date('Y-m')) ?>" onchange="this.form.submit()">
+                <input type="month" name="period" class="form-control" value="<?= htmlspecialchars($selected_period ?? date('Y-m')) ?>">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <div class="col-md-7">
-                <a href="<?= base_url('payroll') ?>" class="btn btn-primary">
-                    <i class="bi bi-x-circle"></i> Clear Filter
-                </a>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('payroll')); ?>
             </div>
         </form>
     </div>

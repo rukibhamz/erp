@@ -20,16 +20,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
     <?php endif; ?>
 
-    <div class="card">
-    <div class="card-header d-flex justify-content-end py-2">
-        <form method="GET" action="" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
-            <input type="search" name="search" class="form-control form-control-sm" style="min-width:200px" value="<?= htmlspecialchars(list_search_term()) ?>" placeholder="Search name, ID, code…">
-            <input type="hidden" name="page" value="1">
-            <label class="small text-muted mb-0">Records</label>
-            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
-            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-        </form>
-    </div>
+    <?php
+$list_filter_action = base_url('taxes');
+$search_placeholder = 'Tax name, code…';
+include(BASEPATH . 'views/partials/list_filters_bar.php');
+?>
+
+<div class="card shadow-sm">
+
     <div class="card-body">
         <?php
         $bulk_delete_enabled = has_permission('taxes', 'delete');

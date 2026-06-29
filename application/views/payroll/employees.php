@@ -3,7 +3,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 include(BASEPATH . 'views/accounting/_nav.php');
 ?>
 
-<div class="page-header">
+<div class="page-header list-filters-page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Employees</h1>
         <?php if (hasPermission('payroll', 'create')): ?>
@@ -21,8 +21,14 @@ include(BASEPATH . 'views/accounting/_nav.php');
     </div>
 <?php endif; ?>
 
+<?php
+$list_filter_action = base_url('payroll/employees');
+$search_placeholder = 'Employee name, code, email…';
+include(BASEPATH . 'views/partials/list_filters_bar.php');
+?>
+
 <?php if (empty($employees)): ?>
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
             <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No employees found.</p>
@@ -34,18 +40,9 @@ include(BASEPATH . 'views/accounting/_nav.php');
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
-    <div class="card-header d-flex justify-content-end py-2">
-        <form method="GET" action="" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
-            <input type="search" name="search" class="form-control form-control-sm" style="min-width:200px" value="<?= htmlspecialchars(list_search_term()) ?>" placeholder="Search name, ID, code…">
-            <input type="hidden" name="page" value="1">
-            <label class="small text-muted mb-0">Records</label>
-            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
-            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-        </form>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -81,7 +78,6 @@ include(BASEPATH . 'views/accounting/_nav.php');
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                     </div>
-
                                 </td>
                             </tr>
                         <?php endforeach; ?>

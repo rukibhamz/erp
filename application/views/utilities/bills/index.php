@@ -21,12 +21,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" class="row g-3 align-items-end">
+        <form method="GET" action="<?= base_url('utilities/bills') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
             <div class="col-md-4">
-                <label class="form-label">Filter by Status</label>
-                <select name="status" class="form-select" onchange="this.form.submit()">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
                     <option value="all" <?= $selected_status === 'all' ? 'selected' : '' ?>>All</option>
                     <option value="draft" <?= $selected_status === 'draft' ? 'selected' : '' ?>>Draft</option>
                     <option value="sent" <?= $selected_status === 'sent' ? 'selected' : '' ?>>Sent</option>
@@ -35,15 +36,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="overdue" <?= $selected_status === 'overdue' ? 'selected' : '' ?>>Overdue</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <div class="col-md-2">
-                <a href="<?= base_url('utilities/bills') ?>" class="btn btn-primary">
-                    <i class="bi bi-x-circle"></i> Clear Filters
-                </a>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('utilities/bills')); ?>
             </div>
         </form>
     </div>

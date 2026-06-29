@@ -21,10 +21,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" action="<?= base_url('payables/bills') ?>" class="row g-3 align-items-end">
-            <?php $search_placeholder = 'Bill #, vendor, or ID…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
+        <form method="GET" action="<?= base_url('payables/bills') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
+                <?php
+                $search_col_class = 'col-12 col-md';
+                $search_placeholder = 'Bill #, vendor, or ID…';
+                include(BASEPATH . 'views/partials/list_search_field.php');
+                ?>
             <div class="col-md-3">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
@@ -49,20 +54,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Filter
-                </button>
-            </div>
-            <div class="col-md-2">
-                <a href="<?= base_url('payables/bills') ?>" class="btn btn-outline-dark w-100">
-                    <i class="bi bi-arrow-clockwise"></i> Reset
-                </a>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('payables/bills')); ?>
             </div>
         </form>
     </div>

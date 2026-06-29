@@ -22,26 +22,31 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<!-- Status Filter -->
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-end py-2">
-        <form method="GET" action="" class="d-flex align-items-center gap-2 mb-0 flex-wrap">
-            <input type="search" name="search" class="form-control form-control-sm" style="min-width:200px" value="<?= htmlspecialchars(list_search_term()) ?>" placeholder="Search name, ID, code…">
-            <input type="hidden" name="page" value="1">
-            <label class="small text-muted mb-0">Records</label>
-            <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50), 'per_page', 'form-select form-select-sm'); ?>
-            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-        </form>
-    </div>
-    <div class="card-body">
-        <div class="btn-group" role="group">
-            <a href="?status=all" class="btn btn-sm <?= $selected_status === 'all' ? 'btn-dark' : 'btn-primary' ?>">All</a>
-            <a href="?status=scheduled" class="btn btn-sm <?= $selected_status === 'scheduled' ? 'btn-dark' : 'btn-primary' ?>">Scheduled</a>
-            <a href="?status=in_progress" class="btn btn-sm <?= $selected_status === 'in_progress' ? 'btn-dark' : 'btn-primary' ?>">In Progress</a>
-            <a href="?status=completed" class="btn btn-sm <?= $selected_status === 'completed' ? 'btn-dark' : 'btn-primary' ?>">Completed</a>
-        </div>
-    </div>
+<?php
+$list_filter_action = base_url('inventory/stock-takes');
+$search_placeholder = 'Stock take #, location…';
+$list_filter_extra_keys = ['search', 'status'];
+$selected_status = $selected_status ?? 'all';
+if ($selected_status !== 'all') {
+    $list_filter_active_badges = '<span class="badge bg-secondary">Status: ' . htmlspecialchars(ucfirst(str_replace('_', ' ', $selected_status))) . '</span>';
+}
+ob_start();
+?>
+<div class="list-filters-secondary d-flex flex-row flex-wrap align-items-center gap-2 mt-2">
+    <span class="filter-group-label">Status</span>
+    <?php
+    $statuses = ['all' => 'All', 'scheduled' => 'Scheduled', 'in_progress' => 'In Progress', 'completed' => 'Completed'];
+    foreach ($statuses as $val => $label):
+        $active = ($selected_status === $val);
+        $href = base_url('inventory/stock-takes') . list_filter_query(['status' => $val === 'all' ? null : $val]);
+    ?>
+    <a href="<?= htmlspecialchars($href) ?>" class="btn btn-sm <?= $active ? 'btn-primary' : 'btn-outline-primary' ?>"><?= htmlspecialchars($label) ?></a>
+    <?php endforeach; ?>
 </div>
+<?php
+$list_filter_secondary = ob_get_clean();
+include(BASEPATH . 'views/partials/list_filters_bar.php');
+?>
 
 <?php if (empty($stock_takes)): ?>
     <div class="card">

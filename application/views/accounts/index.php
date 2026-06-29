@@ -33,12 +33,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" action="<?= base_url('accounts') ?>" class="row g-3">
-            <div class="col-md-4">
+        <form method="GET" action="<?= base_url('accounts') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
+                <div class="col-md-3">
                 <label for="type" class="form-label">Account Type</label>
-                <select class="form-select" id="type" name="type" onchange="this.form.submit()">
+                <select class="form-select" id="type" name="type">
                     <option value="">All Types</option>
                     <option value="Assets" <?= ($selected_type ?? '') === 'Assets' ? 'selected' : '' ?>>Assets</option>
                     <option value="Liabilities" <?= ($selected_type ?? '') === 'Liabilities' ? 'selected' : '' ?>>Liabilities</option>
@@ -47,20 +48,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="Expenses" <?= ($selected_type ?? '') === 'Expenses' ? 'selected' : '' ?>>Expenses</option>
                 </select>
             </div>
-            <div class="col-md-6">
-                <label for="search" class="form-label">Search</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Search by code or name">
-            </div>
-            <?php if (!empty($search)): ?>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <?php endif; ?>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                <?php
+                $search_col_class = 'col-12 col-md';
+                $search_placeholder = 'Account code or name…';
+                include(BASEPATH . 'views/partials/list_search_field.php');
+                ?>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('accounts')); ?>
             </div>
         </form>
     </div>

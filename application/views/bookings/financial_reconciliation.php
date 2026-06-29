@@ -25,11 +25,15 @@ $perPage = intval($pagination['per_page'] ?? 50);
         </div>
     <?php endif; ?>
 
-    <div class="card mb-4">
+    <div class="card shadow-sm mb-4 list-filters-card">
         <div class="card-body">
-            <form method="GET" action="<?= base_url('bookings/financialReconciliation') ?>" class="row g-3 align-items-end">
-                <?php $search_placeholder = 'Booking #, customer, facility…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
-                <input type="hidden" name="page" value="1">
+            <form method="GET" action="<?= base_url('bookings/financialReconciliation') ?>" class="list-filters-form">
+                <div class="row g-2 align-items-end list-filters-row">
+                <?php
+                $search_col_class = 'col-12 col-md';
+                $search_placeholder = 'Booking #, customer, facility…';
+                include(BASEPATH . 'views/partials/list_search_field.php');
+                ?>
                 <div class="col-md-2">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
@@ -45,20 +49,29 @@ $perPage = intval($pagination['per_page'] ?? 50);
                     <label class="form-label">To date</label>
                     <input type="date" name="date_to" class="form-control" value="<?= htmlspecialchars($filters['date_to'] ?? '') ?>">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Records</label>
-                    <?php render_pagination_per_page_select($perPage); ?>
-                </div>
+                <?php render_list_filter_per_page($perPage); ?>
                 <div class="col-md-3">
-                    <div class="form-check mt-4">
+                    <label class="form-label list-filters-btn-spacer d-none d-md-block" aria-hidden="true">&nbsp;</label>
+                    <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="full_scan" value="1" id="full_scan" <?= !empty($filters['full_scan']) ? 'checked' : '' ?>>
                         <label class="form-check-label" for="full_scan">
-                            Full scan (slower, checks every booking in range)
+                            Full scan (slower)
                         </label>
                     </div>
                 </div>
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100">Scan</button>
+                <div class="col-7 col-sm-8 col-md-auto list-filters-actions-col">
+                    <label class="form-label list-filters-btn-spacer d-none d-md-block" aria-hidden="true">&nbsp;</label>
+                    <label class="form-label d-md-none">Actions</label>
+                    <div class="list-filters-btn-group">
+                        <input type="hidden" name="page" value="1">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-funnel-fill me-1"></i>Scan
+                        </button>
+                        <a href="<?= base_url('bookings/financialReconciliation') ?>" class="btn btn-outline-dark btn-sm">
+                            <i class="bi bi-x-circle me-1"></i>Clear
+                        </a>
+                    </div>
+                </div>
                 </div>
             </form>
         </div>

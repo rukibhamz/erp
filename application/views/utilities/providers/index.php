@@ -21,12 +21,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" class="row g-3 align-items-end">
+        <form method="GET" action="<?= base_url('utilities/providers') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
             <div class="col-md-4">
-                <label class="form-label">Filter by Utility Type</label>
-                <select name="utility_type_id" class="form-select" onchange="this.form.submit()">
+                <label class="form-label">Utility Type</label>
+                <select name="utility_type_id" class="form-select">
                     <option value="">All Types</option>
                     <?php foreach ($utility_types as $type): ?>
                         <option value="<?= $type['id'] ?>" <?= ($selected_utility_type_id ?? null) == $type['id'] ? 'selected' : '' ?>>
@@ -35,15 +36,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <div class="col-md-6">
-                <a href="<?= base_url('utilities/providers') ?>" class="btn btn-primary">
-                    <i class="bi bi-x-circle"></i> Clear Filters
-                </a>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('utilities/providers')); ?>
             </div>
         </form>
     </div>

@@ -23,10 +23,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <?php endif; ?>
 
 <!-- Filters -->
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm mb-4 list-filters-card">
     <div class="card-body">
-        <form method="GET" action="<?= base_url('transactions') ?>" class="row g-3">
-            <?php $search_placeholder = 'Txn #, description, account, ID…'; include(BASEPATH . 'views/partials/list_search_field.php'); ?>
+        <form method="GET" action="<?= base_url('transactions') ?>" class="list-filters-form">
+            <div class="row g-2 align-items-end list-filters-row">
+                <?php
+                $search_col_class = 'col-12 col-md';
+                $search_placeholder = 'Txn #, description, account, ID…';
+                include(BASEPATH . 'views/partials/list_search_field.php');
+                ?>
             <div class="col-md-3">
                 <label for="account_id" class="form-label">Account</label>
                 <select class="form-select" id="account_id" name="account_id">
@@ -56,13 +61,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <option value="posted" <?= ($selected_status ?? '') === 'posted' ? 'selected' : '' ?>>Posted</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Records</label>
-                <?php render_pagination_per_page_select(intval($pagination['per_page'] ?? 50)); ?>
-                <input type="hidden" name="page" value="1">
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                <?php render_list_filter_per_page(intval($pagination['per_page'] ?? 50)); ?>
+                <?php render_list_filter_submit_buttons(base_url('transactions')); ?>
             </div>
         </form>
     </div>
