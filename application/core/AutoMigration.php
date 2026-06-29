@@ -916,11 +916,11 @@ class AutoMigration {
             $migrationFile = __DIR__ . '/../../install/migrations_new_features.php';
             if (file_exists($migrationFile)) {
                 require_once $migrationFile;
-                if (function_exists('runNewFeatureMigrations')) {
-                    runNewFeatureMigrations($this->pdo, $this->prefix);
-                }
                 if (function_exists('fixNewFeatureColumns')) {
                     fixNewFeatureColumns($this->pdo, $this->prefix);
+                }
+                if (function_exists('runNewFeatureMigrations')) {
+                    runNewFeatureMigrations($this->pdo, $this->prefix);
                 }
                 return true;
             }
@@ -1116,11 +1116,32 @@ class AutoMigration {
                 }
                 
                 $accountId = $cashAccount['id'];
-                
-                // Create cash account (use INSERT IGNORE to avoid duplicates)
-                $this->pdo->exec("INSERT IGNORE INTO `{$this->prefix}cash_accounts` 
-                    (account_id, account_name, account_type, currency, balance, status, created_at)
-                    VALUES ({$accountId}, 'Main Cash Account', 'cash', 'NGN', 0.00, 'active', NOW())");
+
+                $insertCols = ['account_name' => "'Main Cash Account'", 'currency' => "'NGN'", 'status' => "'active'"];
+                if ($this->pdoColumnExists('cash_accounts', 'account_id')) {
+                    $insertCols['account_id'] = (int) $accountId;
+                }
+                if ($this->pdoColumnExists('cash_accounts', 'gl_account_id')) {
+                    $insertCols['gl_account_id'] = (int) $accountId;
+                }
+                if ($this->pdoColumnExists('cash_accounts', 'account_type')) {
+                    $insertCols['account_type'] = "'petty_cash'";
+                }
+                if ($this->pdoColumnExists('cash_accounts', 'opening_balance')) {
+                    $insertCols['opening_balance'] = '0.00';
+                }
+                if ($this->pdoColumnExists('cash_accounts', 'current_balance')) {
+                    $insertCols['current_balance'] = '0.00';
+                } elseif ($this->pdoColumnExists('cash_accounts', 'balance')) {
+                    $insertCols['balance'] = '0.00';
+                }
+                if ($this->pdoColumnExists('cash_accounts', 'created_at')) {
+                    $insertCols['created_at'] = 'NOW()';
+                }
+
+                $colList = implode(', ', array_keys($insertCols));
+                $valList = implode(', ', array_values($insertCols));
+                $this->pdo->exec("INSERT IGNORE INTO `{$this->prefix}cash_accounts` ({$colList}) VALUES ({$valList})");
                 
                 error_log("AutoMigration: Created default cash account");
             }
@@ -1766,19 +1787,27 @@ class AutoMigration {
             }
 
             try {
-                // Derive class name: 008_unique_account_code.php -> Migration_Unique_account_code
-                $base   = pathinfo($filename, PATHINFO_FILENAME);
-                $parts  = explode('_', $base, 2);
-                $suffix = $parts[1] ?? $base;
-                $className = 'Migration_' . str_replace(' ', '_', ucwords(str_replace('_', ' ', $suffix)));
+                $classesBefore = get_declared_classes();
+                require_once $file;
+                $newClasses = array_diff(get_declared_classes(), $classesBefore);
 
-                if (!class_exists($className)) {
-                    require_once $file;
+                $className = null;
+                foreach ($newClasses as $candidate) {
+                    if (stripos($candidate, 'Migration_') === 0 && method_exists($candidate, 'up')) {
+                        $className = $candidate;
+                        break;
+                    }
                 }
 
-                if (!class_exists($className)) {
-                    error_log("AutoMigration: PHP migration class {$className} not found in {$filename}");
-                    continue;
+                if ($className === null) {
+                    $base = pathinfo($filename, PATHINFO_FILENAME);
+                    $parts = explode('_', $base, 2);
+                    $suffix = $parts[1] ?? $base;
+                    $className = 'Migration_' . str_replace(' ', '_', ucwords(str_replace('_', ' ', $suffix)));
+                    if (!class_exists($className)) {
+                        error_log("AutoMigration: PHP migration class not found in {$filename}");
+                        continue;
+                    }
                 }
 
                 $instance = new $className();
@@ -3526,15 +3555,16 @@ class AutoMigration {
      */
     private function recalculateAccountBalances() {
         try {
-            // Check required tables exist
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}journal_entry_lines'");
             if (!$stmt || count($stmt->fetchAll()) === 0) return true;
             $stmt = $this->pdo->query("SHOW TABLES LIKE '{$this->prefix}accounts'");
             if (!$stmt || count($stmt->fetchAll()) === 0) return true;
 
-            // Recalculate balance for every account from posted journal lines
-            // For Liabilities, Equity, Revenue: balance = credits - debits
-            // For Assets, Expenses: balance = debits - credits
+            $entryColumn = $this->getJournalEntryLineEntryColumn();
+            if ($entryColumn === null) {
+                return true;
+            }
+
             $sql = "UPDATE `{$this->prefix}accounts` a
                     SET a.balance = (
                         SELECT COALESCE(
@@ -3546,13 +3576,13 @@ class AutoMigration {
                             END
                         , 0)
                         FROM `{$this->prefix}journal_entry_lines` jel
-                        JOIN `{$this->prefix}journal_entries` je ON jel.entry_id = je.id
+                        JOIN `{$this->prefix}journal_entries` je ON jel.`{$entryColumn}` = je.id
                         WHERE jel.account_id = a.id
                           AND je.status = 'posted'
                     )
                     WHERE EXISTS (
                         SELECT 1 FROM `{$this->prefix}journal_entry_lines` jel2
-                        JOIN `{$this->prefix}journal_entries` je2 ON jel2.entry_id = je2.id
+                        JOIN `{$this->prefix}journal_entries` je2 ON jel2.`{$entryColumn}` = je2.id
                         WHERE jel2.account_id = a.id AND je2.status = 'posted'
                     )";
 
@@ -3563,6 +3593,32 @@ class AutoMigration {
             error_log("AutoMigration: ERROR recalculating account balances: " . $e->getMessage());
             return false;
         }
+    }
+
+    private function pdoColumnExists($table, $column) {
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1"
+            );
+            $stmt->execute([$this->prefix . $table, $column]);
+            return (bool) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Resolve journal_entry_lines → journal_entries FK column name across schema versions.
+     */
+    private function getJournalEntryLineEntryColumn() {
+        foreach (['entry_id', 'journal_entry_id'] as $column) {
+            $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->prefix}journal_entry_lines` LIKE '{$column}'");
+            if ($stmt && count($stmt->fetchAll()) > 0) {
+                return $column;
+            }
+        }
+        return null;
     }
 
     /**

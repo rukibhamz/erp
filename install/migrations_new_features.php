@@ -5,6 +5,10 @@
 
 function runNewFeatureMigrations($pdo, $prefix = 'erp_') {
     try {
+        if (function_exists('fixNewFeatureColumns')) {
+            fixNewFeatureColumns($pdo, $prefix);
+        }
+
         // --- WHOLESALE PRICING ---
 
         // Customer Types
@@ -155,7 +159,22 @@ function fixNewFeatureColumns($pdo, $prefix = 'erp_') {
         $pdo->exec("ALTER TABLE `{$prefix}customers` ADD INDEX `idx_customer_type` (`customer_type_id`)");
     }
 
-    // --- PROPERTY MANAGEMENT & SPACES ---
+    // Education tax returns — align older deployments before views reference these columns
+    if (!$columnExists('education_tax_returns', 'assessable_profit')) {
+        $pdo->exec("ALTER TABLE `{$prefix}education_tax_returns` ADD COLUMN `assessable_profit` DECIMAL(15,2) NOT NULL DEFAULT 0");
+    }
+    if (!$columnExists('education_tax_returns', 'tax_amount')) {
+        $pdo->exec("ALTER TABLE `{$prefix}education_tax_returns` ADD COLUMN `tax_amount` DECIMAL(15,2) NOT NULL DEFAULT 0");
+    }
+    if (!$columnExists('education_tax_returns', 'paid_amount')) {
+        $pdo->exec("ALTER TABLE `{$prefix}education_tax_returns` ADD COLUMN `paid_amount` DECIMAL(15,2) DEFAULT 0");
+    }
+    if (!$columnExists('education_tax_returns', 'filing_date')) {
+        $pdo->exec("ALTER TABLE `{$prefix}education_tax_returns` ADD COLUMN `filing_date` DATE NULL");
+    }
+    if (!$columnExists('education_tax_returns', 'due_date')) {
+        $pdo->exec("ALTER TABLE `{$prefix}education_tax_returns` ADD COLUMN `due_date` DATE NULL");
+    }
 
     // Spaces table updates
     if (!$columnExists('spaces', 'operational_mode')) {

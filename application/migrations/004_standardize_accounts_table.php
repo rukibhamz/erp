@@ -12,7 +12,7 @@ class Migration_004_standardize_accounts_table {
         $prefix = $this->db->getPrefix();
         
         // Use raw SQL to check and add columns (compatible with our Database class)
-        $this->ensureColumn($prefix . 'accounts', 'parent_account_id', "INT NULL AFTER `id` (FOREIGN KEY REFERENCES `{$prefix}accounts`(`id`) ON DELETE SET NULL)");
+        $this->ensureColumn($prefix . 'accounts', 'parent_account_id', 'INT NULL AFTER `id`');
         $this->ensureColumn($prefix . 'accounts', 'account_category', "VARCHAR(50) NULL AFTER `account_type`");
         $this->ensureColumn($prefix . 'accounts', 'is_system_account', "TINYINT(1) DEFAULT 0 AFTER `account_category`");
         $this->ensureColumn($prefix . 'accounts', 'opening_balance', "DECIMAL(15,2) DEFAULT 0.00 AFTER `balance`");

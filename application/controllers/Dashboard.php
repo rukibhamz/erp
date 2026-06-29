@@ -722,11 +722,13 @@ class Dashboard extends Base_Controller {
             $vatTotal = 0;
             
             try {
-                $payeResult = $this->db->fetchOne(
-                    "SELECT SUM(total_paye) as total FROM `" . $this->db->getPrefix() . "paye_returns` 
-                     WHERE status != 'paid'"
-                );
-                $payeTotal = floatval($payeResult['total'] ?? 0);
+                if ($this->dashboardTableExists('paye_returns')) {
+                    $payeResult = $this->db->fetchOne(
+                        "SELECT SUM(total_paye) as total FROM `" . $this->db->getPrefix() . "paye_returns` 
+                         WHERE status != 'paid'"
+                    );
+                    $payeTotal = floatval($payeResult['total'] ?? 0);
+                }
             } catch (Exception $e) {
                 // Table might not exist
             }
@@ -921,15 +923,26 @@ class Dashboard extends Base_Controller {
     }
     
     private function getRecentPayments($limit = 5) {
-        if (!$this->db) return [];
+        if (!$this->db || !$this->dashboardTableExists('payments')) return [];
         try {
-            // Fixed: Validate limit to prevent SQL injection
-            $limit = max(1, min(100, intval($limit))); // Ensure limit is between 1 and 100
+            $limit = max(1, min(100, intval($limit)));
+            $customerNameExpr = "COALESCE(c.company_name, c.contact_name, c.customer_code, 'Customer')";
+            if ($this->dashboardTableExists('customers')
+                && $this->checkColumnExists('customers', 'company_name')) {
+                return $this->db->fetchAll(
+                    "SELECT p.*, i.invoice_number, {$customerNameExpr} as customer_name
+                     FROM `" . $this->db->getPrefix() . "payments` p
+                     LEFT JOIN `" . $this->db->getPrefix() . "invoices` i ON p.invoice_id = i.id
+                     LEFT JOIN `" . $this->db->getPrefix() . "customers` c ON i.customer_id = c.id
+                     ORDER BY p.payment_date DESC
+                     LIMIT " . $limit
+                ) ?? [];
+            }
+
             return $this->db->fetchAll(
-                "SELECT p.*, i.invoice_number, c.name as customer_name
+                "SELECT p.*, i.invoice_number, NULL as customer_name
                  FROM `" . $this->db->getPrefix() . "payments` p
                  LEFT JOIN `" . $this->db->getPrefix() . "invoices` i ON p.invoice_id = i.id
-                 LEFT JOIN `" . $this->db->getPrefix() . "customers` c ON i.customer_id = c.id
                  ORDER BY p.payment_date DESC
                  LIMIT " . $limit
             ) ?? [];
@@ -973,36 +986,58 @@ class Dashboard extends Base_Controller {
         
         // Education Tax alerts
         try {
-            $edTaxReturns = $this->db->fetchOne(
-                "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "education_tax_returns` 
-                 WHERE status != 'paid' AND due_date < CURDATE()"
-            );
-            if (($edTaxReturns['count'] ?? 0) > 0) {
-                $alerts[] = [
-                    'type' => 'danger',
-                    'message' => $edTaxReturns['count'] . ' Education Tax returns are overdue',
-                    'link' => base_url('education_tax')
-                ];
+            if ($this->dashboardTableExists('education_tax_returns')
+                && $this->checkColumnExists('education_tax_returns', 'due_date')) {
+                $edTaxReturns = $this->db->fetchOne(
+                    "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . "education_tax_returns` 
+                     WHERE status != 'paid' AND due_date < CURDATE()"
+                );
+                if (($edTaxReturns['count'] ?? 0) > 0) {
+                    $alerts[] = [
+                        'type' => 'danger',
+                        'message' => $edTaxReturns['count'] . ' Education Tax returns are overdue',
+                        'link' => base_url('education_tax')
+                    ];
+                }
             }
             
             // Upcoming deadlines for Education Tax
-            $currentYear = date('Y');
-            $edTaxConfig = $this->db->fetchOne(
-                "SELECT * FROM `" . $this->db->getPrefix() . "education_tax_config` 
-                 WHERE tax_year = ? AND deadline_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)",
-                [$currentYear]
-            );
-            if ($edTaxConfig) {
-                $alerts[] = [
-                    'type' => 'info',
-                    'message' => 'Education Tax deadline for ' . $currentYear . ' is approaching: ' . format_date($edTaxConfig['deadline_date']),
-                    'link' => base_url('education_tax/config')
-                ];
+            if ($this->dashboardTableExists('education_tax_config')) {
+                $currentYear = date('Y');
+                $edTaxConfig = $this->db->fetchOne(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "education_tax_config` 
+                     WHERE tax_year = ? AND deadline_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)",
+                    [$currentYear]
+                );
+                if ($edTaxConfig) {
+                    $alerts[] = [
+                        'type' => 'info',
+                        'message' => 'Education Tax deadline for ' . $currentYear . ' is approaching: ' . format_date($edTaxConfig['deadline_date']),
+                        'link' => base_url('education_tax/config')
+                    ];
+                }
             }
         } catch (Exception $e) {
             error_log('Dashboard getSystemAlerts education tax error: ' . $e->getMessage());
         }
         
         return $alerts;
+    }
+
+    private function dashboardTableExists($table) {
+        try {
+            if (!$this->db) {
+                return false;
+            }
+            $fullTable = $this->db->getPrefix() . $table;
+            $result = $this->db->fetchOne(
+                "SELECT 1 FROM information_schema.tables
+                 WHERE table_schema = DATABASE() AND table_name = ? LIMIT 1",
+                [$fullTable]
+            );
+            return !empty($result);
+        } catch (Exception $e) {
+            return false;
+        }
     }
 }

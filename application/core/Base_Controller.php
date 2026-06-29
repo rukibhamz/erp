@@ -522,8 +522,9 @@ class Base_Controller {
             }
             $prefix = $this->db->getPrefix();
             $result = $this->db->fetchOne(
-                "SHOW COLUMNS FROM `{$prefix}{$table}` LIKE ?",
-                [$column]
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1",
+                [$prefix . $table, $column]
             );
             return !empty($result);
         } catch (Exception $e) {

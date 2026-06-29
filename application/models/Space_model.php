@@ -103,9 +103,11 @@ class Space_model extends Base_Model {
         }
 
         try {
+            $fullTable = $this->db->getPrefix() . $table;
             $result = $this->db->fetchOne(
-                "SHOW COLUMNS FROM `" . $this->db->getPrefix() . $table . "` LIKE ?",
-                [$column]
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1",
+                [$fullTable, $column]
             );
             $this->columnExistsCache[$cacheKey] = !empty($result);
         } catch (Exception $e) {
