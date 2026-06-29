@@ -2,6 +2,16 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Accounting extends Base_Controller {
+    private const PAYMENT_REFERENCE_TYPES = [
+        'booking_payment',
+        'invoice_payment',
+        'bill_payment',
+        'rent_payment',
+        'utility_payment',
+        'payment',
+        'education_tax_payment',
+    ];
+
     private $accountModel;
     private $transactionModel;
     private $invoiceModel;
@@ -36,7 +46,8 @@ class Accounting extends Base_Controller {
         $receivables = 0;
         $payables = 0;
         $profitLoss = 0;
-        $recentTransactions = [];
+        $recentPayments = [];
+        $recentLedgerActivity = [];
         $overdueInvoices = [];
         $overdueBills = [];
         
@@ -46,7 +57,8 @@ class Accounting extends Base_Controller {
             $payables = $this->getTotalPayables();
             $profitLoss = $this->getProfitLoss();
             
-            $recentTransactions = $this->getRecentTransactions(10);
+            $recentPayments = $this->getRecentPayments(10);
+            $recentLedgerActivity = $this->getRecentLedgerActivity(10);
             
             $overdueInvoices = $this->getOverdueInvoices(5);
             $overdueBills = $this->getOverdueBills(5);
@@ -60,7 +72,8 @@ class Accounting extends Base_Controller {
             'receivables' => $receivables,
             'payables' => $payables,
             'profit_loss' => $profitLoss,
-            'recent_transactions' => $recentTransactions,
+            'recent_payments' => $recentPayments,
+            'recent_ledger_activity' => $recentLedgerActivity,
             'overdue_invoices' => $overdueInvoices,
             'overdue_bills' => $overdueBills,
             'flash' => $this->getFlashMessage()
@@ -115,32 +128,85 @@ class Accounting extends Base_Controller {
         }
     }
     
-    private function getRecentTransactions($limit = 10) {
-        try {
-            $prefix = $this->db->getPrefix();
-            
-            return $this->db->fetchAll(
-                "SELECT t.*, 
-                        a.account_code, 
+    private function getRecentTransactionBaseSql(): string {
+        $prefix = $this->db->getPrefix();
+
+        return "SELECT t.*,
+                        a.account_code,
                         a.account_name,
                         b.booking_number,
-                        b.customer_name as booking_customer,
+                        b.customer_name AS booking_customer,
                         i.invoice_number,
-                        ic.company_name as invoice_customer,
-                        COALESCE(b.customer_name, ic.company_name) as customer_name
+                        ic.company_name AS invoice_customer,
+                        COALESCE(b.customer_name, ic.company_name) AS customer_name
                  FROM `{$prefix}transactions` t
                  JOIN `{$prefix}accounts` a ON t.account_id = a.id
-                 LEFT JOIN `{$prefix}bookings` b ON t.reference_type IN ('booking_payment', 'booking_revenue') AND t.reference_id = b.id
-                 LEFT JOIN `{$prefix}invoices` i ON t.reference_type = 'invoice' AND t.reference_id = i.id
-                 LEFT JOIN `{$prefix}customers` ic ON i.customer_id = ic.id
+                 LEFT JOIN `{$prefix}bookings` b
+                    ON t.reference_type IN ('booking_payment', 'booking_revenue') AND t.reference_id = b.id
+                 LEFT JOIN `{$prefix}invoices` i
+                    ON t.reference_type = 'invoice' AND t.reference_id = i.id
+                 LEFT JOIN `{$prefix}customers` ic ON i.customer_id = ic.id";
+    }
+
+    private function getPaymentReferenceTypeInList(): string {
+        return "'" . implode("','", self::PAYMENT_REFERENCE_TYPES) . "'";
+    }
+
+    /**
+     * Cash/bank side of payment postings only (one row per payment, not AR/AP clearing lines).
+     */
+    private function getRecentPayments($limit = 10) {
+        try {
+            $prefix = $this->db->getPrefix();
+            $paymentTypes = $this->getPaymentReferenceTypeInList();
+            $cashAccountIds = $this->getCashGlAccountIdsSubquery($prefix);
+
+            return $this->db->fetchAll(
+                $this->getRecentTransactionBaseSql() . "
                  WHERE t.status = 'posted'
+                 AND t.reference_type IN ({$paymentTypes})
+                 AND (
+                     t.account_id IN ({$cashAccountIds})
+                     OR (a.account_type = 'Assets' AND a.account_code LIKE '10%')
+                 )
                  ORDER BY t.transaction_date DESC, t.id DESC
                  LIMIT " . intval($limit)
             );
         } catch (Exception $e) {
-            error_log('getRecentTransactions error: ' . $e->getMessage());
+            error_log('getRecentPayments error: ' . $e->getMessage());
             return [];
         }
+    }
+
+    /**
+     * Non-payment ledger lines (invoices raised, revenue, VAT, journals, bills, etc.).
+     */
+    private function getRecentLedgerActivity($limit = 10) {
+        try {
+            $paymentTypes = $this->getPaymentReferenceTypeInList();
+
+            return $this->db->fetchAll(
+                $this->getRecentTransactionBaseSql() . "
+                 WHERE t.status = 'posted'
+                 AND t.reference_type NOT IN ({$paymentTypes})
+                 ORDER BY t.transaction_date DESC, t.id DESC
+                 LIMIT " . intval($limit)
+            );
+        } catch (Exception $e) {
+            error_log('getRecentLedgerActivity error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function getCashGlAccountIdsSubquery(string $prefix): string {
+        return "SELECT ca.account_id
+                FROM `{$prefix}cash_accounts` ca
+                WHERE ca.account_id IS NOT NULL";
+    }
+
+    /** @deprecated Use getRecentPayments() or getRecentLedgerActivity() */
+    private function getRecentTransactions($limit = 10) {
+        return $this->getRecentLedgerActivity($limit);
     }
     
     private function getOverdueInvoices($limit = 5) {

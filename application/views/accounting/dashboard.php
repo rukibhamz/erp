@@ -71,63 +71,47 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
-<!-- Recent Transactions -->
-<div class="row g-3">
+<!-- Recent Payments & Ledger Activity -->
+<div class="row g-3 mb-3">
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Recent Transactions</h5>
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Payments</h5>
+                <a href="<?= base_url('transactions') ?>" class="small">View all</a>
             </div>
             <div class="card-body">
-                <?php if (!empty($recent_transactions)): ?>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Account</th>
-                                    <th>Customer</th>
-                                    <th>Description</th>
-                                    <th class="text-end">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($recent_transactions as $txn): ?>
-                                    <tr>
-                                        <td><?= format_date($txn['transaction_date']) ?></td>
-                                        <td><small><?= htmlspecialchars($txn['account_code'] ?? '') ?></small></td>
-                                        <td><small><?= htmlspecialchars($txn['customer_name'] ?? '—') ?></small></td>
-                                        <td>
-                                            <small><?= htmlspecialchars($txn['description'] ?? '') ?></small>
-                                            <?php
-                                                $refBadge = ['booking_payment'=>'primary','booking_revenue'=>'success','invoice'=>'info','journal_entry'=>'secondary'];
-                                                $ref = $txn['reference_type'] ?? '';
-                                                $badge = $refBadge[$ref] ?? 'light';
-                                                $label = ucwords(str_replace('_', ' ', $ref));
-                                            ?>
-                                            <?php if ($label): ?><span class="badge bg-<?= $badge ?> ms-1" style="font-size:0.65rem"><?= $label ?></span><?php endif; ?>
-                                        </td>
-                                        <td class="text-end">
-                                            <?php if ($txn['debit'] > 0): ?>
-                                                <span class="text-danger"><?= format_currency($txn['debit']) ?></span>
-                                            <?php else: ?>
-                                                <span class="text-success"><?= format_currency($txn['credit']) ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php else: ?>
-                    <p class="text-muted">No recent transactions</p>
-                <?php endif; ?>
+                <?php
+                $ledger_rows = $recent_payments ?? [];
+                $payments_view = true;
+                $empty_message = 'No recent payments';
+                include(BASEPATH . 'views/accounting/_recent_ledger_rows.php');
+                ?>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
-        <div class="card">
+        <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Ledger Activity</h5>
+                <a href="<?= base_url('ledger') ?>" class="small">View all</a>
+            </div>
+            <div class="card-body">
+                <?php
+                $ledger_rows = $recent_ledger_activity ?? [];
+                $payments_view = false;
+                $empty_message = 'No recent ledger activity';
+                include(BASEPATH . 'views/accounting/_recent_ledger_rows.php');
+                ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overdue -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
             <div class="card-header">
                 <h5 class="card-title mb-0">Overdue Invoices</h5>
             </div>
@@ -160,7 +144,47 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </table>
                     </div>
                 <?php else: ?>
-                    <p class="text-muted">No overdue invoices</p>
+                    <p class="text-muted mb-0">No overdue invoices</p>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Overdue Bills</h5>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($overdue_bills)): ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Bill #</th>
+                                    <th>Vendor</th>
+                                    <th>Due Date</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($overdue_bills as $bill): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="<?= base_url('payables/bills/view/' . $bill['id']) ?>">
+                                                <?= htmlspecialchars($bill['bill_number'] ?? '') ?>
+                                            </a>
+                                        </td>
+                                        <td><?= htmlspecialchars($bill['company_name'] ?? '') ?></td>
+                                        <td><?= format_date($bill['due_date']) ?></td>
+                                        <td class="text-end"><?= format_currency($bill['balance_amount'] ?? 0) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <p class="text-muted mb-0">No overdue bills</p>
                 <?php endif; ?>
             </div>
         </div>
