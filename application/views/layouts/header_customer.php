@@ -105,9 +105,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <i class="bi bi-person"></i> Profile
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="<?= base_url('customer-portal/logout') ?>">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a></li>
+                            <li>
+                                <form method="post" action="<?= base_url('customer-portal/logout') ?>" class="px-3 py-1">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="dropdown-item p-0 border-0 bg-transparent text-start">
+                                        <i class="bi bi-box-arrow-right"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
                         </ul>
                     </li>
                 </ul>

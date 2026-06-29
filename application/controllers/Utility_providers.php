@@ -165,6 +165,14 @@ class Utility_providers extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('utilities', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('utilities/providers');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             if ($this->providerModel->delete($id)) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Utility Providers', 'Deleted provider: ' . $id);

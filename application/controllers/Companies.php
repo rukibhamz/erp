@@ -101,6 +101,14 @@ class Companies extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('companies', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('companies');
+            return;
+        }
+        
+        check_csrf();
+        
         $company = $this->companyModel->getById($id);
         
         if (!$company) {

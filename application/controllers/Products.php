@@ -209,6 +209,14 @@ class Products extends Base_Controller {
 
     public function delete($id) {
         $this->requirePermission('products', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('products');
+            return;
+        }
+        
+        check_csrf();
 
         $product = $this->productModel->getById($id);
         if (!$product) {

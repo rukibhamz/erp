@@ -224,6 +224,14 @@ class Suppliers extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('inventory', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('inventory/suppliers');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $supplier = $this->supplierModel->getById($id);
             if (!$supplier) {

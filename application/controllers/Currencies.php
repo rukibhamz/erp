@@ -175,6 +175,14 @@ class Currencies extends Base_Controller {
 
     public function delete($id) {
         $this->requirePermission('settings', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('currencies');
+            return;
+        }
+        
+        check_csrf();
 
         try {
             $currency = $this->currencyModel->getById($id);

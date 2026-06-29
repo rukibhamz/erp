@@ -66,6 +66,14 @@ class Customer_types extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('customer_types', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('customer_types');
+            return;
+        }
+        
+        check_csrf();
+        
         $type = $this->typeModel->getById($id);
         if (!$type) {
             $this->setFlashMessage('danger', 'Customer type not found.');

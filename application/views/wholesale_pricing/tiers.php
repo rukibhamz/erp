@@ -75,9 +75,13 @@
                                         ?>
                                     </td>
                                     <td>
-                                        <a href="<?= base_url('discount_tiers/delete/' . $tier['id']) ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this tier?')">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
+                                        <form method="post" action="<?= base_url('discount_tiers/delete/' . $tier['id']) ?>" class="d-inline"
+                                              onsubmit="return confirm('Delete this tier?')">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

@@ -220,6 +220,14 @@ class Fixed_assets extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('inventory', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('inventory/assets');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $asset = $this->assetModel->getById($id);
             if (!$asset) {

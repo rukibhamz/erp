@@ -336,6 +336,14 @@ class Leases extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('locations', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('leases');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $lease = $this->leaseModel->getById($id);
             if (!$lease) {

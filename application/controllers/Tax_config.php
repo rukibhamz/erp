@@ -495,6 +495,14 @@ class Tax_config extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('tax', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('tax/config');
+            return;
+        }
+        
+        check_csrf();
+        
         $taxType = $this->taxTypeModel->getById($id);
         if (!$taxType) {
             $this->setFlashMessage('danger', 'Tax type not found.');

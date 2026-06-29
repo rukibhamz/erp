@@ -107,10 +107,13 @@ include(BASEPATH . 'views/tax/_nav.php');
                         </a>
                     <?php endif; ?>
                     <?php if (has_permission('tax', 'delete')): ?>
-                        <a href="<?= base_url('tax/config/delete/' . $tax_type['id']) ?>" class="btn btn-danger" 
-                           onclick="return confirm('Are you sure you want to deactivate this tax type?')">
-                            <i class="bi bi-trash"></i> Deactivate Tax Type
-                        </a>
+                        <form method="post" action="<?= base_url('tax/config/delete/' . $tax_type['id']) ?>" class="d-grid"
+                              onsubmit="return confirm('Are you sure you want to deactivate this tax type?')">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Deactivate Tax Type
+                            </button>
+                        </form>
                     <?php endif; ?>
                     <?php if (has_permission('tax', 'update')): ?>
                         <a href="<?= base_url('tax/config') ?>" class="btn btn-outline-primary">

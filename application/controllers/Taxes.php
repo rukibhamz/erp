@@ -130,6 +130,14 @@ class Taxes extends Base_Controller {
 
     public function delete($id) {
         $this->requirePermission('taxes', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('taxes');
+            return;
+        }
+        
+        check_csrf();
 
         $tax = $this->taxModel->getById($id);
         if (!$tax) {

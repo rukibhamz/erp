@@ -165,6 +165,14 @@ class Entities extends Base_Controller {
 
     public function delete($id) {
         $this->requirePermission('entities', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('entities');
+            return;
+        }
+        
+        check_csrf();
 
         try {
             $entity = $this->entityModel->getById($id);

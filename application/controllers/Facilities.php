@@ -53,6 +53,14 @@ class Facilities extends Base_Controller {
      * @deprecated Use Locations::delete() or Spaces::delete() instead
      */
     public function delete($id) {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('locations');
+            return;
+        }
+        
+        check_csrf();
+        
         $this->setFlashMessage('info', 'Facilities have been moved to Locations. You are being redirected.');
         redirect('locations');
     }

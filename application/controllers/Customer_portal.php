@@ -261,6 +261,14 @@ class Customer_portal extends Base_Controller {
      * Logout
      */
     public function logout() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('customer-portal/login');
+            return;
+        }
+        
+        check_csrf();
+        
         $userId = $this->session['customer_user_id'] ?? null;
         if ($userId) {
             $this->customerPortalUserModel->update((int) $userId, ['remember_token' => null]);

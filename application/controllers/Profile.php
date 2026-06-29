@@ -183,6 +183,14 @@ class Profile extends Base_Controller {
     public function terminateSession($sessionId) {
         $userId = $this->session['user_id'];
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('profile');
+            return;
+        }
+        
+        check_csrf();
+        
         // SECURITY: Verify the session belongs to the current user (prevent IDOR)
         $targetSession = $this->sessionModel->getById($sessionId);
         if (!$targetSession || ($targetSession['user_id'] ?? null) != $userId) {

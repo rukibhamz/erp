@@ -17,9 +17,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a href="<?= base_url('spaces') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
-            <a href="<?= base_url('spaces/delete/' . $space['id']) ?>" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this space? This action cannot be undone.');">
-                <i class="bi bi-trash"></i> Delete
-            </a>
+            <form method="post" action="<?= base_url('spaces/delete/' . $space['id']) ?>" class="d-inline"
+                  onsubmit="return confirm('Are you sure you want to delete this space? This action cannot be undone.');">
+                <?= csrf_field() ?>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </form>
         </div>
     </div>
 </div>

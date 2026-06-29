@@ -516,6 +516,14 @@ class Users extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('users', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('users');
+            return;
+        }
+        
+        check_csrf();
+        
         // Don't allow deleting yourself
         if ($id == $this->session['user_id']) {
             $this->setFlashMessage('danger', 'You cannot delete your own account.');

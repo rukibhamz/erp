@@ -144,9 +144,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-door-open"></i>
                                         </a>
                                         <?php if (has_permission('locations', 'delete')): ?>
-                                            <a href="<?= base_url('locations/delete/' . $Location['id']) ?>" class="btn btn-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this location?');">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
+                                            <form method="post" action="<?= base_url('locations/delete/' . $Location['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this location?');">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
                                     </div>
                                 </td>

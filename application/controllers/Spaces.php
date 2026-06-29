@@ -599,6 +599,14 @@ class Spaces extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('locations', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('spaces');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $space = $this->spaceModel->getById($id);
             if (!$space) {

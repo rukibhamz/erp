@@ -529,6 +529,15 @@ class System_settings extends Base_Controller {
      */
     public function clearDebugLog() {
         $this->requirePermission('settings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('settings/debug-log');
+            return;
+        }
+        
+        check_csrf();
+        
         $logFile = ROOTPATH . 'logs/booking_create_debug.log';
         if (file_exists($logFile)) {
             file_put_contents($logFile, '');

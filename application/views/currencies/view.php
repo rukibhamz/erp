@@ -99,10 +99,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </a>
                     <?php endif; ?>
                     <?php if (has_permission('settings', 'delete') && !($currency['is_base'] ?? false)): ?>
-                        <a href="<?= base_url('currencies/delete/' . $currency['id']) ?>" class="btn btn-danger" 
-                           onclick="return confirm('Are you sure you want to delete this currency?')">
-                            <i class="bi bi-trash"></i> Delete Currency
-                        </a>
+                        <form method="post" action="<?= base_url('currencies/delete/' . $currency['id']) ?>" class="d-grid"
+                              onsubmit="return confirm('Are you sure you want to delete this currency?')">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete Currency
+                            </button>
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>

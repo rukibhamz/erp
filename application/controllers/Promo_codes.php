@@ -144,6 +144,13 @@ class Promo_codes extends Base_Controller {
 
     public function delete($id) {
         $this->requirePermission('bookings', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('promo-codes');
+            return;
+        }
+        
         check_csrf();
 
         $code = $this->promoModel->getById($id);

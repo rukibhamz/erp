@@ -131,10 +131,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <i class="bi bi-file-earmark-plus"></i>
                                         </a>
                                         <?php if (has_permission('locations', 'delete')): ?>
-                                            <a href="<?= base_url('tenants/delete/' . $tenant['id']) ?>" class="btn btn-danger"
-                                               title="Delete" onclick="return confirm('Are you sure you want to delete this tenant?')">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
+                                            <form method="post" action="<?= base_url('tenants/delete/' . $tenant['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this tenant?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
                                     </div>
                                 </td>

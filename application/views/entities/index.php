@@ -66,10 +66,13 @@ $page_title = $page_title ?? 'Entities';
                                             </a>
                                         <?php endif; ?>
                                         <?php if (has_permission('entities', 'delete')): ?>
-                                            <a href="<?= base_url('entities/delete/' . $entity['id']) ?>" class="btn btn-danger" 
-                                               title="Delete" onclick="return confirm('Are you sure you want to delete this entity?')">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
+                                            <form method="post" action="<?= base_url('entities/delete/' . $entity['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete this entity?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
                                     </div>
 

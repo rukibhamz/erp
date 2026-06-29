@@ -110,9 +110,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             <p class="mb-2"><strong>Last Login:</strong><br><?= date('M d, Y g:i A', strtotime($user['last_login'])) ?></p>
                         <?php endif; ?>
                         <hr>
-                        <a href="<?= base_url('customer-portal/logout') ?>" class="btn btn-outline-danger w-100">
-                            <i class="bi bi-box-arrow-right"></i> Logout
-                        </a>
+                        <form method="post" action="<?= base_url('customer-portal/logout') ?>">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

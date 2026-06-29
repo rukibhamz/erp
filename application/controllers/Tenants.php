@@ -213,6 +213,14 @@ class Tenants extends Base_Controller {
 
     public function delete($id) {
         $this->requirePermission('locations', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('tenants');
+            return;
+        }
+        
+        check_csrf();
 
         try {
             $tenant = $this->tenantModel->getById($id);

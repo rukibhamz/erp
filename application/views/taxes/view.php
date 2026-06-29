@@ -97,10 +97,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </a>
                     <?php endif; ?>
                     <?php if (has_permission('taxes', 'delete')): ?>
-                        <a href="<?= base_url('taxes/delete/' . $tax['id']) ?>" class="btn btn-danger" 
-                           onclick="return confirm('Are you sure you want to delete this tax rate?')">
-                            <i class="bi bi-trash"></i> Delete Tax Rate
-                        </a>
+                        <form method="post" action="<?= base_url('taxes/delete/' . $tax['id']) ?>" class="d-grid"
+                              onsubmit="return confirm('Are you sure you want to delete this tax rate?')">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete Tax Rate
+                            </button>
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>

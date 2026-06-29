@@ -157,10 +157,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </a>
                     <?php endif; ?>
                     <?php if (has_permission('bookings', 'delete')): ?>
-                        <a href="<?= base_url('facilities/delete/' . $facility['id']) ?>" class="btn btn-danger" 
-                           onclick="return confirm('Are you sure you want to delete this facility?')">
-                            <i class="bi bi-trash"></i> Delete Facility
-                        </a>
+                        <form method="post" action="<?= base_url('facilities/delete/' . $facility['id']) ?>" class="d-inline"
+                              onsubmit="return confirm('Are you sure you want to delete this facility?')">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete Facility
+                            </button>
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>

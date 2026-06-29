@@ -252,6 +252,14 @@ class Meters extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('utilities', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('utilities/meters');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $meter = $this->meterModel->getById($id);
             if (!$meter) {

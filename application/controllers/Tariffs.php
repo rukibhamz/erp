@@ -194,6 +194,14 @@ class Tariffs extends Base_Controller {
     public function delete($id) {
         $this->requirePermission('utilities', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('utilities/tariffs');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             if ($this->tariffModel->delete($id)) {
                 $this->activityModel->log($this->session['user_id'], 'delete', 'Tariffs', 'Deleted tariff: ' . $id);

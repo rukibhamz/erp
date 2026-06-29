@@ -56,6 +56,15 @@ class Discount_tiers extends Base_Controller {
     
     public function delete($id) {
         $this->requirePermission('wholesale_pricing', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('inventory/items');
+            return;
+        }
+        
+        check_csrf();
+        
         $tier = $this->tierModel->getById($id);
         if ($tier && $this->tierModel->delete($id)) {
             $this->setFlashMessage('success', 'Tier deleted.');

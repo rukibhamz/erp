@@ -129,9 +129,13 @@ $page_title = $page_title ?? 'My Profile';
                                     <td><?= date('M d, Y H:i', $session['last_activity']) ?></td>
                                     <td>
                                         <?php if ($session['id'] !== session_id()): ?>
-                                            <a href="<?= base_url('profile/terminate-session/' . $session['id']) ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to terminate this session?')">
-                                                <i class="bi bi-x-circle"></i> Terminate
-                                            </a>
+                                            <form method="post" action="<?= base_url('profile/terminate-session/' . $session['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to terminate this session?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-x-circle"></i> Terminate
+                                                </button>
+                                            </form>
                                         <?php else: ?>
                                             <span class="badge bg-primary">Current Session</span>
                                         <?php endif; ?>

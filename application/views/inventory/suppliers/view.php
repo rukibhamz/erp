@@ -109,10 +109,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         </a>
                     <?php endif; ?>
                     <?php if (has_permission('inventory', 'delete')): ?>
-                        <a href="<?= base_url('inventory/suppliers/delete/' . $supplier['id']) ?>" class="btn btn-danger" 
-                           onclick="return confirm('Are you sure you want to delete this supplier?')">
-                            <i class="bi bi-trash"></i> Delete Supplier
-                        </a>
+                        <form method="post" action="<?= base_url('inventory/suppliers/delete/' . $supplier['id']) ?>" class="d-grid"
+                              onsubmit="return confirm('Are you sure you want to delete this supplier?')">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete Supplier
+                            </button>
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>
