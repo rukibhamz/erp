@@ -58,25 +58,23 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             <div class="mb-3">
                                                 <span class="badge bg-secondary"><?= ucfirst($addon['addon_type']) ?></span>
                                             </div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div>
+                                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                                <div class="flex-grow-1 min-width-0">
                                                     <strong class="h5 text-primary"><?= format_currency($addon['price']) ?></strong>
                                                     <small class="text-muted">per unit</small>
                                                 </div>
-                                                <div>
-                                                    <div class="qty-control d-flex align-items-center gap-1">
-                                                        <button class="btn btn-dark btn-sm minus-btn" type="button" 
-                                                                data-addon-id="<?= $addon['id'] ?>"
-                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">−</button>
-                                                        <input type="number" class="form-control form-control-sm text-center qty-input" 
+                                                <div class="flex-shrink-0">
+                                                    <div class="qty-control d-flex align-items-center">
+                                                        <button class="btn btn-dark btn-sm qty-btn minus-btn" type="button" 
+                                                                data-addon-id="<?= $addon['id'] ?>">−</button>
+                                                        <input type="number" class="form-control qty-input" 
                                                                data-addon-id="<?= $addon['id'] ?>" 
                                                                data-price="<?= $addon['price'] ?>"
                                                                data-name="<?= htmlspecialchars($addon['name']) ?>"
                                                                value="0" min="0" max="99"
-                                                               style="width:52px;height:32px;text-align:center;">
-                                                        <button class="btn btn-dark btn-sm plus-btn" type="button" 
-                                                                data-addon-id="<?= $addon['id'] ?>"
-                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">+</button>
+                                                               inputmode="numeric" pattern="[0-9]*" aria-label="Quantity for <?= htmlspecialchars($addon['name']) ?>">
+                                                        <button class="btn btn-dark btn-sm qty-btn plus-btn" type="button" 
+                                                                data-addon-id="<?= $addon['id'] ?>">+</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -104,25 +102,23 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 <span class="badge bg-success">Rental Item</span>
                                                 <span class="badge bg-light text-dark border"><i class="bi bi-box"></i> <?= $item['current_stock'] ?> Available</span>
                                             </div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div>
+                                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                                <div class="flex-grow-1 min-width-0">
                                                     <strong class="h5 text-success">₦<?= number_format($item['rental_rate'], 2) ?></strong>
                                                     <small class="text-muted">/<?= $item['rental_rate_type'] ?></small>
                                                 </div>
-                                                <div>
-                                                    <div class="qty-control d-flex align-items-center gap-1">
-                                                        <button class="btn btn-success btn-sm minus-rental-btn" type="button" 
-                                                                data-item-id="<?= $item['id'] ?>"
-                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">−</button>
-                                                        <input type="number" class="form-control form-control-sm text-center rental-qty-input" 
+                                                <div class="flex-shrink-0">
+                                                    <div class="qty-control d-flex align-items-center">
+                                                        <button class="btn btn-success btn-sm qty-btn minus-rental-btn" type="button" 
+                                                                data-item-id="<?= $item['id'] ?>">−</button>
+                                                        <input type="number" class="form-control rental-qty-input" 
                                                                data-item-id="<?= $item['id'] ?>" 
                                                                data-price="<?= $item['rental_rate'] ?>"
                                                                data-name="<?= htmlspecialchars($item['name']) ?>"
                                                                value="0" min="0" max="<?= $item['current_stock'] ?>"
-                                                               style="width:52px;height:32px;text-align:center;">
-                                                        <button class="btn btn-success btn-sm plus-rental-btn" type="button" 
-                                                                data-item-id="<?= $item['id'] ?>"
-                                                                style="width:32px;height:32px;padding:0;font-size:1.1rem;line-height:1;">+</button>
+                                                               inputmode="numeric" pattern="[0-9]*" aria-label="Quantity for <?= htmlspecialchars($item['name']) ?>">
+                                                        <button class="btn btn-success btn-sm qty-btn plus-rental-btn" type="button" 
+                                                                data-item-id="<?= $item['id'] ?>">+</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -494,14 +490,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-/* Ensure qty digits remain visible across themes/overrides */
+/* Quantity selector on extras / rental cards */
+.qty-control {
+    flex-shrink: 0;
+    gap: 0.35rem;
+}
+.qty-control .qty-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    padding: 0;
+    font-size: 1.125rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
 .qty-control .qty-input,
 .qty-control .rental-qty-input {
+    width: 4rem;
+    min-width: 4rem;
+    max-width: 4rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    padding: 0.25rem 0.15rem;
+    text-align: center;
+    font-size: 1.0625rem;
+    font-weight: 600;
     color: #111827 !important;
     -webkit-text-fill-color: #111827 !important;
     background-color: #ffffff !important;
     opacity: 1 !important;
-    font-weight: 600;
+    border-radius: 0.375rem;
+    -moz-appearance: textfield;
+}
+.qty-control .qty-input::-webkit-outer-spin-button,
+.qty-control .qty-input::-webkit-inner-spin-button,
+.qty-control .rental-qty-input::-webkit-outer-spin-button,
+.qty-control .rental-qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 </style>
 
