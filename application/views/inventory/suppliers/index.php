@@ -20,14 +20,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<?php if (empty($suppliers)): ?>
-    <?php
+<?php
 $list_filter_action = base_url('inventory/suppliers');
 $search_placeholder = 'Supplier name, code, email…';
 include(BASEPATH . 'views/partials/list_filters_bar.php');
 ?>
 
-<div class="card shadow-sm">
+<?php if (empty($suppliers)): ?>
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
             <i class="bi bi-truck" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No suppliers found.</p>
@@ -37,8 +37,7 @@ include(BASEPATH . 'views/partials/list_filters_bar.php');
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
-
+    <div class="card shadow-sm">
     <div class="card-body">
         <?php
         $bulk_delete_enabled = has_permission('inventory', 'delete');

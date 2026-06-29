@@ -3,16 +3,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 include(BASEPATH . 'views/staff_management/_nav.php');
 ?>
 
-<div class="page-header">
+<div class="page-header list-filters-page-header">
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Employees</h1>
-        <div class="d-flex gap-2">
-            <?php if (hasPermission('payroll', 'create')): ?>
-                <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add Employee
-                </a>
-            <?php endif; ?>
-        </div>
+        <?php if (hasPermission('payroll', 'create')): ?>
+            <a href="<?= base_url('employees/create') ?>" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Employee
+            </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -23,17 +21,16 @@ include(BASEPATH . 'views/staff_management/_nav.php');
     </div>
 <?php endif; ?>
 
-<?php if (empty($employees)): ?>
-    <?php
+<?php
 $list_filter_action = base_url('staff_management/employees');
 $search_placeholder = 'Name, code, email…';
 include(BASEPATH . 'views/partials/list_filters_bar.php');
 ?>
 
-<div class="card shadow-sm">
-
-    <div class="card-body">
-        <div class="empty-state">
+<?php if (empty($employees)): ?>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="empty-state">
                 <i class="bi bi-people"></i>
                 <p class="mb-0">No employees found.</p>
                 <?php if (hasPermission('payroll', 'create')): ?>
@@ -88,7 +85,6 @@ include(BASEPATH . 'views/partials/list_filters_bar.php');
                                             </a>
                                         <?php endif; ?>
                                     </div>
-
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -99,4 +95,3 @@ include(BASEPATH . 'views/partials/list_filters_bar.php');
         </div>
     </div>
 <?php endif; ?>
-

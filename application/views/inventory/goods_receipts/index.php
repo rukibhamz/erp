@@ -20,14 +20,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<?php if (empty($grns)): ?>
-    <?php
+<?php
 $list_filter_action = base_url('inventory/goods-receipts');
 $search_placeholder = 'GRN #, PO #, supplier…';
 include(BASEPATH . 'views/partials/list_filters_bar.php');
 ?>
 
-<div class="card shadow-sm">
+<?php if (empty($grns)): ?>
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
             <i class="bi bi-box-arrow-in-down" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No goods receipts found.</p>
@@ -37,8 +37,7 @@ include(BASEPATH . 'views/partials/list_filters_bar.php');
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
-
+    <div class="card shadow-sm">
     <div class="card-body">
         <div class="table-responsive">
                 <table class="table table-hover">

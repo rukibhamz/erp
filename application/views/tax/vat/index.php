@@ -21,14 +21,14 @@ include(BASEPATH . 'views/tax/_nav.php');
     </div>
 <?php endif; ?>
 
-<?php if (empty($vat_returns)): ?>
-    <?php
+<?php
 $list_filter_action = base_url('tax/vat');
 $search_placeholder = 'Period, reference…';
 include(BASEPATH . 'views/partials/list_filters_bar.php');
 ?>
 
-<div class="card shadow-sm">
+<?php if (empty($vat_returns)): ?>
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
             <i class="bi bi-receipt" style="font-size: 3rem; color: #ccc;"></i>
             <p class="text-muted mt-3">No VAT returns found.</p>
@@ -40,8 +40,7 @@ include(BASEPATH . 'views/partials/list_filters_bar.php');
         </div>
     </div>
 <?php else: ?>
-    <div class="card">
-
+    <div class="card shadow-sm">
     <div class="card-body">
         <div class="table-responsive">
                 <table class="table table-hover">

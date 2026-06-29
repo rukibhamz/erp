@@ -42,14 +42,14 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 <?php endif; ?>
 
-<?php if (empty($bookings)): ?>
-    <?php
+<?php
 $list_filter_action = base_url('space_bookings');
 $search_placeholder = 'Booking #, customer, space…';
 include(BASEPATH . 'views/partials/list_filters_bar.php');
 ?>
 
-<div class="card shadow-sm">
+<?php if (empty($bookings)): ?>
+    <div class="card shadow-sm">
         <div class="card-body text-center py-5">
             <i class="bi bi-calendar-check" style="font-size: 4rem; color: #dee2e6;"></i>
             <h5 class="mt-3 text-muted">No Bookings Found</h5>
