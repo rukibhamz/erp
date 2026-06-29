@@ -13,8 +13,8 @@
             </div>
 
             <?php if (!empty($flash)): ?>
-                <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
-                    <?= $flash['message'] ?>
+                <div class="alert alert-<?= htmlspecialchars($flash['type']) ?> alert-dismissible fade show">
+                    <?= htmlspecialchars($flash['message']) ?>
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
             <?php endif; ?>

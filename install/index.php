@@ -462,11 +462,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$_SESSION['company_name']]);
                 error_log("Default company created");
                 
-                // Generate config file
+                // Generate config file and .env (secrets live in .env only)
                 error_log("Generating configuration files...");
+                $encryptionKey = bin2hex(random_bytes(32));
                 $config_content = generateConfigFile($_SESSION);
+                $env_content = generateEnvFile($_SESSION, $encryptionKey);
                 $config_dir = dirname(__DIR__) . '/application/config';
                 $config_file = $config_dir . '/config.php';
+                $env_file = dirname(__DIR__) . '/.env';
                 
                 if (!is_dir($config_dir)) {
                     if (!mkdir($config_dir, 0755, true)) {
@@ -477,6 +480,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!file_put_contents($config_file, $config_content)) {
                     throw new Exception("Failed to write config file: {$config_file}");
                 }
+
+                if (!file_put_contents($env_file, $env_content)) {
+                    throw new Exception("Failed to write environment file: {$env_file}");
+                }
+                @chmod($env_file, 0600);
                 
                 // Also create config.installed.php for compatibility
                 $installed_config_file = $config_dir . '/config.installed.php';
@@ -560,35 +568,40 @@ function checkRequirements() {
     return $requirements;
 }
 
-// Generate config file
+// Generate config file (no secrets — values come from .env)
 function generateConfigFile($session) {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'];
     $scriptPath = dirname(dirname($_SERVER['SCRIPT_NAME']));
     $baseUrl = rtrim($protocol . '://' . $host . $scriptPath, '/') . '/';
-    
-    // Generate encryption key if not set
-    $encryption_key = bin2hex(random_bytes(32));
-    
+
     $config = "<?php\n";
     $config .= "defined('BASEPATH') OR exit('No direct script access allowed');\n\n";
-    $config .= "return [\n";
-    $config .= "    'installed' => true,\n";
-    $config .= "    'environment' => 'development', // Change to 'production' after deployment\n";
-    $config .= "    'base_url' => '$baseUrl',\n";
-    $config .= "    'db' => [\n";
-    $config .= "        'hostname' => '" . addslashes($session['db_host']) . "',\n";
-    $config .= "        'username' => '" . addslashes($session['db_user']) . "',\n";
-    $config .= "        'password' => '" . addslashes($session['db_pass']) . "',\n";
-    $config .= "        'database' => '" . addslashes($session['db_name']) . "',\n";
-    $config .= "        'dbprefix' => '" . addslashes($session['db_prefix']) . "',\n";
-    $config .= "        'charset' => 'utf8mb4',\n";
-    $config .= "        'collation' => 'utf8mb4_unicode_ci'\n";
-    $config .= "    ],\n";
-    $config .= "    'encryption_key' => '$encryption_key'\n";
-    $config .= "];\n";
-    
+    $config .= "return require __DIR__ . '/config.php.example';\n";
+
     return $config;
+}
+
+// Write .env with installation secrets (not committed to VCS)
+function generateEnvFile($session, $encryptionKey) {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'];
+    $scriptPath = dirname(dirname($_SERVER['SCRIPT_NAME']));
+    $baseUrl = rtrim($protocol . '://' . $host . $scriptPath, '/') . '/';
+
+    $lines = [
+        'APP_INSTALLED=true',
+        'APP_ENV=production',
+        'APP_BASE_URL=' . $baseUrl,
+        'DB_HOST=' . $session['db_host'],
+        'DB_USER=' . $session['db_user'],
+        'DB_PASSWORD=' . $session['db_pass'],
+        'DB_NAME=' . $session['db_name'],
+        'DB_PREFIX=' . $session['db_prefix'],
+        'APP_ENCRYPTION_KEY=' . $encryptionKey,
+    ];
+
+    return implode("\n", $lines) . "\n";
 }
 
 // Create .htaccess file

@@ -10,6 +10,10 @@ define('APPPATH', __DIR__ . '/application/');
 define('ROOTPATH', __DIR__ . '/');
 define('SYSPATH', __DIR__ . '/application/core/');
 
+// Load environment variables from .env before reading config
+require_once BASEPATH . 'helpers/env_helper.php';
+load_env_file(ROOTPATH . '.env');
+
 // Load Composer autoloader if available (for PHPMailer and other dependencies)
 $composerAutoload = __DIR__ . '/vendor/autoload.php';
 if (file_exists($composerAutoload)) {

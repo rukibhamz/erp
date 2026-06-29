@@ -136,9 +136,12 @@ class Base_Model {
      * @return int Number of records
      */
     public function count($where = '1=1', $params = []) {
-        // SECURITY WARNING: Direct WHERE clause concatenation is dangerous
-        // This method is kept for backward compatibility but should be avoided
-        $sql = "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . $this->table . "` WHERE {$where}";
+        if ($where !== '1=1') {
+            throw new InvalidArgumentException(
+                'Base_Model::count($where) is deprecated and unsafe. Use countBy() instead.'
+            );
+        }
+        $sql = "SELECT COUNT(*) as count FROM `" . $this->db->getPrefix() . $this->table . "`";
         $result = $this->db->fetchOne($sql, $params);
         return $result['count'] ?? 0;
     }

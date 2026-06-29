@@ -54,17 +54,17 @@ class Entities extends Base_Controller {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             check_csrf(); // CSRF Protection
             $data = [
-                'name' => $_POST['name'] ?? '',
-                'address' => $_POST['address'] ?? '',
-                'city' => $_POST['city'] ?? '',
-                'state' => $_POST['state'] ?? '',
-                'zip_code' => $_POST['zip_code'] ?? '',
-                'country' => $_POST['country'] ?? '',
-                'phone' => $_POST['phone'] ?? '',
-                'email' => $_POST['email'] ?? '',
-                'website' => $_POST['website'] ?? '',
-                'tax_id' => $_POST['tax_id'] ?? '',
-                'currency' => $_POST['currency'] ?? 'USD'
+                'name' => sanitize_input($_POST['name'] ?? ''),
+                'address' => sanitize_input($_POST['address'] ?? ''),
+                'city' => sanitize_input($_POST['city'] ?? ''),
+                'state' => sanitize_input($_POST['state'] ?? ''),
+                'zip_code' => sanitize_input($_POST['zip_code'] ?? ''),
+                'country' => sanitize_input($_POST['country'] ?? ''),
+                'phone' => sanitize_input($_POST['phone'] ?? ''),
+                'email' => sanitize_input($_POST['email'] ?? ''),
+                'website' => sanitize_input($_POST['website'] ?? ''),
+                'tax_id' => sanitize_input($_POST['tax_id'] ?? ''),
+                'currency' => sanitize_input($_POST['currency'] ?? 'USD')
             ];
             
             // Validation

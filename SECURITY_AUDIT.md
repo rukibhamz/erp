@@ -6,8 +6,8 @@
 | **Codebase path** | `C:\xampp\htdocs\newerp` |
 | **Audit type** | Full-codebase security review + independent re-audit |
 | **Initial audit date** | 2026-06-28 |
-| **Last updated** | 2026-06-29 |
-| **Branch / revision** | `main` @ `5af3586` |
+| **Last updated** | 2026-06-29 (phase 2 remediation) |
+| **Branch / revision** | `main` (uncommitted security hardening) |
 | **Confidence threshold** | Findings reported at ≥ 8/10 confidence |
 
 ---
@@ -25,18 +25,16 @@ report.
 | # | Title | Severity | Status |
 |---|-------|----------|--------|
 | 1 | CSRF on GET-based state-changing operations | **HIGH** | **Remediated** (`ede660e`, `316eb0d`, `5af3586`) |
-| 2 | Backup restore — dangerous admin capability | **HIGH** | **Open** |
-| 3 | Secrets committed in application config | **MEDIUM** | **Open** |
+| 2 | Backup restore — dangerous admin capability | **HIGH** | **Remediated** (super_admin + controls) |
+| 3 | Secrets committed in application config | **MEDIUM** | **Remediated** (`.env` + `config.php.example`) |
 
-The primary CSRF class of vulnerability — state-changing actions reachable via
-plain GET with no CSRF token — has been remediated across **81 controller
-methods** and **67 view files** in three commits. All `delete($id)` endpoints
-and the majority of other mutating actions now enforce `POST` + `check_csrf()`.
+The primary CSRF class of vulnerability has been remediated across **81 controller
+methods** and **67 view files** in three commits.
 
-The backup-restore issue remains open. It is reframed below as a **privilege
-boundary** problem rather than a file-upload validation bypass: the endpoint's
-intended behavior is to execute SQL, so MIME/extension checks alone are
-insufficient.
+Backup restore is now restricted to **super_admin** only, requires typed
+confirmation (`RESTORE`), validates uploads, logs restore events, and supports an
+optional least-privilege `DB_RESTORE_USER`. Secrets are externalized to `.env`
+via `config.php.example`; `config.php` and `.env` remain gitignored.
 
 ---
 
@@ -117,55 +115,41 @@ controller cannot silently reintroduce this class of bug.
 | **Severity** | HIGH |
 | **Confidence** | 9/10 |
 | **Category** | `privilege_escalation` / `dangerous_functionality` |
-| **Status** | **Open** |
+| **Status** | **Remediated** |
 
-**Affected location:** `application/controllers/Backup.php` — `restore()`, lines ~176–254
+**Affected location:** `application/controllers/Backup.php` — `restore()`
 
-**Description**
+**Original risk**
 
-The `restore()` function accepts `$_FILES['backup_file']`, moves it to a temp
-directory without content validation, and pipes the raw file contents directly
-into the `mysql` CLI:
+The `restore()` function piped uploaded SQL directly into the `mysql` CLI. Any
+user with `settings/update` could execute arbitrary SQL.
 
-```php
-$command = sprintf(
-    'mysql --defaults-file=%s %s < %s 2>&1',
-    escapeshellarg($mysqlConfigFile),
-    escapeshellarg($dbConfig['database']),
-    escapeshellarg($tempFile)
-);
-exec($command, $output, $returnVar);
+**Remediation applied (2026-06-29)**
+
+| Control | Implementation |
+|---------|----------------|
+| Authorization | `requireRole('super_admin')` — only Super Admins can restore |
+| Confirmation | User must type `RESTORE` in a confirmation field |
+| Upload validation | `validateBackupUpload()` — extension, MIME, SQL header check |
+| Pre-restore backup | Automatic backup created before restore runs |
+| Audit logging | Activity log + `error_log` with user ID, filename, and IP |
+| Least-privilege DB | Optional `DB_RESTORE_USER` / `DB_RESTORE_PASSWORD` in `.env` |
+| CSRF + POST | Already enforced; `create()` also gained POST + CSRF guards |
+| UI | Restore form hidden from non–super-admin users |
+
+**Operational note:** Configure a dedicated MySQL restore user in production:
+
+```sql
+CREATE USER 'erp_restore'@'localhost' IDENTIFIED BY '...';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, INDEX ON erp.* TO 'erp_restore'@'localhost';
+-- Do NOT grant FILE, GRANT OPTION, or CREATE USER
 ```
 
-`escapeshellarg` correctly prevents command injection via the filename, but the
-file's contents are executed verbatim by MySQL. Any user with `settings/update`
-permission can upload a crafted `.sql` file containing arbitrary SQL.
+Set `DB_RESTORE_USER` and `DB_RESTORE_PASSWORD` in `.env`.
 
-**Why upload validation alone is insufficient**
-
-The endpoint's intended behavior is to execute SQL from the uploaded file. An
-attacker can trivially prepend a valid `-- MySQL dump` header to malicious SQL
-and pass extension/MIME checks. The existing `validateFileUpload()` helper also
-does not support `.sql`/`.gz` MIME mappings and cannot be reused without
-extension.
-
-**Real security boundary**
-
-1. **Authorization** — restrict restore to a tighter admin role (not all
-   `settings/update` holders).
-2. **Least-privilege DB account** — run restore under a dedicated MySQL user that
-   lacks `GRANT`, `FILE`, and `CREATE USER` privileges.
-3. **Operational controls** — require typed confirmation, log actor/timestamp,
-   and alert on restore operations.
-
-**Secondary hardening (optional, not primary fix)**
-
-- Extension allowlist (`sql`, `gz`)
-- `finfo` MIME check (`text/plain`, `application/gzip`)
-- Recognizable mysqldump header (`-- MySQL dump` / `-- MariaDB dump`)
-
-These accept the app's own backups but do not stop a determined attacker with
-`settings/update` access.
+**Residual risk:** A compromised super_admin account can still restore malicious
+SQL. This is inherent to the feature; monitor activity logs and restrict super_admin
+assignments.
 
 ---
 
@@ -176,20 +160,26 @@ These accept the app's own backups but do not stop a determined attacker with
 | **Severity** | MEDIUM |
 | **Confidence** | HIGH |
 | **Category** | `secrets_exposure` |
-| **Status** | **Open** |
+| **Status** | **Remediated** |
 
-**Affected location:** `application/config/config.php`
+**Affected location:** `application/config/config.php` (gitignored)
 
-The file includes `encryption_key` and database credentials in version control.
-In the current dev snapshot the DB password is empty, but committed secret
-material increases blast radius if the repository is exposed or credentials are
-reused across environments.
+**Remediation applied (2026-06-29)**
 
-**Remediation**
+1. **`application/config/config.php.example`** — versioned template; reads all
+   secrets via `env()` helper.
+2. **`.env.example`** — documents required environment variables.
+3. **`application/helpers/env_helper.php`** — loads `.env` before config is read.
+4. **`index.php`** — calls `load_env_file()` at bootstrap.
+5. **Installer** — writes secrets to `.env` (mode `0600`), not into config.
+6. **`.gitignore`** — already excludes `config.php`, `config.installed.php`, and `.env`.
 
-1. Move secrets to environment variables or a non-versioned config file.
-2. Keep only a `.example` template in VCS.
-3. Rotate `encryption_key` and DB credentials wherever they have been reused.
+**Migration for existing deployments:** Copy secrets from `config.php` into `.env`
+(see `.env.example`), then replace `config.php` with
+`return require __DIR__ . '/config.php.example';`.
+
+**Follow-up:** Rotate `APP_ENCRYPTION_KEY` and DB credentials if they were ever
+committed to version control.
 
 ---
 
@@ -230,34 +220,27 @@ noted:
 
 ---
 
-## 4. Deep-Dive Passes (Unchanged Assessment)
+## 4. Deep-Dive Passes
 
 ### 4.1 SQL Injection — No exploitable instances found
 
-The data layer ([`application/core/Database.php`](application/core/Database.php))
-uses PDO prepared statements with `PDO::ATTR_EMULATE_PREPARES => false`, and
-nearly every query routes through it with bound `?` parameters.
+**Latent SQLi risks — hardening applied:**
 
-**Latent SQLi risks (hardening only):**
-
-| # | Location | Issue | Why not exploitable now |
-|---|----------|-------|-------------------------|
-| L1 | [`Base_Model::count()`](application/core/Base_Model.php:138) | Interpolates `$where` raw | Every caller uses `->count()` with no argument |
-| L2 | [`Database::update/delete($where)`](application/core/Database.php:134) | Accepts raw `$where` string | All callers pass literals |
-| L3 | `SHOW COLUMNS ... LIKE '{$col}'` in AutoMigration / Booking_wizard | Column names interpolated | Names are hardcoded constants |
+| # | Location | Status | Fix |
+|---|----------|--------|-----|
+| L1 | `Base_Model::count($where)` | **Remediated** | Throws if `$where !== '1=1'`; use `countBy()` |
+| L2 | `Database::update/delete($where)` | **Documented** | `@deprecated` docblocks added |
+| L3 | `Bookings::mergeOptionalBookingColumns` | **Remediated** | Uses `checkColumnExists()` with bound params |
 
 ### 4.2 Cross-Site Scripting (XSS) — No high-confidence exploitable issue found
 
-Three layers: input-time `sanitize_input()`, output-time `htmlspecialchars()` /
-`esc()`, and nonce-based CSP without `unsafe-inline`.
+**Latent XSS items — hardening applied:**
 
-**Latent XSS items (hardening only):**
-
-| # | Location | Issue |
-|---|----------|-------|
-| L4 | Entities.php `create()` vs `edit()` | Inconsistent input sanitization |
-| L5 | entities/view.php `website` in `href` | `javascript:` URI possible; CSP mitigates |
-| L6 | bookings/calendar_timeslots.php | Raw flash message output |
+| # | Location | Status | Fix |
+|---|----------|--------|-----|
+| L4 | `Entities::create()` | **Remediated** | `sanitize_input()` on all fields (matches `edit()`) |
+| L5 | `entities/view.php` website `href` | **Remediated** | `safe_external_url()` + `esc(..., 'attr')` |
+| L6 | `calendar_timeslots.php` flash | **Remediated** | `htmlspecialchars()` on flash type and message |
 
 ---
 
@@ -270,6 +253,8 @@ These defenses are correctly implemented and were not changed during remediation
 - PDO prepared statements with `PDO::ATTR_EMULATE_PREPARES => false`
 - Webhook signature verification in `Payment.php`
 - `validateFileUpload()` with server-side MIME detection (for image/document uploads)
+- `validateBackupUpload()` for SQL backup restore uploads
+- `safe_external_url()` for http(s)-only external links
 - Nonce-based CSP via `set_security_headers()`
 - ORDER BY whitelist in `Base_Model::buildOrderByClause()`
 - LIMIT/OFFSET forced through `intval()`
@@ -283,8 +268,12 @@ These defenses are correctly implemented and were not changed during remediation
 | 2026-06-29 | `ede660e` | POST + CSRF on all `delete($id)` and session/logout/clearDebugLog (44 files) |
 | 2026-06-29 | `316eb0d` | POST + CSRF on sync/approve/migrate/log-clean (14 files) |
 | 2026-06-29 | `5af3586` | POST + CSRF on remaining mutators and view forms (23 files) |
+| 2026-06-29 | (pending) | Backup restore hardening, secrets externalization, XSS/SQLi hardening |
 
-**Total:** 81 files changed across three commits.
+**Phase 1 total:** 81 files changed across three commits.
+
+**Phase 2 (uncommitted):** env helper, config template, backup controls,
+`validateBackupUpload()`, XSS L4–L6, SQLi L1/L3 hardening.
 
 ---
 
@@ -293,10 +282,11 @@ These defenses are correctly implemented and were not changed during remediation
 | Priority | Finding | Status | Action |
 |----------|---------|--------|--------|
 | **P0** | Vuln 1 — CSRF state-changing GET | **Done** | Verify in QA; consider router-level GET rejection |
-| **P0** | Vuln 2 — Backup restore | **Open** | Tighten role, least-privilege DB user, audit logging |
-| **P1** | Vuln 3 — Config secrets | **Open** | Externalize secrets; rotate keys |
-| **P2** | XSS L4–L6 | Open | Low-priority hardening |
-| **P2** | SQLi L1–L3 | Open | Deprecate `count($where)`; array-based WHERE API |
+| **P0** | Vuln 2 — Backup restore | **Done** | Configure `DB_RESTORE_USER` in production |
+| **P1** | Vuln 3 — Config secrets | **Done** | Rotate keys if previously committed |
+| **P2** | XSS L4–L6 | **Done** | — |
+| **P2** | SQLi L1, L3 | **Done** | L2: migrate callers to array-based WHERE API over time |
+| **P3** | Router-level GET rejection | Open | Defense-in-depth for CSRF |
 
 ---
 
@@ -321,6 +311,6 @@ race conditions.
 
 ---
 
-*This report reflects the state of the codebase as of commit `5af3586`. Findings
-below the 8/10 confidence threshold were excluded. This is not a guarantee of
-the absence of other vulnerabilities.*
+*This report reflects remediation through 2026-06-29 phase 2. Findings below
+the 8/10 confidence threshold were excluded. This is not a guarantee of the
+absence of other vulnerabilities.*

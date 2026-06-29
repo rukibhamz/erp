@@ -21,6 +21,7 @@ class Backup extends Base_Controller {
         $data = [
             'page_title' => 'Backup & Restore',
             'backups' => $backups,
+            'can_restore' => isset($this->session['role']) && $this->session['role'] === 'super_admin',
             'flash' => $this->getFlashMessage()
         ];
         
@@ -29,11 +30,18 @@ class Backup extends Base_Controller {
     
     public function create() {
         $this->requirePermission('settings', 'update');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('settings/backup');
+            return;
+        }
+        check_csrf();
         
         try {
             $backupFile = $this->createBackup();
             if ($backupFile) {
-                $this->activityModel->log($this->session['user_id'], 'create', 'Backup', 'Created system backup');
+                $this->activityModel->log($this->session['user_id'], 'backup', 'Backup', 'Created system backup: ' . basename($backupFile));
                 $this->setFlashMessage('success', 'Backup created successfully: ' . basename($backupFile));
             } else {
                 $this->setFlashMessage('danger', 'Failed to create backup.');
@@ -68,7 +76,6 @@ class Backup extends Base_Controller {
      * Create database backup
      * 
      * SECURITY: Uses MySQL configuration file to avoid exposing password in process list.
-     * This prevents command injection and credential exposure.
      * 
      * @return string|false Backup file path or false on failure
      */
@@ -81,35 +88,17 @@ class Backup extends Base_Controller {
         $timestamp = date('Y-m-d_H-i-s');
         $backupFile = $backupDir . 'backup_' . $timestamp . '.sql';
         
-        $config = require BASEPATH . 'config/config.php';
-        $dbConfig = $config['db'] ?? $config['database'] ?? [];
-        
-        // SECURITY: Validate database configuration
-        if (empty($dbConfig['hostname']) || empty($dbConfig['username']) || 
-            empty($dbConfig['database']) || !isset($dbConfig['password'])) {
-            error_log('Backup: Incomplete database configuration');
+        $dbConfig = $this->getDbClientConfig();
+        if (!$dbConfig) {
             return false;
         }
         
-        // SECURITY: Create temporary MySQL config file to avoid password in command line
-        $mysqlConfigFile = sys_get_temp_dir() . '/mysql_backup_' . uniqid() . '.cnf';
-        $mysqlConfigContent = "[client]\n";
-        $mysqlConfigContent .= "host=" . $dbConfig['hostname'] . "\n";
-        $mysqlConfigContent .= "user=" . $dbConfig['username'] . "\n";
-        $mysqlConfigContent .= "password=" . $dbConfig['password'] . "\n";
-        
-        // SECURITY: Set restrictive permissions on config file (readable only by owner)
-        if (file_put_contents($mysqlConfigFile, $mysqlConfigContent) === false) {
-            error_log('Backup: Failed to create MySQL config file');
+        $mysqlConfigFile = $this->writeMysqlConfigFile('mysql_backup_', $dbConfig);
+        if (!$mysqlConfigFile) {
             return false;
         }
-        
-        // Set file permissions to 600 (read/write for owner only)
-        chmod($mysqlConfigFile, 0600);
         
         try {
-            // SECURITY: Use --defaults-file to read credentials from file instead of command line
-            // This prevents password from appearing in process list
             $command = sprintf(
                 'mysqldump --defaults-file=%s %s > %s 2>&1',
                 escapeshellarg($mysqlConfigFile),
@@ -118,20 +107,15 @@ class Backup extends Base_Controller {
             );
             
             exec($command, $output, $returnVar);
-            
-            // SECURITY: Always delete config file, even on error
             @unlink($mysqlConfigFile);
             
             if ($returnVar === 0 && file_exists($backupFile)) {
-                // Keep only last 30 backups
                 $this->cleanupOldBackups($backupDir, 30);
                 return $backupFile;
-            } else {
-                // Log error output for debugging (but don't expose to user)
-                error_log('Backup failed: ' . implode("\n", $output));
             }
+            
+            error_log('Backup failed: ' . implode("\n", $output));
         } catch (Exception $e) {
-            // SECURITY: Ensure config file is deleted even on exception
             @unlink($mysqlConfigFile);
             error_log('Backup error: ' . $e->getMessage());
         }
@@ -174,52 +158,51 @@ class Backup extends Base_Controller {
     }
     
     public function restore() {
-        $this->requirePermission('settings', 'update');
+        $this->requireRole('super_admin');
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['backup_file'])) {
             $this->setFlashMessage('danger', 'No backup file uploaded.');
             redirect('settings/backup');
+            return;
         }
         
-        // SECURITY: Validate CSRF token
         check_csrf();
+
+        $confirmation = trim($_POST['restore_confirmation'] ?? '');
+        if ($confirmation !== 'RESTORE') {
+            $this->setFlashMessage('danger', 'Restore cancelled: type RESTORE to confirm.');
+            redirect('settings/backup');
+            return;
+        }
+
+        $validation = validateBackupUpload($_FILES['backup_file']);
+        if (!$validation['valid']) {
+            $this->setFlashMessage('danger', $validation['error'] ?? 'Invalid backup file.');
+            redirect('settings/backup');
+            return;
+        }
+        
+        $uploadedName = basename($_FILES['backup_file']['name']);
+        $tempFile = sys_get_temp_dir() . '/restore_' . uniqid('', true) . '.sql';
         
         try {
-            // Create backup before restore
             $this->createBackup();
             
-            $uploadedFile = $_FILES['backup_file'];
-            $tempFile = sys_get_temp_dir() . '/' . basename($uploadedFile['tmp_name']);
-            
-            if (!move_uploaded_file($uploadedFile['tmp_name'], $tempFile)) {
+            if (!move_uploaded_file($_FILES['backup_file']['tmp_name'], $tempFile)) {
                 throw new Exception('Failed to upload backup file');
             }
             
-            $config = require BASEPATH . 'config/config.php';
-            $dbConfig = $config['db'] ?? $config['database'] ?? [];
-            
-            // SECURITY: Validate database configuration
-            if (empty($dbConfig['hostname']) || empty($dbConfig['username']) || 
-                empty($dbConfig['database']) || !isset($dbConfig['password'])) {
+            $dbConfig = $this->getDbClientConfig(true);
+            if (!$dbConfig) {
                 throw new Exception('Incomplete database configuration');
             }
             
-            // SECURITY: Create temporary MySQL config file to avoid password in command line
-            $mysqlConfigFile = sys_get_temp_dir() . '/mysql_restore_' . uniqid() . '.cnf';
-            $mysqlConfigContent = "[client]\n";
-            $mysqlConfigContent .= "host=" . $dbConfig['hostname'] . "\n";
-            $mysqlConfigContent .= "user=" . $dbConfig['username'] . "\n";
-            $mysqlConfigContent .= "password=" . $dbConfig['password'] . "\n";
-            
-            if (file_put_contents($mysqlConfigFile, $mysqlConfigContent) === false) {
+            $mysqlConfigFile = $this->writeMysqlConfigFile('mysql_restore_', $dbConfig);
+            if (!$mysqlConfigFile) {
                 throw new Exception('Failed to create MySQL config file');
             }
             
-            // Set file permissions to 600 (read/write for owner only)
-            chmod($mysqlConfigFile, 0600);
-            
             try {
-                // SECURITY: Use --defaults-file to read credentials from file
                 $command = sprintf(
                     'mysql --defaults-file=%s %s < %s 2>&1',
                     escapeshellarg($mysqlConfigFile),
@@ -228,29 +211,84 @@ class Backup extends Base_Controller {
                 );
                 
                 exec($command, $output, $returnVar);
-                
-                // SECURITY: Always delete config file and temp file
                 @unlink($mysqlConfigFile);
                 @unlink($tempFile);
                 
                 if ($returnVar === 0) {
-                    $this->activityModel->log($this->session['user_id'], 'update', 'Backup', 'Restored system from backup');
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                    $this->activityModel->log(
+                        $this->session['user_id'],
+                        'restore',
+                        'Backup',
+                        'Restored database from backup file: ' . $uploadedName . ' (IP: ' . $ip . ')'
+                    );
+                    error_log('SECURITY: Database restore by user ' . $this->session['user_id'] . ' from ' . $uploadedName . ' IP ' . $ip);
                     $this->setFlashMessage('success', 'Database restored successfully from backup.');
                 } else {
                     throw new Exception('Restore failed: ' . implode("\n", $output));
                 }
             } catch (Exception $e) {
-                // SECURITY: Ensure config file is deleted even on exception
                 @unlink($mysqlConfigFile);
                 @unlink($tempFile);
                 throw $e;
             }
         } catch (Exception $e) {
             error_log('Restore error: ' . $e->getMessage());
-            $this->setFlashMessage('danger', 'Error restoring backup: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Error restoring backup. Please check the logs.');
         }
         
         redirect('settings/backup');
+    }
+
+    /**
+     * @param bool $forRestore Use dedicated restore credentials when configured
+     */
+    private function getDbClientConfig($forRestore = false) {
+        $config = require BASEPATH . 'config/config.php';
+        $dbConfig = $config['db'] ?? $config['database'] ?? [];
+
+        if (empty($dbConfig['hostname']) || empty($dbConfig['database']) || !isset($dbConfig['password'])) {
+            error_log('Backup: Incomplete database configuration');
+            return null;
+        }
+
+        $username = $dbConfig['username'] ?? '';
+        $password = $dbConfig['password'] ?? '';
+
+        if ($forRestore && !empty($config['db_restore']['username'])) {
+            $username = $config['db_restore']['username'];
+            $password = $config['db_restore']['password'] ?? '';
+        } elseif ($forRestore) {
+            error_log('Backup restore: DB_RESTORE_USER not configured; using main database credentials');
+        }
+
+        if ($username === '') {
+            error_log('Backup: Database username missing');
+            return null;
+        }
+
+        return [
+            'hostname' => $dbConfig['hostname'],
+            'username' => $username,
+            'password' => $password,
+            'database' => $dbConfig['database'],
+        ];
+    }
+
+    private function writeMysqlConfigFile($prefix, array $dbConfig) {
+        $mysqlConfigFile = sys_get_temp_dir() . '/' . $prefix . uniqid('', true) . '.cnf';
+        $mysqlConfigContent = "[client]\n";
+        $mysqlConfigContent .= "host=" . $dbConfig['hostname'] . "\n";
+        $mysqlConfigContent .= "user=" . $dbConfig['username'] . "\n";
+        $mysqlConfigContent .= "password=" . $dbConfig['password'] . "\n";
+
+        if (file_put_contents($mysqlConfigFile, $mysqlConfigContent) === false) {
+            error_log('Backup: Failed to create MySQL config file');
+            return false;
+        }
+
+        chmod($mysqlConfigFile, 0600);
+        return $mysqlConfigFile;
     }
     
     private function formatBytes($bytes, $precision = 2) {
@@ -262,4 +300,3 @@ class Backup extends Base_Controller {
         return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }
-

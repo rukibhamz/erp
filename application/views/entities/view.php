@@ -90,8 +90,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     <?php endif; ?>
                     
                     <?php if (!empty($entity['website'])): ?>
+                    <?php $websiteUrl = safe_external_url($entity['website']); ?>
                     <dt>Website</dt>
-                    <dd><a href="<?= htmlspecialchars($entity['website']) ?>" target="_blank"><?= htmlspecialchars($entity['website']) ?></a></dd>
+                    <dd>
+                        <?php if ($websiteUrl): ?>
+                            <a href="<?= esc($websiteUrl, 'attr') ?>" target="_blank" rel="noopener noreferrer"><?= htmlspecialchars($entity['website']) ?></a>
+                        <?php else: ?>
+                            <?= htmlspecialchars($entity['website']) ?>
+                        <?php endif; ?>
+                    </dd>
                     <?php endif; ?>
                     
                     <?php if (!empty($entity['created_at'])): ?>

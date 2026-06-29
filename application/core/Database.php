@@ -131,6 +131,12 @@ class Database {
         return $this->connection->lastInsertId();
     }
     
+    /**
+     * Update rows matching a WHERE clause.
+     *
+     * @deprecated Prefer updateWhere(array $conditions, array $data) for safe parameterized WHERE.
+     * The $where argument must be a literal clause with ? placeholders only.
+     */
     public function update($table, $data, $where, $whereParams = []) {
         $table = $this->config['dbprefix'] . $table;
         $fields = array_keys($data);
@@ -147,6 +153,12 @@ class Database {
         return $this->query($sql, $params)->rowCount();
     }
     
+    /**
+     * Delete rows matching a WHERE clause.
+     *
+     * @deprecated Prefer deleteWhere(array $conditions) for safe parameterized WHERE.
+     * The $where argument must be a literal clause with ? placeholders only.
+     */
     public function delete($table, $where, $params = []) {
         $table = $this->config['dbprefix'] . $table;
         $sql = "DELETE FROM `{$table}` WHERE {$where}";

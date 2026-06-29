@@ -217,6 +217,80 @@ function validateFileUpload($file, $allowedTypes = [
 }
 
 /**
+ * Validate a SQL backup upload before restore.
+ *
+ * @param array $file $_FILES element
+ * @return array ['valid' => bool, 'error' => string|null]
+ */
+function validateBackupUpload($file) {
+    if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return ['valid' => false, 'error' => 'Invalid file upload'];
+    }
+
+    if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        return ['valid' => false, 'error' => 'Upload failed'];
+    }
+
+    if ($file['size'] > 100 * 1024 * 1024) {
+        return ['valid' => false, 'error' => 'Backup file exceeds 100MB limit'];
+    }
+
+    $extension = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
+    if ($extension !== 'sql') {
+        return ['valid' => false, 'error' => 'Only .sql backup files are allowed'];
+    }
+
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($finfo) {
+            $mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+            $allowedMimes = ['text/plain', 'text/x-sql', 'application/sql', 'application/octet-stream'];
+            if ($mime && !in_array($mime, $allowedMimes, true)) {
+                return ['valid' => false, 'error' => 'Invalid backup file type'];
+            }
+        }
+    }
+
+    $header = file_get_contents($file['tmp_name'], false, null, 0, 512);
+    if ($header === false) {
+        return ['valid' => false, 'error' => 'Cannot read backup file'];
+    }
+
+    $looksLikeDump = (bool) preg_match('/^(--\s|\/\*|CREATE\s|DROP\s|INSERT\s|SET\s)/i', ltrim($header));
+    if (!$looksLikeDump) {
+        return ['valid' => false, 'error' => 'File does not appear to be a valid SQL backup'];
+    }
+
+    return ['valid' => true];
+}
+
+/**
+ * Return a safe http(s) URL or empty string for dangerous schemes.
+ */
+function safe_external_url($url) {
+    $url = trim((string) $url);
+    if ($url === '') {
+        return '';
+    }
+
+    if (!preg_match('#^https?://#i', $url)) {
+        if (preg_match('#^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}#i', $url)) {
+            $url = 'https://' . $url;
+        } else {
+            return '';
+        }
+    }
+
+    $parts = parse_url($url);
+    if (empty($parts['scheme']) || !in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
+        return '';
+    }
+
+    return $url;
+}
+
+/**
  * Set HTTP security headers
  * 
  * SECURITY: Sets essential security headers to prevent common attacks:

@@ -6,7 +6,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Backup & Restore</h1>
         <form method="POST" action="<?= base_url('settings/backup/create') ?>" onsubmit="return confirm('Create a new backup? This may take a few moments.')">
-            <?php echo csrf_field(); ?>
+            <?= csrf_field() ?>
             <button type="submit" class="btn btn-dark">
                 <i class="bi bi-database"></i> Create Backup Now
             </button>
@@ -72,6 +72,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     </div>
 </div>
 
+<?php if (!empty($can_restore)): ?>
 <div class="card mt-4">
     <div class="card-header bg-dark text-white">
         <h5 class="mb-0"><i class="bi bi-shield-exclamation"></i> Restore from Backup</h5>
@@ -80,16 +81,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div class="alert alert-warning">
             <i class="bi bi-exclamation-triangle"></i>
             <strong>Warning:</strong> Restoring a backup will replace all current data with the backup data. This action cannot be undone.
-            <br><strong>Always create a new backup before restoring!</strong>
+            <br><strong>Only Super Admins can restore.</strong> A pre-restore backup is created automatically.
         </div>
-        <form method="POST" action="<?= base_url('settings/backup/restore') ?>
-<?php echo csrf_field(); ?>" 
+        <form method="POST" action="<?= base_url('settings/backup/restore') ?>"
               enctype="multipart/form-data"
               onsubmit="return confirm('Are you sure you want to restore from backup? ALL current data will be replaced!')">
+            <?= csrf_field() ?>
             <div class="mb-3">
                 <label class="form-label">Upload Backup File (.sql)</label>
                 <input type="file" name="backup_file" class="form-control" accept=".sql" required>
-                <small class="text-muted">Select a backup file to restore</small>
+                <small class="text-muted">Select a valid SQL backup file</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Type <strong>RESTORE</strong> to confirm</label>
+                <input type="text" name="restore_confirmation" class="form-control" autocomplete="off" required
+                       pattern="RESTORE" title="Type RESTORE to confirm">
             </div>
             <button type="submit" class="btn btn-danger">
                 <i class="bi bi-arrow-counterclockwise"></i> Restore from Backup
@@ -97,6 +103,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </form>
     </div>
 </div>
-
-
-
+<?php else: ?>
+<div class="card mt-4">
+    <div class="card-body">
+        <p class="text-muted mb-0">
+            <i class="bi bi-lock"></i> Database restore is restricted to Super Admin accounts.
+        </p>
+    </div>
+</div>
+<?php endif; ?>

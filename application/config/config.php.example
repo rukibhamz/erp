@@ -1,0 +1,37 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+if (!function_exists('env')) {
+    require_once __DIR__ . '/../helpers/env_helper.php';
+    load_env_file(dirname(__DIR__, 2) . '/.env');
+}
+
+/**
+ * Application configuration template.
+ *
+ * Copy to config.php and set values via environment variables (.env file).
+ * Secrets must NOT be committed to version control.
+ *
+ * @see .env.example
+ */
+return [
+    'installed' => filter_var(env('APP_INSTALLED', 'true'), FILTER_VALIDATE_BOOLEAN),
+    'environment' => env('APP_ENV', 'production'),
+    'base_url' => env('APP_BASE_URL', 'http://localhost/newerp/'),
+    'db' => [
+        'hostname' => env('DB_HOST', 'localhost'),
+        'username' => env('DB_USER', 'root'),
+        'password' => env('DB_PASSWORD', ''),
+        'database' => env('DB_NAME', 'erp'),
+        'dbprefix' => env('DB_PREFIX', 'erp_'),
+        'charset' => 'utf8mb4',
+        'collation' => 'utf8mb4_unicode_ci',
+    ],
+    // Optional: dedicated MySQL user for backup restore (least privilege).
+    // If omitted, the main db credentials are used.
+    'db_restore' => [
+        'username' => env('DB_RESTORE_USER', ''),
+        'password' => env('DB_RESTORE_PASSWORD', ''),
+    ],
+    'encryption_key' => env('APP_ENCRYPTION_KEY', ''),
+];

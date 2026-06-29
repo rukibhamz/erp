@@ -84,13 +84,10 @@ class Bookings extends Base_Controller {
      */
     private function mergeOptionalBookingColumns(array &$data, $spaceId, $locationId = 0) {
         try {
-            $table = '`' . $this->db->getPrefix() . 'bookings`';
-            $spaceCols = $this->db->fetchAll("SHOW COLUMNS FROM {$table} LIKE 'space_id'");
-            if (!empty($spaceCols) && $spaceId > 0) {
+            if ($this->checkColumnExists('bookings', 'space_id') && $spaceId > 0) {
                 $data['space_id'] = (int) $spaceId;
             }
-            $locationCols = $this->db->fetchAll("SHOW COLUMNS FROM {$table} LIKE 'location_id'");
-            if (!empty($locationCols) && $locationId > 0) {
+            if ($this->checkColumnExists('bookings', 'location_id') && $locationId > 0) {
                 $data['location_id'] = (int) $locationId;
             }
         } catch (Exception $e) {
