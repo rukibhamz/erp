@@ -10,28 +10,10 @@ define('APPPATH', __DIR__ . '/application/');
 define('ROOTPATH', __DIR__ . '/');
 define('SYSPATH', __DIR__ . '/application/core/');
 
-// Load environment variables from .env before reading config
-require_once BASEPATH . 'helpers/env_helper.php';
-load_env_file(ROOTPATH . '.env');
+// Load environment + config (auto-migrates legacy inline config to .env on first request)
+require_once BASEPATH . 'helpers/config_helper.php';
 
-// Load Composer autoloader if available (for PHPMailer and other dependencies)
-$composerAutoload = __DIR__ . '/vendor/autoload.php';
-if (file_exists($composerAutoload)) {
-    require_once $composerAutoload;
-}
-
-// Check if installed
-// Prefer config.installed.php if it exists (created during installation)
-$config_installed_file = BASEPATH . 'config/config.installed.php';
-$config_file = BASEPATH . 'config/config.php';
-
-// Load configuration - prefer config.installed.php if it exists
-if (file_exists($config_installed_file)) {
-    $config = require $config_installed_file;
-} elseif (file_exists($config_file)) {
-    $config = require $config_file;
-} else {
-    // No config files - redirect to installer
+if (!app_config_installed()) {
     if (file_exists(__DIR__ . '/install/index.php')) {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
         $host = $_SERVER['HTTP_HOST'];
@@ -41,6 +23,14 @@ if (file_exists($config_installed_file)) {
         exit;
     }
     die('Application not configured. Please run the installer.');
+}
+
+$config = load_app_config();
+
+// Load Composer autoloader if available (for PHPMailer and other dependencies)
+$composerAutoload = __DIR__ . '/vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
 }
 
 // Verify installation status

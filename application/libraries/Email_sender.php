@@ -68,14 +68,9 @@ class Email_sender {
         
         // Fallback to config file if database settings not found
         if (empty($emailSettings['smtp_host'])) {
-            $configFile = BASEPATH . 'config/config.installed.php';
-            if (!file_exists($configFile)) {
-                $configFile = BASEPATH . 'config/config.php';
-            }
-            
-            if (file_exists($configFile)) {
-                $config = require $configFile;
-                $emailConfig = $config['email'] ?? [];
+            require_once BASEPATH . 'helpers/config_helper.php';
+            $config = load_app_config();
+            $emailConfig = $config['email'] ?? [];
                 
                 if (!empty($emailConfig)) {
                     $emailSettings = array_merge($emailSettings, [
@@ -88,7 +83,6 @@ class Email_sender {
                         'smtp_encryption' => $emailConfig['smtp_encryption'] ?? 'tls'
                     ]);
                 }
-            }
         }
         
         // Set configuration with database values or defaults

@@ -13,7 +13,8 @@ class Base_Controller {
     public function __construct() {
         $this->loader = new Loader();
         $this->load = $this->loader;
-        $this->config = require BASEPATH . 'config/config.php';
+        require_once BASEPATH . 'helpers/config_helper.php';
+        $this->config = load_app_config();
         $this->session = &$_SESSION;
         
         // Initialize Input class (mimics CodeIgniter 3's Input class)

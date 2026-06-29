@@ -5,22 +5,17 @@
  */
 
 define('BASEPATH', __DIR__ . '/application/');
+define('ROOTPATH', __DIR__ . '/');
+require_once BASEPATH . 'helpers/config_helper.php';
 require_once BASEPATH . 'core/Database.php';
 
-// Load config to get DB details
-$config_installed_file = BASEPATH . 'config/config.installed.php';
-$config_file = BASEPATH . 'config/config.php';
-
-if (file_exists($config_installed_file)) {
-    $config = require $config_installed_file;
-} elseif (file_exists($config_file)) {
-    $config = require $config_file;
-} else {
+$config = load_app_config();
+if (empty($config['installed'])) {
     die('Not configured');
 }
 
 // Get Database instance
-$db = Database::getInstance($config['db']);
+$db = Database::getInstance();
 $prefix = $config['db']['dbprefix'] ?? 'erp_';
 
 // Fetch company name and logo from settings

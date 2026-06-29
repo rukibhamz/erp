@@ -166,20 +166,24 @@ assignments.
 
 **Remediation applied (2026-06-29)**
 
-1. **`application/config/config.php.example`** — versioned template; reads all
-   secrets via `env()` helper.
+1. **`application/config/config.php.example`** — versioned template; reads all secrets via `env()`.
 2. **`.env.example`** — documents required environment variables.
-3. **`application/helpers/env_helper.php`** — loads `.env` before config is read.
-4. **`index.php`** — calls `load_env_file()` at bootstrap.
+3. **`application/helpers/env_helper.php`** — loads `.env` at bootstrap.
+4. **`application/helpers/config_helper.php`** — unified `load_app_config()` + **automatic migration**.
 5. **Installer** — writes secrets to `.env` (mode `0600`), not into config.
-6. **`.gitignore`** — already excludes `config.php`, `config.installed.php`, and `.env`.
+6. **`.gitignore`** — excludes `config.php`, `config.installed.php`, `.env`, and `*.legacy.bak`.
 
-**Migration for existing deployments:** Copy secrets from `config.php` into `.env`
-(see `.env.example`), then replace `config.php` with
-`return require __DIR__ . '/config.php.example';`.
+**Automatic migration (deployed systems)**
 
-**Follow-up:** Rotate `APP_ENCRYPTION_KEY` and DB credentials if they were ever
-committed to version control.
+On the **first HTTP request** after `git pull`, if inline secrets still exist in
+`config.php` or `config.installed.php`:
+
+1. Values are copied into **`.env`** (only if `APP_ENCRYPTION_KEY` is not already set).
+2. Legacy config files are backed up as `*.legacy.bak` and replaced with thin wrappers.
+3. All components (`Database`, `Base_Controller`, `url_helper`, etc.) use `load_app_config()`.
+
+No manual migration step is required for typical upgrades. Original config files are
+preserved as `config.php.legacy.bak` / `config.installed.php.legacy.bak` on the server.
 
 ---
 

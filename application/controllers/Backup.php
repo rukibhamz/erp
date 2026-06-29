@@ -244,7 +244,7 @@ class Backup extends Base_Controller {
      * @param bool $forRestore Use dedicated restore credentials when configured
      */
     private function getDbClientConfig($forRestore = false) {
-        $config = require BASEPATH . 'config/config.php';
+        $config = load_app_config();
         $dbConfig = $config['db'] ?? $config['database'] ?? [];
 
         if (empty($dbConfig['hostname']) || empty($dbConfig['database']) || !isset($dbConfig['password'])) {

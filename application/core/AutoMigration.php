@@ -18,19 +18,8 @@ class AutoMigration {
         }
         
         try {
-            // Get database connection directly from config
-            // Try config.installed.php first, then config.php
-            $configFile = BASEPATH . 'config/config.installed.php';
-            if (!file_exists($configFile)) {
-                $configFile = BASEPATH . 'config/config.php';
-            }
-            
-            if (!file_exists($configFile)) {
-                // Config not found - skip migration (installer will handle it)
-                return;
-            }
-            
-            $config = require $configFile;
+            require_once BASEPATH . 'helpers/config_helper.php';
+            $config = load_app_config();
             
             // Check if installed
             if (!isset($config['installed']) || $config['installed'] !== true) {

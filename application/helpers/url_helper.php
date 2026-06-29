@@ -2,18 +2,9 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 function base_url($path = '') {
-    // Try to get base_url from config
-    $configFile = BASEPATH . 'config/config.installed.php';
-    if (!file_exists($configFile)) {
-        $configFile = BASEPATH . 'config/config.php';
-    }
-    
-    if (file_exists($configFile)) {
-        $config = require $configFile;
-        $baseUrl = $config['base_url'] ?? '';
-    } else {
-        $baseUrl = '';
-    }
+    require_once BASEPATH . 'helpers/config_helper.php';
+    $config = load_app_config();
+    $baseUrl = $config['base_url'] ?? '';
     
     // Helper function to detect HTTPS (works behind proxies like cPanel, Cloudflare, etc.)
     $isHttps = function() {

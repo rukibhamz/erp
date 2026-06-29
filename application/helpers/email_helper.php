@@ -21,12 +21,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 if (!function_exists('send_email')) {
     function send_email($to, $subject, $message, $fromEmail = null, $fromName = null, $isHtml = true, $attachments = []) {
         try {
-            // Load settings - try config.installed.php first
-            $configFile = BASEPATH . 'config/config.installed.php';
-            if (!file_exists($configFile)) {
-                $configFile = BASEPATH . 'config/config.php';
-            }
-            $config = require $configFile;
+            require_once BASEPATH . 'helpers/config_helper.php';
+            $config = load_app_config();
             $settings = $config['email'] ?? [];
             
             // If no email settings in config file, try database settings table

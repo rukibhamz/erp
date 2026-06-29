@@ -7,17 +7,8 @@ class Database {
     private $config = [];
     
     private function __construct() {
-        // Load config - prefer config.installed.php if it exists
-        $configFile = BASEPATH . 'config/config.installed.php';
-        if (!file_exists($configFile)) {
-            $configFile = BASEPATH . 'config/config.php';
-        }
-        
-        if (!file_exists($configFile)) {
-            throw new Exception('Configuration file not found.');
-        }
-        
-        $config = require $configFile;
+        require_once BASEPATH . 'helpers/config_helper.php';
+        $config = load_app_config();
         $this->config = $config['db'] ?? [];
         $this->connect();
     }
