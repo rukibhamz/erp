@@ -43,6 +43,12 @@ class Modules extends Base_Controller {
      * Toggle module activation
      */
     public function toggle() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('modules');
+            return;
+        }
+        
         check_csrf();
         
         $moduleKey = sanitize_input($_POST['module_key'] ?? '');
@@ -81,6 +87,12 @@ class Modules extends Base_Controller {
      * Update module display name
      */
     public function updateName() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('modules');
+            return;
+        }
+        
         check_csrf();
         
         $moduleKey = sanitize_input($_POST['module_key'] ?? '');
@@ -125,6 +137,12 @@ class Modules extends Base_Controller {
      * Update module details (name, description, icon, sort order)
      */
     public function update() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('modules');
+            return;
+        }
+        
         check_csrf();
         
         $moduleKey = sanitize_input($_POST['module_key'] ?? '');

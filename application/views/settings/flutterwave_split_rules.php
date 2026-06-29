@@ -68,11 +68,13 @@
                                         <i class="bi bi-pencil"></i> Edit
                                     </a>
                                     <?php if (!empty($rule['is_active'])): ?>
-                                        <a href="<?= base_url('settings/flutterwave/split-rules/delete/' . (int) $rule['id']) ?>"
-                                           class="btn btn-sm btn-danger"
-                                           onclick="return confirm('Deactivate this rule?');">
-                                            <i class="bi bi-x-circle"></i> Deactivate
-                                        </a>
+                                        <form method="post" action="<?= base_url('settings/flutterwave/split-rules/delete/' . (int) $rule['id']) ?>" class="d-inline"
+                                              onsubmit="return confirm('Deactivate this rule?');">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-x-circle"></i> Deactivate
+                                            </button>
+                                        </form>
                                     <?php endif; ?>
                                 </td>
                             </tr>

@@ -58,6 +58,14 @@ class Paye extends Base_Controller {
     public function calculate($payrollRunId) {
         $this->requirePermission('tax', 'create');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('tax/paye');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $payrollRun = $this->payrollModel->getRunById($payrollRunId);
             if (!$payrollRun) {

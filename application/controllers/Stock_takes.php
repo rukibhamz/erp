@@ -53,6 +53,7 @@ class Stock_takes extends Base_Controller {
         $this->requirePermission('inventory', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $locationId = intval($_POST['location_id'] ?? 0);
             $scheduledDate = sanitize_input($_POST['scheduled_date'] ?? date('Y-m-d'));
             $type = sanitize_input($_POST['type'] ?? 'full');
@@ -153,6 +154,14 @@ class Stock_takes extends Base_Controller {
     public function start($id) {
         $this->requirePermission('inventory', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('inventory/stock-takes/view/' . $id);
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $stockTake = $this->stockTakeModel->getById($id);
             if (!$stockTake) {
@@ -179,6 +188,14 @@ class Stock_takes extends Base_Controller {
     public function updateCount() {
         $this->requirePermission('inventory', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'error' => 'Method not allowed']);
+            exit;
+        }
+        
+        check_csrf();
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $itemId = intval($_POST['item_id'] ?? 0);
             $stockTakeId = intval($_POST['stock_take_id'] ?? 0);
@@ -202,6 +219,14 @@ class Stock_takes extends Base_Controller {
     
     public function complete($id) {
         $this->requirePermission('inventory', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('inventory/stock-takes/view/' . $id);
+            return;
+        }
+        
+        check_csrf();
         
         try {
             $stockTake = $this->stockTakeModel->getById($id);

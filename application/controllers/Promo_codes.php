@@ -130,6 +130,13 @@ class Promo_codes extends Base_Controller {
 
     public function toggle($id) {
         $this->requirePermission('bookings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('promo-codes');
+            return;
+        }
+        
         check_csrf();
 
         $code = $this->promoModel->getById($id);

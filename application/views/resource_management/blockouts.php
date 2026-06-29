@@ -61,11 +61,13 @@
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <a href="<?= site_url('resource-management/delete-blockout/' . ($blockout['id'] ?? '')) ?>" 
-                                                   class="btn btn-sm btn-outline-danger"
-                                                   onclick="return confirm('Are you sure you want to delete this blockout?')">
-                                                    <i class="fas fa-trash"></i>
-                                                </a>
+                                                <form method="post" action="<?= site_url('resource-management/delete-blockout/' . ($blockout['id'] ?? '')) ?>" class="d-inline"
+                                                      onsubmit="return confirm('Are you sure you want to delete this blockout?')">
+                                                    <?= csrf_field() ?>
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

@@ -6,9 +6,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="d-flex justify-content-between align-items-center">
         <h1 class="page-title mb-0">Lease: <?= htmlspecialchars($lease['lease_number']) ?></h1>
         <div class="d-flex gap-2">
-            <a href="<?= base_url('rent-invoices/generate/' . $lease['id']) ?>" class="btn btn-success" onclick="return confirm('Generate rent invoice for this month?')">
-                <i class="bi bi-receipt"></i> Generate Invoice
-            </a>
+            <form method="post" action="<?= base_url('rent-invoices/generate/' . $lease['id']) ?>" class="d-inline"
+                  onsubmit="return confirm('Generate rent invoice for this month?')">
+                <?= csrf_field() ?>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-receipt"></i> Generate Invoice
+                </button>
+            </form>
             <a href="<?= base_url('leases') ?>" class="btn btn-primary">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
@@ -156,9 +160,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="card-body">
                 <?php if (empty($invoices)): ?>
                     <p class="text-muted mb-3">No invoices generated yet.</p>
-                    <a href="<?= base_url('rent-invoices/generate/' . $lease['id']) ?>" class="btn btn-primary">
-                        <i class="bi bi-receipt"></i> Generate Invoice
-                    </a>
+                    <form method="post" action="<?= base_url('rent-invoices/generate/' . $lease['id']) ?>" class="d-inline">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-receipt"></i> Generate Invoice
+                        </button>
+                    </form>
                 <?php else: ?>
                     <div class="table-responsive">
                         <table class="table table-sm">

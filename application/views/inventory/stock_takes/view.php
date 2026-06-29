@@ -7,14 +7,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title mb-0">Stock Take: <?= htmlspecialchars($stock_take['stock_take_number']) ?></h1>
         <div class="d-flex gap-2">
             <?php if ($stock_take['status'] === 'scheduled' && hasPermission('inventory', 'update')): ?>
-                <a href="<?= base_url('inventory/stock-takes/start/' . $stock_take['id']) ?>" class="btn btn-info" onclick="return confirm('Start this stock take?')">
-                    <i class="bi bi-play-circle"></i> Start
-                </a>
+                <form method="post" action="<?= base_url('inventory/stock-takes/start/' . $stock_take['id']) ?>" class="d-inline"
+                      onsubmit="return confirm('Start this stock take?')">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-info">
+                        <i class="bi bi-play-circle"></i> Start
+                    </button>
+                </form>
             <?php endif; ?>
             <?php if ($stock_take['status'] === 'in_progress' && hasPermission('inventory', 'update')): ?>
-                <a href="<?= base_url('inventory/stock-takes/complete/' . $stock_take['id']) ?>" class="btn btn-success" onclick="return confirm('Complete this stock take? Adjustments will be created for variances.')">
-                    <i class="bi bi-check-circle"></i> Complete
-                </a>
+                <form method="post" action="<?= base_url('inventory/stock-takes/complete/' . $stock_take['id']) ?>" class="d-inline"
+                      onsubmit="return confirm('Complete this stock take? Adjustments will be created for variances.')">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Complete
+                    </button>
+                </form>
             <?php endif; ?>
             <a href="<?= base_url('inventory/stock-takes') ?>" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left"></i> Back

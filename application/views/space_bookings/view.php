@@ -7,9 +7,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <h1 class="page-title mb-0">Booking: <?= htmlspecialchars($booking['booking_number']) ?></h1>
         <div class="d-flex gap-2">
             <?php if ($booking['status'] === 'pending'): ?>
-                <a href="<?= base_url('space-bookings/confirm/' . $booking['id']) ?>" class="btn btn-primary" onclick="return confirm('Confirm this booking?')">
-                    <i class="bi bi-check-circle"></i> Confirm
-                </a>
+                <form method="post" action="<?= base_url('space-bookings/confirm/' . $booking['id']) ?>" class="d-inline"
+                      onsubmit="return confirm('Confirm this booking?')">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Confirm
+                    </button>
+                </form>
             <?php endif; ?>
             <?php if ($booking['status'] !== 'cancelled'): ?>
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#cancelModal">

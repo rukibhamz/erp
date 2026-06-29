@@ -135,6 +135,14 @@ class Settings extends Base_Controller {
     public function toggleGateway($id) {
         $this->requirePermission('settings', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('settings/payment-gateways');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $gateway = $this->gatewayModel->getById($id);
             if ($gateway) {
@@ -469,6 +477,15 @@ class Settings extends Base_Controller {
 
     public function flutterwaveSubaccountDelete($id) {
         $this->requirePermission('settings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('settings/flutterwave/subaccounts');
+            return;
+        }
+        
+        check_csrf();
+        
         $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
         $row = $subaccountModel->getById((int) $id);
         if ($row) {
@@ -480,6 +497,15 @@ class Settings extends Base_Controller {
 
     public function flutterwaveSubaccountSetDefault($id) {
         $this->requirePermission('settings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('settings/flutterwave/subaccounts');
+            return;
+        }
+        
+        check_csrf();
+        
         $subaccountModel = $this->loadModel('Flutterwave_subaccount_model');
         $row = $subaccountModel->getById((int) $id);
         if ($row && !empty($row['is_active'])) {
@@ -617,6 +643,15 @@ class Settings extends Base_Controller {
 
     public function flutterwaveSplitRuleDelete($id) {
         $this->requirePermission('settings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('settings/flutterwave/split-rules');
+            return;
+        }
+        
+        check_csrf();
+        
         $ruleModel = $this->loadModel('Flutterwave_split_rule_model');
         $ruleModel->update((int) $id, ['is_active' => 0]);
         $this->setFlashMessage('success', 'Split rule deactivated.');

@@ -255,6 +255,14 @@ class Space_bookings extends Base_Controller {
     public function confirm($id) {
         $this->requirePermission('locations', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('space-bookings/view/' . $id);
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $booking = $this->bookingModel->getById($id);
             if (!$booking) {

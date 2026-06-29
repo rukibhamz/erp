@@ -1567,6 +1567,14 @@ class Bookings extends Base_Controller {
 
     public function recordPayment() {
         $this->requirePermission('bookings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('bookings');
+            return;
+        }
+        
+        check_csrf();
 
         $bookingId = intval($_POST['booking_id'] ?? 0);
         $amount = floatval($_POST['amount'] ?? 0);
@@ -1727,6 +1735,7 @@ class Bookings extends Base_Controller {
         $this->requirePermission('bookings', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $newDate = sanitize_input($_POST['booking_date'] ?? '');
             $newStartTime = sanitize_input($_POST['start_time'] ?? '');
             $newEndTime = sanitize_input($_POST['end_time'] ?? '');
@@ -1869,6 +1878,7 @@ class Bookings extends Base_Controller {
         $this->requirePermission('bookings', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $reason = sanitize_input($_POST['cancellation_reason'] ?? '');
             $applyRefund = !empty($_POST['apply_refund']);
             
@@ -1993,6 +2003,7 @@ class Bookings extends Base_Controller {
         $this->requirePermission('bookings', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $newStatus = sanitize_input($_POST['status'] ?? '');
             $reason = sanitize_input($_POST['reason'] ?? '');
             
@@ -2093,6 +2104,7 @@ class Bookings extends Base_Controller {
         $this->requirePermission('bookings', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $resourceId = intval($_POST['resource_id'] ?? 0);
             $startDateTime = sanitize_input($_POST['start_datetime'] ?? '');
             $endDateTime = sanitize_input($_POST['end_datetime'] ?? '');
@@ -2161,6 +2173,14 @@ class Bookings extends Base_Controller {
      */
     public function removeResource($bookingResourceId) {
         $this->requirePermission('bookings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('bookings');
+            return;
+        }
+        
+        check_csrf();
         
         try {
             $bookingResource = $this->bookingResourceModel->getById($bookingResourceId);

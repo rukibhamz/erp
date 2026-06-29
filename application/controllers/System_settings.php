@@ -45,6 +45,13 @@ class System_settings extends Base_Controller {
     
     public function save() {
         $this->requirePermission('settings', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('settings/system');
+            return;
+        }
+        
         check_csrf(); // Validate CSRF token
         
         $tab = sanitize_input($_POST['tab'] ?? 'company');

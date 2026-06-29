@@ -541,6 +541,18 @@ class Tax_config extends Base_Controller {
     public function toggleStatus($id) {
         $this->requirePermission('tax', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            if (isset($_POST['ajax'])) {
+                echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+                exit;
+            }
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('tax/config');
+            return;
+        }
+        
+        check_csrf();
+        
         $taxType = $this->taxTypeModel->getById($id);
         if (!$taxType) {
             if (isset($_POST['ajax'])) {

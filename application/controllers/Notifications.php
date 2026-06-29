@@ -81,6 +81,14 @@ class Notifications extends Base_Controller {
             exit;
         }
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+        
+        check_csrf();
+        
         try {
             if ($this->notificationModel->markAsRead($id, (int) $this->session['user_id'])) {
                 echo json_encode(['success' => true]);
@@ -104,6 +112,14 @@ class Notifications extends Base_Controller {
             echo json_encode(['success' => false, 'message' => 'Unauthorized']);
             exit;
         }
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+        
+        check_csrf();
         
         $userId = $this->session['user_id'] ?? null;
         
@@ -165,6 +181,14 @@ class Notifications extends Base_Controller {
      */
     public function savePreferences() {
         header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
+        }
+        
+        check_csrf();
         
         $userId = $this->session['user_id'] ?? null;
         $userEmail = $this->session['email'] ?? null;

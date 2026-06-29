@@ -46,7 +46,10 @@ class Report_builder extends Base_Controller {
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('report-builder');
+            return;
         }
+        
+        check_csrf();
         
         try {
             $allowedSources = array_keys($this->getDataSources());

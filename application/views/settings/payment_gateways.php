@@ -89,17 +89,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             </a>
                                         <?php endif; ?>
                                         <?php if ($gateway['is_active']): ?>
-                                            <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 
-                                               class="btn btn-sm btn-danger"
-                                               onclick="return confirm('Are you sure you want to deactivate this gateway?')">
-                                                <i class="bi bi-x-circle"></i> Deactivate
-                                            </a>
+                                            <form method="post" action="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to deactivate this gateway?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="bi bi-x-circle"></i> Deactivate
+                                                </button>
+                                            </form>
                                         <?php else: ?>
-                                            <a href="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" 
-                                               class="btn btn-sm btn-success"
-                                               onclick="return confirm('Are you sure you want to activate this gateway?')">
-                                                <i class="bi bi-check-circle"></i> Activate
-                                            </a>
+                                            <form method="post" action="<?= base_url('settings/payment-gateways/toggle/' . $gateway['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to activate this gateway?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check-circle"></i> Activate
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
                                     </td>
                                 </tr>

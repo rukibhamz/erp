@@ -379,6 +379,14 @@ class Fixed_assets extends Base_Controller {
     public function calculateDepreciation() {
         $this->requirePermission('inventory', 'update');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('inventory/assets');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             // Get all active assets
             $assets = $this->db->fetchAll(

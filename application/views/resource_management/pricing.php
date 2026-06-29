@@ -147,11 +147,13 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                <a href="<?= site_url('resource-management/delete-pricing/' . ($rule['id'] ?? '')) ?>" 
-                                                   class="btn btn-sm btn-outline-danger"
-                                                   onclick="return confirm('Delete this pricing rule?')">
-                                                    <i class="fas fa-trash"></i>
-                                                </a>
+                                                <form method="post" action="<?= site_url('resource-management/delete-pricing/' . ($rule['id'] ?? '')) ?>" class="d-inline"
+                                                      onsubmit="return confirm('Delete this pricing rule?')">
+                                                    <?= csrf_field() ?>
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

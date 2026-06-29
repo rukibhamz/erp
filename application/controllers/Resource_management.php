@@ -31,6 +31,7 @@ class Resource_management extends Base_Controller {
         $this->requirePermission('bookings', 'update');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $days = [0, 1, 2, 3, 4, 5, 6]; // Sunday to Saturday
             
             foreach ($days as $day) {
@@ -119,6 +120,7 @@ class Resource_management extends Base_Controller {
         $this->requirePermission('bookings', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'resource_id' => intval($_POST['resource_id'] ?? 0),
                 'start_date' => sanitize_input($_POST['start_date'] ?? ''),
@@ -146,6 +148,14 @@ class Resource_management extends Base_Controller {
      */
     public function deleteBlockout($id) {
         $this->requirePermission('bookings', 'delete');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('facilities');
+            return;
+        }
+        
+        check_csrf();
         
         try {
             $blockout = $this->blockoutModel->getById($id);
@@ -202,6 +212,7 @@ class Resource_management extends Base_Controller {
         $this->requirePermission('bookings', 'create');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'resource_id' => intval($_POST['resource_id'] ?? 0),
                 'rate_type' => sanitize_input($_POST['rate_type'] ?? 'hourly'),
@@ -236,6 +247,14 @@ class Resource_management extends Base_Controller {
     public function deletePricing($id) {
         $this->requirePermission('bookings', 'delete');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('facilities');
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $pricing = $this->pricingModel->getById($id);
             if ($pricing && $this->pricingModel->delete($id)) {
@@ -262,6 +281,7 @@ class Resource_management extends Base_Controller {
         $this->requirePermission('bookings', 'read');
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $action = sanitize_input($_POST['_action'] ?? 'create');
 
             // Handle delete
@@ -354,6 +374,7 @@ class Resource_management extends Base_Controller {
         $this->requirePermission('bookings', 'update');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             $data = [
                 'name' => sanitize_input($_POST['name'] ?? ''),
                 'description' => sanitize_input($_POST['description'] ?? ''),
@@ -382,6 +403,7 @@ class Resource_management extends Base_Controller {
         $this->requirePermission('bookings', 'delete');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            check_csrf();
             try {
                 if ($this->addonModel->delete($id)) {
                     $this->activityModel->log($this->session['user_id'], 'delete', 'Bookings', 'Deleted addon ID: ' . $id);

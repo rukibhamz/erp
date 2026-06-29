@@ -102,15 +102,19 @@
                                     </td>
                                     <td class="text-end pe-3 text-nowrap">
                                         <?php if (!empty($row['is_active']) && empty($row['is_default'])): ?>
-                                            <a href="<?= base_url('settings/flutterwave/subaccounts/default/' . (int) $row['id']) ?>"
-                                               class="btn btn-sm btn-secondary me-1">Set default</a>
+                                            <form method="post" action="<?= base_url('settings/flutterwave/subaccounts/default/' . (int) $row['id']) ?>" class="d-inline">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-secondary me-1">Set default</button>
+                                            </form>
                                         <?php endif; ?>
                                         <a href="<?= base_url('settings/flutterwave/subaccounts/edit/' . (int) $row['id']) ?>"
                                            class="btn btn-sm btn-primary me-1">Edit</a>
                                         <?php if ($row['is_active']): ?>
-                                            <a href="<?= base_url('settings/flutterwave/subaccounts/delete/' . (int) $row['id']) ?>"
-                                               class="btn btn-sm btn-danger"
-                                               onclick="return confirm('Deactivate this code?');">Deactivate</a>
+                                            <form method="post" action="<?= base_url('settings/flutterwave/subaccounts/delete/' . (int) $row['id']) ?>" class="d-inline"
+                                                  onsubmit="return confirm('Deactivate this code?');">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-danger">Deactivate</button>
+                                            </form>
                                         <?php endif; ?>
                                     </td>
                                 </tr>

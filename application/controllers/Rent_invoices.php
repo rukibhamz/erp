@@ -69,6 +69,14 @@ class Rent_invoices extends Base_Controller {
     public function generate($leaseId, $periodStart = null, $periodEnd = null) {
         $this->requirePermission('locations', 'create');
         
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('leases/view/' . $leaseId);
+            return;
+        }
+        
+        check_csrf();
+        
         try {
             $lease = $this->leaseModel->getWithDetails($leaseId);
             if (!$lease) {
@@ -222,6 +230,14 @@ class Rent_invoices extends Base_Controller {
      */
     public function recordPayment() {
         $this->requirePermission('locations', 'update');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('rent-invoices');
+            return;
+        }
+        
+        check_csrf();
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $invoiceId = intval($_POST['invoice_id'] ?? 0);
