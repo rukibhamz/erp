@@ -272,11 +272,11 @@ These defenses are correctly implemented and were not changed during remediation
 | 2026-06-29 | `ede660e` | POST + CSRF on all `delete($id)` and session/logout/clearDebugLog (44 files) |
 | 2026-06-29 | `316eb0d` | POST + CSRF on sync/approve/migrate/log-clean (14 files) |
 | 2026-06-29 | `5af3586` | POST + CSRF on remaining mutators and view forms (23 files) |
-| 2026-06-29 | (pending) | Backup restore hardening, secrets externalization, XSS/SQLi hardening |
+| 2026-06-29 | `b876233` | Backup restore hardening, secrets externalization, XSS/SQLi hardening |
 
 **Phase 1 total:** 81 files changed across three commits.
 
-**Phase 2 (uncommitted):** env helper, config template, backup controls,
+**Phase 2 (committed in `b876233`):** env helper, config template, backup controls,
 `validateBackupUpload()`, XSS L4–L6, SQLi L1/L3 hardening.
 
 ---
@@ -315,6 +315,51 @@ race conditions.
 
 ---
 
-*This report reflects remediation through 2026-06-29 phase 2. Findings below
-the 8/10 confidence threshold were excluded. This is not a guarantee of the
-absence of other vulnerabilities.*
+## 9. Second Audit (2026-06-30)
+
+A second full pass was performed after phase-2 remediation, focused on areas not
+deeply covered in the first audit: authentication & session handling, password
+and token management, authorization/IDOR, file-upload storage, command
+execution, dynamic code execution, and the public customer portal.
+
+**Result: no new HIGH or MEDIUM exploitable vulnerabilities found.** The areas
+reviewed are soundly implemented.
+
+### Verified secure (this pass)
+
+| Area | Finding |
+|------|---------|
+| Login / session | CSRF-guarded login, rate limiting (`rate_limit_allows`), `session_regenerate_id(true)` on login and remember-me auto-login (anti–session-fixation), DB-backed session tracking ([Auth.php](application/controllers/Auth.php)) |
+| Password storage | `password_hash(..., PASSWORD_BCRYPT)` + `password_verify`; account lockout after N failed attempts ([User_model.php:52](application/models/User_model.php)) |
+| Remember-me tokens | Random 256-bit token; **only the SHA-256 hash** stored in DB, plaintext in HttpOnly/Secure/SameSite cookie ([User_model.php:108](application/models/User_model.php)) |
+| Password reset | `random_bytes(32)` token, 1-hour expiry validated server-side, strength enforced, tokens cleared on use, no email enumeration ([Auth.php:195](application/controllers/Auth.php)) |
+| Authorization / IDOR | Customer portal enforces ownership (`customer_email === session user email`) on **every** id-taking endpoint — `booking`, `payBooking`, `viewBooking`, `rescheduleBooking`, `getRescheduleQuote` ([Customer_portal.php:473](application/controllers/Customer_portal.php)) |
+| Command execution | Only OS-level `exec()` is the `mysqldump`/`mysql` call in `Backup.php`, fully wrapped in `escapeshellarg()`. All other `exec()` are `PDO::exec()` (SQL DDL). |
+| Dynamic code / includes | No `eval`/`assert`/`create_function`; no `include`/`require`/file ops driven by request input. |
+| File download | `Backup::download()` constrains to the backups dir via `basename()` — no path traversal. |
+| Payment webhook | `handleWebhook()` verifies the signature on the **raw** request body and fails closed (HTTP 401) before processing; payments are additionally re-verified server-to-server against the gateway API ([Payment.php:337](application/controllers/Payment.php)). |
+| Avatar / logo upload | Both call `validateFileUpload()` (server-side MIME ↔ extension match against an image allowlist) before saving ([Profile.php:148](application/controllers/Profile.php), [System_settings.php:82](application/controllers/System_settings.php)). |
+
+### New low-severity / hardening items
+
+None are independently exploitable today, but worth addressing:
+
+| # | Location | Issue | Recommendation |
+|---|----------|-------|----------------|
+| L7 | [`Upload.php`](application/libraries/Upload.php) library defaults | Defaults are `allowed_types => '*'`, `encrypt_name => FALSE`, and validation is **extension-only (no MIME check)**. The sole caller (`Spaces::uploadPhotos`) overrides safely (image-only types + `encrypt_name = TRUE`), but a future caller relying on defaults into a web-accessible path would be an RCE vector. | Change library defaults to deny-by-default, force `encrypt_name`, and add server-side MIME detection inside `do_upload()`. |
+| L8 | [`Spaces::uploadPhotos`](application/controllers/Spaces.php:753) | Validates by file **extension only** (no content/MIME inspection). Filenames are randomized so the uploaded file is not directly executable as served, but a polyglot image is still storable. | Route space photos through `validateFileUpload()` for content-based MIME validation, consistent with avatar/logo uploads. |
+| L9 | [`Stock_movements::receive`](application/controllers/Stock_movements.php:33) (and `Profile`/`Payment` debug logs) | Always-on diagnostic logging writes full `$_POST` / payloads to files under `logs/`. Data is non-PII and the endpoint is permission-gated, so impact is low. | Gate diagnostic logging behind a debug flag (as `payment_debug_log` already does), remove before production, and ensure `logs/` is not web-accessible. |
+
+### Methodology (second pass)
+
+Traced data flow from request inputs to sensitive sinks across auth, session,
+authorization, file I/O, process execution, and the public portal. Reviewed
+controller method guards, the `Base_Controller` permission/role/auth helpers,
+the `User_model` crypto, the `Upload` library and all `move_uploaded_file`
+callers, all `exec`-family calls, and the payment webhook signature path.
+
+---
+
+*This report reflects remediation through 2026-06-29 phase 2 and a second audit
+on 2026-06-30. Findings below the 8/10 confidence threshold were excluded. This
+is not a guarantee of the absence of other vulnerabilities.*
