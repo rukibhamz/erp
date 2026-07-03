@@ -257,10 +257,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <?php echo csrf_field(); ?>
                                                     <button
                                                         type="submit"
-                                                        class="btn btn-sm btn-outline-danger"
+                                                        class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1"
                                                         onclick="return confirm('Delete this payment? This will update booking, receivables and account balances.');"
                                                     >
-                                                        <i class="bi bi-trash"></i> Delete
+                                                        <i class="bi bi-trash"></i>
+                                                        <span>Delete</span>
                                                     </button>
                                                 </form>
                                             </td>
