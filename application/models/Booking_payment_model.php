@@ -71,6 +71,30 @@ class Booking_payment_model extends Base_Model {
     }
 
     /**
+     * Detect likely duplicate manual payment entries.
+     * Duplicate criteria: same booking, same date, same method, same amount, completed status.
+     */
+    public function findDuplicatePayment($bookingId, $paymentDate, $paymentMethod, $amount) {
+        try {
+            return $this->db->fetchOne(
+                "SELECT *
+                 FROM `" . $this->db->getPrefix() . $this->table . "`
+                 WHERE booking_id = ?
+                   AND payment_date = ?
+                   AND payment_method = ?
+                   AND amount = ?
+                   AND status = 'completed'
+                 ORDER BY created_at DESC, id DESC
+                 LIMIT 1",
+                [$bookingId, $paymentDate, $paymentMethod, $amount]
+            ) ?: null;
+        } catch (Exception $e) {
+            error_log('Booking_payment_model findDuplicatePayment error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Recalculate and sync paid_amount and balance_amount on the bookings table
      * from the actual sum of completed booking_payments records.
      * Call this after any payment is recorded/updated and on booking view load.

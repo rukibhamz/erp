@@ -1595,6 +1595,101 @@ class Bookings extends Base_Controller {
         }
     }
 
+    public function deletePayment($bookingId, $paymentId) {
+        $this->requirePermission('bookings', 'update');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->setFlashMessage('danger', 'Invalid request method.');
+            redirect('bookings/view/' . intval($bookingId));
+            return;
+        }
+
+        check_csrf();
+
+        $bookingId = intval($bookingId);
+        $paymentId = intval($paymentId);
+        if ($bookingId <= 0 || $paymentId <= 0) {
+            $this->setFlashMessage('danger', 'Invalid payment selection.');
+            redirect('bookings/view/' . $bookingId);
+            return;
+        }
+
+        $pdo = $this->db->getConnection();
+        $startedTx = false;
+
+        try {
+            $booking = $this->bookingModel->getById($bookingId);
+            if (!$booking) {
+                throw new Exception('Booking not found.');
+            }
+
+            $payment = $this->paymentModel->getById($paymentId);
+            if (!$payment || intval($payment['booking_id'] ?? 0) !== $bookingId) {
+                throw new Exception('Payment record not found for this booking.');
+            }
+
+            if (!$this->db->inTransaction()) {
+                $pdo->beginTransaction();
+                $startedTx = true;
+            }
+
+            $paymentMethod = strtolower(trim((string) ($payment['payment_method'] ?? '')));
+            $amount = floatval($payment['amount'] ?? 0);
+
+            // Reverse linked cash account balance update (if one was posted)
+            if ($amount > 0 && $paymentMethod !== '' && $this->cashAccountModel && $this->accountModel) {
+                $cashGlAccount = $this->accountModel->getByPaymentMethod($paymentMethod);
+                if ($cashGlAccount) {
+                    $activeCashAccounts = $this->cashAccountModel->getActive();
+                    foreach ($activeCashAccounts as $ca) {
+                        if ((int) ($ca['account_id'] ?? 0) === (int) ($cashGlAccount['id'] ?? 0)) {
+                            $this->cashAccountModel->updateBalance($ca['id'], $amount, 'withdrawal');
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Remove booking-payment GL transaction rows created during payment posting.
+            $this->db->query(
+                "DELETE FROM `" . $this->db->getPrefix() . "transactions`
+                 WHERE reference_type = 'booking_payment' AND reference_id = ?",
+                [$paymentId]
+            );
+
+            if (!$this->paymentModel->delete($paymentId)) {
+                throw new Exception('Failed to delete payment record.');
+            }
+
+            // Always recompute booking figures from source of truth (booking_payments table).
+            $this->paymentModel->syncBookingBalance($bookingId);
+            if ($this->bookingFinancialSync) {
+                $this->bookingFinancialSync->syncReceivablesFromBookingPayments($bookingId);
+            }
+
+            if ($startedTx && $this->db->inTransaction()) {
+                $pdo->commit();
+            }
+
+            $this->activityModel->log(
+                $this->session['user_id'],
+                'delete',
+                'Booking Payments',
+                'Deleted payment #' . ($payment['payment_number'] ?? $paymentId) . ' from booking: ' . ($booking['booking_number'] ?? $bookingId)
+            );
+
+            $this->setFlashMessage('success', 'Payment deleted and balances re-synced successfully.');
+        } catch (Exception $e) {
+            if ($startedTx && $this->db->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Bookings deletePayment error: ' . $e->getMessage());
+            $this->setFlashMessage('danger', 'Failed to delete payment: ' . $e->getMessage());
+        }
+
+        redirect('bookings/view/' . $bookingId);
+    }
+
     private function processPayment($bookingId, $amount, $paymentMethod, $paymentType, $paymentDate = null) {
         if (!$paymentDate) $paymentDate = date('Y-m-d');
         
@@ -1607,6 +1702,26 @@ class Bookings extends Base_Controller {
             $booking = $this->bookingModel->getById($bookingId);
             if (!$booking) {
                 throw new Exception('Booking not found');
+            }
+
+            // Guard 1: block exact duplicates (common double-submit/manual repeat).
+            $duplicatePayment = $this->paymentModel->findDuplicatePayment($bookingId, $paymentDate, $paymentMethod, $amount);
+            if ($duplicatePayment) {
+                throw new Exception(
+                    'Duplicate payment detected. '
+                    . 'Payment #' . ($duplicatePayment['payment_number'] ?? $duplicatePayment['id'])
+                    . ' with same amount/method/date already exists.'
+                );
+            }
+
+            // Guard 2: prevent overpayment even if UI client-side max is bypassed.
+            $alreadyPaid = floatval($this->paymentModel->getTotalPaid($bookingId));
+            $totalAmount = floatval($booking['total_amount'] ?? 0);
+            $remainingBalance = max(0, $totalAmount - $alreadyPaid);
+            if ($amount > ($remainingBalance + 0.00001)) {
+                throw new Exception(
+                    'Payment exceeds outstanding balance. Remaining balance is ' . number_format($remainingBalance, 2)
+                );
             }
 
             // Create payment record

@@ -234,6 +234,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <th>Method</th>
                                         <th>Amount</th>
                                         <th>Status</th>
+                                        <?php if (has_permission('bookings', 'update') && $booking['status'] !== 'cancelled'): ?>
+                                        <th>Action</th>
+                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -248,6 +251,20 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <?= ucfirst($payment['status']) ?>
                                                 </span>
                                             </td>
+                                            <?php if (has_permission('bookings', 'update') && $booking['status'] !== 'cancelled'): ?>
+                                            <td>
+                                                <form method="POST" action="<?= base_url('bookings/deletePayment/' . intval($booking['id']) . '/' . intval($payment['id'])) ?>" class="d-inline">
+                                                    <?php echo csrf_field(); ?>
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Delete this payment? This will update booking, receivables and account balances.');"
+                                                    >
+                                                        <i class="bi bi-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
