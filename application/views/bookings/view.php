@@ -234,7 +234,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <th>Method</th>
                                         <th>Amount</th>
                                         <th>Status</th>
-                                        <?php if (has_permission('bookings', 'update') && $booking['status'] !== 'cancelled'): ?>
+                                        <?php if (isAdmin() && $booking['status'] !== 'cancelled'): ?>
                                         <th>Action</th>
                                         <?php endif; ?>
                                     </tr>
@@ -251,7 +251,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                     <?= ucfirst($payment['status']) ?>
                                                 </span>
                                             </td>
-                                            <?php if (has_permission('bookings', 'update') && $booking['status'] !== 'cancelled'): ?>
+                                            <?php if (isAdmin() && $booking['status'] !== 'cancelled'): ?>
                                             <td>
                                                 <form method="POST" action="<?= base_url('bookings/deletePayment/' . intval($booking['id']) . '/' . intval($payment['id'])) ?>" class="d-inline">
                                                     <?php echo csrf_field(); ?>

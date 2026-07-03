@@ -1596,7 +1596,7 @@ class Bookings extends Base_Controller {
     }
 
     public function deletePayment($bookingId, $paymentId) {
-        $this->requirePermission('bookings', 'update');
+        $this->requireRole(['admin', 'super_admin']);
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->setFlashMessage('danger', 'Invalid request method.');
