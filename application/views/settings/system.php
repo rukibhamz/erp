@@ -133,7 +133,7 @@ $activeTab = $active_tab ?? 'company';
             <h5 class="mb-0"><i class="bi bi-envelope"></i> Email Configuration</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="<?= base_url('settings/system/save') ?>">
+            <form method="POST" action="<?= base_url('settings/system/save') ?>" id="emailSettingsForm">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="tab" value="email">
                 
@@ -189,38 +189,38 @@ $activeTab = $active_tab ?? 'company';
                                value="<?= htmlspecialchars($settings['from_name'] ?? '') ?>">
                     </div>
                 </div>
-                
-                <!-- Test Email Section -->
-                <div class="card border-primary mb-3">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0 text-white"><i class="bi bi-envelope-check"></i> Test Email Configuration</h6>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted small mb-3">Send a test email to verify your SMTP settings are working correctly.</p>
-                        <div class="row g-3">
-                            <div class="col-md-8">
-                                <label class="form-label">Test Email Address</label>
-                                <input type="email" id="test_email_address" class="form-control" 
-                                       placeholder="Enter email address to send test to (optional - will use your email if left blank)"
-                                       value="">
-                                <small class="text-muted">Leave blank to use your account email address</small>
-                            </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <button type="button" class="btn btn-primary w-100" onclick="testEmail()" id="testEmailBtn">
-                                    <i class="bi bi-send"></i> Send Test Email
-                                </button>
-                            </div>
-                        </div>
-                        <div id="testEmailResult" class="mt-3" style="display: none;"></div>
-                    </div>
-                </div>
-                
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-dark">
-                        <i class="bi bi-save"></i> Save Email Settings
-                    </button>
-                </div>
             </form>
+
+            <!-- Outside the save form: CSP blocks onclick, and Enter here must not submit settings -->
+            <div class="card border-primary mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0 text-white"><i class="bi bi-envelope-check"></i> Test Email Configuration</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">Send a test email to verify your SMTP settings are working correctly.</p>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label" for="test_email_address">Test Email Address</label>
+                            <input type="email" id="test_email_address" class="form-control"
+                                   placeholder="Enter email address to send test to (optional - will use your email if left blank)"
+                                   value="" autocomplete="email">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-primary w-100" id="testEmailBtn">
+                                <i class="bi bi-send"></i> Send Test Email
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Leave blank to use your account email address</small>
+                    <div id="testEmailResult" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" form="emailSettingsForm" class="btn btn-dark">
+                    <i class="bi bi-save"></i> Save Email Settings
+                </button>
+            </div>
         </div>
     </div>
 <?php endif; ?>
@@ -399,77 +399,86 @@ $activeTab = $active_tab ?? 'company';
 <?php endif; ?>
 
 <script nonce="<?= csp_nonce() ?>">
-function testEmail() {
+(function () {
     const btn = document.getElementById('testEmailBtn');
     const resultDiv = document.getElementById('testEmailResult');
-    const testEmail = document.getElementById('test_email_address').value.trim();
-    
-    // Disable button and show loading
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
-    resultDiv.style.display = 'none';
-    
-    // Prepare form data
-    const formData = new FormData();
-    formData.append('csrf_token', '<?= csrf_token() ?>');
-    if (testEmail) {
-        formData.append('test_email', testEmail);
+    const emailInput = document.getElementById('test_email_address');
+    if (!btn || !resultDiv || !emailInput) {
+        return;
     }
-    
-    // Send AJAX request
-    fetch('<?= base_url("settings/system/test-email") ?>', {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => {
-        // Check if response is OK
-        if (!response.ok) {
-            throw new Error('HTTP error! status: ' + response.status);
-        }
-        // Try to parse as JSON
-        return response.text().then(text => {
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                // If not JSON, return the text as error
-                throw new Error('Invalid response: ' + text.substring(0, 100));
-            }
-        });
-    })
-    .then(data => {
-        // Reset button
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-send"></i> Send Test Email';
-        
-        // Show result
+
+    function setButtonLoading(isLoading) {
+        btn.disabled = isLoading;
+        btn.innerHTML = isLoading
+            ? '<span class="spinner-border spinner-border-sm me-2"></span>Sending...'
+            : '<i class="bi bi-send"></i> Send Test Email';
+    }
+
+    function showResult(success, message) {
         resultDiv.style.display = 'block';
-        if (data && data.success) {
-            resultDiv.className = 'mt-3 alert alert-success';
-            resultDiv.innerHTML = '<i class="bi bi-check-circle"></i> ' + (data.message || 'Email sent successfully');
-        } else {
-            resultDiv.className = 'mt-3 alert alert-danger';
-            resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.message || data.error || 'Unknown error occurred');
-        }
-        
-        // Scroll to result
+        resultDiv.className = 'mt-3 alert alert-' + (success ? 'success' : 'danger');
+        resultDiv.innerHTML = '<i class="bi bi-' + (success ? 'check' : 'x') + '-circle"></i> ' + message;
         resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    })
-    .catch(error => {
-        // Reset button
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-send"></i> Send Test Email';
-        
-        // Show error
-        resultDiv.style.display = 'block';
-        resultDiv.className = 'mt-3 alert alert-danger';
-        resultDiv.innerHTML = '<i class="bi bi-x-circle"></i> Error: ' + (error.message || 'Failed to send test email. Please check your configuration.');
-        
-        console.error('Test email error:', error);
+    }
+
+    function sendTestEmail() {
+        const address = emailInput.value.trim();
+
+        setButtonLoading(true);
+        resultDiv.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('csrf_token', '<?= csrf_token() ?>');
+        if (address) {
+            formData.append('test_email', address);
+        }
+
+        fetch('<?= base_url("settings/system/test-email") ?>', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(async (response) => {
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error(response.ok
+                    ? ('Invalid response: ' + text.substring(0, 100))
+                    : ('Request failed (HTTP ' + response.status + '). Please refresh and try again.'));
+            }
+            if (!response.ok && !(data && (data.message || data.error))) {
+                throw new Error('Request failed (HTTP ' + response.status + '). Please refresh and try again.');
+            }
+            return data;
+        })
+        .then((data) => {
+            setButtonLoading(false);
+            if (data && data.success) {
+                showResult(true, data.message || 'Email sent successfully');
+            } else {
+                showResult(false, (data && (data.message || data.error)) || 'Unknown error occurred');
+            }
+        })
+        .catch((error) => {
+            setButtonLoading(false);
+            showResult(false, 'Error: ' + (error.message || 'Failed to send test email. Please check your configuration.'));
+            console.error('Test email error:', error);
+        });
+    }
+
+    btn.addEventListener('click', sendTestEmail);
+    emailInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            sendTestEmail();
+        }
     });
-}
+})();
 
 function testSMS() {
     alert('SMS test functionality will be implemented');
