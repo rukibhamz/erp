@@ -200,19 +200,14 @@ $activeTab = $active_tab ?? 'company';
                 </div>
                 <div class="card-body">
                     <p class="text-muted small mb-3">Send a test email to verify your SMTP settings are working correctly. Save settings first if you changed them.</p>
-                    <div class="row g-2">
-                        <div class="col-md-8">
-                            <label class="form-label" for="test_email_address">Test Email Address</label>
-                            <input type="email" id="test_email_address" class="form-control"
-                                   placeholder="Enter email address to send test to (optional - will use your email if left blank)"
-                                   value="" autocomplete="email">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</label>
-                            <button type="button" class="btn btn-primary w-100" id="testEmailBtn">
-                                <i class="bi bi-send"></i> Send Test Email
-                            </button>
-                        </div>
+                    <label class="form-label" for="test_email_address">Test Email Address</label>
+                    <div class="d-flex flex-column flex-md-row gap-2 align-items-stretch">
+                        <input type="email" id="test_email_address" class="form-control"
+                               placeholder="Enter email address to send test to (optional - will use your email if left blank)"
+                               value="" autocomplete="email">
+                        <button type="button" class="btn btn-primary text-nowrap" id="testEmailBtn">
+                            <i class="bi bi-send"></i> Send Test Email
+                        </button>
                     </div>
                     <small class="text-muted d-block mt-1">Leave blank to use your account email address</small>
                     <div id="testEmailResult" class="mt-3" style="display: none;"></div>
