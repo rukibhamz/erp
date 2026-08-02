@@ -110,17 +110,32 @@ class Email_sender {
             $this->mail->Username = $this->config['smtp_user'];
             $this->mail->Password = $this->config['smtp_pass'];
             
-            // Set encryption based on config
+            // Fail fast instead of hanging the request (default can wait a very long time)
+            $this->mail->Timeout = 15;
+            $this->mail->SMTPKeepAlive = false;
+            
+            $port = intval($this->config['smtp_port'] ?? 587);
             $encryption = strtolower($this->config['encryption'] ?? 'tls');
+            
+            // Port/encryption mismatches commonly hang (e.g. 465 + STARTTLS)
+            if ($port === 465 && $encryption === 'tls') {
+                $encryption = 'ssl';
+                error_log('Email_sender: Port 465 with TLS detected; using SSL (SMTPS) instead');
+            } elseif ($port === 587 && $encryption === 'ssl') {
+                $encryption = 'tls';
+                error_log('Email_sender: Port 587 with SSL detected; using TLS (STARTTLS) instead');
+            }
+            
             if ($encryption === 'ssl') {
                 $this->mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
             } elseif ($encryption === 'tls') {
                 $this->mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             } else {
                 $this->mail->SMTPSecure = '';
+                $this->mail->SMTPAutoTLS = false;
             }
             
-            $this->mail->Port = $this->config['smtp_port'];
+            $this->mail->Port = $port;
             
             // IMPORTANT: For Gmail, the "From" email must match the authenticated username
             // Use SMTP username as From email if not set, or if they don't match
@@ -132,21 +147,19 @@ class Email_sender {
             
             $this->mail->setFrom($fromEmail, $this->config['from_name']);
             $this->mail->CharSet = 'UTF-8';
-            $this->mail->SMTPDebug = $this->debugMode ? 2 : 0; // Enable debug if requested
+            $this->mail->SMTPDebug = $this->debugMode ? 2 : 0;
             $this->mail->Debugoutput = function($str, $level) {
                 error_log("PHPMailer Debug (Level {$level}): {$str}");
             };
             
-            // Additional Gmail-specific settings
-            if (strpos($this->config['smtp_host'], 'gmail') !== false) {
-                $this->mail->SMTPOptions = [
-                    'ssl' => [
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
-                        'allow_self_signed' => true
-                    ]
-                ];
-            }
+            // Many shared hosts use self-signed certs; without this, SSL/TLS can hang or fail
+            $this->mail->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                ]
+            ];
         } catch (Exception $e) {
             error_log('Email config error: ' . $e->getMessage());
         }

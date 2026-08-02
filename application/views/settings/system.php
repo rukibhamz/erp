@@ -152,6 +152,7 @@ $activeTab = $active_tab ?? 'company';
                         <label class="form-label">SMTP Port</label>
                         <input type="number" name="smtp_port" class="form-control" 
                                value="<?= htmlspecialchars($settings['smtp_port'] ?? '587') ?>">
+                        <small class="text-muted">465 (SSL) or 587 (TLS)</small>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Encryption</label>
@@ -160,6 +161,7 @@ $activeTab = $active_tab ?? 'company';
                             <option value="ssl" <?= ($settings['smtp_encryption'] ?? '') === 'ssl' ? 'selected' : '' ?>>SSL</option>
                             <option value="none" <?= ($settings['smtp_encryption'] ?? '') === 'none' ? 'selected' : '' ?>>None</option>
                         </select>
+                        <small class="text-muted">Use SSL with port 465</small>
                     </div>
                 </div>
                 
@@ -197,8 +199,8 @@ $activeTab = $active_tab ?? 'company';
                     <h6 class="mb-0 text-white"><i class="bi bi-envelope-check"></i> Test Email Configuration</h6>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small mb-3">Send a test email to verify your SMTP settings are working correctly.</p>
-                    <div class="row g-2 align-items-end">
+                    <p class="text-muted small mb-3">Send a test email to verify your SMTP settings are working correctly. Save settings first if you changed them.</p>
+                    <div class="row g-2">
                         <div class="col-md-8">
                             <label class="form-label" for="test_email_address">Test Email Address</label>
                             <input type="email" id="test_email_address" class="form-control"
@@ -206,6 +208,7 @@ $activeTab = $active_tab ?? 'company';
                                    value="" autocomplete="email">
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label d-none d-md-block" aria-hidden="true">&nbsp;</label>
                             <button type="button" class="btn btn-primary w-100" id="testEmailBtn">
                                 <i class="bi bi-send"></i> Send Test Email
                             </button>
@@ -407,6 +410,9 @@ $activeTab = $active_tab ?? 'company';
         return;
     }
 
+    const REQUEST_TIMEOUT_MS = 25000;
+    let activeController = null;
+
     function setButtonLoading(isLoading) {
         btn.disabled = isLoading;
         btn.innerHTML = isLoading
@@ -422,7 +428,16 @@ $activeTab = $active_tab ?? 'company';
     }
 
     function sendTestEmail() {
+        if (activeController) {
+            activeController.abort();
+        }
+
         const address = emailInput.value.trim();
+        const controller = new AbortController();
+        activeController = controller;
+        const timeoutId = setTimeout(function () {
+            controller.abort();
+        }, REQUEST_TIMEOUT_MS);
 
         setButtonLoading(true);
         resultDiv.style.display = 'none';
@@ -439,7 +454,8 @@ $activeTab = $active_tab ?? 'company';
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: formData,
-            credentials: 'same-origin'
+            credentials: 'same-origin',
+            signal: controller.signal
         })
         .then(async (response) => {
             const text = await response.text();
@@ -457,7 +473,6 @@ $activeTab = $active_tab ?? 'company';
             return data;
         })
         .then((data) => {
-            setButtonLoading(false);
             if (data && data.success) {
                 showResult(true, data.message || 'Email sent successfully');
             } else {
@@ -465,9 +480,19 @@ $activeTab = $active_tab ?? 'company';
             }
         })
         .catch((error) => {
-            setButtonLoading(false);
-            showResult(false, 'Error: ' + (error.message || 'Failed to send test email. Please check your configuration.'));
+            if (error && error.name === 'AbortError') {
+                showResult(false, 'Error: The request timed out. For port 465, set Encryption to SSL (not TLS), save, then try again.');
+            } else {
+                showResult(false, 'Error: ' + ((error && error.message) || 'Failed to send test email. Please check your configuration.'));
+            }
             console.error('Test email error:', error);
+        })
+        .finally(function () {
+            clearTimeout(timeoutId);
+            if (activeController === controller) {
+                activeController = null;
+            }
+            setButtonLoading(false);
         });
     }
 
@@ -482,7 +507,6 @@ $activeTab = $active_tab ?? 'company';
 
 function testSMS() {
     alert('SMS test functionality will be implemented');
-    // TODO: Implement AJAX call to test SMS
 }
 </script>
 

@@ -114,6 +114,13 @@ class System_settings extends Base_Controller {
                         $smtpEncryption = 'tls';
                     }
                     
+                    // Avoid hang-prone combos: 465 expects SSL, 587 expects TLS
+                    if ($smtpPort === 465 && $smtpEncryption === 'tls') {
+                        $smtpEncryption = 'ssl';
+                    } elseif ($smtpPort === 587 && $smtpEncryption === 'ssl') {
+                        $smtpEncryption = 'tls';
+                    }
+                    
                     // SECURITY: Validate email format
                     if (!empty($fromEmail) && !filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
                         throw new Exception('Invalid from email address');
@@ -422,20 +429,21 @@ class System_settings extends Base_Controller {
                 $fromName = substr($fromName, 0, 100);
             }
             
-            // Use Email_sender library - it now reads from database automatically
-            require_once BASEPATH . 'libraries/Email_sender.php';
-            // Enable debug mode for test emails to help troubleshoot
-            $emailSender = new Email_sender(true); // Enable debug mode
+            // Cap request runtime so the UI doesn't spin forever on bad SMTP settings
+            if (function_exists('set_time_limit')) {
+                @set_time_limit(30);
+            }
             
-            // Send test email using Email_sender library
-            $result = $emailSender->sendInvoice(
+            require_once BASEPATH . 'libraries/Email_sender.php';
+            $emailSender = new Email_sender(true);
+            
+            $result = $emailSender->sendEmail(
                 $testEmail,
                 $subject,
                 $message
             );
             
             if ($result['success']) {
-                // SECURITY: Log activity without exposing sensitive data
                 $this->activityModel->log(
                     $this->session['user_id'], 
                     'test_email', 
@@ -448,16 +456,17 @@ class System_settings extends Base_Controller {
                     'message' => "Test email sent successfully. Please check your inbox."
                 ]);
             } else {
-                // Provide helpful error message
                 $errorMsg = $result['error'] ?? 'Unknown error';
+                $errorLower = strtolower($errorMsg);
                 
-                // SECURITY: Don't expose detailed error information, but provide helpful hints
                 $message = 'Failed to send test email. ';
-                if (strpos($errorMsg, 'not configured') !== false) {
+                if (strpos($errorLower, 'not configured') !== false) {
                     $message .= 'Please configure SMTP settings in System Settings > Email Configuration.';
-                } elseif (strpos($errorMsg, 'Connection') !== false || strpos($errorMsg, 'timeout') !== false) {
-                    $message .= 'Please verify your SMTP host and port settings.';
-                } elseif (strpos($errorMsg, 'authentication') !== false || strpos($errorMsg, 'login') !== false || strpos($errorMsg, '535') !== false) {
+                } elseif (strpos($errorLower, 'timed out') !== false || strpos($errorLower, 'timeout') !== false) {
+                    $message .= 'Connection timed out. Port 465 usually needs SSL; port 587 usually needs TLS. Also verify the SMTP host is reachable.';
+                } elseif (strpos($errorLower, 'connection') !== false || strpos($errorLower, 'could not connect') !== false) {
+                    $message .= 'Could not connect to the SMTP server. Check host, port, and encryption (465=SSL, 587=TLS).';
+                } elseif (strpos($errorLower, 'authentication') !== false || strpos($errorLower, 'login') !== false || strpos($errorMsg, '535') !== false) {
                     $message .= 'Please verify your SMTP username and password. For Gmail, use an App Password (not your regular password).';
                 } else {
                     $message .= 'Error: ' . htmlspecialchars($errorMsg);
