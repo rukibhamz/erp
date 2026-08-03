@@ -56,9 +56,32 @@ class Customer_portal_user_model extends Base_Model {
                 return ['success' => false, 'message' => 'Invalid credentials'];
             }
             
-            // Check if account is locked
-            if ($user['status'] === 'suspended' || 
-                ($user['locked_until'] && strtotime($user['locked_until']) > time())) {
+            // Check if a temporary lockout has expired and clear it
+            if (!empty($user['locked_until']) && strtotime($user['locked_until']) <= time()) {
+                $this->resetFailedLogin($user['id']);
+                $user = $this->getByEmail($email);
+                if (!$user) {
+                    return ['success' => false, 'message' => 'Invalid credentials'];
+                }
+            }
+
+            // Legacy lockouts set status=suspended and never cleared it after unlock/reset.
+            // If there is no active lockout window, restore access.
+            if ($user['status'] === 'suspended' && empty($user['locked_until'])) {
+                $this->resetFailedLogin($user['id']);
+                $user = $this->getByEmail($email);
+                if (!$user) {
+                    return ['success' => false, 'message' => 'Invalid credentials'];
+                }
+            }
+
+            // Temporary lockout from too many failed logins
+            if (!empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
+                return ['success' => false, 'message' => 'Account is temporarily locked due to too many failed login attempts. Please try again later or reset your password.'];
+            }
+
+            // Permanent suspension
+            if ($user['status'] === 'suspended') {
                 return ['success' => false, 'message' => 'Account is locked. Please contact support.'];
             }
             
@@ -238,7 +261,10 @@ class Customer_portal_user_model extends Base_Model {
                 'password_reset_token' => null,
                 'password_reset_expires' => null,
                 'failed_login_attempts' => 0,
-                'locked_until' => null
+                'locked_until' => null,
+                // Lockouts previously set status=suspended; unlock so login works after reset
+                'status' => 'active',
+                'email_verified' => 1
             ]);
             
             return true;
@@ -290,8 +316,8 @@ class Customer_portal_user_model extends Base_Model {
             $updateData = ['failed_login_attempts' => $attempts];
             
             if ($attempts >= $this->maxLoginAttempts) {
+                // Temporary lock only — do not permanently suspend the account
                 $updateData['locked_until'] = date('Y-m-d H:i:s', time() + $this->lockoutDuration);
-                $updateData['status'] = 'suspended';
             }
             
             $this->update($userId, $updateData);
