@@ -34,6 +34,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         .nav-link:hover {
             color: #ccc !important;
         }
+        .dropdown-menu .dropdown-item {
+            color: #212529 !important;
+        }
+        .dropdown-menu .dropdown-item.text-danger {
+            color: #dc3545 !important;
+        }
+        .dropdown-menu .dropdown-item:hover,
+        .dropdown-menu .dropdown-item:focus {
+            color: #000 !important;
+            background-color: #f8f9fa !important;
+        }
+        .dropdown-menu .dropdown-item.text-danger:hover,
+        .dropdown-menu .dropdown-item.text-danger:focus {
+            color: #dc3545 !important;
+            background-color: rgba(220, 53, 69, 0.1) !important;
+        }
     </style>
 </head>
 <body>
@@ -106,9 +122,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <form method="post" action="<?= base_url('customer-portal/logout') ?>" class="px-3 py-1">
+                                <form method="post" action="<?= base_url('customer-portal/logout') ?>" class="mb-0">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="dropdown-item p-0 border-0 bg-transparent text-start">
+                                    <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
                                         <i class="bi bi-box-arrow-right"></i> Logout
                                     </button>
                                 </form>

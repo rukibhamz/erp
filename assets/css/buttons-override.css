@@ -401,11 +401,11 @@ a.btn-outline-secondary {
     color: #ffffff !important;
 }
 
-/* Form buttons */
+/* Form buttons — exclude dropdown items (transparent bg needs dark text) */
 form .btn-primary,
 form .btn-dark,
 form .btn-secondary,
-form button[type="submit"],
+form button[type="submit"]:not(.dropdown-item),
 form input[type="submit"] {
     color: #ffffff !important;
 }
