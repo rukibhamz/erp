@@ -478,14 +478,9 @@ class Payroll extends Base_Controller {
             $updateData = ['status' => 'posted'];
             
             // Only add posted_date and posted_by if columns exist
-            try {
-                $columns = $this->db->query("SHOW COLUMNS FROM `" . $this->db->getPrefix() . "payroll_runs` LIKE 'posted_date'")->fetchAll();
-                if (!empty($columns)) {
-                    $updateData['posted_date'] = date('Y-m-d H:i:s');
-                    $updateData['posted_by'] = $this->session['user_id'];
-                }
-            } catch (Exception $e) {
-                error_log("Payroll postPayroll: Could not check for posted_date column: " . $e->getMessage());
+            if ($this->checkColumnExists('payroll_runs', 'posted_date')) {
+                $updateData['posted_date'] = date('Y-m-d H:i:s');
+                $updateData['posted_by'] = $this->session['user_id'];
             }
             
             $updated = $this->payrollModel->updateRun($payrollRunId, $updateData);
@@ -495,17 +490,8 @@ class Payroll extends Base_Controller {
             }
 
             // Update all payslips to posted status
-            $payslips = $this->payrollModel->getPayslips($payrollRunId);
-            foreach ($payslips as $payslip) {
-                $this->db->query(
-                    "UPDATE `" . $this->db->getPrefix() . "payslips` 
-                     SET status = 'posted' 
-                     WHERE id = ?",
-                    [$payslip['id']]
-                );
-            }
-            
-            error_log("Payroll postPayroll: Updated " . count($payslips) . " payslips to posted status");
+            $this->payrollModel->markPayslipsPosted($payrollRunId);
+            error_log("Payroll postPayroll: Marked payslips for run #{$payrollRunId} as posted");
 
             // Update cash account balance
             $balanceUpdated = $this->cashAccountModel->updateBalance(

@@ -5,28 +5,28 @@ class Router {
     private $controller = 'Dashboard';
     private $method = 'index';
     private $params = [];
-    
+
     public function __construct() {
         $this->parseUrl();
     }
-    
+
     private function parseUrl() {
         // Get URL from query string first (set by .htaccess RewriteRule)
         $url = $_GET['url'] ?? '';
-        
+
         // If url parameter is empty, extract from REQUEST_URI (fallback for non-rewrite scenarios)
         if (empty($url) && !empty($_SERVER['REQUEST_URI'])) {
             $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
             $scriptDir = dirname($scriptName);
-            
+
             // Normalize paths
             $requestUri = '/' . trim($requestUri, '/');
             $scriptDir = '/' . trim($scriptDir, '/');
-            
+
             // Remove query string if present
             $requestUri = strtok($requestUri, '?');
-            
+
             // Handle subdirectory installations (e.g., /erp/)
             if ($scriptDir !== '/' && $scriptDir !== '/.' && strpos($requestUri, $scriptDir) === 0) {
                 // Remove the script directory from request URI
@@ -39,7 +39,7 @@ class Router {
                 $url = trim($requestUri, '/');
             }
         }
-        
+
         // Sanitize and clean URL
         $url = trim($url, '/');
         if (!empty($url)) {
@@ -47,15 +47,15 @@ class Router {
             // Remove any double slashes that might have been introduced
             $url = preg_replace('#/+#', '/', $url);
         }
-        
+
         // Load routes
         $routes = require BASEPATH . 'config/routes.php';
-        
+
         // Ensure routes is an array
         if (!is_array($routes)) {
             $routes = [];
         }
-        
+
         // If URL is empty, use default controller
         // Default is Dashboard, but authentication will redirect to login if needed
         if (empty($url)) {
@@ -69,10 +69,10 @@ class Router {
             }
             return;
         }
-        
+
         $urlParts = explode('/', $url);
         $path = strtolower($url); // Normalize path to lowercase for consistent matching
-        
+
         // SPECIAL CASE: Handle tax/compliance routes BEFORE route matching
         // This ensures tax/compliance/* routes are handled correctly
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'tax' && strtolower($urlParts[1]) === 'compliance') {
@@ -91,7 +91,7 @@ class Router {
                     break;
                 }
             }
-            
+
             if ($exactRoute) {
                 // Use the route definition
                 $routeParts = explode('/', $exactRoute);
@@ -115,7 +115,7 @@ class Router {
                 return;
             }
         }
-        
+
         // Check exact route matches first (case-insensitive)
         // Sort routes by length (longest first) to match more specific routes first
         $sortedRoutes = [];
@@ -126,7 +126,7 @@ class Router {
             $sortedRoutes[$pattern] = strlen($pattern);
         }
         arsort($sortedRoutes); // Sort by length descending
-        
+
         $pathLower = strtolower($path);
         foreach (array_keys($sortedRoutes) as $pattern) {
             $route = $routes[$pattern];
@@ -145,7 +145,7 @@ class Router {
                 return;
             }
         }
-        
+
         // Check pattern routes (with parameters like (:num), (:any))
         // Sort pattern routes by specificity (longest/most specific first)
         $patternRoutes = [];
@@ -153,22 +153,22 @@ class Router {
             if ($pattern === 'default_controller' || $pattern === '404_override') {
                 continue;
             }
-            
+
             // Skip exact matches (already checked)
             if (strpos($pattern, '(') === false) {
                 continue;
             }
-            
+
             // Calculate specificity score:
             // 1. Length (longer = more specific)
             // 2. Parameter type preference (:num before :any)
             $specificity = strlen($pattern) * 1000; // Base score from length
-            
+
             // Prefer (:num) over (:any) for better matching
             // Count how many :num vs :any parameters exist
             $numCount = substr_count($pattern, '(:num)');
             $anyCount = substr_count($pattern, '(:any)');
-            
+
             // Routes with :num are more specific than :any
             if ($numCount > 0 && $anyCount === 0) {
                 $specificity += 100; // Bonus for :num only
@@ -176,22 +176,22 @@ class Router {
                 $specificity -= 50; // Penalty for :any only
             }
             // Mixed patterns get base score
-            
+
             $patternRoutes[$pattern] = [
                 'route' => $route,
                 'specificity' => $specificity
             ];
         }
-        
+
         // Sort by specificity (highest first)
         uasort($patternRoutes, function($a, $b) {
             return $b['specificity'] - $a['specificity'];
         });
-        
+
         // Process sorted pattern routes
         foreach ($patternRoutes as $pattern => $routeData) {
             $route = $routeData['route'];
-            
+
             // Convert route pattern to regex (case-insensitive for better matching)
             // Replace placeholders before preg_quote — preg_quote escapes ":" so '\(:num\)' never matches.
             $regexPattern = str_replace(['(:num)', '(:any)'], ['__CINUM__', '__CIANY__'], $pattern);
@@ -199,20 +199,20 @@ class Router {
             $regexPattern = str_replace(['__CINUM__', '__CIANY__'], ['([0-9]+)', '(.+)'], $regexPattern);
             $regexPattern = str_replace('\\/', '/', $regexPattern);
             $regex = '#^' . $regexPattern . '$#i'; // Added 'i' flag for case-insensitive matching
-            
+
             // Match against lowercase path (already normalized)
             if (preg_match($regex, $path, $matches)) {
                 error_log("Router: Pattern '{$pattern}' MATCHED path '{$path}' with regex '{$regex}'");
                 array_shift($matches); // Remove full match
-                
+
                 $routeParts = explode('/', $route);
                 $this->controller = $routeParts[0];
                 $this->method = $routeParts[1] ?? 'index';
-                
+
                 // Extract parameters from route string ($1, $2, etc.)
                 // CRITICAL FIX: Properly map route parameters to URL matches
                 $params = [];
-                
+
                 // First, collect all parameter placeholders from route (e.g., $1, $2)
                 $paramPlaceholders = [];
                 foreach ($routeParts as $part) {
@@ -220,10 +220,10 @@ class Router {
                         $paramPlaceholders[] = intval($paramMatch[1]);
                     }
                 }
-                
+
                 // Sort placeholders to ensure correct order
                 sort($paramPlaceholders);
-                
+
                 // Map each placeholder to its corresponding match
                 foreach ($paramPlaceholders as $placeholderIndex) {
                     $matchIndex = $placeholderIndex - 1; // $1 -> index 0, $2 -> index 1, etc.
@@ -237,221 +237,80 @@ class Router {
                         }
                     }
                 }
-                
+
                 // If no placeholders found but we have matches, use matches directly
                 if (empty($paramPlaceholders) && !empty($matches)) {
                     $params = $matches;
                 }
-                
+
                 $this->params = $params;
-                
+
                 // Log successful route match for debugging
                 error_log("Router: Matched pattern '{$pattern}' -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
-                
+
                 return;
             }
         }
-        
+
         // No route match, use direct controller/method parsing
         // CRITICAL FIX: Special handling for receivables and payables
         // These modules use the module name as the controller (Receivables, Payables)
         // not a sub-controller like inventory/items
         $firstPart = strtolower($urlParts[0] ?? '');
-        
+
         if ($firstPart === 'receivables') {
             // Receivables module - map directly to Receivables controller
-            $this->controller = 'Receivables';
-            
-            if (count($urlParts) >= 3) {
-                // Handle method names like "editCustomer", "viewCustomer", "createInvoice"
-                $methodPart = $urlParts[1] ?? '';
-                $actionPart = $urlParts[2] ?? '';
-                
-                // Map common patterns: customers/edit -> editCustomer, invoices/view -> viewInvoice
-                if ($methodPart === 'customers' && $actionPart === 'edit') {
-                    $this->method = 'editCustomer';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'customers' && $actionPart === 'view') {
-                    $this->method = 'viewCustomer';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'customers' && $actionPart === 'create') {
-                    $this->method = 'createCustomer';
-                    $this->params = [];
-                } elseif ($methodPart === 'invoices' && $actionPart === 'edit') {
-                    $this->method = 'editInvoice';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'invoices' && $actionPart === 'view') {
-                    $this->method = 'viewInvoice';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'invoices' && $actionPart === 'create') {
-                    $this->method = 'createInvoice';
-                    $this->params = [];
-                } elseif ($methodPart === 'invoices' && $actionPart === 'payment') {
-                    $this->method = 'recordPayment';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'payments' && $actionPart === 'create') {
-                    $this->method = 'createPayment';
-                    $this->params = [];
-                } elseif ($methodPart === 'customers' && $actionPart === 'history') {
-                    $this->method = 'customerHistory';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'deleteCustomer') {
-                    $this->method = 'deleteCustomer';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } elseif ($methodPart === 'editCustomer') {
-                    $this->method = 'editCustomer';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } elseif ($methodPart === 'viewCustomer') {
-                    $this->method = 'viewCustomer';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } elseif ($methodPart === 'customerHistory') {
-                    $this->method = 'customerHistory';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } else {
-                    // Generic mapping: receivables/method/param
-                    $this->method = $actionPart ?: ($methodPart ?: 'customers');
-                    $this->params = count($urlParts) > 3 ? array_slice($urlParts, 3) : [];
-                }
-            } elseif (count($urlParts) === 2) {
-                // receivables/customers or receivables/invoices
-                $this->method = $urlParts[1] ?? 'customers';
-                $this->params = [];
-            } else {
-                // receivables only
-                $this->method = 'customers';
-                $this->params = [];
-            }
-            
-            // Convert numeric parameters to integers
-            $this->params = array_map(function($param) {
-                return is_string($param) && preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-            }, $this->params);
-            error_log("Router: Receivables URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            // Handle method names like "editCustomer", "viewCustomer", "createInvoice"
+            $this->dispatchResourceActionRoute($urlParts, 'Receivables', [
+                'customers:edit'    => 'editCustomer',
+                'customers:view'    => 'viewCustomer',
+                'customers:create'  => 'createCustomer',
+                'invoices:edit'     => 'editInvoice',
+                'invoices:view'     => 'viewInvoice',
+                'invoices:create'   => 'createInvoice',
+                'invoices:payment'  => 'recordPayment',
+                'payments:create'   => 'createPayment',
+                'customers:history' => 'customerHistory',
+            ], ['deleteCustomer', 'editCustomer', 'viewCustomer', 'customerHistory'], 'customers');
             return;
         }
-        
+
         if ($firstPart === 'cash') {
             // Cash module - map directly to Cash controller
-            $this->controller = 'Cash';
-            
-            if (count($urlParts) >= 3) {
-                // Handle method names like "editAccount", "createAccount", "deleteAccount"
-                $methodPart = $urlParts[1] ?? '';
-                $actionPart = $urlParts[2] ?? '';
-                
-                // Map common patterns: accounts/edit -> editAccount, accounts/create -> createAccount
-                if ($methodPart === 'accounts' && $actionPart === 'edit') {
-                    $this->method = 'editAccount';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'accounts' && $actionPart === 'create') {
-                    $this->method = 'createAccount';
-                    $this->params = [];
-                } elseif ($methodPart === 'accounts' && $actionPart === 'delete') {
-                    $this->method = 'deleteAccount';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } else {
-                    // Generic mapping: cash/method/param
-                    $this->method = $actionPart ?: ($methodPart ?: 'index');
-                    $this->params = count($urlParts) > 3 ? array_slice($urlParts, 3) : [];
-                }
-            } elseif (count($urlParts) === 2) {
-                // cash/accounts or cash/receipts or cash/payments
-                $this->method = $urlParts[1] ?? 'index';
-                $this->params = [];
-            } else {
-                // cash only
-                $this->method = 'index';
-                $this->params = [];
-            }
-            
-            // Convert numeric parameters to integers
-            $this->params = array_map(function($param) {
-                return is_string($param) && preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-            }, $this->params);
-            error_log("Router: Cash URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            // Handle method names like "editAccount", "createAccount", "deleteAccount"
+            $this->dispatchResourceActionRoute($urlParts, 'Cash', [
+                'accounts:edit'   => 'editAccount',
+                'accounts:create' => 'createAccount',
+                'accounts:delete' => 'deleteAccount',
+            ], [], 'index');
             return;
         }
-        
+
         if ($firstPart === 'payables') {
             // Payables module - map directly to Payables controller
-            $this->controller = 'Payables';
-            
-            if (count($urlParts) >= 3) {
-                // Handle method names like "editVendor", "viewBill", "createBill"
-                $methodPart = $urlParts[1] ?? '';
-                $actionPart = $urlParts[2] ?? '';
-                
-                // Map common patterns: vendors/edit -> editVendor, bills/view -> viewBill
-                if ($methodPart === 'vendors' && $actionPart === 'edit') {
-                    $this->method = 'editVendor';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'vendors' && $actionPart === 'view') {
-                    $this->method = 'viewVendor';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'vendors' && $actionPart === 'delete') {
-                    $this->method = 'deleteVendor';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'vendors' && $actionPart === 'create') {
-                    $this->method = 'createVendor';
-                    $this->params = [];
-                } elseif ($methodPart === 'bills' && $actionPart === 'edit') {
-                    $this->method = 'editBill';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'bills' && $actionPart === 'view') {
-                    $this->method = 'viewBill';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'bills' && $actionPart === 'create') {
-                    $this->method = 'createBill';
-                    $this->params = [];
-                } elseif ($methodPart === 'bills' && $actionPart === 'delete') {
-                    $this->method = 'deleteBill';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'vendors' && $actionPart === 'history') {
-                    $this->method = 'vendorHistory';
-                    $this->params = count($urlParts) > 3 ? [intval($urlParts[3])] : [];
-                } elseif ($methodPart === 'deleteVendor') {
-                    $this->method = 'deleteVendor';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } elseif ($methodPart === 'editVendor') {
-                    $this->method = 'editVendor';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } elseif ($methodPart === 'viewVendor') {
-                    $this->method = 'viewVendor';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } elseif ($methodPart === 'vendorHistory') {
-                    $this->method = 'vendorHistory';
-                    $this->params = $actionPart ? [intval($actionPart)] : [];
-                } else {
-                    // Generic mapping: payables/method/param
-                    $this->method = $actionPart ?: ($methodPart ?: 'vendors');
-                    $this->params = count($urlParts) > 3 ? array_slice($urlParts, 3) : [];
-                }
-            } elseif (count($urlParts) === 2) {
-                // payables/vendors or payables/bills
-                $this->method = $urlParts[1] ?? 'vendors';
-                $this->params = [];
-            } else {
-                // payables only
-                $this->method = 'vendors';
-                $this->params = [];
-            }
-            
-            // Convert numeric parameters to integers
-            $this->params = array_map(function($param) {
-                return is_string($param) && preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-            }, $this->params);
-            error_log("Router: Payables URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+            // Handle method names like "editVendor", "viewBill", "createBill"
+            $this->dispatchResourceActionRoute($urlParts, 'Payables', [
+                'vendors:edit'    => 'editVendor',
+                'vendors:view'    => 'viewVendor',
+                'vendors:delete'  => 'deleteVendor',
+                'vendors:create'  => 'createVendor',
+                'bills:edit'      => 'editBill',
+                'bills:view'      => 'viewBill',
+                'bills:create'    => 'createBill',
+                'bills:delete'    => 'deleteBill',
+                'vendors:history' => 'vendorHistory',
+            ], ['deleteVendor', 'editVendor', 'viewVendor', 'vendorHistory'], 'vendors');
             return;
         }
-        
+
         // CRITICAL FIX: Handle multi-segment module URLs (e.g., inventory/items/view/123)
         // Special handling for locations routes (MUST be before module prefix handling)
         // Locations is both a module prefix AND a controller name
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'locations') {
             $method = strtolower($urlParts[1]);
-            
+
             // Handle booking routes with hyphens
-            if ($method === 'create-booking' || $method === 'booking-calendar' || $method === 'view-booking' || 
+            if ($method === 'create-booking' || $method === 'booking-calendar' || $method === 'view-booking' ||
                 $method === 'get-spaces-for-booking' || $method === 'check-booking-availability') {
                 // Map hyphenated methods to camelCase
                 $methodMap = [
@@ -461,31 +320,25 @@ class Router {
                     'get-spaces-for-booking' => 'getSpacesForBooking',
                     'check-booking-availability' => 'checkBookingAvailability'
                 ];
-                
+
                 $this->controller = 'Locations';
                 $this->method = $methodMap[$method] ?? $method;
-                
+
                 // Handle parameters
                 if (count($urlParts) > 2) {
-                    $this->params = array_slice($urlParts, 2);
-                    $this->params = array_map(function($param) {
-                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                    }, $this->params);
+                    $this->params = $this->castNumericParams(array_slice($urlParts, 2));
                 }
-                
+
                 error_log("Router: Locations booking route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
                 return;
             }
-            
+
             // Handle bookings route
             if ($method === 'bookings') {
                 $this->controller = 'Locations';
                 $this->method = 'bookings';
                 if (count($urlParts) > 2) {
-                    $this->params = array_slice($urlParts, 2);
-                    $this->params = array_map(function($param) {
-                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                    }, $this->params);
+                    $this->params = $this->castNumericParams(array_slice($urlParts, 2));
                 } else if (count($urlParts) === 2 && !empty($urlParts[1]) && is_numeric($urlParts[1])) {
                     // Handle locations/bookings/123 format
                     $this->params = [intval($urlParts[1])];
@@ -493,22 +346,19 @@ class Router {
                 error_log("Router: Locations bookings route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
                 return;
             }
-            
+
             // Check if it's a Locations controller method (view, edit, create, delete)
             if (in_array($method, ['view', 'edit', 'create', 'delete', 'index'])) {
                 $this->controller = 'Locations';
                 $this->method = $method;
                 if (count($urlParts) > 2) {
-                    $this->params = array_slice($urlParts, 2);
-                    $this->params = array_map(function($param) {
-                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                    }, $this->params);
+                    $this->params = $this->castNumericParams(array_slice($urlParts, 2));
                 }
                 error_log("Router: Locations route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
                 return;
             }
         }
-        
+
         // Special handling for properties routes (legacy, maps to Locations)
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'properties') {
             $method = strtolower($urlParts[1]);
@@ -516,16 +366,13 @@ class Router {
                 $this->controller = 'Locations';
                 $this->method = $method;
                 if (count($urlParts) > 2) {
-                    $this->params = array_slice($urlParts, 2);
-                    $this->params = array_map(function($param) {
-                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                    }, $this->params);
+                    $this->params = $this->castNumericParams(array_slice($urlParts, 2));
                 }
                 error_log("Router: Properties route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
                 return;
             }
         }
-        
+
         // Special handling for space-bookings routes (hyphenated controller name)
         if (count($urlParts) >= 1 && strtolower($urlParts[0]) === 'space-bookings') {
             $this->controller = 'Space_bookings';
@@ -545,46 +392,39 @@ class Router {
                 $this->method = 'index';
             }
             if (count($urlParts) > 2) {
-                $this->params = array_slice($urlParts, 2);
-                $this->params = array_map(function($param) {
-                    return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                }, $this->params);
+                $this->params = $this->castNumericParams(array_slice($urlParts, 2));
             }
             error_log("Router: Space_bookings route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
             return;
         }
-        
+
         // Check if this looks like a module/controller/method/param pattern
         if (count($urlParts) >= 3) {
             // Common module prefixes that should be stripped (removed 'locations' and 'bookings' since they're handle as top-level or handled specifically)
             $modulePrefixes = ['inventory', 'utilities', 'accounting', 'tax', 'cash'];
             $firstPart = strtolower($urlParts[0]);
-            
+
             // If first part is a known module prefix, treat second part as controller
             if (in_array($firstPart, $modulePrefixes)) {
                 $controllerPart = $urlParts[1];
                 $methodPart = $urlParts[2] ?? 'index';
-                
+
                 // Convert controller name (e.g., items -> Items)
                 $parts = explode('_', $controllerPart);
                 $parts = array_map('ucfirst', $parts);
                 $this->controller = implode('_', $parts);
                 $this->method = $methodPart;
-                
+
                 // Remaining parts are parameters
                 if (count($urlParts) > 3) {
-                    $this->params = array_slice($urlParts, 3);
-                    // Convert numeric parameters to integers
-                    $this->params = array_map(function($param) {
-                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                    }, $this->params);
+                    $this->params = $this->castNumericParams(array_slice($urlParts, 3));
                 }
-                
+
                 error_log("Router: Multi-segment URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
                 return;
             }
         }
-        
+
         // Handle underscore controllers (e.g., tax_compliance -> Tax_compliance)
         // Special handling for booking-wizard routes (MUST be before general parsing)
         if (count($urlParts) >= 1 && strtolower($urlParts[0]) === 'booking-wizard') {
@@ -629,14 +469,14 @@ class Router {
             }
             return;
         }
-        
+
         // Special handling for customer-portal routes (MUST be before general parsing)
         if (count($urlParts) >= 1 && strtolower($urlParts[0]) === 'customer-portal') {
             // Map customer-portal routes to Customer_portal controller
             $this->controller = 'Customer_portal';
             if (isset($urlParts[1]) && !empty($urlParts[1])) {
                 $method = strtolower($urlParts[1]);
-                
+
                 // Map hyphenated methods to camelCase if needed, or handle directly
                 $customerPortalMethods = [
                     'forgot-password' => 'forgotPassword',
@@ -650,10 +490,7 @@ class Router {
 
                 // Handle parameters
                 if (count($urlParts) > 2) {
-                    $this->params = array_slice($urlParts, 2);
-                    $this->params = array_map(function($param) {
-                        return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                    }, $this->params);
+                    $this->params = $this->castNumericParams(array_slice($urlParts, 2));
                 }
             } else {
                 $this->method = 'index';
@@ -675,15 +512,15 @@ class Router {
             }
             return;
         }
-        
+
         // Special handling for settings routes with hyphens
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'settings') {
             $method = strtolower($urlParts[1]);
-            
+
             // Map hyphenated settings routes to camelCase methods
             if ($method === 'payment-gateways') {
                 $this->controller = 'Settings';
-                
+
                 if (count($urlParts) >= 3) {
                     $action = strtolower($urlParts[2]);
                     if ($action === 'edit' && isset($urlParts[3])) {
@@ -700,11 +537,11 @@ class Router {
                     $this->method = 'paymentGateways';
                     $this->params = [];
                 }
-                
+
                 error_log("Router: Settings payment-gateways route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
                 return;
             }
-            
+
             // Handle settings/roles routes
             if ($method === 'roles') {
                 $this->controller = 'Settings';
@@ -713,7 +550,7 @@ class Router {
                 error_log("Router: Settings roles route matched -> Controller: {$this->controller}, Method: {$this->method}");
                 return;
             }
-            
+
             // Handle settings/edit-role/ID routes
             if ($method === 'edit-role' && isset($urlParts[2])) {
                 $this->controller = 'Settings';
@@ -723,22 +560,19 @@ class Router {
                 return;
             }
         }
-        
+
         // Special handling for payment routes
         if (count($urlParts) >= 2 && strtolower($urlParts[0]) === 'payment') {
             $method = strtolower($urlParts[1]);
             $this->controller = 'Payment';
             $this->method = $method;
-            
+
             if (count($urlParts) > 2) {
-                $this->params = array_slice($urlParts, 2);
-                $this->params = array_map(function($param) {
-                    return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-                }, $this->params);
+                $this->params = $this->castNumericParams(array_slice($urlParts, 2));
             } else {
                 $this->params = [];
             }
-            
+
             error_log("Router: Payment route matched -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
             return;
         }
@@ -748,31 +582,76 @@ class Router {
             $parts = array_map('ucfirst', $parts);
             $this->controller = implode('_', $parts);
         }
-        
+
         if (isset($urlParts[1]) && !empty($urlParts[1])) {
             $this->method = $urlParts[1];
         }
-        
+
         if (count($urlParts) > 2) {
-            $this->params = array_slice($urlParts, 2);
-            // Convert numeric parameters to integers for type safety
-            $this->params = array_map(function($param) {
-                return preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
-            }, $this->params);
+            $this->params = $this->castNumericParams(array_slice($urlParts, 2));
         }
-        
+
         // Log fallback parsing result
         error_log("Router: Fallback parsing -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
     }
-    
+
+    /**
+     * Generic dispatcher for "<controller>/<resource>/<action>[/<id>]" style modules
+     * (Receivables, Payables, Cash) that map resource+action pairs to camelCase methods.
+     *
+     * @param array $actionMap '<resource>:<action>' => method name. The id (if any) is read
+     *                         from $urlParts[3], except for "create" actions which take none.
+     * @param array $directMethods Resource segments that are already a full method name
+     *                              (e.g. "editCustomer"), with the id in the next segment.
+     */
+    private function dispatchResourceActionRoute(array $urlParts, string $controller, array $actionMap, array $directMethods, string $defaultMethod): void {
+        $this->controller = $controller;
+
+        if (count($urlParts) >= 3) {
+            $resource = $urlParts[1] ?? '';
+            $action = $urlParts[2] ?? '';
+            $key = $resource . ':' . $action;
+
+            if (isset($actionMap[$key])) {
+                $this->method = $actionMap[$key];
+                $this->params = ($action !== 'create' && count($urlParts) > 3) ? [intval($urlParts[3])] : [];
+            } elseif (in_array($resource, $directMethods, true)) {
+                $this->method = $resource;
+                $this->params = $action ? [intval($action)] : [];
+            } else {
+                // Generic fallback mapping: <controller>/<method>/<param>
+                $this->method = $action ?: ($resource ?: $defaultMethod);
+                $this->params = count($urlParts) > 3 ? array_slice($urlParts, 3) : [];
+            }
+        } elseif (count($urlParts) === 2) {
+            $this->method = $urlParts[1] ?? $defaultMethod;
+            $this->params = [];
+        } else {
+            $this->method = $defaultMethod;
+            $this->params = [];
+        }
+
+        $this->params = $this->castNumericParams($this->params);
+        error_log("Router: {$controller} URL parsed -> Controller: {$this->controller}, Method: {$this->method}, Params: " . json_encode($this->params));
+    }
+
+    /**
+     * Convert numeric-looking string URL segments to integers.
+     */
+    private function castNumericParams(array $params): array {
+        return array_map(function ($param) {
+            return is_string($param) && preg_match('/^[0-9]+$/', $param) ? intval($param) : $param;
+        }, $params);
+    }
+
     public function dispatch() {
         // Log routing information for debugging
         error_log("Router dispatch: Controller={$this->controller}, Method={$this->method}, Params=" . json_encode($this->params));
-        
+
         // Handle underscore controllers (e.g., Tax_compliance)
         $controllerName = $this->controller;
         $controllerFile = BASEPATH . 'controllers/' . $controllerName . '.php';
-        
+
         if (!file_exists($controllerFile)) {
             // Try to find Error404 controller
             $error404File = BASEPATH . 'controllers/Error404.php';
@@ -797,7 +676,7 @@ class Router {
         } else {
             require_once $controllerFile;
         }
-        
+
         // Try exact match first, then case-insensitive match
         if (!class_exists($controllerName)) {
             // Try case-insensitive class lookup
@@ -809,14 +688,14 @@ class Router {
                     break;
                 }
             }
-            
+
             if (!class_exists($controllerName)) {
                 http_response_code(404);
                 error_log("Router ERROR: Controller class '{$controllerName}' not found in file '{$controllerFile}'");
                 die("Controller '{$this->controller}' class not found in file.");
             }
         }
-        
+
         // Global CSRF for state-changing requests (before controller instantiation)
         if (function_exists('enforce_global_csrf')) {
             enforce_global_csrf($controllerName, $this->method);
@@ -830,18 +709,18 @@ class Router {
             error_log("Router ERROR: Failed to instantiate controller '{$controllerName}': " . $e->getMessage());
             die("Error instantiating controller: " . $e->getMessage());
         }
-        
+
         if (!method_exists($controller, $this->method)) {
             http_response_code(404);
             error_log("Router ERROR: Method '{$this->method}' not found in controller '{$controllerName}'. Available methods: " . implode(', ', get_class_methods($controller)));
             die("Method {$this->method} not found in {$controllerName}.");
         }
-        
+
         // Log method call details
         error_log("Router: Calling {$controllerName}::{$this->method}(" . implode(', ', array_map(function($p) {
             return is_scalar($p) ? var_export($p, true) : gettype($p);
         }, $this->params)) . ")");
-        
+
         // Call the controller method with parameters
         try {
             call_user_func_array([$controller, $this->method], $this->params);
@@ -858,4 +737,3 @@ class Router {
         }
     }
 }
-

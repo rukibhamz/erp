@@ -1323,15 +1323,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
         ];
 
         try {
-            $prefix = $this->db->getPrefix();
-            $pending = $this->db->fetchAll(
-                "SELECT * FROM `{$prefix}payment_transactions`
-                 WHERE status = 'pending'
-                   AND payment_type = 'booking_payment'
-                   AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)
-                 ORDER BY id DESC
-                 LIMIT " . max(1, min(500, $limit))
-            );
+            $pending = $this->paymentTransactionModel->getStalePendingBookingPayments($limit);
 
             foreach ($pending as $txn) {
                 $stats['pending_checked']++;
@@ -1350,20 +1342,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                 }
             }
 
-            $unfulfilled = $this->db->fetchAll(
-                "SELECT pt.*
-                 FROM `{$prefix}payment_transactions` pt
-                 INNER JOIN `{$prefix}bookings` b ON b.id = pt.reference_id
-                 LEFT JOIN `{$prefix}booking_payments` bp
-                    ON bp.booking_id = b.id
-                   AND bp.status = 'completed'
-                   AND (bp.reference = pt.transaction_ref OR bp.gateway_transaction_id = pt.transaction_ref)
-                 WHERE pt.status = 'success'
-                   AND pt.payment_type = 'booking_payment'
-                   AND bp.id IS NULL
-                 ORDER BY pt.id DESC
-                 LIMIT " . max(1, min(500, $limit))
-            );
+            $unfulfilled = $this->paymentTransactionModel->getUnfulfilledSuccessfulBookingPayments($limit);
 
             foreach ($unfulfilled as $txn) {
                 try {

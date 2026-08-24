@@ -82,6 +82,20 @@ class Payroll_model extends Base_Model {
         }
     }
     
+    public function markPayslipsPosted($payrollRunId) {
+        try {
+            return $this->db->query(
+                "UPDATE `" . $this->db->getPrefix() . "payslips`
+                 SET status = 'posted'
+                 WHERE payroll_run_id = ?",
+                [$payrollRunId]
+            );
+        } catch (Exception $e) {
+            error_log('Payroll_model markPayslipsPosted error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function getPayslips($payrollRunId) {
         try {
             return $this->db->fetchAll(

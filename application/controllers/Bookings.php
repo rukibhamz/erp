@@ -921,10 +921,25 @@ class Bookings extends Base_Controller {
 
             $count = 0;
             foreach ($bookings as $booking) {
-                // Send email logic here (placeholder)
-                // $this->emailService->sendPaymentReminder($booking);
-                
-                // Mark as sent
+                if (empty($booking['customer_email'])) {
+                    error_log('Bookings reminder skipped (no email) for booking #' . $booking['id']);
+                    continue;
+                }
+
+                $sent = send_booking_payment_reminder_email(
+                    $booking['customer_email'],
+                    $booking['booking_number'],
+                    $booking['customer_name'] ?? '',
+                    $booking['balance_amount'] ?? $booking['total_amount'] ?? 0,
+                    $booking['payment_deadline']
+                );
+
+                if (!$sent) {
+                    error_log('Bookings reminder email failed to send for booking #' . $booking['id']);
+                    continue;
+                }
+
+                // Mark as sent only after the email actually goes out
                 $this->bookingModel->update($booking['id'], ['is_reminder_sent' => 1]);
                 $count++;
             }

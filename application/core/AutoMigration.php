@@ -7,9 +7,37 @@
  */
 
 class AutoMigration {
+    /**
+     * Marker recorded in the migrations table once every "ALWAYS" check below
+     * has run successfully. Requests short-circuit past the whole battery of
+     * checks as long as this marker is present, instead of re-running ~40
+     * SHOW TABLES/SHOW COLUMNS checks on every single page load.
+     *
+     * Bump this (e.g. _v2, _v3, ...) whenever an ALWAYS-check method is added
+     * or changed, so the next request re-runs the full battery once and then
+     * records the new marker.
+     */
+    private const VERSION_MARKER = '__automigration_version_1';
+
     private static $executed = false;
     private $pdo;
     private $prefix;
+
+    /** Connection details, kept only to lazily open the dedicated gate connection below. */
+    private $dsn;
+    private $dbUsername;
+    private $dbPassword;
+
+    /**
+     * Separate PDO connection used only by isCurrentVersionApplied()/
+     * acquireMigrationLock()/markVersionApplied()/releaseMigrationLock().
+     * Kept entirely independent of $this->pdo (used by the large migration
+     * battery below) so nothing about the gating logic's query pattern can
+     * ever interact with the battery's — GET_LOCK()'s lock is also tied to
+     * the connection that acquired it, so this needs to stay open for the
+     * lifetime of the request rather than being opened and closed per call.
+     */
+    private $gatePdo;
     
     public function __construct() {
         // Prevent multiple executions in same request
@@ -46,7 +74,11 @@ class AutoMigration {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ];
-            
+
+            $this->dsn = $dsn;
+            $this->dbUsername = $username;
+            $this->dbPassword = $password;
+
             $this->pdo = new PDO($dsn, $username, $password, $options);
             $this->runPendingMigrations();
             self::$executed = true;
@@ -58,9 +90,148 @@ class AutoMigration {
     }
     
     /**
-     * Run pending migrations automatically
+     * Run pending migrations automatically — but only do the actual work
+     * (and only touch the database with more than one cheap SELECT) when
+     * the current version marker isn't already recorded, and only ever run
+     * the mutating checks under an advisory lock so two concurrent requests
+     * can't race each other's ALTER TABLE / backfill statements.
      */
     private function runPendingMigrations() {
+        if ($this->isCurrentVersionApplied()) {
+            return;
+        }
+
+        if (!$this->acquireMigrationLock()) {
+            // Another request is already running (or just finished) the same
+            // checks — skip this request rather than race it. The next
+            // request will see the version marker (or retry the lock).
+            //
+            // No re-check of isCurrentVersionApplied() after acquiring the
+            // lock: acquireMigrationLock() is non-blocking (GET_LOCK(...,0)),
+            // so there's no wait during which another request could have
+            // finished in the meantime. In the vanishingly rare case where
+            // one did, every check below is independently idempotent, so a
+            // redundant run is harmless rather than incorrect.
+            return;
+        }
+
+        try {
+            $this->runPendingMigrationsInner();
+            $this->markVersionApplied();
+        } finally {
+            $this->releaseMigrationLock();
+        }
+    }
+
+    /**
+     * Lazily open the dedicated gate connection (see $gatePdo docblock above).
+     */
+    private function gatePdo(): PDO {
+        if (!$this->gatePdo) {
+            $this->gatePdo = new PDO($this->dsn, $this->dbUsername, $this->dbPassword, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ]);
+        }
+        return $this->gatePdo;
+    }
+
+    /**
+     * Cheap check: is the current code's version marker already recorded?
+     * A single indexed SELECT — no CREATE TABLE, no full migrations list.
+     */
+    private function isCurrentVersionApplied(): bool {
+        try {
+            $marker = $this->gatePdo()->quote(self::VERSION_MARKER);
+            $stmt = $this->gatePdo()->query(
+                "SELECT 1 FROM `{$this->prefix}migrations` WHERE migration = {$marker} LIMIT 1"
+            );
+            return $stmt && count($stmt->fetchAll()) > 0;
+        } catch (\Throwable $e) {
+            // Table likely doesn't exist yet (fresh install) — fall through
+            // to the full check, which creates it.
+            return false;
+        }
+    }
+
+    /**
+     * Record that the full battery of checks has run successfully, so later
+     * requests can skip straight past it until VERSION_MARKER is bumped.
+     */
+    private function markVersionApplied(): void {
+        try {
+            $marker = $this->gatePdo()->quote(self::VERSION_MARKER);
+            $this->gatePdo()->exec(
+                "INSERT IGNORE INTO `{$this->prefix}migrations` (migration) VALUES ({$marker})"
+            );
+        } catch (\Throwable $e) {
+            error_log('AutoMigration: Could not record version marker: ' . $e->getMessage());
+        }
+    }
+
+    /** Sentinel row in the migrations table used as a lock marker (see acquireMigrationLock). */
+    private const LOCK_MARKER = '__automigration_lock';
+
+    /**
+     * Non-blocking lock so concurrent requests can't run overlapping schema
+     * changes: an INSERT guarded by the table's UNIQUE KEY on `migration`,
+     * released with a DELETE. (MySQL's GET_LOCK()/RELEASE_LOCK() would be the
+     * textbook choice here, but empirically triggered PDO_MYSQL "unbuffered
+     * queries" failures against this app's connection in practice — a plain
+     * row lock avoids that class of problem entirely.) Stale rows older than
+     * 5 minutes are reclaimed so a crashed request can't jam this forever.
+     */
+    private function acquireMigrationLock(): bool {
+        try {
+            $conn = $this->gatePdo();
+            $marker = $conn->quote(self::LOCK_MARKER);
+
+            // The migrations table may not exist yet on a brand-new install —
+            // ensureMigrationsTable() only runs after the lock is acquired,
+            // so create it here too (idempotent) rather than deadlock on it.
+            $conn->exec("CREATE TABLE IF NOT EXISTS `{$this->prefix}migrations` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `migration` VARCHAR(255) NOT NULL,
+                `batch` INT(11) NOT NULL DEFAULT 1,
+                `executed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `unique_migration` (`migration`),
+                KEY `idx_batch` (`batch`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            // Reclaim a lock left behind by a request that crashed mid-migration.
+            $conn->exec(
+                "DELETE FROM `{$this->prefix}migrations`
+                 WHERE migration = {$marker} AND executed_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE)"
+            );
+
+            $conn->exec("INSERT INTO `{$this->prefix}migrations` (migration) VALUES ({$marker})");
+            return true;
+        } catch (\Throwable $e) {
+            // Duplicate-key error — another request already holds the lock.
+            return false;
+        }
+    }
+
+    private function releaseMigrationLock(): void {
+        try {
+            if (!$this->gatePdo) {
+                return;
+            }
+            $marker = $this->gatePdo()->quote(self::LOCK_MARKER);
+            $this->gatePdo()->exec("DELETE FROM `{$this->prefix}migrations` WHERE migration = {$marker}");
+        } catch (\Throwable $e) {
+            // Nothing useful to do — the stale-reclaim above will clean it up later.
+        }
+    }
+
+    /**
+     * The original per-request migration battery: numbered migrations plus
+     * ~40 idempotent "ALWAYS" checks. Only reached when the version marker
+     * is missing and the migration lock was acquired (see runPendingMigrations).
+     */
+    private function runPendingMigrationsInner() {
         // Check if migrations table exists, if not create it
         $this->ensureMigrationsTable();
         
@@ -3602,7 +3773,12 @@ class AutoMigration {
                  WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1"
             );
             $stmt->execute([$this->prefix . $table, $column]);
-            return (bool) $stmt->fetchColumn();
+            $exists = (bool) $stmt->fetchColumn();
+            // This is called back-to-back up to 7 times per request (see callers
+            // above) — without closeCursor(), the unbuffered result from one
+            // call can leave the connection unable to serve the next query.
+            $stmt->closeCursor();
+            return $exists;
         } catch (Exception $e) {
             return false;
         }

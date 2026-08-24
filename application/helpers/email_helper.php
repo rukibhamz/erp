@@ -381,6 +381,83 @@ if (!function_exists('send_password_reset_email')) {
 }
 
 /**
+ * Send a payment deadline reminder for a part-paid booking
+ * SECURITY: Recipient/from addresses are validated by send_email()/send_email_php()
+ *
+ * @param string $email Customer email address
+ * @param string $bookingNumber Booking reference number
+ * @param string $customerName Customer's name (optional)
+ * @param float $balanceAmount Outstanding balance
+ * @param string $deadline Payment deadline (Y-m-d)
+ * @return bool True if email sent successfully
+ */
+if (!function_exists('send_booking_payment_reminder_email')) {
+    function send_booking_payment_reminder_email($email, $bookingNumber, $customerName, $balanceAmount, $deadline) {
+        try {
+            $deadlineFormatted = date('M d, Y', strtotime($deadline));
+            $balanceFormatted = number_format((float) $balanceAmount, 2);
+            $bookingLink = base_url('customer-portal/bookings');
+
+            $subject = 'Payment Reminder - Booking ' . $bookingNumber;
+
+            $message = "
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #ffc107; color: #333; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        .booking-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h2>Payment Reminder</h2>
+        </div>
+        <div class='content'>
+            <p>Hello" . ($customerName ? " {$customerName}" : "") . ",</p>
+            <p>This is a reminder that a payment is due soon for your booking.</p>
+            <div class='booking-box'>
+                <strong>Booking Reference:</strong> {$bookingNumber}<br>
+                <strong>Amount Due:</strong> {$balanceFormatted}<br>
+                <strong>Due Date:</strong> {$deadlineFormatted}
+            </div>
+            <p style='text-align: center;'>
+                <a href='{$bookingLink}' class='button'>View My Booking</a>
+            </p>
+            <p>Please make payment by the due date to avoid disruption to your booking.</p>
+        </div>
+        <div class='footer'>
+            <p>This is an automated email. Please do not reply to this message.</p>
+            <p>&copy; " . date('Y') . " Business ERP System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+            $result = send_email($email, $subject, $message);
+
+            if ($result) {
+                error_log("Booking payment reminder email sent successfully to: {$email}");
+            } else {
+                error_log("Failed to send booking payment reminder email to: {$email}");
+            }
+
+            return $result;
+        } catch (Exception $e) {
+            error_log("Booking payment reminder email error: " . $e->getMessage());
+            return false;
+        }
+    }
+}
+
+/**
  * Send welcome email to guest user after booking
  * SECURITY: Sends a welcome email with account activation link
  * 

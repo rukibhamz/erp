@@ -59,6 +59,55 @@ class Payment_transaction_model extends Base_Model {
     }
     
     /**
+     * Booking-payment transactions still marked "pending" after the gateway
+     * should have redirected the customer back (i.e. likely abandoned or
+     * needing a status re-check against the gateway).
+     */
+    public function getStalePendingBookingPayments(int $limit): array {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "`
+                 WHERE status = 'pending'
+                   AND payment_type = 'booking_payment'
+                   AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                 ORDER BY id DESC
+                 LIMIT " . max(1, min(500, $limit))
+            );
+        } catch (Exception $e) {
+            error_log('Payment_transaction_model getStalePendingBookingPayments error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Booking-payment transactions the gateway confirmed as successful but
+     * that never got a matching completed booking_payments row — i.e. the
+     * post-payment fulfillment step didn't run or failed.
+     */
+    public function getUnfulfilledSuccessfulBookingPayments(int $limit): array {
+        try {
+            $prefix = $this->db->getPrefix();
+            return $this->db->fetchAll(
+                "SELECT pt.*
+                 FROM `{$prefix}payment_transactions` pt
+                 INNER JOIN `{$prefix}bookings` b ON b.id = pt.reference_id
+                 LEFT JOIN `{$prefix}booking_payments` bp
+                    ON bp.booking_id = b.id
+                   AND bp.status = 'completed'
+                   AND (bp.reference = pt.transaction_ref OR bp.gateway_transaction_id = pt.transaction_ref)
+                 WHERE pt.status = 'success'
+                   AND pt.payment_type = 'booking_payment'
+                   AND bp.id IS NULL
+                 ORDER BY pt.id DESC
+                 LIMIT " . max(1, min(500, $limit))
+            );
+        } catch (Exception $e) {
+            error_log('Payment_transaction_model getUnfulfilledSuccessfulBookingPayments error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Generate a cryptographically secure transaction reference
      * SECURITY: Uses random_bytes() instead of MD5 for secure random generation
      * 
