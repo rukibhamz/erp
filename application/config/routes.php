@@ -451,6 +451,7 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['spaces/create/(:num)'] = 'Spaces/create/$1';
         $route['spaces/view/(:num)'] = 'Spaces/view/$1';
         $route['spaces/edit/(:num)'] = 'Spaces/edit/$1';
+        $route['spaces/delete_photo/(:num)'] = 'Spaces/delete_photo/$1';
         $route['spaces/sync/(:num)'] = 'Spaces/syncToBooking/$1';
         $route['spaces/syncToBooking/(:num)'] = 'Spaces/syncToBooking/$1';
         $route['tenants'] = 'Tenants/index';

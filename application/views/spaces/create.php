@@ -156,7 +156,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="col-md-6">
                     <label class="form-label">Options</label>
                     <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="is_bookable" name="is_bookable" value="1" onchange="toggleBookableConfig()">
+                        <input class="form-check-input" type="checkbox" id="is_bookable" name="is_bookable" value="1">
                         <label class="form-check-label" for="is_bookable">
                             Make this space bookable (sync with Booking Module)
                         </label>
@@ -398,10 +398,21 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <script nonce="<?= csp_nonce() ?>">
-function toggleBookableConfig() {
-    const checkbox = document.getElementById('is_bookable');
+(function () {
+    const bookableCheckbox = document.getElementById('is_bookable');
     const configDiv = document.getElementById('bookableConfig');
-    configDiv.style.display = checkbox.checked ? 'block' : 'none';
-}
+
+    function toggleBookableConfig() {
+        if (!bookableCheckbox || !configDiv) {
+            return;
+        }
+        configDiv.style.display = bookableCheckbox.checked ? 'block' : 'none';
+    }
+
+    if (bookableCheckbox) {
+        bookableCheckbox.addEventListener('change', toggleBookableConfig);
+        toggleBookableConfig();
+    }
+})();
 </script>
 

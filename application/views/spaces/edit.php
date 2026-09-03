@@ -155,7 +155,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="col-md-6">
                     <label class="form-label">Options</label>
                     <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="is_bookable" name="is_bookable" value="1" <?= $space['is_bookable'] ? 'checked' : '' ?> onchange="toggleBookableConfig()">
+                        <input class="form-check-input" type="checkbox" id="is_bookable" name="is_bookable" value="1" <?= $space['is_bookable'] ? 'checked' : '' ?>>
                         <label class="form-check-label" for="is_bookable">
                             Make this space bookable (sync with Booking Module)
                         </label>
@@ -195,13 +195,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 <div class="col-6 col-md-3 col-lg-2">
                                     <div class="card h-100 shadow-sm border-0">
                                         <div class="position-absolute top-0 end-0 p-1">
-                                            <form method="post" action="<?= base_url('spaces/delete_photo/' . $photo['id']) ?>" class="d-inline"
-                                                  onsubmit="return confirm('Delete this photo?')">
-                                                <?= csrf_field() ?>
-                                                <button type="submit" class="btn btn-sm btn-danger rounded-circle">
-                                                    <i class="bi bi-x"></i>
-                                                </button>
-                                            </form>
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-danger rounded-circle js-delete-photo"
+                                                    formaction="<?= base_url('spaces/delete_photo/' . $photo['id']) ?>"
+                                                    formmethod="post"
+                                                    title="Delete photo">
+                                                <i class="bi bi-x"></i>
+                                            </button>
                                         </div>
                                         <img src="<?= base_url($photo['photo_url']) ?>" class="card-img-top rounded" style="height: 120px; object-fit: cover;">
                                         <?php if ($photo['is_primary']): ?>
@@ -447,10 +447,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 </div>
 
 <script nonce="<?= csp_nonce() ?>">
-function toggleBookableConfig() {
-    const checkbox = document.getElementById('is_bookable');
+(function () {
+    const bookableCheckbox = document.getElementById('is_bookable');
     const configDiv = document.getElementById('bookableConfig');
-    configDiv.style.display = checkbox.checked ? 'block' : 'none';
-}
+
+    function toggleBookableConfig() {
+        if (!bookableCheckbox || !configDiv) {
+            return;
+        }
+        configDiv.style.display = bookableCheckbox.checked ? 'block' : 'none';
+    }
+
+    if (bookableCheckbox) {
+        bookableCheckbox.addEventListener('change', toggleBookableConfig);
+        toggleBookableConfig();
+    }
+
+    document.querySelectorAll('.js-delete-photo').forEach(function (btn) {
+        btn.addEventListener('click', function (event) {
+            if (!confirm('Delete this photo?')) {
+                event.preventDefault();
+            }
+        });
+    });
+})();
 </script>
 

@@ -174,8 +174,22 @@ class Spaces extends Base_Controller {
             if (!empty($_POST['amenities']) && is_array($_POST['amenities'])) {
                 $amenities = $_POST['amenities'];
             }
+
+            $wasBookable = false;
+            $currentSpace = null;
+            try {
+                $currentSpace = $this->spaceModel->getById($id);
+                $wasBookable = !empty($currentSpace['is_bookable']);
+            } catch (Exception $e) {
+                // Ignore
+            }
+
+            $propertyId = !empty($_POST['property_id'])
+                ? intval($_POST['property_id'])
+                : intval($currentSpace['property_id'] ?? 0);
             
             $data = [
+                'property_id' => $propertyId ?: null,
                 'space_number' => sanitize_input($_POST['space_number'] ?? ''),
                 'space_name' => sanitize_input($_POST['space_name'] ?? ''),
                 'category' => sanitize_input($_POST['category'] ?? 'other'),
@@ -197,37 +211,34 @@ class Spaces extends Base_Controller {
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
-            $wasBookable = false;
+            $updated = false;
             try {
-                $currentSpace = $this->spaceModel->getById($id);
-                $wasBookable = !empty($currentSpace['is_bookable']);
+                $this->spaceModel->update($id, $data);
+                $updated = true;
             } catch (Exception $e) {
-                // Ignore
+                error_log('Spaces edit update error: ' . $e->getMessage());
+                $this->setFlashMessage('danger', 'Failed to update space: ' . $e->getMessage());
             }
-            
-            if ($this->spaceModel->update($id, $data)) {
+
+            if ($updated) {
                 // Handle photo uploads
                 $this->uploadPhotos($id);
 
-                // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
-                // Check if rates/config fields were submitted (even if is_bookable checkbox wasn't checked)
                 $hasRateUpdates = isset($_POST['hourly_rate']) || isset($_POST['daily_rate']) || 
                                   isset($_POST['half_day_rate']) || isset($_POST['weekly_rate']) ||
-                                  isset($_POST['minimum_duration']) || isset($_POST['maximum_duration']);
+                                  isset($_POST['minimum_duration']) || isset($_POST['maximum_duration']) ||
+                                  isset($_POST['pp_picnic_base']) || isset($_POST['pp_photo_base']) ||
+                                  isset($_POST['pp_video_base']) || isset($_POST['ws_daily']) ||
+                                  isset($_POST['booking_types']) || isset($_POST['operating_start']);
                 
                 // Get current space state after update
                 $currentSpace = $this->spaceModel->getById($id);
                 $isCurrentlyBookable = !empty($currentSpace['is_bookable']);
                 $hasBookableConfig = !empty($this->spaceModel->getBookableConfig($id));
                 
-                // Update bookable config if checkbox is checked OR if rates were updated
-                error_log("Spaces Edit: POST is_bookable=" . ($_POST['is_bookable']??'null') . ", hasRateUpdates=" . ($hasRateUpdates?'yes':'no') . ", hasConfig=" . ($hasBookableConfig?'yes':'no'));
-                
-                if (!empty($_POST['is_bookable']) || $hasRateUpdates) {
-                    error_log("Spaces Edit: Calling updateBookableConfig");
+                // Update bookable config whenever bookable settings are present
+                if (!empty($_POST['is_bookable']) || $hasRateUpdates || $hasBookableConfig) {
                     $this->updateBookableConfig($id, $_POST);
-                } else {
-                    error_log("Spaces Edit: NOT calling updateBookableConfig");
                 }
                 
                 // Always sync when prices are submitted or space is bookable
@@ -258,8 +269,6 @@ class Spaces extends Base_Controller {
                 $this->activityModel->log($this->session['user_id'], 'update', 'Spaces', 'Updated space: ' . $data['space_name']);
                 $this->setFlashMessage('success', 'Space updated successfully.');
                 redirect('spaces/view/' . $id);
-            } else {
-                $this->setFlashMessage('danger', 'Failed to update space.');
             }
         }
         
