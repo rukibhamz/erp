@@ -457,34 +457,36 @@ class Spaces extends Base_Controller {
             error_log('Spaces updateBookableConfig: Found existing config ID ' . $config['id']);
             
             $bookingTypes = [];
-            if (!empty($postData['booking_types']) && is_array($postData['booking_types'])) {
+            if (isset($postData['booking_types']) && is_array($postData['booking_types'])) {
                 $bookingTypes = $postData['booking_types'];
+            } else {
+                // Preserve existing booking types when checkboxes weren't posted
+                $bookingTypes = json_decode($config['booking_types'] ?? '[]', true) ?: [];
             }
             
             // Get existing pricing rules to preserve values not being updated
             $existingPricingRules = json_decode($config['pricing_rules'] ?? '{}', true) ?: [];
-            
-            // Start with existing rules and only update fields that are provided and not empty
             $pricingRules = $existingPricingRules;
-            
-            if (isset($postData['hourly_rate']) && $postData['hourly_rate'] !== '' && $postData['hourly_rate'] !== null) {
-                $pricingRules['base_hourly'] = floatval($postData['hourly_rate']);
-            }
-            if (isset($postData['daily_rate']) && $postData['daily_rate'] !== '' && $postData['daily_rate'] !== null) {
-                $pricingRules['base_daily'] = floatval($postData['daily_rate']);
-            }
-            if (isset($postData['half_day_rate']) && $postData['half_day_rate'] !== '' && $postData['half_day_rate'] !== null) {
-                $pricingRules['half_day'] = floatval($postData['half_day_rate']);
-            }
-            if (isset($postData['weekly_rate']) && $postData['weekly_rate'] !== '' && $postData['weekly_rate'] !== null) {
-                $pricingRules['weekly'] = floatval($postData['weekly_rate']);
-            }
-            if (isset($postData['security_deposit']) && $postData['security_deposit'] !== '' && $postData['security_deposit'] !== null) {
-                $pricingRules['deposit'] = floatval($postData['security_deposit']);
-            }
-            
-            // Per Person & Workspace rates for Update
-            if (isset($postData['pp_picnic_base'])) {
+
+            $applyRate = function ($postKey, $ruleKey) use ($postData, &$pricingRules) {
+                if (!array_key_exists($postKey, $postData)) {
+                    return;
+                }
+                $raw = $postData[$postKey];
+                if ($raw === '' || $raw === null) {
+                    return;
+                }
+                $pricingRules[$ruleKey] = floatval($raw);
+            };
+
+            $applyRate('hourly_rate', 'base_hourly');
+            $applyRate('daily_rate', 'base_daily');
+            $applyRate('half_day_rate', 'half_day');
+            $applyRate('weekly_rate', 'weekly');
+            $applyRate('security_deposit', 'deposit');
+
+            // Specialized rates: only overwrite when a base value was actually entered
+            if (isset($postData['pp_picnic_base']) && $postData['pp_picnic_base'] !== '' && $postData['pp_picnic_base'] !== null) {
                 $pricingRules['per_person_rates']['picnic'] = [
                     'base_per_person' => floatval($postData['pp_picnic_base']),
                     'equipment_tiers' => [
@@ -494,7 +496,7 @@ class Spaces extends Base_Controller {
                     ]
                 ];
             }
-            if (isset($postData['pp_photo_base'])) {
+            if (isset($postData['pp_photo_base']) && $postData['pp_photo_base'] !== '' && $postData['pp_photo_base'] !== null) {
                 $pricingRules['per_person_rates']['photoshoot'] = [
                     'base_per_person' => floatval($postData['pp_photo_base']),
                     'equipment_tiers' => [
@@ -504,7 +506,7 @@ class Spaces extends Base_Controller {
                     ]
                 ];
             }
-            if (isset($postData['pp_video_base'])) {
+            if (isset($postData['pp_video_base']) && $postData['pp_video_base'] !== '' && $postData['pp_video_base'] !== null) {
                 $pricingRules['per_person_rates']['videoshoot'] = [
                     'base_per_person' => floatval($postData['pp_video_base']),
                     'equipment_tiers' => [
@@ -514,7 +516,7 @@ class Spaces extends Base_Controller {
                     ]
                 ];
             }
-            if (isset($postData['ws_daily'])) {
+            if (isset($postData['ws_daily']) && $postData['ws_daily'] !== '' && $postData['ws_daily'] !== null) {
                 $pricingRules['workspace_rates'] = [
                     'per_person_daily' => floatval($postData['ws_daily'] ?? 0),
                     'per_person_weekly' => floatval($postData['ws_weekly'] ?? 0),
@@ -572,17 +574,18 @@ class Spaces extends Base_Controller {
             
             error_log('Spaces updateBookableConfig: Update data = ' . json_encode($updateData));
             
-            $updateResult = $this->bookableConfigModel->update($config['id'], $updateData);
+            try {
+                $this->bookableConfigModel->update($config['id'], $updateData);
+            } catch (Exception $e) {
+                error_log('Spaces updateBookableConfig DB update error: ' . $e->getMessage());
+                throw $e;
+            }
             
-            error_log('Spaces updateBookableConfig: Update result = ' . var_export($updateResult, true));
-            
-            // Sync to booking module - ALWAYS sync when config is updated
+            // Sync to booking module with the freshly saved prices
             $syncResult = $this->spaceModel->syncToBookingModule($spaceId);
             
-            error_log('Spaces updateBookableConfig: Sync result = ' . var_export($syncResult, true));
-            
             if (!$syncResult) {
-                error_log('Spaces updateBookableConfig: WARNING - Sync failed for space ' . $spaceId);
+                error_log('Spaces updateBookableConfig: WARNING - Sync failed for space ' . $spaceId . ': ' . ($this->spaceModel->getLastSyncError() ?? 'unknown'));
             }
             
             return true;
