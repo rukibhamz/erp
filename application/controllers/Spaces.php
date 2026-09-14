@@ -93,6 +93,12 @@ class Spaces extends Base_Controller {
                 'notes' => sanitize_input($_POST['notes'] ?? ''),
                 'created_at' => date('Y-m-d H:i:s')
             ];
+
+            if ($data['operational_mode'] === 'available_for_booking') {
+                $data['is_bookable'] = 1;
+            } elseif ($data['is_bookable'] && $data['operational_mode'] === 'vacant') {
+                $data['operational_mode'] = 'available_for_booking';
+            }
             
             // Auto-generate space number if empty (leave blank to auto-generate)
             if (is_empty_or_whitespace($data['space_number'])) {
@@ -106,7 +112,7 @@ class Spaces extends Base_Controller {
                 $this->uploadPhotos($spaceId);
 
                 // If marked as bookable, create bookable config and sync to booking module
-                if (!empty($_POST['is_bookable'])) {
+                if (!empty($data['is_bookable'])) {
                     $this->createBookableConfig($spaceId, $_POST);
                     // Auto-sync to booking module
                     try {
@@ -210,6 +216,12 @@ class Spaces extends Base_Controller {
                 'notes' => sanitize_input($_POST['notes'] ?? ''),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
+
+            if ($data['operational_mode'] === 'available_for_booking') {
+                $data['is_bookable'] = 1;
+            } elseif ($data['is_bookable'] && $data['operational_mode'] === 'vacant') {
+                $data['operational_mode'] = 'available_for_booking';
+            }
             
             $updated = false;
             try {

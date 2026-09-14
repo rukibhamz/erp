@@ -145,8 +145,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="col-md-6">
                     <label for="operational_mode" class="form-label">Operational Mode</label>
                     <select class="form-select" id="operational_mode" name="operational_mode">
+                        <option value="available_for_booking" selected>Available for Booking</option>
                         <option value="vacant">Vacant</option>
-                        <option value="available_for_booking">Available for Booking</option>
                         <option value="leased">Leased</option>
                         <option value="owner_operated">Owner Operated</option>
                         <option value="reserved">Reserved</option>
@@ -156,7 +156,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <div class="col-md-6">
                     <label class="form-label">Options</label>
                     <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="is_bookable" name="is_bookable" value="1">
+                        <input class="form-check-input" type="checkbox" id="is_bookable" name="is_bookable" value="1" checked>
                         <label class="form-check-label" for="is_bookable">
                             Make this space bookable (sync with Booking Module)
                         </label>

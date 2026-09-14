@@ -27,7 +27,7 @@ class Location_model extends Base_Model {
         try {
             $locations = $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                 WHERE status = 'operational' 
+                 WHERE status IN ('operational', 'active') 
                  ORDER BY property_name"
             );
             // Map fields for views
@@ -115,7 +115,7 @@ class Location_model extends Base_Model {
             $locations = $this->db->fetchAll(
                 "SELECT DISTINCT p.* FROM `" . $this->db->getPrefix() . $this->table . "` p
                  INNER JOIN `" . $this->db->getPrefix() . "spaces` s ON s.property_id = p.id
-                 WHERE p.status = 'operational' AND s.is_bookable = 1
+                 WHERE p.status IN ('operational', 'active') AND s.is_bookable = 1
                  ORDER BY p.property_name"
             );
 
@@ -123,7 +123,7 @@ class Location_model extends Base_Model {
             if (empty($locations)) {
                 $locations = $this->db->fetchAll(
                     "SELECT * FROM `" . $this->db->getPrefix() . $this->table . "` 
-                     WHERE status = 'operational'
+                     WHERE status IN ('operational', 'active')
                      ORDER BY property_name"
                 );
             }

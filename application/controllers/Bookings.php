@@ -435,7 +435,7 @@ class Bookings extends Base_Controller {
 
             // Get space and its facility_id
             $space = $this->spaceModel->getWithProperty($spaceId);
-            if (!$space || !$space['is_bookable']) {
+            if (!$space || !$this->spaceModel->isPubliclyBookable($space)) {
                 $this->setFlashMessage('danger', 'Selected space is not available for booking.');
                 redirect('bookings/create');
             }

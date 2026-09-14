@@ -51,21 +51,30 @@ class Space_model extends Base_Model {
     
     public function getBookableSpaces($propertyId = null) {
         try {
-            // Check if is_bookable column exists first to avoid fatal errors during migration
-            $checkColumn = $this->db->fetchOne("SHOW COLUMNS FROM `" . $this->db->getPrefix() . $this->table . "` LIKE 'is_bookable'");
-            
-            if (!$checkColumn) {
+            if (!$this->hasColumn($this->table, 'is_bookable')) {
                 error_log("Space_model: is_bookable column missing in " . $this->table);
                 return [];
             }
 
+            $prefix = $this->db->getPrefix();
             $hasFeaturedColumn = $this->hasColumn($this->table, 'is_featured');
             $featuredOrderSql = $hasFeaturedColumn ? ", s.is_featured DESC" : "";
+            $hasOperationalMode = $this->hasColumn($this->table, 'operational_mode');
+            $hasFacilityId = $this->hasColumn($this->table, 'facility_id');
+
+            $bookableWhere = "s.is_bookable = 1";
+            if ($hasOperationalMode) {
+                $bookableWhere .= " OR s.operational_mode = 'available_for_booking'";
+            }
+            if ($hasFacilityId) {
+                $bookableWhere .= " OR s.facility_id IS NOT NULL";
+            }
+            $bookableWhere .= " OR EXISTS (SELECT 1 FROM `{$prefix}bookable_config` bc WHERE bc.space_id = s.id)";
 
             $sql = "SELECT s.*, p.property_name, p.property_code 
-                    FROM `" . $this->db->getPrefix() . $this->table . "` s
-                    JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
-                    WHERE s.is_bookable = 1
+                    FROM `{$prefix}{$this->table}` s
+                    JOIN `{$prefix}properties` p ON s.property_id = p.id
+                    WHERE ({$bookableWhere})
                     AND s.operational_status NOT IN ('decommissioned','temporarily_closed')";
             $params = [];
             
@@ -76,13 +85,29 @@ class Space_model extends Base_Model {
             
             $sql .= " ORDER BY p.property_name" . $featuredOrderSql . ", s.space_name";
             
-            $spaces = $this->db->fetchAll($sql, $params);
+            try {
+                $spaces = $this->db->fetchAll($sql, $params);
+            } catch (Exception $queryError) {
+                error_log('Space_model getBookableSpaces expanded query error: ' . $queryError->getMessage());
+                $sql = "SELECT s.*, p.property_name, p.property_code 
+                        FROM `{$prefix}{$this->table}` s
+                        JOIN `{$prefix}properties` p ON s.property_id = p.id
+                        WHERE s.is_bookable = 1
+                        AND s.operational_status NOT IN ('decommissioned','temporarily_closed')";
+                $params = [];
+                if ($propertyId) {
+                    $sql .= " AND s.property_id = ?";
+                    $params[] = $propertyId;
+                }
+                $sql .= " ORDER BY p.property_name" . $featuredOrderSql . ", s.space_name";
+                $spaces = $this->db->fetchAll($sql, $params);
+            }
 
             // Fallback: if no bookable spaces found for this location, return all non-decommissioned spaces
             if (empty($spaces) && $propertyId) {
                 $sql = "SELECT s.*, p.property_name, p.property_code 
-                        FROM `" . $this->db->getPrefix() . $this->table . "` s
-                        JOIN `" . $this->db->getPrefix() . "properties` p ON s.property_id = p.id
+                        FROM `{$prefix}{$this->table}` s
+                        JOIN `{$prefix}properties` p ON s.property_id = p.id
                         WHERE s.property_id = ?
                         AND s.operational_status NOT IN ('decommissioned')
                         ORDER BY " . ($hasFeaturedColumn ? "s.is_featured DESC, " : "") . "s.space_name";
@@ -94,6 +119,26 @@ class Space_model extends Base_Model {
             error_log('Space_model getBookableSpaces error: ' . $e->getMessage());
             return [];
         }
+    }
+
+    public function isPubliclyBookable($space) {
+        if (empty($space) || !is_array($space)) {
+            return false;
+        }
+        $status = $space['operational_status'] ?? '';
+        if (in_array($status, ['decommissioned', 'temporarily_closed'], true)) {
+            return false;
+        }
+        if (!empty($space['is_bookable']) && intval($space['is_bookable']) === 1) {
+            return true;
+        }
+        if (($space['operational_mode'] ?? '') === 'available_for_booking') {
+            return true;
+        }
+        if (!empty($space['facility_id'])) {
+            return true;
+        }
+        return false;
     }
 
     private function hasColumn($table, $column) {

@@ -31,6 +31,7 @@ class Database {
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
             ];
             
             $this->connection = new PDO($dsn, $this->config['username'], $this->config['password'], $options);
@@ -102,11 +103,16 @@ class Database {
     }
     
     public function fetchAll($sql, $params = []) {
-        return $this->query($sql, $params)->fetchAll();
+        $stmt = $this->query($sql, $params);
+        $rows = $stmt->fetchAll();
+        $stmt->closeCursor();
+        return $rows;
     }
     
     public function fetchOne($sql, $params = []) {
-        $result = $this->query($sql, $params)->fetch();
+        $stmt = $this->query($sql, $params);
+        $result = $stmt->fetch();
+        $stmt->closeCursor();
         return $result ?: false;
     }
     

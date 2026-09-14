@@ -114,41 +114,47 @@ class Booking_wizard extends Base_Controller {
             // Get spaces grouped by location
             $spacesByLocation = [];
             foreach ($locations as $location) {
-                $spaces = $this->spaceModel->getBookableSpaces($location['id']);
+                try {
+                    $spaces = $this->spaceModel->getBookableSpaces($location['id']);
+                } catch (Exception $e) {
+                    error_log('Booking_wizard step1 getBookableSpaces error: ' . $e->getMessage());
+                    continue;
+                }
                 if (!empty($spaces)) {
                     // Get booking types and pricing for each space
                     foreach ($spaces as &$space) {
-                        $config = $this->spaceModel->getBookableConfig($space['id']);
-                        if ($config && !empty($config['booking_types'])) {
-                            $space['booking_types'] = json_decode($config['booking_types'], true) ?: ['hourly', 'daily'];
-                        } else {
-                            $space['booking_types'] = ['hourly', 'daily']; // Default
-                        }
-                        
-                        // Get pricing info
-                        if ($config && !empty($config['pricing_rules'])) {
-                            $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
-                            $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
-                            $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
-                            $space['half_day_rate'] = $pricingRules['half_day'] ?? 0;
-                            $space['weekly_rate'] = $pricingRules['weekly'] ?? 0;
-                        }
-                        
-                        // Get facility_id if synced
-                        if (!empty($space['facility_id'])) {
-                            $facility = $this->facilityModel->getById($space['facility_id']);
-                            if ($facility) {
-                                $space['facility_id'] = $facility['id'];
-                                $space['hourly_rate'] = $space['hourly_rate'] ?? $facility['hourly_rate'] ?? 0;
-                                $space['daily_rate'] = $space['daily_rate'] ?? $facility['daily_rate'] ?? 0;
-                            }
-                        }
-                        
-                        // Get photos
                         try {
+                            $config = $this->spaceModel->getBookableConfig($space['id']);
+                            if ($config && !empty($config['booking_types'])) {
+                                $space['booking_types'] = json_decode($config['booking_types'], true) ?: ['hourly', 'daily'];
+                            } else {
+                                $space['booking_types'] = ['hourly', 'daily']; // Default
+                            }
+                            
+                            // Get pricing info
+                            if ($config && !empty($config['pricing_rules'])) {
+                                $pricingRules = json_decode($config['pricing_rules'], true) ?: [];
+                                $space['hourly_rate'] = $pricingRules['base_hourly'] ?? $pricingRules['hourly'] ?? 0;
+                                $space['daily_rate'] = $pricingRules['base_daily'] ?? $pricingRules['daily'] ?? 0;
+                                $space['half_day_rate'] = $pricingRules['half_day'] ?? 0;
+                                $space['weekly_rate'] = $pricingRules['weekly'] ?? 0;
+                            }
+                            
+                            // Get facility_id if synced
+                            if (!empty($space['facility_id'])) {
+                                $facility = $this->facilityModel->getById($space['facility_id']);
+                                if ($facility) {
+                                    $space['facility_id'] = $facility['id'];
+                                    $space['hourly_rate'] = $space['hourly_rate'] ?? $facility['hourly_rate'] ?? 0;
+                                    $space['daily_rate'] = $space['daily_rate'] ?? $facility['daily_rate'] ?? 0;
+                                }
+                            }
+                            
                             $space['photos'] = $this->spaceModel->getPhotos($space['id']);
                         } catch (Exception $e) {
-                            $space['photos'] = [];
+                            error_log('Booking_wizard step1 space enrich error: ' . $e->getMessage());
+                            $space['booking_types'] = $space['booking_types'] ?? ['hourly', 'daily'];
+                            $space['photos'] = $space['photos'] ?? [];
                         }
                     }
                     unset($space);
@@ -196,7 +202,7 @@ class Booking_wizard extends Base_Controller {
         
         try {
             $space = $this->spaceModel->getWithProperty($spaceId);
-            if (!$space || empty($space['is_bookable'])) {
+            if (!$space || !$this->spaceModel->isPubliclyBookable($space)) {
                 $this->setFlashMessage('danger', 'Space not found or not available for public booking.');
                 redirect('booking-wizard/step1');
             }
@@ -347,7 +353,7 @@ class Booking_wizard extends Base_Controller {
         try {
             // Get space with location info
             $space = $this->spaceModel->getWithProperty($spaceId);
-            if (!$space || !$space['is_bookable']) {
+            if (!$space || !$this->spaceModel->isPubliclyBookable($space)) {
                 $this->setFlashMessage('danger', 'Space not available for booking.');
                 redirect('booking-wizard/step1');
             }
@@ -489,7 +495,7 @@ class Booking_wizard extends Base_Controller {
 
             // Fallback: if space_id is actually a facility_id (from internal bookings),
             // look up the space that links to this facility
-            if (!$space || !($space['is_bookable'] ?? false)) {
+            if (!$space || !$this->spaceModel->isPubliclyBookable($space)) {
                 $spaceByFacility = $this->db->fetchOne(
                     "SELECT * FROM `" . $this->db->getPrefix() . "spaces` WHERE facility_id = ? LIMIT 1",
                     [$spaceId]
