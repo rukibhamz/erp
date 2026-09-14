@@ -773,7 +773,12 @@ class Spaces extends Base_Controller {
         $files = $_FILES['photos'];
         $count = count($files['name']);
         
-        $config['upload_path']   = './uploads/spaces/';
+        $uploadDir = ROOTPATH . 'uploads/spaces/';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+
+        $config['upload_path']   = $uploadDir;
         $config['allowed_types'] = 'gif|jpg|png|jpeg|webp';
         $config['max_size']      = 5120; // 5MB
         $config['encrypt_name']  = TRUE;

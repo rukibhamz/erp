@@ -292,6 +292,12 @@ class Booking_wizard extends Base_Controller {
                 $photos = [];
                 try {
                     $photos = $this->spaceModel->getPhotos($space['id']);
+                    foreach ($photos as &$photo) {
+                        if (!empty($photo['photo_url'])) {
+                            $photo['photo_url'] = media_url($photo['photo_url']);
+                        }
+                    }
+                    unset($photo);
                 } catch (Exception $e) {
                     // Ignore
                 }

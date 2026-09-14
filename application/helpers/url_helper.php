@@ -82,11 +82,73 @@ function base_url($path = '') {
     
     // Handle the path parameter
     if (!empty($path)) {
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+        $path = str_replace('\\', '/', (string) $path);
         $path = ltrim($path, '/');
         return $baseUrl . $path;
     }
     
     return $baseUrl;
+}
+
+/**
+ * Build a public URL for an uploaded file (space photos, etc.).
+ * Accepts relative paths, absolute filesystem paths, and full URLs.
+ */
+function media_url($path = '') {
+    $path = trim((string) $path);
+    if ($path === '') {
+        return '';
+    }
+
+    if (preg_match('#^https?://#i', $path)) {
+        $urlPath = parse_url($path, PHP_URL_PATH) ?: '';
+        if (preg_match('#/(uploads/.+)$#i', $urlPath, $matches)) {
+            $path = $matches[1];
+        } else {
+            return $path;
+        }
+    }
+
+    $path = str_replace('\\', '/', $path);
+    $path = preg_replace('#^\./#', '', $path);
+
+    if (defined('ROOTPATH') && strpos($path, str_replace('\\', '/', ROOTPATH)) === 0) {
+        $path = substr($path, strlen(str_replace('\\', '/', ROOTPATH)));
+    }
+
+    $path = ltrim($path, '/');
+
+    if (defined('ROOTPATH')) {
+        $fullPath = ROOTPATH . str_replace('/', DIRECTORY_SEPARATOR, $path);
+        if (!is_file($fullPath)) {
+            $dir = dirname($fullPath);
+            $base = basename($fullPath);
+            if (is_dir($dir)) {
+                foreach (scandir($dir) as $entry) {
+                    if ($entry === '.' || $entry === '..') {
+                        continue;
+                    }
+                    if (strcasecmp($entry, $base) === 0) {
+                        $path = ltrim(dirname($path) . '/' . $entry, './');
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    $segments = [];
+    foreach (explode('/', $path) as $segment) {
+        if ($segment === '') {
+            continue;
+        }
+        $segments[] = rawurlencode($segment);
+    }
+
+    return base_url(implode('/', $segments));
 }
 
 function site_url($path = '') {

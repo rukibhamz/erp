@@ -19,7 +19,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="carousel-inner">
                             <?php foreach ($space['photos'] as $index => $photo): ?>
                                 <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
-                                    <img src="<?= base_url($photo['photo_url']) ?>" class="d-block w-100" style="height: 500px; object-fit: cover;" alt="<?= htmlspecialchars($space['space_name']) ?>">
+                                    <img src="<?= htmlspecialchars(media_url($photo['photo_url'])) ?>" class="d-block w-100" style="height: 500px; object-fit: cover;" alt="<?= htmlspecialchars($space['space_name']) ?>">
                                 </div>
                             <?php endforeach; ?>
                         </div>

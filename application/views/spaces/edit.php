@@ -203,7 +203,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                                 <i class="bi bi-x"></i>
                                             </button>
                                         </div>
-                                        <img src="<?= base_url($photo['photo_url']) ?>" class="card-img-top rounded" style="height: 120px; object-fit: cover;">
+                                        <img src="<?= htmlspecialchars(media_url($photo['photo_url'])) ?>" class="card-img-top rounded" style="height: 120px; object-fit: cover;">
                                         <?php if ($photo['is_primary']): ?>
                                             <div class="card-footer p-1 text-center bg-success text-white">
                                                 <small>Primary</small>

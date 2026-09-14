@@ -70,9 +70,14 @@ class Upload {
         }
 
         $fileName = $file['name'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if ($this->config['encrypt_name']) {
-            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $fileName = md5(uniqid(rand(), true)) . '.' . $ext;
+            $fileName = md5(uniqid(rand(), true)) . ($ext !== '' ? '.' . $ext : '');
+        } else {
+            $fileName = preg_replace('/[^A-Za-z0-9._-]/', '_', $fileName);
+            if ($ext !== '' && !preg_match('/\.' . preg_quote($ext, '/') . '$/i', $fileName)) {
+                $fileName .= '.' . $ext;
+            }
         }
 
         $targetFile = $this->config['upload_path'] . $fileName;

@@ -229,7 +229,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         <div class="carousel-inner">
                                             <?php foreach ($photos as $index => $photo): ?>
                                                 <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
-                                                    <img src="<?= base_url($photo['photo_url']) ?>" class="d-block w-100" style="height: 250px; object-fit: cover;" alt="Space Photo">
+                                                    <img src="<?= htmlspecialchars(media_url($photo['photo_url'])) ?>" class="d-block w-100" style="height: 250px; object-fit: cover;" alt="Space Photo">
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
@@ -243,7 +243,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                         </button>
                                     </div>
                                 <?php else: ?>
-                                    <img src="<?= base_url($photos[0]['photo_url'] ?? '') ?>" class="img-fluid rounded mb-3 shadow-sm" style="height: 250px; width: 100%; object-fit: cover;" alt="Space Image">
+                                    <img src="<?= htmlspecialchars(media_url($photos[0]['photo_url'] ?? '')) ?>" class="img-fluid rounded mb-3 shadow-sm" style="height: 250px; width: 100%; object-fit: cover;" alt="Space Image">
                                 <?php endif; ?>
                             <?php endif; ?>
                             

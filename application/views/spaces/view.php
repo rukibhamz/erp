@@ -100,7 +100,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         <div class="carousel-inner">
                             <?php foreach ($space['photos'] as $index => $photo): ?>
                                 <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
-                                    <img src="<?= base_url($photo['photo_url']) ?>" class="d-block w-100" style="height: 400px; object-fit: cover;" alt="Space Photo">
+                                    <img src="<?= htmlspecialchars(media_url($photo['photo_url'])) ?>" class="d-block w-100" style="height: 400px; object-fit: cover;" alt="Space Photo">
                                     <?php if ($photo['caption']): ?>
                                         <div class="carousel-caption d-none d-md-block">
                                             <p><?= htmlspecialchars($photo['caption']) ?></p>
@@ -125,7 +125,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                             aria-current="<?= $index === 0 ? 'true' : 'false' ?>" 
                                             aria-label="Slide <?= $index + 1 ?>"
                                             style="width: 60px; height: 40px; text-indent: 0; opacity: 1; border: 2px solid transparent;">
-                                        <img src="<?= base_url($photo['photo_url']) ?>" class="d-block w-100 h-100" style="object-fit: cover;">
+                                        <img src="<?= htmlspecialchars(media_url($photo['photo_url'])) ?>" class="d-block w-100 h-100" style="object-fit: cover;">
                                     </button>
                                 <?php endforeach; ?>
                             </div>

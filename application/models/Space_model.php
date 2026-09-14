@@ -202,16 +202,71 @@ class Space_model extends Base_Model {
     
     public function getPhotos($spaceId) {
         try {
-            return $this->db->fetchAll(
+            $orderBy = 'is_primary DESC';
+            if ($this->hasColumn('space_photos', 'display_order')) {
+                $orderBy .= ', display_order ASC';
+            }
+
+            $photos = $this->db->fetchAll(
                 "SELECT * FROM `" . $this->db->getPrefix() . "space_photos` 
                  WHERE space_id = ? 
-                 ORDER BY is_primary DESC, display_order ASC",
+                 ORDER BY " . $orderBy,
                 [$spaceId]
             );
+
+            if (empty($photos)) {
+                $space = $this->getById($spaceId);
+                if (!empty($space['facility_id'])) {
+                    try {
+                        $facilityPhotos = $this->db->fetchAll(
+                            "SELECT * FROM `" . $this->db->getPrefix() . "facility_photos` 
+                             WHERE facility_id = ? 
+                             ORDER BY is_primary DESC",
+                            [$space['facility_id']]
+                        );
+                        foreach ($facilityPhotos as $facilityPhoto) {
+                            $photos[] = [
+                                'photo_url' => $facilityPhoto['photo_path'] ?? $facilityPhoto['photo_url'] ?? '',
+                                'is_primary' => $facilityPhoto['is_primary'] ?? 0,
+                                'caption' => $facilityPhoto['photo_name'] ?? null
+                            ];
+                        }
+                    } catch (Exception $e) {
+                        // Facility photos table may not exist
+                    }
+                }
+            }
+
+            foreach ($photos as &$photo) {
+                $photo['photo_url'] = $this->normalizeStoredPhotoPath($photo['photo_url'] ?? '');
+            }
+            unset($photo);
+
+            return $photos;
         } catch (Exception $e) {
             error_log('Space_model getPhotos error: ' . $e->getMessage());
             return [];
         }
+    }
+
+    private function normalizeStoredPhotoPath($path) {
+        $path = trim(str_replace('\\', '/', (string) $path));
+        if ($path === '') {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $path)) {
+            $urlPath = parse_url($path, PHP_URL_PATH) ?: '';
+            if (preg_match('#/(uploads/.+)$#i', $urlPath, $matches)) {
+                return ltrim($matches[1], '/');
+            }
+            return $path;
+        }
+        $path = preg_replace('#^\./#', '', $path);
+        $root = defined('ROOTPATH') ? str_replace('\\', '/', ROOTPATH) : '';
+        if ($root !== '' && strpos($path, $root) === 0) {
+            $path = substr($path, strlen($root));
+        }
+        return ltrim($path, '/');
     }
 
     public function addPhoto($data) {
