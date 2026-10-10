@@ -44,6 +44,7 @@ class Base_Controller {
         // Load security helper (for security headers and session config)
         require_once BASEPATH . '../application/helpers/security_helper.php';
         require_once BASEPATH . '../application/helpers/settings_helper.php';
+        require_once BASEPATH . '../application/helpers/seo_helper.php';
         
         // Set security headers on all responses
         set_security_headers();
@@ -124,7 +125,7 @@ class Base_Controller {
     
     protected function checkModuleAccess() {
         // Skip module check for public controllers (guest-accessible)
-        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal'];
+        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal', 'sitemap'];
         $currentClass = strtolower(get_class($this));
         
         if (in_array($currentClass, $publicControllers)) {
@@ -158,7 +159,7 @@ class Base_Controller {
     }
     
     protected function checkAuth() {
-        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal'];
+        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal', 'sitemap'];
         $currentController = strtolower(get_class($this));
         
         // Always require authentication for non-public controllers
@@ -453,7 +454,7 @@ class Base_Controller {
             $currentClass = strtolower(get_class($this));
             
             // Exemptions: Auth (staff login) and public booking wizard during maintenance
-            $exemptions = ['auth', 'booking_wizard', 'error404'];
+            $exemptions = ['auth', 'booking_wizard', 'error404', 'sitemap'];
             
             if (!in_array($currentClass, $exemptions)) {
                 // If not exempt, redirect to the maintenance page

@@ -6,7 +6,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc($page_title ?? 'Customer Portal') ?> - <?= esc($config['app_name'] ?? 'ERP System') ?></title>
+<?= seo_meta_tags([
+        'title' => $page_title ?? 'Customer Portal',
+        'robots' => 'noindex, nofollow',
+    ]) ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">

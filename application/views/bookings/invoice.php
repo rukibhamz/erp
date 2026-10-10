@@ -7,6 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice - <?= $booking['booking_number'] ?></title>
+    <meta name="robots" content="noindex, nofollow">
     <link href="<?= base_url('assets/css/bootstrap.min.css') ?>" rel="stylesheet">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; }

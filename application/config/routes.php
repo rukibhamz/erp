@@ -11,6 +11,12 @@ $route['logout'] = 'Auth/logout';
 $route['forgot-password'] = 'Auth/forgotPassword';
 $route['reset-password'] = 'Auth/resetPassword';
 
+// SEO
+$route['sitemap.xml'] = 'Sitemap/index';
+$route['robots.txt'] = 'Sitemap/robots';
+$route['llms.txt'] = 'Sitemap/llms';
+$route['llm.txt'] = 'Sitemap/llms';
+
 // Dashboard
 $route['dashboard'] = 'Dashboard/index';
 

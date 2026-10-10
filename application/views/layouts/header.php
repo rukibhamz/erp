@@ -6,7 +6,10 @@
     <?php if (function_exists('csrf_token')): ?>
     <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
     <?php endif; ?>
-    <title><?= esc($page_title ?? 'Business Management System') ?> - ERP</title>
+<?= seo_meta_tags([
+        'title' => $page_title ?? 'Dashboard',
+        'robots' => 'noindex, nofollow',
+    ]) ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -27,12 +30,10 @@
     <link href="<?= base_url('assets/css/ui-consistency.css') ?>?v=<?= is_file($ui_consistency_css) ? filemtime($ui_consistency_css) : '1' ?>" rel="stylesheet">
     <link href="<?= base_url('assets/css/list-filters.css') ?>?v=<?= is_file($list_filters_css) ? filemtime($list_filters_css) : '1' ?>" rel="stylesheet">
     
-    <!-- PWA Support -->
-    <link rel="manifest" href="<?= base_url('pwa_manifest.php') ?>">
-    <meta name="theme-color" content="#000000">
+    <!-- PWA Support (manifest and theme-color are emitted by seo_meta_tags) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="ERP">
+    <meta name="apple-mobile-web-app-title" content="<?= esc(seo_site_name()) ?>">
     
     <script nonce="<?= csp_nonce() ?>">
         // Initialize theme before page loads to prevent flash

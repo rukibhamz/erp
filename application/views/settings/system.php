@@ -46,6 +46,12 @@ $activeTab = $active_tab ?? 'company';
             <i class="bi bi-shield-check"></i> Policies & Notices
         </a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $activeTab === 'seo' ? 'active' : '' ?>" 
+           href="<?= base_url('settings/system?tab=seo') ?>">
+            <i class="bi bi-search"></i> SEO & Sharing
+        </a>
+    </li>
 </ul>
 
 <!-- Company Settings -->
@@ -560,4 +566,163 @@ function testSMS() {
             </form>
         </div>
     </div>
+<?php endif; ?>
+
+<!-- SEO & Sharing -->
+<?php if ($activeTab === 'seo'): ?>
+    <?php
+    $seoDefaults = seo_defaults();
+    $seoImageUrl = seo_asset_url($seoDefaults['image']);
+    $hasCustomSeoImage = strpos($seoDefaults['image'], 'uploads/') === 0;
+    $seoHost = parse_url(base_url(), PHP_URL_HOST) ?: '';
+    ?>
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-search"></i> SEO & Social Sharing</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="<?= base_url('settings/system/save') ?>" enctype="multipart/form-data">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="tab" value="seo">
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Controls how the public booking portal appears in Google and when links are shared on WhatsApp, Facebook, LinkedIn and X. Staff and customer-account pages are always hidden from search engines.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" for="seo_site_title">Site Title</label>
+                            <input type="text" id="seo_site_title" name="seo_site_title" class="form-control js-seo-count" maxlength="70"
+                                   data-preview="title"
+                                   placeholder="<?= htmlspecialchars(seo_clean_text($settings['company_name'] ?? '') ?: 'Acropolis Park') ?>"
+                                   value="<?= htmlspecialchars(seo_clean_text($settings['seo_site_title'] ?? '')) ?>">
+                            <small class="text-muted">Brand name shown in browser tabs and search results. Leave blank to use the company name. <span class="js-seo-counter" data-for="seo_site_title"></span></small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" for="seo_description">Meta Description</label>
+                            <textarea id="seo_description" name="seo_description" class="form-control js-seo-count" rows="3" maxlength="300"
+                                      data-preview="description" data-ideal="160"
+                                      placeholder="<?= htmlspecialchars($seoDefaults['description']) ?>"><?= htmlspecialchars(seo_clean_text($settings['seo_description'] ?? '')) ?></textarea>
+                            <small class="text-muted">Summary shown under the title in Google and link previews. Aim for 120–160 characters. <span class="js-seo-counter" data-for="seo_description"></span></small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" for="seo_keywords">Keywords</label>
+                            <input type="text" id="seo_keywords" name="seo_keywords" class="form-control" maxlength="255"
+                                   placeholder="<?= htmlspecialchars($seoDefaults['keywords']) ?>"
+                                   value="<?= htmlspecialchars(seo_clean_text($settings['seo_keywords'] ?? '')) ?>">
+                            <small class="text-muted">Comma-separated. Optional — Google ignores keywords, but some other search engines use them.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" for="seo_twitter_handle">X (Twitter) Handle</label>
+                            <div class="input-group">
+                                <span class="input-group-text">@</span>
+                                <input type="text" id="seo_twitter_handle" name="seo_twitter_handle" class="form-control" maxlength="16"
+                                       pattern="@?[A-Za-z0-9_]{1,15}" placeholder="acropolispark"
+                                       value="<?= htmlspecialchars(ltrim($settings['seo_twitter_handle'] ?? '', '@')) ?>">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold" for="seo_og_image">Share Image</label>
+                            <input type="file" id="seo_og_image" name="seo_og_image" class="form-control" accept="image/png,image/jpeg">
+                            <small class="text-muted d-block">PNG or JPG, 1200×630 px recommended (minimum 600×315). Shown when the portal link is shared. Space pages use their own primary photo.</small>
+                            <?php if ($hasCustomSeoImage): ?>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="seo_og_image_reset" name="seo_og_image_reset" value="1">
+                                    <label class="form-check-label" for="seo_og_image_reset">Remove custom image and use the default</label>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <button type="submit" class="btn btn-dark">
+                            <i class="bi bi-save"></i> Save SEO Settings
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-eye"></i> Link Preview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="border rounded overflow-hidden">
+                        <img src="<?= htmlspecialchars($seoImageUrl) ?>" id="seoPreviewImage" alt="Share image preview"
+                             class="w-100 d-block" style="aspect-ratio: 1200 / 630; object-fit: cover; background: #f1f3f5;">
+                        <div class="p-3 bg-light">
+                            <div class="small text-uppercase text-muted"><?= htmlspecialchars($seoHost) ?></div>
+                            <div class="fw-semibold text-truncate" id="seoPreviewTitle"><?= htmlspecialchars($seoDefaults['site_name']) ?> | Book Event Spaces, Shoots & Workspaces Online</div>
+                            <div class="small text-muted" id="seoPreviewDescription"><?= htmlspecialchars(seo_clean_text($seoDefaults['description'], 160)) ?></div>
+                        </div>
+                    </div>
+                    <p class="small text-muted mt-3 mb-2">
+                        Social apps cache previews. After changing the image, re-scrape the link with the
+                        <a href="https://developers.facebook.com/tools/debug/" target="_blank" rel="noopener">Facebook Sharing Debugger</a>
+                        (also refreshes WhatsApp).
+                    </p>
+                    <p class="small text-muted mb-0">
+                        Submit <code><?= htmlspecialchars(base_url('sitemap.xml')) ?></code> in
+                        <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console</a>
+                        so new spaces are discovered quickly.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script nonce="<?= csp_nonce() ?>">
+    (function () {
+        const titleSuffix = ' | Book Event Spaces, Shoots & Workspaces Online';
+        const titleInput = document.getElementById('seo_site_title');
+        const descInput = document.getElementById('seo_description');
+        const imageInput = document.getElementById('seo_og_image');
+        const previewTitle = document.getElementById('seoPreviewTitle');
+        const previewDesc = document.getElementById('seoPreviewDescription');
+        const previewImage = document.getElementById('seoPreviewImage');
+
+        function updateCounter(input) {
+            const counter = document.querySelector('.js-seo-counter[data-for="' + input.id + '"]');
+            if (!counter) {
+                return;
+            }
+            const length = input.value.trim().length;
+            const ideal = parseInt(input.dataset.ideal || input.maxLength, 10);
+            counter.textContent = '(' + length + '/' + ideal + ')';
+            counter.classList.toggle('text-danger', length > ideal);
+        }
+
+        function updatePreview() {
+            const title = titleInput.value.trim() || titleInput.placeholder;
+            previewTitle.textContent = title + titleSuffix;
+            let desc = descInput.value.trim() || descInput.placeholder;
+            if (desc.length > 160) {
+                desc = desc.slice(0, 159).replace(/\s+\S*$/, '') + '…';
+            }
+            previewDesc.textContent = desc;
+        }
+
+        document.querySelectorAll('.js-seo-count').forEach(function (input) {
+            input.addEventListener('input', function () {
+                updateCounter(input);
+                updatePreview();
+            });
+            updateCounter(input);
+        });
+
+        if (imageInput) {
+            imageInput.addEventListener('change', function () {
+                const file = imageInput.files && imageInput.files[0];
+                if (file && file.type.indexOf('image/') === 0) {
+                    previewImage.src = URL.createObjectURL(file);
+                }
+            });
+        }
+    })();
+    </script>
 <?php endif; ?>

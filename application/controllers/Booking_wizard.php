@@ -184,6 +184,11 @@ class Booking_wizard extends Base_Controller {
 
         $data = [
             'page_title' => 'Select Location & Space',
+            'seo' => [
+                'full_title' => seo_site_name() . ' | Book Event Spaces, Shoots & Workspaces Online',
+                'robots' => 'index, follow',
+                'canonical' => base_url(),
+            ],
             'locations' => $locations,
             'spaces_by_location' => $spacesByLocation,
             'selected_location_id' => $locationId,
@@ -235,8 +240,34 @@ class Booking_wizard extends Base_Controller {
             redirect('booking-wizard/step1');
         }
 
+        $seoDescription = seo_clean_text(
+            !empty($space['description']) ? $space['description'] : ($space['detailed_description'] ?? ''),
+            160
+        );
+        if ($seoDescription === '') {
+            $parts = ['Book ' . seo_clean_text($space['space_name']) . ' at ' . seo_site_name() . '.'];
+            if (!empty($space['capacity'])) {
+                $parts[] = 'Capacity up to ' . intval($space['capacity']) . ' guests.';
+            }
+            if (!empty($space['hourly_rate']) && floatval($space['hourly_rate']) > 0) {
+                $parts[] = 'From ' . format_currency($space['hourly_rate']) . ' per hour.';
+            }
+            $parts[] = 'Check live availability and book online.';
+            $seoDescription = implode(' ', $parts);
+        }
+
+        $seoLocation = seo_clean_text($space['property_name'] ?? '');
+
         $data = [
             'page_title' => $space['space_name'] . ' - Space Details',
+            'seo' => [
+                'title' => seo_clean_text($space['space_name']) . ($seoLocation !== '' ? ' at ' . $seoLocation : ''),
+                'description' => $seoDescription,
+                'image' => $space['photos'][0]['photo_url'] ?? null,
+                'image_alt' => seo_clean_text($space['space_name']),
+                'robots' => 'index, follow',
+                'canonical' => base_url('booking-wizard/space/details/' . $spaceId),
+            ],
             'space' => $space,
             'flash' => $this->getFlashMessage()
         ];

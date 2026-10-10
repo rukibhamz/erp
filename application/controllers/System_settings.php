@@ -192,6 +192,60 @@ class System_settings extends Base_Controller {
                         'privacy_url'                => sanitize_input($_POST['privacy_url'] ?? ''),
                     ];
                     break;
+
+                case 'seo':
+                    // Stored as plain text (escaped on output) so '&' etc. aren't double-encoded in meta tags
+                    $plainText = function ($field, $maxLength) {
+                        $value = strip_tags(html_entity_decode((string) ($_POST[$field] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                        $value = trim(preg_replace('/\s+/u', ' ', $value));
+                        return mb_substr($value, 0, $maxLength);
+                    };
+
+                    $twitterHandle = ltrim(trim((string) ($_POST['seo_twitter_handle'] ?? '')), '@');
+                    if ($twitterHandle !== '' && !preg_match('/^[A-Za-z0-9_]{1,15}$/', $twitterHandle)) {
+                        throw new Exception('X (Twitter) handle may only contain letters, numbers and underscores (max 15 characters).');
+                    }
+
+                    $settings = [
+                        'seo_site_title' => $plainText('seo_site_title', 70),
+                        'seo_description' => $plainText('seo_description', 300),
+                        'seo_keywords' => $plainText('seo_keywords', 255),
+                        'seo_twitter_handle' => $twitterHandle,
+                    ];
+
+                    $uploadDir = BASEPATH . '../uploads/company/';
+                    $previousImage = (string) get_app_setting('seo_og_image', '');
+
+                    if (!empty($_POST['seo_og_image_reset'])) {
+                        $settings['seo_og_image'] = '';
+                    } elseif (!empty($_FILES['seo_og_image']['name'])) {
+                        $validation = validateFileUpload($_FILES['seo_og_image'], ['image/jpeg', 'image/png']);
+                        $imageInfo = $validation['valid'] ? @getimagesize($_FILES['seo_og_image']['tmp_name']) : false;
+
+                        if (!$validation['valid']) {
+                            $uploadWarning = 'SEO text saved, but the share image was rejected: ' . ($validation['error'] ?? 'invalid file.');
+                        } elseif (!$imageInfo || $imageInfo[0] < 600 || $imageInfo[1] < 315) {
+                            $uploadWarning = 'SEO text saved, but the share image must be at least 600×315 pixels (1200×630 recommended).';
+                        } else {
+                            if (!is_dir($uploadDir)) {
+                                mkdir($uploadDir, 0755, true);
+                            }
+                            $extension = $imageInfo[2] === IMAGETYPE_PNG ? 'png' : 'jpg';
+                            $filename = 'og_' . time() . '.' . $extension;
+                            if (move_uploaded_file($_FILES['seo_og_image']['tmp_name'], $uploadDir . $filename)) {
+                                $settings['seo_og_image'] = $filename;
+                            } else {
+                                $uploadWarning = 'SEO text saved, but the share image could not be stored. Check that uploads/company/ is writable.';
+                            }
+                        }
+                    }
+
+                    if (array_key_exists('seo_og_image', $settings)
+                        && preg_match('/^og_\d+\.(png|jpg)$/', $previousImage)
+                        && is_file($uploadDir . $previousImage)) {
+                        $staleFile = $uploadDir . $previousImage;
+                    }
+                    break;
             }
             
             // Save each setting
@@ -220,6 +274,12 @@ class System_settings extends Base_Controller {
             if ($saved > 0) {
                 $this->activityModel->log($this->session['user_id'], 'update', 'Settings', "Updated {$tab} settings");
                 $this->setFlashMessage('success', 'Settings saved successfully.');
+            }
+            if (!empty($staleFile)) {
+                @unlink($staleFile);
+            }
+            if (!empty($uploadWarning)) {
+                $this->setFlashMessage('warning', $uploadWarning);
             }
         } catch (Exception $e) {
             error_log('System_settings save error: ' . $e->getMessage());
