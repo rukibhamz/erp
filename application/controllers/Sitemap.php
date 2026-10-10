@@ -76,6 +76,7 @@ class Sitemap extends Base_Controller {
             echo "Disallow: {$basePath}{$path}\n";
         }
         echo "\nSitemap: " . base_url('sitemap.xml') . "\n";
+        echo "\n# Guidance for AI assistants: " . base_url('llms.txt') . "\n";
         exit;
     }
 
