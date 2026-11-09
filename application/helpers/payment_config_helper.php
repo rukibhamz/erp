@@ -54,6 +54,11 @@ function merge_gateway_config($gatewayCode, array $dbGateway) {
         'additional_config' => json_decode($dbGateway['additional_config'] ?? '{}', true) ?: [],
     ];
 
+    // Some installs store the API secret only in secret_key
+    if (trim((string) $merged['private_key']) === '' && trim((string) $merged['secret_key']) !== '') {
+        $merged['private_key'] = $merged['secret_key'];
+    }
+
     if (!empty($providerEnv['public_key'])) {
         $merged['public_key'] = $providerEnv['public_key'];
     }

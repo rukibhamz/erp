@@ -730,6 +730,13 @@ class AutoMigration {
         } catch (Exception $e) {
             error_log("AutoMigration: Error running PHP migrations: " . $e->getMessage());
         }
+
+        // ALWAYS self-heal schema gaps that break live booking/payment/dashboard
+        try {
+            $this->ensureLiveSchemaHotfixes();
+        } catch (Exception $e) {
+            error_log("AutoMigration: Error applying live schema hotfixes: " . $e->getMessage());
+        }
     }
     
 
@@ -3982,5 +3989,246 @@ class AutoMigration {
             error_log("AutoMigration: ERROR in ensureCleanCOA: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Production hotfixes that must apply automatically on deploy (no manual SQL).
+     * Covers missing booking/accounting tables and columns observed on live.
+     */
+    private function ensureLiveSchemaHotfixes() {
+        $p = $this->prefix;
+
+        $tableExists = function ($table) use ($p) {
+            try {
+                $stmt = $this->pdo->query("SHOW TABLES LIKE " . $this->pdo->quote($p . $table));
+                return $stmt && count($stmt->fetchAll()) > 0;
+            } catch (Exception $e) {
+                return false;
+            }
+        };
+
+        $columnExists = function ($table, $column) use ($p) {
+            try {
+                $stmt = $this->pdo->query("SHOW COLUMNS FROM `{$p}{$table}` LIKE " . $this->pdo->quote($column));
+                return $stmt && count($stmt->fetchAll()) > 0;
+            } catch (Exception $e) {
+                return false;
+            }
+        };
+
+        $addColumn = function ($table, $column, $definition) use ($p, $columnExists) {
+            if ($columnExists($table, $column)) {
+                return;
+            }
+            try {
+                $this->pdo->exec("ALTER TABLE `{$p}{$table}` ADD COLUMN `{$column}` {$definition}");
+                error_log("AutoMigration hotfix: added {$table}.{$column}");
+            } catch (Exception $e) {
+                // Retry without AFTER clause if present
+                $bare = preg_replace('/\s+AFTER\s+`[^`]+`/i', '', $definition);
+                try {
+                    $this->pdo->exec("ALTER TABLE `{$p}{$table}` ADD COLUMN `{$column}` {$bare}");
+                    error_log("AutoMigration hotfix: added {$table}.{$column} (unpositioned)");
+                } catch (Exception $e2) {
+                    error_log("AutoMigration hotfix: could not add {$table}.{$column}: " . $e2->getMessage());
+                }
+            }
+        };
+
+        // --- Missing booking feature tables (no FKs: live may use spaces IDs) ---
+        if (!$tableExists('resource_pricing')) {
+            try {
+                $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$p}resource_pricing` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `resource_id` int(11) NOT NULL,
+                    `rate_type` enum('hourly','half_day','full_day','weekly','monthly') NOT NULL,
+                    `price` decimal(15,2) NOT NULL,
+                    `peak_price` decimal(15,2) DEFAULT NULL,
+                    `member_price` decimal(15,2) DEFAULT NULL,
+                    `start_date` date DEFAULT NULL,
+                    `end_date` date DEFAULT NULL,
+                    `day_of_week` int(11) DEFAULT NULL,
+                    `is_seasonal` tinyint(1) DEFAULT 0,
+                    `season_name` varchar(50) DEFAULT NULL,
+                    `min_duration` int(11) DEFAULT NULL,
+                    `max_duration` int(11) DEFAULT NULL,
+                    `quantity_discount` text DEFAULT NULL,
+                    `duration_discount` text DEFAULT NULL,
+                    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `resource_id` (`resource_id`),
+                    KEY `rate_type` (`rate_type`),
+                    KEY `start_date` (`start_date`),
+                    KEY `end_date` (`end_date`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                error_log("AutoMigration hotfix: created resource_pricing");
+            } catch (Exception $e) {
+                error_log("AutoMigration hotfix: resource_pricing create failed: " . $e->getMessage());
+            }
+        }
+
+        if (!$tableExists('resource_availability')) {
+            try {
+                $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$p}resource_availability` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `resource_id` int(11) NOT NULL,
+                    `day_of_week` int(11) NOT NULL,
+                    `is_available` tinyint(1) DEFAULT 1,
+                    `start_time` time DEFAULT NULL,
+                    `end_time` time DEFAULT NULL,
+                    `break_start` time DEFAULT NULL,
+                    `break_end` time DEFAULT NULL,
+                    `time_slots` text DEFAULT NULL,
+                    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `resource_day` (`resource_id`, `day_of_week`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                error_log("AutoMigration hotfix: created resource_availability");
+            } catch (Exception $e) {
+                error_log("AutoMigration hotfix: resource_availability create failed: " . $e->getMessage());
+            }
+        }
+
+        if (!$tableExists('resource_blockouts')) {
+            try {
+                $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$p}resource_blockouts` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `resource_id` int(11) NOT NULL,
+                    `start_date` date NOT NULL,
+                    `end_date` date NOT NULL,
+                    `start_time` time DEFAULT NULL,
+                    `end_time` time DEFAULT NULL,
+                    `reason` varchar(255) DEFAULT NULL,
+                    `notes` text DEFAULT NULL,
+                    `created_by` int(11) DEFAULT NULL,
+                    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `resource_id` (`resource_id`),
+                    KEY `start_date` (`start_date`),
+                    KEY `end_date` (`end_date`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                error_log("AutoMigration hotfix: created resource_blockouts");
+            } catch (Exception $e) {
+                error_log("AutoMigration hotfix: resource_blockouts create failed: " . $e->getMessage());
+            }
+        }
+
+        if (!$tableExists('cancellation_policies')) {
+            try {
+                $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$p}cancellation_policies` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `name` varchar(255) NOT NULL,
+                    `description` text DEFAULT NULL,
+                    `rules` text NOT NULL,
+                    `is_default` tinyint(1) DEFAULT 0,
+                    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `is_default` (`is_default`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                $this->pdo->exec("INSERT INTO `{$p}cancellation_policies` (`name`, `description`, `rules`, `is_default`)
+                    SELECT 'Standard Policy', 'Default cancellation policy', '{\"rules\":[{\"hours_before\":24,\"refund_percent\":100},{\"hours_before\":0,\"refund_percent\":0}]}', 1
+                    FROM DUAL
+                    WHERE NOT EXISTS (SELECT 1 FROM `{$p}cancellation_policies` WHERE is_default = 1 LIMIT 1)");
+                error_log("AutoMigration hotfix: created cancellation_policies");
+            } catch (Exception $e) {
+                error_log("AutoMigration hotfix: cancellation_policies create failed: " . $e->getMessage());
+            }
+        } else {
+            try {
+                $stmt = $this->pdo->query("SELECT COUNT(*) AS cnt FROM `{$p}cancellation_policies` WHERE is_default = 1");
+                $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+                if (($row['cnt'] ?? 0) == 0) {
+                    $this->pdo->exec("INSERT INTO `{$p}cancellation_policies` (`name`, `description`, `rules`, `is_default`)
+                        VALUES ('Standard Policy', 'Default cancellation policy', '{\"rules\":[{\"hours_before\":24,\"refund_percent\":100},{\"hours_before\":0,\"refund_percent\":0}]}', 1)");
+                }
+            } catch (Exception $e) {
+                // non-fatal
+            }
+        }
+
+        if (!$tableExists('booking_modifications')) {
+            try {
+                $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$p}booking_modifications` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `booking_id` int(11) NOT NULL,
+                    `changed_by` int(11) DEFAULT NULL,
+                    `change_type` enum('reschedule','resource_change','addon_change','status_change','amount_change','other') NOT NULL,
+                    `old_value` text DEFAULT NULL,
+                    `new_value` text DEFAULT NULL,
+                    `reason` text DEFAULT NULL,
+                    `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `booking_id` (`booking_id`),
+                    KEY `changed_by` (`changed_by`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+                error_log("AutoMigration hotfix: created booking_modifications");
+            } catch (Exception $e) {
+                error_log("AutoMigration hotfix: booking_modifications create failed: " . $e->getMessage());
+            }
+        }
+
+        if (!$tableExists('account_balance_cache')) {
+            try {
+                $this->pdo->exec("CREATE TABLE IF NOT EXISTS `{$p}account_balance_cache` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `account_id` INT(11) NOT NULL,
+                    `balance` DECIMAL(15,2) DEFAULT 0.00,
+                    `as_of_date` DATE NOT NULL,
+                    `last_updated` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `account_date` (`account_id`, `as_of_date`),
+                    KEY `account_id` (`account_id`),
+                    KEY `idx_as_of_date` (`as_of_date`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+                error_log("AutoMigration hotfix: created account_balance_cache");
+            } catch (Exception $e) {
+                error_log("AutoMigration hotfix: account_balance_cache create failed: " . $e->getMessage());
+            }
+        }
+
+        // --- Missing columns ---
+        if ($tableExists('invoice_items')) {
+            $addColumn('invoice_items', 'product_id', 'INT(11) NULL AFTER `invoice_id`');
+        }
+        if ($tableExists('payments')) {
+            $addColumn('payments', 'invoice_id', 'INT(11) NULL');
+        }
+        if ($tableExists('education_tax_config')) {
+            $addColumn('education_tax_config', 'deadline_date', 'DATE NULL');
+        }
+
+        // Release slots held by abandoned online unpaid bookings (gateway init failed / abandoned checkout)
+        if ($tableExists('bookings')) {
+            try {
+                $hasPaymentStatus = $columnExists('bookings', 'payment_status');
+                $hasSource = $columnExists('bookings', 'booking_source');
+                if ($hasPaymentStatus) {
+                    $sql = "UPDATE `{$p}bookings`
+                            SET `status` = 'cancelled',
+                                `cancelled_at` = COALESCE(`cancelled_at`, NOW())
+                            WHERE `status` = 'pending'
+                              AND `payment_status` = 'unpaid'
+                              AND `created_at` < (NOW() - INTERVAL 2 HOUR)";
+                    if ($hasSource) {
+                        $sql .= " AND (`booking_source` IS NULL OR `booking_source` IN ('online','dashboard'))";
+                    }
+                    // Do not cancel pay_later intentionally unpaid bookings
+                    if ($columnExists('bookings', 'payment_plan')) {
+                        $sql .= " AND (`payment_plan` IS NULL OR `payment_plan` != 'pay_later')";
+                    }
+                    $affected = $this->pdo->exec($sql);
+                    if ($affected) {
+                        error_log("AutoMigration hotfix: cancelled {$affected} abandoned unpaid pending booking(s)");
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("AutoMigration hotfix: abandoned booking cleanup failed: " . $e->getMessage());
+            }
+        }
+
+        return true;
     }
 }

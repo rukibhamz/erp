@@ -926,14 +926,26 @@ class Dashboard extends Base_Controller {
         if (!$this->db || !$this->dashboardTableExists('payments')) return [];
         try {
             $limit = max(1, min(100, intval($limit)));
+            $prefix = $this->db->getPrefix();
+            $hasInvoiceId = $this->checkColumnExists('payments', 'invoice_id');
+
+            if (!$hasInvoiceId) {
+                return $this->db->fetchAll(
+                    "SELECT p.*, NULL as invoice_number, NULL as customer_name
+                     FROM `{$prefix}payments` p
+                     ORDER BY p.payment_date DESC
+                     LIMIT " . $limit
+                ) ?? [];
+            }
+
             $customerNameExpr = "COALESCE(c.company_name, c.contact_name, c.customer_code, 'Customer')";
             if ($this->dashboardTableExists('customers')
                 && $this->checkColumnExists('customers', 'company_name')) {
                 return $this->db->fetchAll(
                     "SELECT p.*, i.invoice_number, {$customerNameExpr} as customer_name
-                     FROM `" . $this->db->getPrefix() . "payments` p
-                     LEFT JOIN `" . $this->db->getPrefix() . "invoices` i ON p.invoice_id = i.id
-                     LEFT JOIN `" . $this->db->getPrefix() . "customers` c ON i.customer_id = c.id
+                     FROM `{$prefix}payments` p
+                     LEFT JOIN `{$prefix}invoices` i ON p.invoice_id = i.id
+                     LEFT JOIN `{$prefix}customers` c ON i.customer_id = c.id
                      ORDER BY p.payment_date DESC
                      LIMIT " . $limit
                 ) ?? [];
@@ -941,8 +953,8 @@ class Dashboard extends Base_Controller {
 
             return $this->db->fetchAll(
                 "SELECT p.*, i.invoice_number, NULL as customer_name
-                 FROM `" . $this->db->getPrefix() . "payments` p
-                 LEFT JOIN `" . $this->db->getPrefix() . "invoices` i ON p.invoice_id = i.id
+                 FROM `{$prefix}payments` p
+                 LEFT JOIN `{$prefix}invoices` i ON p.invoice_id = i.id
                  ORDER BY p.payment_date DESC
                  LIMIT " . $limit
             ) ?? [];
@@ -1002,7 +1014,8 @@ class Dashboard extends Base_Controller {
             }
             
             // Upcoming deadlines for Education Tax
-            if ($this->dashboardTableExists('education_tax_config')) {
+            if ($this->dashboardTableExists('education_tax_config')
+                && $this->checkColumnExists('education_tax_config', 'deadline_date')) {
                 $currentYear = date('Y');
                 $edTaxConfig = $this->db->fetchOne(
                     "SELECT * FROM `" . $this->db->getPrefix() . "education_tax_config` 

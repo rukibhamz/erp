@@ -96,28 +96,66 @@ class Invoice_model extends Base_Model {
                 error_log('Invoice_model addItem error: item_description is required.');
                 return false;
             }
-            
-            $sql = "INSERT INTO `" . $this->db->getPrefix() . "invoice_items` 
-                    (invoice_id, product_id, item_description, quantity, unit_price, tax_rate, tax_amount, discount_rate, discount_amount, line_total, account_id, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
-            
-            return $this->db->query($sql, [
-                $invoiceId,
-                $itemData['product_id'] ?? null,
-                $itemData['item_description'] ?? $itemData['description'] ?? '',
-                $itemData['quantity'] ?? 1,
-                $itemData['unit_price'] ?? 0,
-                $itemData['tax_rate'] ?? 0,
-                $itemData['tax_amount'] ?? 0,
-                $itemData['discount_rate'] ?? 0,
-                $itemData['discount_amount'] ?? 0,
-                $itemData['line_total'] ?? $itemData['amount'] ?? 0,
-                $itemData['account_id'] ?? null
-            ]);
+
+            $prefix = $this->db->getPrefix();
+            $hasProductId = $this->invoiceItemsHasProductId();
+
+            if ($hasProductId) {
+                $sql = "INSERT INTO `{$prefix}invoice_items`
+                        (invoice_id, product_id, item_description, quantity, unit_price, tax_rate, tax_amount, discount_rate, discount_amount, line_total, account_id, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                $params = [
+                    $invoiceId,
+                    $itemData['product_id'] ?? null,
+                    $itemData['item_description'] ?? $itemData['description'] ?? '',
+                    $itemData['quantity'] ?? 1,
+                    $itemData['unit_price'] ?? 0,
+                    $itemData['tax_rate'] ?? 0,
+                    $itemData['tax_amount'] ?? 0,
+                    $itemData['discount_rate'] ?? 0,
+                    $itemData['discount_amount'] ?? 0,
+                    $itemData['line_total'] ?? $itemData['amount'] ?? 0,
+                    $itemData['account_id'] ?? null
+                ];
+            } else {
+                $sql = "INSERT INTO `{$prefix}invoice_items`
+                        (invoice_id, item_description, quantity, unit_price, tax_rate, tax_amount, discount_rate, discount_amount, line_total, account_id, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                $params = [
+                    $invoiceId,
+                    $itemData['item_description'] ?? $itemData['description'] ?? '',
+                    $itemData['quantity'] ?? 1,
+                    $itemData['unit_price'] ?? 0,
+                    $itemData['tax_rate'] ?? 0,
+                    $itemData['tax_amount'] ?? 0,
+                    $itemData['discount_rate'] ?? 0,
+                    $itemData['discount_amount'] ?? 0,
+                    $itemData['line_total'] ?? $itemData['amount'] ?? 0,
+                    $itemData['account_id'] ?? null
+                ];
+            }
+
+            return $this->db->query($sql, $params);
         } catch (Exception $e) {
             error_log('Invoice_model addItem error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    private function invoiceItemsHasProductId() {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+        try {
+            $row = $this->db->fetchOne(
+                "SHOW COLUMNS FROM `" . $this->db->getPrefix() . "invoice_items` LIKE 'product_id'"
+            );
+            $cached = !empty($row);
+        } catch (Exception $e) {
+            $cached = false;
+        }
+        return $cached;
     }
 }
 

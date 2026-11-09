@@ -18,31 +18,64 @@ class Flutterwave_provider extends Abstract_payment_provider {
             throw new Exception('Flutterwave secret key is not configured');
         }
 
-        $txRef = $metadata['transaction_ref'] ?? ('TXN-' . time());
+        $txRef = trim((string) ($metadata['transaction_ref'] ?? ('TXN-' . time())));
+        $amountValue = round((float) $amount, 2);
+        $currencyCode = strtoupper(trim((string) ($currency ?: 'NGN')));
+        $email = trim((string) ($customer['email'] ?? ''));
+        $redirectUrl = $this->appendGatewayToCallback($this->config['callback_url'] ?? '');
+
+        if ($txRef === '') {
+            throw new Exception('Flutterwave tx_ref is missing');
+        }
+        if ($amountValue <= 0) {
+            throw new Exception('Flutterwave amount must be greater than zero');
+        }
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception('A valid customer email is required for online payment');
+        }
+        if ($redirectUrl === '' || !preg_match('#^https?://#i', $redirectUrl)) {
+            throw new Exception('Flutterwave redirect URL is not configured. Set a public HTTPS site URL.');
+        }
+
+        $customerPayload = [
+            'email' => $email,
+            'name' => trim((string) ($customer['name'] ?? '')) ?: $email,
+        ];
+        $phone = preg_replace('/\s+/', '', (string) ($customer['phone'] ?? ''));
+        if ($phone !== '') {
+            $customerPayload['phonenumber'] = $phone;
+        }
 
         $data = [
             'tx_ref' => $txRef,
-            'amount' => $amount,
-            'currency' => $currency,
-            'redirect_url' => $this->appendGatewayToCallback($this->config['callback_url'] ?? ''),
-            'payment_options' => 'card,account,banktransfer,mpesa,mobilemoney,ussd',
-            'customer' => [
-                'email' => $customer['email'] ?? '',
-                'name' => $customer['name'] ?? '',
-                'phonenumber' => $customer['phone'] ?? '',
-            ],
+            'amount' => $amountValue,
+            'currency' => $currencyCode,
+            'redirect_url' => $redirectUrl,
+            'customer' => $customerPayload,
             'customizations' => [
-                'title' => $metadata['title'] ?? 'Payment',
-                'description' => $metadata['description'] ?? ($metadata['payment_type'] ?? 'Payment'),
+                'title' => substr((string) ($metadata['title'] ?? 'Booking Payment'), 0, 50),
+                'description' => substr((string) ($metadata['description'] ?? ($metadata['payment_type'] ?? 'Payment')), 0, 100),
             ],
             'meta' => [
-                'payment_type' => $metadata['payment_type'] ?? '',
+                'payment_type' => (string) ($metadata['payment_type'] ?? ''),
                 'reference_id' => (string) ($metadata['reference_id'] ?? ''),
             ],
         ];
 
+        // Only attach valid Flutterwave subaccount codes (RS_…). Bad split payloads cause HTTP 400.
         if (!empty($metadata['subaccounts']) && is_array($metadata['subaccounts'])) {
-            $data['subaccounts'] = $metadata['subaccounts'];
+            $validSubaccounts = [];
+            foreach ($metadata['subaccounts'] as $sub) {
+                $id = is_array($sub) ? trim((string) ($sub['id'] ?? '')) : trim((string) $sub);
+                if ($id !== '' && preg_match('/^RS_[A-Z0-9]+$/i', $id)) {
+                    $validSubaccounts[] = ['id' => $id];
+                }
+            }
+            if ($validSubaccounts !== []) {
+                $data['subaccounts'] = $validSubaccounts;
+            } elseif (!empty($metadata['subaccounts'])) {
+                error_log('Flutterwave Standard: ignored invalid subaccounts payload');
+            }
         }
 
         $response = $this->httpRequest(self::API_BASE . '/payments', [
@@ -73,7 +106,17 @@ class Flutterwave_provider extends Abstract_payment_provider {
         }
 
         $message = $result['message'] ?? 'Failed to initialize payment';
-        error_log('Flutterwave Standard initialize failed (HTTP ' . $response['http_code'] . '): ' . $message);
+        error_log(
+            'Flutterwave Standard initialize failed (HTTP ' . $response['http_code'] . '): ' . $message
+            . ' | payload=' . json_encode([
+                'tx_ref' => $txRef,
+                'amount' => $amountValue,
+                'currency' => $currencyCode,
+                'redirect_url' => $redirectUrl,
+                'customer_email' => $email,
+                'has_subaccounts' => !empty($data['subaccounts']),
+            ])
+        );
         throw new Exception($message);
     }
 

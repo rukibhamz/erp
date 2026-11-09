@@ -10,9 +10,18 @@ abstract class Abstract_payment_provider implements Payment_provider_interface {
 
     protected function getSecretKey() {
         if (!empty($this->config['test_mode'])) {
-            return $this->config['test_secret_key'] ?? $this->config['private_key'] ?? '';
+            return trim((string) (
+                $this->config['test_secret_key']
+                ?? $this->config['private_key']
+                ?? $this->config['secret_key']
+                ?? ''
+            ));
         }
-        return $this->config['private_key'] ?? '';
+        return trim((string) (
+            $this->config['private_key']
+            ?? $this->config['secret_key']
+            ?? ''
+        ));
     }
 
     /**

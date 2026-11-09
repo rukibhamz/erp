@@ -1139,13 +1139,25 @@ class Booking_wizard extends Base_Controller {
             // Prevents race conditions where a slot was taken between Step 2 and Finalize
             $facilityId = $resource['facility_id'] ?? $resource['id']; // Use facility ID if mapped, else resource ID
             $checkEndDate = $bookingData['end_date'] ?? $bookingData['date'];
+
+            // Resume an unpaid pending booking left behind when Flutterwave init failed previously
+            $reusedExistingBooking = false;
+            $resumeBooking = $this->findResumableUnpaidBooking(
+                $facilityId,
+                $bookingData['date'],
+                $bookingData['start_time'],
+                $bookingData['end_time'],
+                $bookingData['customer_email'],
+                $checkEndDate
+            );
+            $excludeBookingId = $resumeBooking['id'] ?? null;
             
             $isAvailable = $this->facilityModel->checkAvailability(
                 $facilityId,
                 $bookingData['date'],
                 $bookingData['start_time'],
                 $bookingData['end_time'],
-                null,
+                $excludeBookingId,
                 $checkEndDate
             );
             
@@ -1153,6 +1165,20 @@ class Booking_wizard extends Base_Controller {
                 // Rollback is automatic if exception thrown before commit? 
                 // Actually we haven't done any SQL yet (except selects), so just throw
                 throw new Exception('The selected time slot has just been booked by another user. Please select a different time.');
+            }
+
+            if ($resumeBooking) {
+                $reusedExistingBooking = true;
+                $bookingId = (int) $resumeBooking['id'];
+                $bookingNumber = $resumeBooking['booking_number'];
+                $bookingRecord = $resumeBooking;
+                $finalTotal = (float) ($resumeBooking['total_amount'] ?? $resumeBooking['balance_amount'] ?? 0);
+                $_SESSION['booking_data']['pending_booking_id'] = $bookingId;
+                if ($pdo->inTransaction()) {
+                    $pdo->commit();
+                }
+                error_log("FINALIZE: Reusing unpaid pending booking #{$bookingId} ({$bookingNumber}) for payment retry");
+                file_put_contents($logFile, "[$timestamp] REUSING BOOKING ID: {$bookingId}\n", FILE_APPEND);
             }
             
             // Recalculate base amount
@@ -1257,12 +1283,14 @@ class Booking_wizard extends Base_Controller {
             
             $finalTotal = $subtotal - $discountAmount + $taxAmount + $securityDeposit;
             
+            $paymentPlan = sanitize_input($_POST['payment_plan'] ?? ($bookingRecord['payment_plan'] ?? 'full'));
+            $endDate = $bookingData['end_date'] ?? $bookingData['date'];
+
+            if (!$reusedExistingBooking) {
             // Create booking
             $bookingNumber = $this->bookingModel->getNextBookingNumber();
-            $paymentPlan = sanitize_input($_POST['payment_plan'] ?? 'full');
             
             // Handle multi-day bookings
-            $endDate = $bookingData['end_date'] ?? $bookingData['date'];
             $isRecurring = !empty($bookingData['is_recurring']) && intval($bookingData['is_recurring']) == 1;
             $recurringPattern = $isRecurring ? sanitize_input($bookingData['recurring_pattern'] ?? '') : null;
             $recurringEndDate = $isRecurring && !empty($bookingData['recurring_end_date']) ? sanitize_input($bookingData['recurring_end_date']) : null;
@@ -1343,6 +1371,7 @@ class Booking_wizard extends Base_Controller {
             }
             
             file_put_contents($logFile, "[$timestamp] SUCCESS: Created Booking ID: $bookingId\n", FILE_APPEND);
+            $_SESSION['booking_data']['pending_booking_id'] = $bookingId;
             
             // CRITICAL FIX: Commit the booking IMMEDIATELY to prevent rollback
             // from optional operations (resources, addons, slots, invoice) that might fail
@@ -1456,13 +1485,14 @@ class Booking_wizard extends Base_Controller {
                 error_log('Booking wizard: Failed to create invoice - ' . $e->getMessage());
                 // Continue anyway - invoice creation is optional
             }
+            } // end if (!$reusedExistingBooking)
             
             // NOTE: Transaction was already committed immediately after booking creation
             // All operations above (resources, addons, slots, invoice) run with autocommit
             
             // Calculate initial payment based on payment plan
             $paymentMethod = sanitize_input($_POST['payment_method'] ?? '');
-            $paymentPlan = sanitize_input($_POST['payment_plan'] ?? 'full');
+            $paymentPlan = sanitize_input($_POST['payment_plan'] ?? ($paymentPlan ?? 'full'));
             
             // Determine initial payment amount based on plan
             $initialPayment = $finalTotal; // Default to full payment
@@ -1604,7 +1634,15 @@ class Booking_wizard extends Base_Controller {
                             $gatewayError = $paymentResult['message'] ?? 'Could not start online payment.';
                             error_log('Gateway initialization failed: ' . json_encode($paymentResult));
                             file_put_contents($logFile, "[$timestamp] GATEWAY FAILED: {$gatewayError}\n", FILE_APPEND);
-                            $this->setFlashMessage('danger', 'Online payment could not be started: ' . $gatewayError);
+                            // Keep unpaid booking + session so retry resumes payment instead of double-booking the slot
+                            if (!empty($bookingId)) {
+                                $_SESSION['booking_data']['pending_booking_id'] = (int) $bookingId;
+                            }
+                            $this->setFlashMessage(
+                                'danger',
+                                'Online payment could not be started: ' . $gatewayError
+                                . ' Your reservation is held — please try payment again.'
+                            );
                             redirect('booking-wizard/step5');
                             return;
                         }
@@ -1759,6 +1797,88 @@ class Booking_wizard extends Base_Controller {
         $this->loadView('booking_wizard/confirmation', $data);
     }
     
+    /**
+     * Find an unpaid pending booking for the same customer/slot so payment retry
+     * does not create a duplicate that then fails availability checks.
+     */
+    private function findResumableUnpaidBooking($facilityId, $bookingDate, $startTime, $endTime, $customerEmail, $endDate = null) {
+        try {
+            $prefix = $this->db->getPrefix();
+            $email = trim((string) $customerEmail);
+            $facilityId = (int) $facilityId;
+            $endDate = $endDate ?: $bookingDate;
+            if ($facilityId <= 0 || $email === '') {
+                return null;
+            }
+
+            $sessionPendingId = (int) ($_SESSION['booking_data']['pending_booking_id'] ?? 0);
+            if ($sessionPendingId > 0) {
+                $bySession = $this->db->fetchOne(
+                    "SELECT * FROM `{$prefix}bookings`
+                     WHERE id = ?
+                       AND status = 'pending'
+                       AND payment_status = 'unpaid'
+                       AND LOWER(TRIM(customer_email)) = LOWER(?)
+                     LIMIT 1",
+                    [$sessionPendingId, $email]
+                );
+                if ($bySession) {
+                    return $bySession;
+                }
+            }
+
+            return $this->db->fetchOne(
+                "SELECT * FROM `{$prefix}bookings`
+                 WHERE status = 'pending'
+                   AND payment_status = 'unpaid'
+                   AND LOWER(TRIM(customer_email)) = LOWER(?)
+                   AND booking_date = ?
+                   AND start_time = ?
+                   AND end_time = ?
+                   AND (
+                        facility_id = ?
+                        OR space_id = ?
+                        OR facility_id IN (SELECT facility_id FROM `{$prefix}spaces` WHERE id = ? AND facility_id IS NOT NULL)
+                   )
+                   AND (end_date IS NULL OR end_date = ? OR ? = booking_date)
+                 ORDER BY id DESC
+                 LIMIT 1",
+                [
+                    $email,
+                    $bookingDate,
+                    $startTime,
+                    $endTime,
+                    $facilityId,
+                    $facilityId,
+                    $facilityId,
+                    $endDate,
+                    $endDate
+                ]
+            ) ?: null;
+        } catch (Exception $e) {
+            error_log('findResumableUnpaidBooking error: ' . $e->getMessage());
+            // Fallback without end_date column / spaces subquery
+            try {
+                return $this->db->fetchOne(
+                    "SELECT * FROM `" . $this->db->getPrefix() . "bookings`
+                     WHERE status = 'pending'
+                       AND payment_status = 'unpaid'
+                       AND LOWER(TRIM(customer_email)) = LOWER(?)
+                       AND booking_date = ?
+                       AND start_time = ?
+                       AND end_time = ?
+                       AND (facility_id = ? OR space_id = ?)
+                     ORDER BY id DESC
+                     LIMIT 1",
+                    [$customerEmail, $bookingDate, $startTime, $endTime, (int) $facilityId, (int) $facilityId]
+                ) ?: null;
+            } catch (Exception $e2) {
+                error_log('findResumableUnpaidBooking fallback error: ' . $e2->getMessage());
+                return null;
+            }
+        }
+    }
+
     private function calculateDuration($date, $startTime, $endTime) {
         try {
             $start = new DateTime($date . ' ' . $startTime);

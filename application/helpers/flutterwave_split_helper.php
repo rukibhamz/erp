@@ -40,7 +40,10 @@ function flutterwave_should_log_split(array $gatewayConfig) {
  * @return array{subaccounts:array, rule_id:?int, subaccount_id:?string}
  */
 function flutterwave_build_subaccounts_payload(array $subaccountIds, $ruleId = null) {
-    $subaccountIds = array_values(array_filter(array_map('strval', $subaccountIds)));
+    $subaccountIds = array_values(array_filter(array_map(function ($id) {
+        $id = trim((string) $id);
+        return preg_match('/^RS_[A-Z0-9]+$/i', $id) ? $id : '';
+    }, $subaccountIds)));
     if ($subaccountIds === []) {
         return ['subaccounts' => [], 'rule_id' => $ruleId, 'subaccount_id' => null];
     }
