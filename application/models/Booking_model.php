@@ -172,12 +172,13 @@ class Booking_model extends Base_Model {
         }
     }
     
-    public function getByDateRange($startDate, $endDate, $spaceId = null) {
+    public function getByDateRange($startDate, $endDate, $resourceId = null) {
         try {
+            $prefix = $this->db->getPrefix();
             // Updated to use LEFT JOIN and prefer Spaces table but fallback to Facilities
             // This ensures robustness if one relation is missing
             $sql = "SELECT b.*, " . $this->facilityListSelectSql() . "
-                    FROM `" . $this->db->getPrefix() . $this->table . "` b
+                    FROM `" . $prefix . $this->table . "` b
                     " . $this->facilityListJoinSql() . "
                     WHERE (
                         (b.booking_date >= ? AND b.booking_date <= ?)
@@ -186,10 +187,17 @@ class Booking_model extends Base_Model {
             
             $params = [$startDate, $endDate, $startDate, $startDate];
             
-            if ($spaceId) {
-                $sql .= " AND (b.space_id = ? OR b.facility_id = ?)";
-                $params[] = $spaceId;
-                $params[] = $spaceId;
+            if ($resourceId) {
+                $resourceId = (int) $resourceId;
+                // Match this facility, or spaces that belong to it.
+                // Do NOT use `space_id = resourceId` alone — space/facility IDs collide across tables
+                // and falsely mark other venues as occupied (breaks reschedule slot loading).
+                $sql .= " AND (
+                    b.facility_id = ?
+                    OR b.space_id IN (SELECT id FROM `{$prefix}spaces` WHERE facility_id = ?)
+                )";
+                $params[] = $resourceId;
+                $params[] = $resourceId;
             }
             
             $sql .= " ORDER BY b.booking_date, b.start_time";
@@ -204,19 +212,25 @@ class Booking_model extends Base_Model {
     /**
      * Get recurring bookings that fall on a specific date
      */
-    public function getRecurringBookingsForDate($spaceId, $date) {
+    public function getRecurringBookingsForDate($resourceId, $date) {
         try {
-            // Get all recurring bookings for this space
+            $prefix = $this->db->getPrefix();
+            $resourceId = (int) $resourceId;
+            // Get recurring bookings for this facility / its spaces (avoid space_id=facilityId collision)
             $recurringBookings = $this->db->fetchAll(
-                "SELECT b.*, s.space_name as facility_name
-                 FROM `" . $this->db->getPrefix() . $this->table . "` b
-                 JOIN `" . $this->db->getPrefix() . "spaces` s ON b.space_id = s.id
-                 WHERE b.space_id = ?
+                "SELECT b.*, COALESCE(NULLIF(f.facility_name, ''), s.space_name) as facility_name
+                 FROM `{$prefix}{$this->table}` b
+                 LEFT JOIN `{$prefix}facilities` f ON b.facility_id = f.id
+                 LEFT JOIN `{$prefix}spaces` s ON b.space_id = s.id
+                 WHERE (
+                    b.facility_id = ?
+                    OR b.space_id IN (SELECT id FROM `{$prefix}spaces` WHERE facility_id = ?)
+                 )
                  AND b.is_recurring = 1
                  AND b.status NOT IN ('cancelled', 'refunded', 'no_show')
                  AND b.recurring_pattern IS NOT NULL
                  AND b.booking_date <= ?",
-                [$spaceId, $date]
+                [$resourceId, $resourceId, $date]
             );
             
             $matchingBookings = [];

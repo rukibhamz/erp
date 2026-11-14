@@ -392,6 +392,7 @@ class Facility_model extends Base_Model {
                                  'end' => $dayEnd,
                                  'booking_id' => $booking['id'],
                                  'customer_name' => $booking['customer_name'] ?? 'Booked',
+                                 'booking_number' => $booking['booking_number'] ?? '',
                                  'booking' => $booking
                              ];
                         }
@@ -514,13 +515,22 @@ class Facility_model extends Base_Model {
                             }
                         }
 
+                        $occupiedLabel = $occupier;
+                        if ($isOccupied && !$isBuffer && !empty($bookingData['booking_number'])) {
+                            $occupiedLabel = trim(($bookingData['booking_number'] ?? '') . ' — ' . ($occupier ?: 'Booked'));
+                        } elseif ($isOccupied && $isBuffer && !empty($bookingData['booking_number'])) {
+                            $occupiedLabel = 'Buffer (' . $bookingData['booking_number'] . ')';
+                        }
+
                         $allSlots[] = [
                             'date' => $currentDay,
                             'start' => $slotStartStr,
                             'end' => $slotEndStr,
                             'available' => !$isOccupied,
                             'is_buffer' => $isBuffer,
-                            'occupied_by' => $occupier,
+                            'occupied_by' => $occupiedLabel,
+                            'booking_id' => $bookingData['id'] ?? ($bookingData['booking_id'] ?? null),
+                            'booking_number' => $bookingData['booking_number'] ?? null,
                             'booking' => $bookingData,
                             'display' => $slotStartDT->format('g:i A') . ' - ' . $slotEndDT->format('g:i A')
                         ];
@@ -554,10 +564,15 @@ class Facility_model extends Base_Model {
             // Use endDate if provided (for multi-day bookings), otherwise use bookingDate
             $checkEndDate = $endDate ?? $bookingDate;
             
-            // Check for overlapping bookings (no buffer - exact times)
+            // Check for overlapping bookings (no buffer - exact times).
+            // Include spaces linked to this facility; do not match bare space_id=facilityId.
+            $prefix = $this->db->getPrefix();
             $sql = "SELECT COUNT(*) as count 
-                    FROM `" . $this->db->getPrefix() . "bookings` 
-                    WHERE facility_id = ? 
+                    FROM `{$prefix}bookings` 
+                    WHERE (
+                        facility_id = ?
+                        OR space_id IN (SELECT id FROM `{$prefix}spaces` WHERE facility_id = ?)
+                    )
                     AND status NOT IN ('cancelled', 'refunded', 'no_show')
                     AND (
                         (booking_date = ? AND start_time < ? AND end_time > ?)
@@ -566,6 +581,7 @@ class Facility_model extends Base_Model {
                     )";
             
             $params = [
+                $facilityId,
                 $facilityId,
                 $bookingDate, $endTime, $startTime,
                 $checkEndDate, $endTime, $startTime,
@@ -1199,25 +1215,36 @@ class Facility_model extends Base_Model {
     public function getConflictingBooking($facilityId, $bookingDate, $startTime, $endTime, $excludeBookingId = null, $endDate = null) {
         try {
             $checkEndDate = $endDate ?? $bookingDate;
+            $prefix = $this->db->getPrefix();
             
             $sql = "SELECT b.*, u.username 
-                    FROM `" . $this->db->getPrefix() . "bookings` b
-                    LEFT JOIN `" . $this->db->getPrefix() . "users` u ON b.created_by = u.id
-                    WHERE b.facility_id = ? 
+                    FROM `{$prefix}bookings` b
+                    LEFT JOIN `{$prefix}users` u ON b.created_by = u.id
+                    WHERE (
+                        b.facility_id = ?
+                        OR b.space_id IN (SELECT id FROM `{$prefix}spaces` WHERE facility_id = ?)
+                    )
                     AND b.status NOT IN ('cancelled', 'refunded', 'no_show')
                     AND (
                         (b.booking_date = ? AND b.start_time < ? AND b.end_time > ?)
                         OR (b.booking_date = ? AND b.start_time < ? AND b.end_time > ?)
                         OR (b.booking_date BETWEEN ? AND ? AND b.booking_date != ? AND b.booking_date != ?)
-                    )
-                    LIMIT 1";
+                    )";
             
             $params = [
+                $facilityId,
                 $facilityId,
                 $bookingDate, $endTime, $startTime,
                 $checkEndDate, $endTime, $startTime,
                 $bookingDate, $checkEndDate, $bookingDate, $checkEndDate
             ];
+
+            if ($excludeBookingId) {
+                $sql .= " AND b.id != ?";
+                $params[] = (int) $excludeBookingId;
+            }
+
+            $sql .= " LIMIT 1";
             
             return $this->db->fetchOne($sql, $params);
         } catch (Exception $e) {

@@ -99,10 +99,14 @@
         return occupiedSlots.map(function (slot) {
             const isBuffer = !!slot.is_buffer;
             const btnClass = isBuffer ? 'btn-warning text-dark' : 'btn-danger';
-            const label = isBuffer ? 'Buffer' : 'Occupied';
+            const who = slot.occupied_by || slot.booking_number || '';
+            const label = isBuffer
+                ? (who ? ('Buffer — ' + who) : 'Buffer')
+                : (who ? ('Occupied — ' + who) : 'Occupied');
             const textClass = isBuffer ? 'text-dark' : 'text-white';
+            const title = label.replace(/"/g, '&quot;');
             return '<div class="col-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">' +
-                '<div class="booking-slot-btn ' + btnClass + ' disabled" aria-disabled="true">' +
+                '<div class="booking-slot-btn ' + btnClass + ' disabled" aria-disabled="true" title="' + title + '">' +
                 '<span class="booking-slot-time">' + fmt(slot.start) + ' – ' + fmt(slot.end) + '</span>' +
                 '<span class="booking-slot-status ' + textClass + '">' + label + '</span>' +
                 '</div></div>';
