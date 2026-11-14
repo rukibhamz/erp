@@ -96,8 +96,8 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                         </select>
                     </div>
                     <div class="col-12 col-sm-6 col-md-2">
-                        <label class="form-label" for="filter-date">Date</label>
-                        <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>">
+                        <label class="form-label" for="filter-date">Reserved day</label>
+                        <input type="date" name="date" id="filter-date" class="form-control" value="<?= htmlspecialchars($selected_date) ?>" title="Filter by the booking reserved date">
                     </div>
                     <?php render_list_filter_per_page($perPage); ?>
                     <?php render_list_filter_submit_buttons(base_url('bookings')); ?>
@@ -113,7 +113,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                         <span class="badge bg-primary">Status: <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $selected_status))) ?></span>
                     <?php endif; ?>
                     <?php if (!empty($selected_date)): ?>
-                        <span class="badge bg-info text-dark"><?= date('M Y', strtotime($selected_date)) ?></span>
+                        <span class="badge bg-info text-dark">Reserved: <?= date('M d, Y', strtotime($selected_date)) ?></span>
                     <?php endif; ?>
                     <a href="<?= base_url('bookings') ?>" class="small ms-1">Clear all</a>
                 </div>
@@ -155,7 +155,8 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                     <tbody>
                         <?php if (!empty($bookings)): ?>
                             <?php foreach ($bookings as $booking): ?>
-                                <tr>
+                                <?php $bookingViewUrl = base_url('bookings/view/' . intval($booking['id'])); ?>
+                                <tr class="booking-row-clickable" data-href="<?= htmlspecialchars($bookingViewUrl) ?>" tabindex="0" role="link" aria-label="View booking <?= htmlspecialchars($booking['booking_number']) ?>">
                                     <?php bulk_delete_render_checkbox_td($bulk_delete_enabled, (int) $booking['id'], 'booking ' . $booking['booking_number']); ?>
                                     <td><strong><?= htmlspecialchars($booking['booking_number']) ?></strong></td>
                                     <td><?= htmlspecialchars($booking['facility_name']) ?></td>
@@ -186,8 +187,8 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
                                             <?= ucfirst($booking['status']) ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <a href="<?= base_url('bookings/view/' . $booking['id']) ?>" class="btn btn-sm btn-primary" title="View">
+                                    <td class="booking-row-actions" onclick="event.stopPropagation();">
+                                        <a href="<?= $bookingViewUrl ?>" class="btn btn-sm btn-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         <?php if (isSuperAdmin()): ?>
@@ -227,4 +228,29 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
 <style>
 .sortable-th a { display: inline-flex; align-items: center; white-space: nowrap; cursor: pointer; }
 .sortable-th a:hover { color: var(--bs-primary) !important; }
+.booking-row-clickable { cursor: pointer; }
+.booking-row-clickable:hover { background-color: rgba(13, 110, 253, 0.06); }
+.booking-row-clickable:focus-visible { outline: 2px solid rgba(13, 110, 253, 0.45); outline-offset: -2px; }
 </style>
+<script nonce="<?= csp_nonce() ?>">
+(() => {
+    document.querySelectorAll('tr.booking-row-clickable[data-href]').forEach((row) => {
+        const go = () => {
+            const href = row.getAttribute('data-href');
+            if (href) window.location.href = href;
+        };
+        row.addEventListener('click', (event) => {
+            if (event.target.closest('a, button, input, label, form, .booking-row-actions')) {
+                return;
+            }
+            go();
+        });
+        row.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                go();
+            }
+        });
+    });
+})();
+</script>

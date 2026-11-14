@@ -105,14 +105,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 $hasBookings = isset($bookingsByDate[$dateStr]);
                                 
                                 echo '<td class="calendar-day' . ($hasBookings ? ' has-bookings' : '') . '">';
-                                echo '<div class="day-number">' . $day . '</div>';
+                                echo '<div class="day-number"><a href="' . htmlspecialchars(base_url('bookings?date=' . $dateStr)) . '" class="calendar-day-link" title="View reservations for this day">' . $day . '</a></div>';
                                 
                                 if ($hasBookings) {
                                     foreach ($bookingsByDate[$dateStr] as $booking) {
                                         $color = $statusColors[$booking['status']] ?? 'secondary';
-                                        echo '<div class="booking-item bg-' . $color . '" title="' . htmlspecialchars($booking['customer_name'] . ' - ' . $booking['facility_name']) . '">';
-                                        echo htmlspecialchars($booking['facility_name']);
-                                        echo '</div>';
+                                        $bookingTitle = htmlspecialchars(($booking['customer_name'] ?? '') . ' - ' . ($booking['facility_name'] ?? '') . ' (' . ucfirst($booking['status'] ?? '') . ')');
+                                        $bookingUrl = base_url('bookings/view/' . intval($booking['id']));
+                                        echo '<a href="' . htmlspecialchars($bookingUrl) . '" class="booking-item bg-' . $color . ' text-decoration-none" title="' . $bookingTitle . '">';
+                                        echo htmlspecialchars($booking['facility_name'] ?? 'Booking');
+                                        echo '</a>';
                                     }
                                 }
                                 
@@ -130,14 +132,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 $hasBookings = isset($bookingsByDate[$dateStr]);
                                 
                                 echo '<td class="calendar-day' . ($hasBookings ? ' has-bookings' : '') . '">';
-                                echo '<div class="day-number">' . $day . '</div>';
+                                echo '<div class="day-number"><a href="' . htmlspecialchars(base_url('bookings?date=' . $dateStr)) . '" class="calendar-day-link" title="View reservations for this day">' . $day . '</a></div>';
                                 
                                 if ($hasBookings) {
                                     foreach ($bookingsByDate[$dateStr] as $booking) {
                                         $color = $statusColors[$booking['status']] ?? 'secondary';
-                                        echo '<div class="booking-item bg-' . $color . '" title="' . htmlspecialchars($booking['customer_name'] . ' - ' . $booking['facility_name']) . '">';
-                                        echo htmlspecialchars($booking['facility_name']);
-                                        echo '</div>';
+                                        $bookingTitle = htmlspecialchars(($booking['customer_name'] ?? '') . ' - ' . ($booking['facility_name'] ?? '') . ' (' . ucfirst($booking['status'] ?? '') . ')');
+                                        $bookingUrl = base_url('bookings/view/' . intval($booking['id']));
+                                        echo '<a href="' . htmlspecialchars($bookingUrl) . '" class="booking-item bg-' . $color . ' text-decoration-none" title="' . $bookingTitle . '">';
+                                        echo htmlspecialchars($booking['facility_name'] ?? 'Booking');
+                                        echo '</a>';
                                     }
                                 }
                                 

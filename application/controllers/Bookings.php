@@ -97,18 +97,21 @@ class Bookings extends Base_Controller {
 
     public function index() {
         $status = $_GET['status'] ?? 'all';
-        $date = $_GET['date'] ?? '';
-        $hasDateFilter = !empty($_GET['date']); // Only filter by date if user explicitly set one
+        $date = trim((string) ($_GET['date'] ?? ''));
+        $hasDateFilter = $date !== '' && strtotime($date) !== false;
+        if ($hasDateFilter) {
+            $date = date('Y-m-d', strtotime($date));
+        } else {
+            $date = '';
+        }
 
         // Auto-complete any confirmed/in_progress bookings whose date has passed
         $this->autoCompleteExpiredBookings();
         
         try {
             if ($hasDateFilter) {
-                // User explicitly selected a date — show that month's bookings
-                $startDate = date('Y-m-01', strtotime($date));
-                $endDate = date('Y-m-t', strtotime($date));
-                $bookings = $this->bookingModel->getByDateRange($startDate, $endDate);
+                // Exact reserved day (booking_date), not whole month
+                $bookings = $this->bookingModel->getByDateRange($date, $date);
                 
                 // Filter by status
                 if ($status !== 'all') {

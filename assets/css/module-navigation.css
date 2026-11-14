@@ -90,7 +90,18 @@
     margin-bottom: var(--space-xs, 0.25rem);
 }
 
+.calendar-day-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.calendar-day-link:hover {
+    color: var(--bs-primary, #0d6efd);
+    text-decoration: underline;
+}
+
 .booking-item {
+    display: block;
     font-size: var(--font-size-xs, 0.75rem);
     padding: var(--space-xs, 0.25rem) var(--space-sm, 0.5rem);
     margin: var(--space-xs, 0.25rem) 0;
@@ -100,10 +111,20 @@
     overflow: hidden;
     text-overflow: ellipsis;
     transition: opacity var(--transition-base, 200ms);
+    color: #fff !important;
 }
 
 .booking-item:hover {
-    opacity: 0.8;
+    opacity: 0.85;
+    color: #fff !important;
+}
+
+.booking-item.bg-warning {
+    color: #212529 !important;
+}
+
+.booking-item.bg-warning:hover {
+    color: #212529 !important;
 }
 
 @media (max-width: 768px) {
