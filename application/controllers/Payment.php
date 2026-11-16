@@ -281,12 +281,27 @@ public function callback() {
                 }
             }
         }
+
+        $bookingConfirmationToken = null;
+        if (!empty($bookingId)) {
+            grant_booking_confirmation_access((int) $bookingId);
+            try {
+                $bookingModel = $this->loadModel('Booking_model');
+                $bookingForToken = $bookingModel ? $bookingModel->getById((int) $bookingId) : null;
+                if ($bookingForToken) {
+                    $bookingConfirmationToken = booking_confirmation_token($bookingForToken);
+                }
+            } catch (Exception $tokenEx) {
+                error_log('Payment confirmation token error: ' . $tokenEx->getMessage());
+            }
+        }
         
         $data = [
             'page_title' => 'Payment Confirmation',
             'status' => $status,
             'transaction' => $transaction,
-            'booking_id' => $bookingId
+            'booking_id' => $bookingId,
+            'booking_confirmation_token' => $bookingConfirmationToken
         ];
         
         $this->loadView('payment/confirmation', $data);
@@ -906,6 +921,8 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
                             }
                         }
                     }
+
+                    grant_booking_confirmation_access((int) $booking['id']);
 
                     // SEND NOTIFICATION (EMAIL) - use UPDATED booking data
                     if ($this->notificationModel && $isFullPayment) {

@@ -543,8 +543,8 @@ class Booking_wizard extends Base_Controller {
             }
 
             if (!$space) {
-                // Last resort: treat spaceId directly as facilityId
-                $result = $this->facilityModel->getAvailableTimeSlots($spaceId, $date, $endDate);
+                // Last resort: treat spaceId directly as facilityId (public: no booking PII)
+                $result = $this->facilityModel->getAvailableTimeSlots($spaceId, $date, $endDate, null, false);
                 echo json_encode($result);
                 exit;
             }
@@ -561,8 +561,8 @@ class Booking_wizard extends Base_Controller {
                  exit;
             }
 
-            // Use centralized logic in Facility_model
-            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $endDate);
+            // Public endpoint: never return full booking rows (customer PII)
+            $result = $this->facilityModel->getAvailableTimeSlots($facilityId, $date, $endDate, null, false);
             
             echo json_encode($result);
 
@@ -1070,10 +1070,6 @@ class Booking_wizard extends Base_Controller {
      * Finalize booking
      */
     public function finalize() {
-        // Define log variables for debugging
-        $logFile = ROOTPATH . 'logs/debug_wizard_log.txt';
-        $timestamp = date('Y-m-d H:i:s');
-
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->setFlashMessage('danger', 'Invalid request.');
             redirect('booking-wizard/step1');
@@ -1178,7 +1174,7 @@ class Booking_wizard extends Base_Controller {
                     $pdo->commit();
                 }
                 error_log("FINALIZE: Reusing unpaid pending booking #{$bookingId} ({$bookingNumber}) for payment retry");
-                file_put_contents($logFile, "[$timestamp] REUSING BOOKING ID: {$bookingId}\n", FILE_APPEND);
+                booking_wizard_debug_log("REUSING BOOKING ID: {$bookingId}");
             }
             
             // Recalculate base amount
@@ -1355,29 +1351,32 @@ class Booking_wizard extends Base_Controller {
                 'created_at' => date('Y-m-d H:i:s')
             ];
             
-            // Log the record before insert
-            file_put_contents($logFile, "[$timestamp] INSERTING BOOKING: " . print_r($bookingRecord, true) . "\n", FILE_APPEND);
+            booking_wizard_debug_log(
+                'INSERTING BOOKING number=' . ($bookingRecord['booking_number'] ?? '')
+                . ' facility_id=' . ($bookingRecord['facility_id'] ?? '')
+                . ' date=' . ($bookingRecord['booking_date'] ?? '')
+            );
             
             if (empty($bookingRecord['booking_number'])) {
-                 file_put_contents($logFile, "[$timestamp] ERROR: Empty booking number\n", FILE_APPEND);
+                 booking_wizard_debug_log('ERROR: Empty booking number');
                  throw new Exception('System failed to generate booking number');
             }
 
             $bookingId = $this->bookingModel->create($bookingRecord);
             
             if (!$bookingId) {
-                file_put_contents($logFile, "[$timestamp] ERROR: Model create returned false (Insert Failed)\n", FILE_APPEND);
+                booking_wizard_debug_log('ERROR: Model create returned false (Insert Failed)');
                 throw new Exception('Failed to create booking - Database Insert Failed');
             }
             
-            file_put_contents($logFile, "[$timestamp] SUCCESS: Created Booking ID: $bookingId\n", FILE_APPEND);
+            booking_wizard_debug_log("SUCCESS: Created Booking ID: $bookingId");
             $_SESSION['booking_data']['pending_booking_id'] = $bookingId;
             
             // CRITICAL FIX: Commit the booking IMMEDIATELY to prevent rollback
             // from optional operations (resources, addons, slots, invoice) that might fail
             if ($pdo->inTransaction()) {
                 $pdo->commit();
-                file_put_contents($logFile, "[$timestamp] BOOKING COMMITTED: ID $bookingId now persisted\n", FILE_APPEND);
+                booking_wizard_debug_log("BOOKING COMMITTED: ID $bookingId now persisted");
             }
             
             // All subsequent operations are optional and run OUTSIDE the transaction
@@ -1605,7 +1604,7 @@ class Booking_wizard extends Base_Controller {
                         }
                         
                         if ($paymentResult['success'] && !empty($paymentResult['authorization_url'])) {
-                            file_put_contents($logFile, "[$timestamp] GATEWAY SUCCESS - commit before redirect\n", FILE_APPEND);
+                            booking_wizard_debug_log('GATEWAY SUCCESS - commit before redirect');
                             if ($pdo->inTransaction()) {
                                 $pdo->commit();
                             }
@@ -1624,7 +1623,7 @@ class Booking_wizard extends Base_Controller {
 
                             unset($_SESSION['booking_data']);
 
-                            file_put_contents($logFile, "[$timestamp] Redirecting to: " . $paymentResult['authorization_url'] . "\n", FILE_APPEND);
+                            booking_wizard_debug_log('Redirecting to payment gateway');
                             redirect($paymentResult['authorization_url']);
                             exit;
                         } else {
@@ -1633,15 +1632,16 @@ class Booking_wizard extends Base_Controller {
                             }
                             $gatewayError = $paymentResult['message'] ?? 'Could not start online payment.';
                             error_log('Gateway initialization failed: ' . json_encode($paymentResult));
-                            file_put_contents($logFile, "[$timestamp] GATEWAY FAILED: {$gatewayError}\n", FILE_APPEND);
-                            // Keep unpaid booking + session so retry resumes payment instead of double-booking the slot
+                            booking_wizard_debug_log('GATEWAY FAILED: ' . $gatewayError);
+                            // Release slot on init failure so unpaid pendings cannot hold availability
                             if (!empty($bookingId)) {
-                                $_SESSION['booking_data']['pending_booking_id'] = (int) $bookingId;
+                                $this->releaseUnpaidPendingBooking((int) $bookingId);
+                                unset($_SESSION['booking_data']['pending_booking_id']);
                             }
                             $this->setFlashMessage(
                                 'danger',
                                 'Online payment could not be started: ' . $gatewayError
-                                . ' Your reservation is held — please try payment again.'
+                                . ' Please try again.'
                             );
                             redirect('booking-wizard/step5');
                             return;
@@ -1650,6 +1650,10 @@ class Booking_wizard extends Base_Controller {
                 } else {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
+                    }
+                    if (!empty($bookingId)) {
+                        $this->releaseUnpaidPendingBooking((int) $bookingId);
+                        unset($_SESSION['booking_data']['pending_booking_id']);
                     }
                     $this->setFlashMessage('danger', 'Payment gateway is not configured. Please contact support.');
                     redirect('booking-wizard/step5');
@@ -1664,7 +1668,7 @@ class Booking_wizard extends Base_Controller {
             // Only commit if transaction is still active
             if ($pdo->inTransaction()) {
                 $pdo->commit();
-                file_put_contents($logFile, "[$timestamp] TRANSACTION COMMITTED\n", FILE_APPEND);
+                booking_wizard_debug_log('TRANSACTION COMMITTED');
             }
 
             // Notify staff (admin, super_admin, manager) of new booking
@@ -1675,7 +1679,7 @@ class Booking_wizard extends Base_Controller {
                     $staffBooking['id'] = $bookingId;
                     $staffBooking['facility_name'] = $resource['space_name'] ?? $resource['name'] ?? 'Reserved Space';
                     $notificationModel->sendNewBookingStaffNotification($bookingId, $staffBooking);
-                    file_put_contents($logFile, "[$timestamp] STAFF NOTIFICATION SENT for booking: {$bookingNumber}\n", FILE_APPEND);
+                    booking_wizard_debug_log("STAFF NOTIFICATION SENT for booking: {$bookingNumber}");
                 }
             } catch (Exception $notifyEx) {
                 error_log("Booking_wizard: Failed to send staff notification - " . $notifyEx->getMessage());
@@ -1684,15 +1688,20 @@ class Booking_wizard extends Base_Controller {
 
             // Clear booking data from session
             unset($_SESSION['booking_data']);
+
+            $confirmBooking = $bookingRecord;
+            $confirmBooking['id'] = $bookingId;
+            grant_booking_confirmation_access((int) $bookingId);
+            $confirmToken = booking_confirmation_token($confirmBooking);
             
             $this->setFlashMessage('success', 'Booking created successfully! Booking Number: ' . $bookingNumber);
-            redirect('booking-wizard/confirmation/' . $bookingId);
+            redirect('booking-wizard/confirmation/' . $bookingId . '?t=' . urlencode($confirmToken));
             
         } catch (Exception $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 try {
                     $pdo->rollBack();
-                    file_put_contents($logFile, "[$timestamp] TRANSACTION ROLLED BACK\n", FILE_APPEND);
+                    booking_wizard_debug_log('TRANSACTION ROLLED BACK');
                 } catch (Exception $rollbackException) {
                     // Transaction might already be finished
                     error_log('Rollback note: ' . $rollbackException->getMessage());
@@ -1711,10 +1720,7 @@ class Booking_wizard extends Base_Controller {
             }
             
             error_log('Booking_wizard finalize error: ' . $e->getMessage());
-            
-            $logFile = ROOTPATH . 'logs/debug_wizard_log.txt';
-            $timestamp = date('Y-m-d H:i:s');
-            file_put_contents($logFile, "[$timestamp] EXCEPTION: " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n", FILE_APPEND);
+            booking_wizard_debug_log('EXCEPTION: ' . $e->getMessage());
             
             $this->setFlashMessage('danger', 'Failed to create booking: ' . $e->getMessage());
             redirect('booking-wizard/step5');
@@ -1729,31 +1735,26 @@ class Booking_wizard extends Base_Controller {
         if (!$bookingId) {
             $bookingId = $_GET['id'] ?? null;
         }
+        $bookingId = (int) $bookingId;
         
-        if (!$bookingId) {
+        if ($bookingId <= 0) {
             $this->setFlashMessage('danger', 'No booking ID provided.');
             redirect('booking-wizard/step1');
             return;
         }
         
-        error_log("Booking confirmation: Looking for booking ID: $bookingId");
-        
         try {
             // Try getWithFacility first, fallback to getById
             $booking = $this->bookingModel->getWithFacility($bookingId);
             if (!$booking) {
-                error_log("Booking confirmation: getWithFacility returned null, trying getById");
                 $booking = $this->bookingModel->getById($bookingId);
             }
             
-            if (!$booking) {
-                error_log("Booking confirmation: Booking not found with ID: $bookingId");
+            if (!$booking || !can_access_booking_confirmation($booking)) {
                 $this->setFlashMessage('danger', 'Booking not found.');
                 redirect('booking-wizard/step1');
                 return;
             }
-            
-            error_log("Booking confirmation: Found booking #" . ($booking['booking_number'] ?? $bookingId));
             
             $resources = [];
             $addons = [];
@@ -1779,10 +1780,9 @@ class Booking_wizard extends Base_Controller {
             
         } catch (Exception $e) {
             error_log("Booking confirmation: Exception - " . $e->getMessage());
-            $booking = null;
-            $resources = [];
-            $addons = [];
-            $paymentSchedule = [];
+            $this->setFlashMessage('danger', 'Booking not found.');
+            redirect('booking-wizard/step1');
+            return;
         }
 
         $data = [
@@ -1795,6 +1795,32 @@ class Booking_wizard extends Base_Controller {
         ];
 
         $this->loadView('booking_wizard/confirmation', $data);
+    }
+
+    /**
+     * Cancel an unpaid pending booking created before a failed gateway init
+     * so the slot is not held without payment.
+     */
+    private function releaseUnpaidPendingBooking(int $bookingId): void {
+        if ($bookingId <= 0 || !$this->bookingModel) {
+            return;
+        }
+        try {
+            $booking = $this->bookingModel->getById($bookingId);
+            if (!$booking) {
+                return;
+            }
+            if (($booking['status'] ?? '') !== 'pending') {
+                return;
+            }
+            if (($booking['payment_status'] ?? '') !== 'unpaid') {
+                return;
+            }
+            $this->bookingModel->updateStatus($bookingId, 'cancelled');
+            booking_wizard_debug_log("Released unpaid pending booking ID {$bookingId} after gateway failure");
+        } catch (Exception $e) {
+            error_log('releaseUnpaidPendingBooking error: ' . $e->getMessage());
+        }
     }
     
     /**
@@ -1982,11 +2008,10 @@ class Booking_wizard extends Base_Controller {
      * @return int|null Customer ID
      */
     private function getOrCreateCustomer($booking) {
-        $logFile = 'logs/customer_creation.log';
-        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - START getOrCreateCustomer for email: " . ($booking['customer_email'] ?? 'N/A') . "\n", FILE_APPEND);
+        booking_wizard_debug_log('START getOrCreateCustomer');
         
         if (!$this->customerModel) {
-            @file_put_contents($logFile, "Customer model not loaded\n", FILE_APPEND);
+            booking_wizard_debug_log('Customer model not loaded');
             return null;
         }
         
@@ -2002,12 +2027,12 @@ class Booking_wizard extends Base_Controller {
             
             if ($existingCustomer) {
                 // Customer exists - just return the ID
-                @file_put_contents($logFile, "Found existing customer ID: " . $existingCustomer['id'] . "\n", FILE_APPEND);
+                booking_wizard_debug_log('Found existing customer ID: ' . $existingCustomer['id']);
                 return $existingCustomer['id'];
             }
             
             // ✅ STEP 2: Customer doesn't exist - create new one
-            @file_put_contents($logFile, "Creating new customer\n", FILE_APPEND);
+            booking_wizard_debug_log('Creating new customer');
             
             // Generate unique customer code
             $customerCode = $this->customerModel->getNextCustomerCode();
@@ -2048,7 +2073,7 @@ class Booking_wizard extends Base_Controller {
             $customerId = $this->customerModel->create($customerData);
             
             if ($customerId) {
-                @file_put_contents($logFile, "Created new customer ID: $customerId with code: $customerCode\n", FILE_APPEND);
+                booking_wizard_debug_log("Created new customer ID: $customerId with code: $customerCode");
                 
                 // ✅ STEP 3: Create customer ledger entry in accounting
                 $this->createCustomerLedgerAccount($customerId, $booking['customer_name'] ?? 'Guest');
@@ -2059,7 +2084,7 @@ class Booking_wizard extends Base_Controller {
             return null;
             
         } catch (Exception $e) {
-            @file_put_contents($logFile, "ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+            booking_wizard_debug_log('getOrCreateCustomer ERROR: ' . $e->getMessage());
             error_log("getOrCreateCustomer error: " . $e->getMessage());
             return null;
         }
@@ -2162,12 +2187,11 @@ class Booking_wizard extends Base_Controller {
      * @return int|null Invoice ID
      */
     private function createBookingInvoice($bookingId, $booking) {
-        $logFile = 'logs/invoice_creation.log';
-        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - START createBookingInvoice for Booking $bookingId\n", FILE_APPEND);
+        booking_wizard_debug_log("START createBookingInvoice for Booking $bookingId");
         
         try {
             if (!$this->invoiceModel) {
-                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Invoice model not loaded\n", FILE_APPEND);
+                booking_wizard_debug_log(date('Y-m-d H:i:s') . " - ERROR: Invoice model not loaded\n");
                 error_log("createBookingInvoice: Invoice model not loaded");
                 return null;
             }
@@ -2176,7 +2200,7 @@ class Booking_wizard extends Base_Controller {
             $customerId = $this->getOrCreateCustomer($booking);
             
             if (!$customerId) {
-                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: Failed to obtain Customer ID\n", FILE_APPEND);
+                booking_wizard_debug_log(date('Y-m-d H:i:s') . " - ERROR: Failed to obtain Customer ID\n");
             }
             
             // ✅ STEP 2: Check if invoice already exists for this booking
@@ -2187,7 +2211,7 @@ class Booking_wizard extends Base_Controller {
             );
             
             if ($existingInvoice) {
-                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Invoice already exists ID: " . $existingInvoice['id'] . "\n", FILE_APPEND);
+                booking_wizard_debug_log(date('Y-m-d H:i:s') . " - Invoice already exists ID: " . $existingInvoice['id'] . "\n");
                 return $existingInvoice['id'];
             }
             
@@ -2199,7 +2223,7 @@ class Booking_wizard extends Base_Controller {
             $discountAmount = floatval($booking['discount_amount'] ?? 0);
             $paidAmount = floatval($booking['paid_amount'] ?? 0);
             
-            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Creating invoice: subtotal=$subtotal, tax=$taxAmount, total=$totalAmount\n", FILE_APPEND);
+            booking_wizard_debug_log(date('Y-m-d H:i:s') . " - Creating invoice: subtotal=$subtotal, tax=$taxAmount, total=$totalAmount\n");
             
             // ✅ STEP 3: Create invoice
             $invoiceData = [
@@ -2228,7 +2252,7 @@ class Booking_wizard extends Base_Controller {
             $invoiceId = $this->invoiceModel->create($invoiceData);
             
             if ($invoiceId) {
-                @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Created invoice ID: $invoiceId\n", FILE_APPEND);
+                booking_wizard_debug_log(date('Y-m-d H:i:s') . " - Created invoice ID: $invoiceId\n");
                 
             // ✅ STEP 4: Add invoice line items
                 try {
@@ -2276,7 +2300,7 @@ class Booking_wizard extends Base_Controller {
             
             return null;
         } catch (Exception $e) {
-            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+            booking_wizard_debug_log(date('Y-m-d H:i:s') . " - ERROR: " . $e->getMessage() . "\n");
             error_log("createBookingInvoice: Error - " . $e->getMessage());
             return null;
         }
@@ -2426,11 +2450,10 @@ class Booking_wizard extends Base_Controller {
      * Creates: DR Cash, CR Accounts Receivable
      */
     public function recordPaymentInAccounting($bookingId, $booking, $amount, $reference) {
-        $logFile = 'logs/payment_accounting.log';
-        @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Recording payment for booking $bookingId, amount: $amount\n", FILE_APPEND);
+        booking_wizard_debug_log("Recording payment for booking $bookingId, amount: $amount");
         
         if (!$this->accountModel || !$this->transactionModel) {
-            @file_put_contents($logFile, "Accounting models not loaded\n", FILE_APPEND);
+            booking_wizard_debug_log("Accounting models not loaded\n");
             return;
         }
         
@@ -2465,7 +2488,7 @@ class Booking_wizard extends Base_Controller {
             }
             
             if (!$cashAccount || !$arAccount) {
-                @file_put_contents($logFile, "Missing cash or AR accounts\n", FILE_APPEND);
+                booking_wizard_debug_log("Missing cash or AR accounts\n");
                 error_log("recordPaymentInAccounting: Missing cash or AR accounts");
                 return;
             }
@@ -2560,11 +2583,11 @@ class Booking_wizard extends Base_Controller {
                 $this->updateCustomerBalance($customerId);
             }
             
-            @file_put_contents($logFile, date('Y-m-d H:i:s') . " - Payment recording complete: Cash DR $amount, AR CR $amount, JE: $journalEntryId\n", FILE_APPEND);
+            booking_wizard_debug_log(date('Y-m-d H:i:s') . " - Payment recording complete: Cash DR $amount, AR CR $amount, JE: $journalEntryId\n");
             error_log("recordPaymentInAccounting: Recorded payment - Cash DR: $amount, AR CR: $amount, JE: $journalEntryId");
             
         } catch (Exception $e) {
-            @file_put_contents($logFile, "ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+            booking_wizard_debug_log("ERROR: " . $e->getMessage() . "\n");
             error_log("recordPaymentInAccounting error: " . $e->getMessage());
         }
     }

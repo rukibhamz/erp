@@ -445,6 +445,80 @@ function payment_debug_log(string $message): void {
     @file_put_contents($dir . '/payment_debug.log', $message, FILE_APPEND);
 }
 
+/**
+ * Write booking-wizard debug lines under logs/. Enable with BOOKING_WIZARD_DEBUG=1.
+ * Never pass customer PII into $message.
+ */
+function booking_wizard_debug_log(string $message): void {
+    if (env('BOOKING_WIZARD_DEBUG', '0') !== '1' && env('BOOKING_WIZARD_DEBUG', '0') !== 'true') {
+        return;
+    }
+    $dir = (defined('ROOTPATH') ? ROOTPATH : dirname(__DIR__, 2) . '/') . 'logs';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    @file_put_contents(
+        $dir . '/debug_wizard_log.txt',
+        '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n",
+        FILE_APPEND
+    );
+}
+
+/**
+ * HMAC token authorizing access to a public booking confirmation page.
+ */
+function booking_confirmation_token(array $booking): string {
+    $secret = (string) env('APP_ENCRYPTION_KEY', '');
+    if ($secret === '') {
+        $secret = 'booking-confirmation';
+    }
+    $id = (int) ($booking['id'] ?? 0);
+    $number = (string) ($booking['booking_number'] ?? '');
+    return hash_hmac('sha256', $id . '|' . $number, $secret);
+}
+
+function grant_booking_confirmation_access(int $bookingId): void {
+    if ($bookingId <= 0) {
+        return;
+    }
+    if (!isset($_SESSION['booking_confirmation_access']) || !is_array($_SESSION['booking_confirmation_access'])) {
+        $_SESSION['booking_confirmation_access'] = [];
+    }
+    $_SESSION['booking_confirmation_access'][$bookingId] = time();
+}
+
+/**
+ * Whether the current request may view a public booking confirmation (anti-IDOR).
+ */
+function can_access_booking_confirmation(array $booking): bool {
+    $bookingId = (int) ($booking['id'] ?? 0);
+    if ($bookingId <= 0) {
+        return false;
+    }
+
+    $token = (string) ($_GET['t'] ?? '');
+    if ($token !== '' && hash_equals(booking_confirmation_token($booking), $token)) {
+        return true;
+    }
+
+    $grants = $_SESSION['booking_confirmation_access'] ?? [];
+    if (!empty($grants[$bookingId]) && (time() - (int) $grants[$bookingId]) < 86400) {
+        return true;
+    }
+
+    $sessionEmail = trim((string) ($_SESSION['customer_email'] ?? $_SESSION['email'] ?? ''));
+    $bookingEmail = trim((string) ($booking['customer_email'] ?? ''));
+    if ($sessionEmail !== '' && $bookingEmail !== '' && strcasecmp($sessionEmail, $bookingEmail) === 0) {
+        return true;
+    }
+
+    if (function_exists('has_permission') && has_permission('bookings', 'read')) {
+        return true;
+    }
+
+    return false;
+}
+
 function configure_secure_session($isHttps = null) {
     // Auto-detect HTTPS if not specified
     if ($isHttps === null) {

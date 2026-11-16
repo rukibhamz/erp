@@ -283,8 +283,9 @@ class Facility_model extends Base_Model {
         return null;
     }
     
-    public function getAvailableTimeSlots($facilityId, $date, $endDate = null, $excludeBookingId = null) {
+    public function getAvailableTimeSlots($facilityId, $date, $endDate = null, $excludeBookingId = null, $includeBookingDetails = true) {
         $checkEndDate = $endDate ?? $date;
+        $includeBookingDetails = (bool) $includeBookingDetails;
 
         
         try {
@@ -391,8 +392,9 @@ class Facility_model extends Base_Model {
                                  'start' => $dayStart,
                                  'end' => $dayEnd,
                                  'booking_id' => $booking['id'],
-                                 'customer_name' => $booking['customer_name'] ?? 'Booked',
-                                 'booking_number' => $booking['booking_number'] ?? '',
+                                 // Keep full row in memory for buffer math; strip before public responses.
+                                 'customer_name' => $includeBookingDetails ? ($booking['customer_name'] ?? 'Booked') : 'Booked',
+                                 'booking_number' => $includeBookingDetails ? ($booking['booking_number'] ?? '') : '',
                                  'booking' => $booking
                              ];
                         }
@@ -516,10 +518,20 @@ class Facility_model extends Base_Model {
                         }
 
                         $occupiedLabel = $occupier;
-                        if ($isOccupied && !$isBuffer && !empty($bookingData['booking_number'])) {
-                            $occupiedLabel = trim(($bookingData['booking_number'] ?? '') . ' — ' . ($occupier ?: 'Booked'));
-                        } elseif ($isOccupied && $isBuffer && !empty($bookingData['booking_number'])) {
-                            $occupiedLabel = 'Buffer (' . $bookingData['booking_number'] . ')';
+                        if ($includeBookingDetails) {
+                            if ($isOccupied && !$isBuffer && !empty($bookingData['booking_number'])) {
+                                $occupiedLabel = trim(($bookingData['booking_number'] ?? '') . ' — ' . ($occupier ?: 'Booked'));
+                            } elseif ($isOccupied && $isBuffer && !empty($bookingData['booking_number'])) {
+                                $occupiedLabel = 'Buffer (' . $bookingData['booking_number'] . ')';
+                            }
+                        } elseif ($isOccupied) {
+                            if ($occupier === 'Past') {
+                                $occupiedLabel = 'Past';
+                            } elseif ($isBuffer) {
+                                $occupiedLabel = 'Buffer';
+                            } else {
+                                $occupiedLabel = 'Booked';
+                            }
                         }
 
                         $allSlots[] = [
@@ -529,9 +541,9 @@ class Facility_model extends Base_Model {
                             'available' => !$isOccupied,
                             'is_buffer' => $isBuffer,
                             'occupied_by' => $occupiedLabel,
-                            'booking_id' => $bookingData['id'] ?? ($bookingData['booking_id'] ?? null),
-                            'booking_number' => $bookingData['booking_number'] ?? null,
-                            'booking' => $bookingData,
+                            'booking_id' => $includeBookingDetails ? ($bookingData['id'] ?? ($bookingData['booking_id'] ?? null)) : null,
+                            'booking_number' => $includeBookingDetails ? ($bookingData['booking_number'] ?? null) : null,
+                            'booking' => $includeBookingDetails ? $bookingData : null,
                             'display' => $slotStartDT->format('g:i A') . ' - ' . $slotEndDT->format('g:i A')
                         ];
                     }

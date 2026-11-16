@@ -900,11 +900,15 @@ class Bookings extends Base_Controller {
     }
 
     public function send_reminders() {
-        // Only allow from CLI or specific secret key if called via URL
-        if (PHP_SAPI !== 'cli' && ($_GET['key'] ?? '') !== 'REMIND_SECRET_KEY') {
-            http_response_code(404);
-            echo "404 Not Found";
-            exit;
+        // Only allow from CLI or URL with BOOKING_REMIND_SECRET from env
+        if (PHP_SAPI !== 'cli') {
+            $expected = (string) env('BOOKING_REMIND_SECRET', '');
+            $provided = (string) ($_GET['key'] ?? '');
+            if ($expected === '' || !hash_equals($expected, $provided)) {
+                http_response_code(404);
+                echo "404 Not Found";
+                exit;
+            }
         }
 
         try {

@@ -76,7 +76,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             // For guests, show link to booking wizard confirmation instead of dashboard bookings
                             $viewUrl = isset($_SESSION['user_id']) 
                                 ? base_url('bookings/view/' . $booking_id)
-                                : base_url('booking-wizard/confirmation/' . $booking_id);
+                                : base_url(
+                                    'booking-wizard/confirmation/' . $booking_id
+                                    . (!empty($booking_confirmation_token) ? ('?t=' . urlencode($booking_confirmation_token)) : '')
+                                );
                             ?>
                             <a href="<?= $viewUrl ?>" class="btn btn-primary">
                                 <i class="bi bi-eye"></i> View Booking

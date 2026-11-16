@@ -85,7 +85,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
     </div>
 
     <?php if (!empty($flash)): ?>
-        <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
+        <div class="alert alert-<?= htmlspecialchars($flash['type'] ?? 'info') ?> alert-dismissible fade show">
             <?= htmlspecialchars($flash['message']) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>

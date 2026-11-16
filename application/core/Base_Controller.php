@@ -296,6 +296,10 @@ class Base_Controller {
     }
     
     protected function setFlashMessage($type, $message) {
+        $allowedTypes = ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark', 'light'];
+        if (!in_array((string) $type, $allowedTypes, true)) {
+            $type = 'info';
+        }
         $this->session['flash_message'] = [
             'type' => $type,
             'message' => $message
