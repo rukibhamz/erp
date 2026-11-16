@@ -3,6 +3,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 $sort = $sort ?? 'booking_number';
 $sort_dir = $sort_dir ?? 'asc';
+$selected_status = $selected_status ?? 'all';
+$selected_date = $selected_date ?? '';
 $pagination = $pagination ?? [];
 $perPage = intval($pagination['per_page'] ?? 50);
 
@@ -82,7 +84,7 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
         </div>
     </div>
 
-    <?php if ($flash): ?>
+    <?php if (!empty($flash)): ?>
         <div class="alert alert-<?= $flash['type'] ?> alert-dismissible fade show">
             <?= htmlspecialchars($flash['message']) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
