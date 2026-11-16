@@ -28,31 +28,52 @@ $sortableTh = function ($column, $label) use ($buildSortUrl, $sortIcon) {
 ?>
 
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4 list-filters-page-header">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 list-filters-page-header">
         <h1 class="h3 mb-0">Bookings</h1>
-        <div class="list-filters-page-actions">
-            <a href="<?= base_url('booking-reports') ?>" class="btn btn-primary">
+        <div class="d-flex flex-wrap align-items-center gap-2 list-filters-page-actions">
+            <a href="<?= base_url('bookings/calendar') ?>" class="btn btn-outline-primary">
+                <i class="bi bi-calendar-month"></i> Calendar
+            </a>
+            <a href="<?= base_url('booking-reports') ?>" class="btn btn-outline-primary">
                 <i class="bi bi-graph-up"></i> Reports
             </a>
-            <a href="<?= base_url('bookings/calendar') ?>" class="btn btn-primary">
-                <i class="bi bi-calendar-month"></i> Calendar View
-            </a>
+
             <?php if (has_permission('bookings', 'update')): ?>
-                <a href="<?= base_url('bookings/financialReconciliation') ?>" class="btn btn-primary">
-                    <i class="bi bi-arrow-repeat"></i> Reconcile Finances
-                </a>
-                <form method="POST" action="<?= base_url('payment/reconcile-gateway-payments') ?>" class="d-inline"
-                      onsubmit="return confirm('Re-verify pending online payments and fix facility name mismatches on existing bookings?');">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="repair_space_ids" value="1">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-credit-card"></i> Sync Gateway Payments
+                <div class="dropdown">
+                    <button type="button"
+                            class="btn btn-outline-secondary dropdown-toggle"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            id="bookingsToolsMenu">
+                        <i class="bi bi-tools"></i> Tools
                     </button>
-                </form>
-                <a href="<?= base_url('resource-management/addons') ?>" class="btn btn-primary">
-                    <i class="bi bi-puzzle"></i> Manage Add-ons
-                </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bookingsToolsMenu">
+                        <li>
+                            <a class="dropdown-item" href="<?= base_url('bookings/financialReconciliation') ?>">
+                                <i class="bi bi-arrow-repeat me-2"></i> Reconcile Finances
+                            </a>
+                        </li>
+                        <li>
+                            <form method="POST"
+                                  action="<?= base_url('payment/reconcile-gateway-payments') ?>"
+                                  onsubmit="return confirm('Re-verify pending online payments and fix facility name mismatches on existing bookings?');">
+                                <?php echo csrf_field(); ?>
+                                <input type="hidden" name="repair_space_ids" value="1">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-credit-card me-2"></i> Sync Gateway Payments
+                                </button>
+                            </form>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="<?= base_url('resource-management/addons') ?>">
+                                <i class="bi bi-puzzle me-2"></i> Manage Add-ons
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             <?php endif; ?>
+
             <?php if (has_permission('bookings', 'create')): ?>
                 <a href="<?= base_url('bookings/create') ?>" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> New Booking

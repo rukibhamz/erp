@@ -290,6 +290,7 @@
 
 /* Bookings / list pages: header action buttons stack on mobile */
 @media (max-width: 767.98px) {
+    .list-filters-page-header.d-flex.justify-content-between,
     .list-filters-page-header .d-flex.justify-content-between,
     .list-filters-page-header > .d-flex {
         flex-direction: column;
@@ -297,6 +298,7 @@
         gap: 0.75rem;
     }
 
+    .list-filters-page-header .list-filters-page-actions,
     .list-filters-page-header .d-flex > div:last-child,
     .list-filters-page-header .btn-group {
         display: flex;
@@ -305,11 +307,27 @@
         width: 100%;
     }
 
+    .list-filters-page-header .list-filters-page-actions > .btn,
+    .list-filters-page-header .list-filters-page-actions > .dropdown,
     .list-filters-page-header .d-flex .btn {
         flex: 1 1 calc(50% - 0.25rem);
         min-width: 0;
+    }
+
+    .list-filters-page-header .list-filters-page-actions > .dropdown > .btn {
+        width: 100%;
+    }
+
+    .list-filters-page-header .list-filters-page-actions > .btn,
+    .list-filters-page-header .d-flex .btn {
         font-size: 0.8125rem;
         padding-left: 0.5rem;
         padding-right: 0.5rem;
+    }
+
+    /* Keep the primary create action full-width and last */
+    .list-filters-page-header .list-filters-page-actions > .btn-primary {
+        flex: 1 1 100%;
+        order: 10;
     }
 }
