@@ -126,7 +126,14 @@ class Booking_financial_sync_service {
                 );
                 $result['journal_posted'] = $posted;
                 if ($posted) {
-                    $result['messages'][] = 'Posted GL adjustment of ' . $this->formatMoney(abs($deltaTotal)) . ' to match booking total.';
+                    $afterPosted = $this->getEffectivePostedRevenue($bookingId, $invoiceIds);
+                    if (abs($bookingTotal - $afterPosted) >= 0.01) {
+                        $result['ok'] = false;
+                        $result['messages'][] = 'GL adjustment posted but effective posted revenue is still '
+                            . $this->formatMoney($afterPosted) . ' vs booking ' . $this->formatMoney($bookingTotal) . '.';
+                    } else {
+                        $result['messages'][] = 'Posted GL adjustment of ' . $this->formatMoney(abs($deltaTotal)) . ' to match booking total.';
+                    }
                 } else {
                     $result['messages'][] = 'GL adjustment could not be posted (check revenue/AR accounts).';
                     $result['ok'] = false;
@@ -538,11 +545,13 @@ class Booking_financial_sync_service {
     }
 
     /**
-     * Sum posted sales recognition (invoice journal preferred over booking_revenue).
+     * Sum posted sales recognition (invoice journal preferred over booking_revenue),
+     * then always apply booking_adjustment journals so reconcile deltas stick.
      */
     private function getEffectivePostedRevenue(int $bookingId, array $invoiceIds): float {
         $total = 0.0;
         $prefix = $this->db->getPrefix();
+        $usedInvoiceJournals = false;
 
         if (!empty($invoiceIds)) {
             foreach ($invoiceIds as $invoiceId) {
@@ -555,18 +564,22 @@ class Booking_financial_sync_service {
                 }
             }
             if ($total > 0) {
-                return round($total, 2);
+                $usedInvoiceJournals = true;
             }
         }
 
-        $rows = $this->db->fetchAll(
-            "SELECT amount FROM `" . $prefix . "journal_entries` WHERE reference = ? AND status != 'void'",
-            ['booking_revenue:' . $bookingId]
-        );
-        foreach ($rows as $row) {
-            $total += floatval($row['amount'] ?? 0);
+        if (!$usedInvoiceJournals) {
+            $rows = $this->db->fetchAll(
+                "SELECT amount FROM `" . $prefix . "journal_entries` WHERE reference = ? AND status != 'void'",
+                ['booking_revenue:' . $bookingId]
+            );
+            foreach ($rows as $row) {
+                $total += floatval($row['amount'] ?? 0);
+            }
         }
 
+        // Always net adjustments — previously skipped when invoice journals existed,
+        // so "reconcile" posted booking_adjustment rows that never cleared the UI mismatch.
         $adjustRows = $this->db->fetchAll(
             "SELECT amount, description FROM `" . $prefix . "journal_entries`
              WHERE reference = ? AND status != 'void'",
