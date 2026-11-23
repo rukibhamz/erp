@@ -2,13 +2,20 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Base_Controller {
-    protected $db;
-    protected $loader;
-    protected $load;
-    protected $config;
+    /** @var Database|null */
+    protected ?Database $db = null;
+    /** @var Loader */
+    protected Loader $loader;
+    /** @var Loader */
+    protected Loader $load;
+    /** @var array */
+    protected array $config;
+    /** @var array */
     protected $session;
-    protected $router;
-    public $input; // Explicitly declared for PHP 8.2 compatibility
+    /** @var Router|null */
+    protected ?Router $router = null;
+    /** @var Input */
+    public Input $input; // Explicitly declared for PHP 8.2 compatibility
     
     public function __construct() {
         $this->loader = new Loader();
@@ -125,7 +132,7 @@ class Base_Controller {
     
     protected function checkModuleAccess() {
         // Skip module check for public controllers (guest-accessible)
-        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal', 'sitemap'];
+        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal', 'sitemap', 'cron'];
         $currentClass = strtolower(get_class($this));
         
         if (in_array($currentClass, $publicControllers)) {
@@ -137,14 +144,76 @@ class Base_Controller {
             return;
         }
         
-        // Map controllers to module keys
+        // Map controllers to module keys (lowercase keys match strtolower(get_class()))
         $controllerModuleMap = [
-            'Accounting' => 'accounting',
-            // ... (rest of map) ...
+            'accounting' => 'accounting',
+            'accounts' => 'accounting',
+            'transactions' => 'accounting',
+            'cash' => 'accounting',
+            'receivables' => 'accounting',
+            'payables' => 'accounting',
+            'ledger' => 'accounting',
+            'reports' => 'accounting',
+            'budgets' => 'accounting',
+            'financial_years' => 'accounting',
+            'recurring' => 'accounting',
+            'credit_notes' => 'accounting',
+            'estimates' => 'accounting',
+            'templates' => 'accounting',
+            'banking' => 'accounting',
+            'staff_management' => 'staff_management',
+            'payroll' => 'staff_management',
+            'employees' => 'staff_management',
+            'bookings' => 'bookings',
+            'facilities' => 'bookings',
+            'resource_management' => 'bookings',
+            'booking_wizard' => 'bookings',
+            'booking_reports' => 'bookings',
+            'space_bookings' => 'bookings',
+            'locations' => 'locations',
+            'properties' => 'locations',
+            'spaces' => 'locations',
+            'leases' => 'locations',
+            'tenants' => 'locations',
+            'rent_invoices' => 'locations',
+            'utilities' => 'utilities',
+            'meters' => 'utilities',
+            'meter_readings' => 'utilities',
+            'utility_bills' => 'utilities',
+            'utility_providers' => 'utilities',
+            'utility_payments' => 'utilities',
+            'utility_reports' => 'utilities',
+            'utility_allocations' => 'utilities',
+            'utility_alerts' => 'utilities',
+            'tariffs' => 'utilities',
+            'vendor_utility_bills' => 'utilities',
+            'inventory' => 'inventory',
+            'items' => 'inventory',
+            'products' => 'inventory',
+            'stock_movements' => 'inventory',
+            'suppliers' => 'inventory',
+            'purchase_orders' => 'inventory',
+            'goods_receipts' => 'inventory',
+            'stock_adjustments' => 'inventory',
+            'stock_takes' => 'inventory',
+            'fixed_assets' => 'inventory',
+            'inventory_reports' => 'inventory',
+            'tax' => 'tax',
+            'taxes' => 'tax',
+            'tax_compliance' => 'tax',
+            'tax_config' => 'tax',
+            'tax_reports' => 'tax',
+            'vat' => 'tax',
+            'paye' => 'tax',
+            'cit' => 'tax',
+            'wht' => 'tax',
+            'education_tax' => 'tax',
+            'tax_payments' => 'tax',
+            'pos' => 'pos',
+            'entities' => 'entities',
+            'companies' => 'entities',
         ];
-        
-        // ...
-        
+
         // Check if controller is mapped to a module
         if (isset($controllerModuleMap[$currentClass])) {
             $moduleKey = $controllerModuleMap[$currentClass];
@@ -159,8 +228,13 @@ class Base_Controller {
     }
     
     protected function checkAuth() {
-        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal', 'sitemap'];
+        $publicControllers = ['auth', 'error404', 'payment', 'booking_wizard', 'customer_portal', 'sitemap', 'cron'];
         $currentController = strtolower(get_class($this));
+
+        // Nested Payment construct during cron must not force a login redirect
+        if (defined('CRON_JOB_RUNNING') && CRON_JOB_RUNNING) {
+            return;
+        }
         
         // Always require authentication for non-public controllers
         if (!in_array($currentController, $publicControllers)) {
@@ -175,11 +249,15 @@ class Base_Controller {
         }
     }
     
-    protected function loadModel($model) {
+    protected function loadModel(string $model) {
         return $this->loader->model($model);
     }
     
-    protected function loadLibrary($library, $params = null) {
+    /**
+     * @param class-string $library
+     * @param mixed $params
+     */
+    protected function loadLibrary(string $library, mixed $params = null): ?object {
         $libraryFile = BASEPATH . 'libraries/' . $library . '.php';
         
         if (file_exists($libraryFile)) {
@@ -197,7 +275,7 @@ class Base_Controller {
         return null;
     }
     
-    protected function loadView($view, $data = []) {
+    protected function loadView(string $view, array $data = []) {
         $data['config'] = $this->config;
         $data['session'] = $this->session;
         
@@ -246,7 +324,7 @@ class Base_Controller {
     /**
      * Paginate an in-memory list using shared request params (page, per_page).
      */
-    protected function paginateList(array $items, $defaultPerPage = null, array $searchFields = []) {
+    protected function paginateList(array $items, ?int $defaultPerPage = null, array $searchFields = []) {
         $search = list_search_term();
         if ($search !== '' && !empty($searchFields)) {
             $items = filter_rows_by_search($items, $searchFields, $search);
@@ -276,7 +354,7 @@ class Base_Controller {
     /**
      * Pagination params for SQL LIMIT/OFFSET queries.
      */
-    protected function paginationParams($defaultPerPage = null) {
+    protected function paginationParams(?int $defaultPerPage = null): array {
         return pagination_resolve_request($defaultPerPage ?? $this->getDefaultItemsPerPage());
     }
     
@@ -288,14 +366,14 @@ class Base_Controller {
         return null;
     }
     
-    protected function jsonResponse($data, $statusCode = 200) {
+    protected function jsonResponse(mixed $data, int $statusCode = 200): void {
         http_response_code($statusCode);
         header('Content-Type: application/json');
         echo json_encode($data);
         exit;
     }
     
-    protected function setFlashMessage($type, $message) {
+    protected function setFlashMessage(string $type, string $message): void {
         $allowedTypes = ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark', 'light'];
         if (!in_array((string) $type, $allowedTypes, true)) {
             $type = 'info';
@@ -315,7 +393,7 @@ class Base_Controller {
         return null;
     }
     
-    protected function requirePermission($module, $permission) {
+    protected function requirePermission(string $module, string $permission): bool {
         if (!isset($this->session['user_id'])) {
             redirect('login');
         }
@@ -332,7 +410,7 @@ class Base_Controller {
         
         if (!$hasPermission) {
             // Log the failed permission check for debugging
-            error_log("Permission check failed: User ID {$this->session['user_id']}, Role: {$this->session['role']}, Module: {$module}, Permission: {$permission}");
+            error_log('Permission check failed: User ID ' . $this->session['user_id'] . ', Role: ' . ($this->session['role'] ?? 'none') . ', Module: ' . $module . ', Permission: ' . $permission);
             
             $this->setFlashMessage('danger', 'You do not have permission to perform this action.');
             redirect('dashboard');
@@ -348,7 +426,7 @@ class Base_Controller {
      * @return bool True if user has required role
      * @throws void Redirects if role check fails
      */
-    protected function requireRole($roles) {
+    protected function requireRole(string|array $roles): bool {
         if (!is_array($roles)) {
             $roles = [$roles];
         }
@@ -387,7 +465,7 @@ class Base_Controller {
      * @param string $permission Permission name
      * @return bool True if user has permission
      */
-    protected function checkPermission($module, $permission) {
+    protected function checkPermission(string $module, string $permission): bool {
         if (!isset($this->session['user_id'])) {
             return false;
         }
@@ -446,19 +524,23 @@ class Base_Controller {
      * Check if maintenance mode is enabled and enforce restrictions
      */
     protected function checkMaintenanceMode() {
+        // Cron jobs (and nested Payment construct) must keep running
+        if (defined('CRON_JOB_RUNNING') && CRON_JOB_RUNNING) {
+            return;
+        }
+
         // Super Admin bypasses maintenance mode
         if (isset($this->session['role']) && $this->session['role'] === 'super_admin') {
             return;
         }
 
-        $maintenanceMode = $this->getSetting('maintenance_mode');
-        // DEBUG: error_log("Maintenance Mode Debug: value=" . var_export($maintenanceMode, true));
-        
-        if ($maintenanceMode && intval($maintenanceMode) === 1) {
+        $maintenanceMode = $this->getSetting('maintenance_mode') ?? '0';
+
+        if ((int) $maintenanceMode === 1) {
             $currentClass = strtolower(get_class($this));
             
-            // Exemptions: Auth (staff login) and public booking wizard during maintenance
-            $exemptions = ['auth', 'booking_wizard', 'error404', 'sitemap'];
+            // Exemptions: Auth (staff login), cron, and public booking wizard during maintenance
+            $exemptions = ['auth', 'booking_wizard', 'error404', 'sitemap', 'cron'];
             
             if (!in_array($currentClass, $exemptions)) {
                 // If not exempt, redirect to the maintenance page
@@ -470,7 +552,7 @@ class Base_Controller {
     /**
      * Get a setting value from the database
      */
-    protected function getSetting($key) {
+    protected function getSetting(string $key): ?string {
         if (!$this->db) {
             return null;
         }
@@ -481,7 +563,7 @@ class Base_Controller {
                 "SELECT setting_value FROM `{$prefix}settings` WHERE setting_key = ?",
                 [$key]
             );
-            return $result ? $result['setting_value'] : null;
+            return $result ? (string) $result['setting_value'] : null;
         } catch (Exception $e) {
             error_log("Base_Controller getSetting error ($key): " . $e->getMessage());
             return null;
@@ -505,14 +587,6 @@ class Base_Controller {
         exit;
     }
 
-    /**
-     * Check if a column exists in a table
-     * SECURITY: Uses parameterized query to prevent SQL injection
-     * 
-     * @param string $table Table name (without prefix)
-     * @param string $column Column name
-     * @return bool True if column exists, false otherwise
-     */
     protected function getSessionTimeoutSeconds(): int {
         if ($this->db && function_exists('get_session_timeout_seconds')) {
             return get_session_timeout_seconds();
@@ -520,7 +594,15 @@ class Base_Controller {
         return 1800;
     }
 
-    protected function checkColumnExists($table, $column) {
+    /**
+     * Check if a column exists in a table
+     * SECURITY: Uses parameterized query to prevent SQL injection
+     *
+     * @param string $table Table name (without prefix)
+     * @param string $column Column name
+     * @return bool True if column exists, false otherwise
+     */
+    protected function checkColumnExists(string $table, string $column): bool {
         try {
             if (!$this->db) {
                 return false;

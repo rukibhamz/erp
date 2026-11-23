@@ -417,6 +417,78 @@ find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
 
 ---
 
+## Automated Financial Reconcile (Cron)
+
+Nightly job that **detects, reports, and auto-repairs**:
+
+1. Booking ↔ invoice ↔ GL ↔ payment mismatches  
+2. Stale / unfulfilled gateway payments  
+3. Chart-of-accounts cached balance vs ledger  
+
+### 1. Configure `.env`
+
+```env
+CRON_SECRET=paste_a_long_random_secret_here
+CRON_REPORT_EMAIL=admin@example.com
+# Optional:
+# CRON_FINANCIAL_BOOKING_LIMIT=2000
+# CRON_GATEWAY_LIMIT=200
+```
+
+Generate a secret:
+
+```bash
+php -r "echo bin2hex(random_bytes(32));"
+```
+
+### 2. Manual test
+
+Replace the host/path and secret for your install (XAMPP example):
+
+```bat
+curl -fsS "http://localhost/erp/cron/financial-reconcile?key=YOUR_SECRET"
+```
+
+JSON output:
+
+```bat
+curl -fsS "http://localhost/erp/cron/financial-reconcile?key=YOUR_SECRET&format=json"
+```
+
+A wrong or missing key returns HTTP 404. Successful runs write:
+
+- `logs/financial_reconcile_YYYYMMDD_HHMMSS.log` (full report)
+- `logs/financial_reconcile.log` (one-line summary)
+
+If anything was mismatched, repaired, or errored and `CRON_REPORT_EMAIL` (or system admin email) is set, an email summary is sent.
+
+### 3. Windows Task Scheduler (XAMPP)
+
+1. Open **Task Scheduler** → **Create Basic Task**.  
+2. Trigger: **Daily** (e.g. 2:30 AM).  
+3. Action: **Start a program**.  
+4. Program/script:
+
+```text
+C:\Windows\System32\curl.exe
+```
+
+5. Arguments (adjust URL/secret):
+
+```text
+-fsS "http://localhost/erp/cron/financial-reconcile?key=YOUR_SECRET"
+```
+
+6. Finish, then **Run** the task once and confirm a new file under `logs/`.
+
+### 4. Linux crontab example
+
+```bash
+30 2 * * * curl -fsS "https://your-domain/cron/financial-reconcile?key=YOUR_SECRET" >> /var/log/erp_financial_reconcile.out 2>&1
+```
+
+---
+
 ## Support
 
 ### Documentation

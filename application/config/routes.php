@@ -414,6 +414,9 @@ $route['booking-wizard/step2/(:num)'] = 'Booking_wizard/step2/$1';
         $route['payment/verify'] = 'Payment/verify';
         $route['payment/verify/(:any)'] = 'Payment/verify/$1';
         $route['payment/reconcile-gateway-payments'] = 'Payment/reconcileGatewayPaymentsAdmin';
+
+        // Unattended cron jobs (secret-gated via CRON_SECRET)
+        $route['cron/financial-reconcile'] = 'Cron/financialReconcile';
         
         // Customer Portal
         $route['customer-portal'] = 'Customer_portal/login';

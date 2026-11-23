@@ -2,14 +2,23 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Payment extends Base_Controller {
+    /** @var Payment_gateway_model|null */
     private $gatewayModel;
+    /** @var Payment_transaction_model|null */
     private $paymentTransactionModel;
+    /** @var Booking_model|null */
     private $bookingModel;
+    /** @var Booking_payment_model|null */
     private $bookingPaymentModel;
+    /** @var Transaction_model|null */
     private $transactionModel;
+    /** @var Cash_account_model|null */
     private $cashAccountModel;
+    /** @var Account_model|null */
     private $accountModel;
+    /** @var Invoice_model|null */
     private $invoiceModel;
+    /** @var Notification_model|null */
     private $notificationModel;
     
     public function __construct() {
@@ -325,7 +334,7 @@ public function callback() {
     /**
      * Shared webhook processing with signature verification on raw body.
      */
-    private function handleWebhook($gatewayCode) {
+    private function handleWebhook(string $gatewayCode) {
         header('Content-Type: application/json');
 
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -410,7 +419,7 @@ public function callback() {
     /**
      * Log refund webhook events (fulfillment reversal is manual / future work).
      */
-    private function handleRefundWebhook($gatewayCode, array $payload) {
+    private function handleRefundWebhook(string $gatewayCode, array $payload) {
         $txRef = $payload['data']['tx_ref'] ?? null;
         $event = $payload['event'] ?? $payload['type'] ?? 'refund';
         error_log("Payment refund webhook [{$gatewayCode}] event={$event} tx_ref=" . ($txRef ?? 'n/a'));
@@ -429,7 +438,7 @@ public function callback() {
     /**
      * Check if webhook is a test/verification event
      */
-    private function isTestWebhook($gatewayCode, $payload) {
+    private function isTestWebhook(string $gatewayCode, array $payload) {
         switch ($gatewayCode) {
             case 'paystack':
                 // Paystack sends 'charge.success' for real payments
@@ -475,7 +484,7 @@ public function callback() {
     /**
      * Verify webhook signature for security
      */
-    private function verifyWebhookSignature($gatewayCode, $rawBody, $gateway) {
+    private function verifyWebhookSignature(string $gatewayCode, string $rawBody, array $gateway) {
         require_once BASEPATH . 'libraries/payment/Payment_provider_factory.php';
 
         if (Payment_provider_factory::supports($gatewayCode)) {
@@ -500,7 +509,7 @@ public function callback() {
         }
     }
 
-    private function shouldProcessWebhookEvent($gatewayCode, array $payload) {
+    private function shouldProcessWebhookEvent(string $gatewayCode, array $payload) {
         require_once BASEPATH . 'libraries/payment/Payment_provider_factory.php';
         if (Payment_provider_factory::supports($gatewayCode)) {
             $gateway = $this->gatewayModel->getByCode($gatewayCode);
@@ -514,7 +523,7 @@ public function callback() {
     /**
      * Verify payment manually
      */
-    public function verify($transactionRef) {
+    public function verify(string $transactionRef) {
         header('Content-Type: application/json');
         
         $gatewayCode = $_GET['gateway'] ?? 'paystack';
@@ -531,7 +540,7 @@ public function callback() {
     /**
  * Verify payment with gateway
  */
-private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = false, array $verifyOptions = []) {
+private function verifyPayment(string $transactionRef, string $gatewayCode, bool $fromWebhook = false, array $verifyOptions = []) {
     $timestamp = date('Y-m-d H:i:s');
     
     try {
@@ -656,7 +665,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
     /**
      * Process successful payment
      */
-    private function processPaymentSuccess($transaction) {
+    private function processPaymentSuccess(array $transaction) {
         $ts = date('Y-m-d H:i:s');
         
         payment_debug_log("[$ts] processPaymentSuccess: ENTERED, type={$transaction['payment_type']}, ref_id={$transaction['reference_id']}, amount={$transaction['amount']}\n");
@@ -1219,7 +1228,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
     /**
      * Get customer info based on payment type
      */
-    private function getCustomerInfo($paymentType, $referenceId) {
+    private function getCustomerInfo(string $paymentType, int $referenceId) {
         if ($paymentType === 'booking_payment') {
             $booking = $this->loadModel('Booking_model')->getById($referenceId);
             if ($booking) {
@@ -1241,7 +1250,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
     /**
      * Get payment description
      */
-    private function getPaymentDescription($paymentType, $referenceId) {
+    private function getPaymentDescription(string $paymentType, int $referenceId) {
         if ($paymentType === 'booking_payment') {
             $booking = $this->loadModel('Booking_model')->getById($referenceId);
             if ($booking) {
@@ -1254,7 +1263,7 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
     /**
      * Extract reference from webhook payload
      */
-    private function extractReferenceFromWebhook($gatewayCode, $payload) {
+    private function extractReferenceFromWebhook(string $gatewayCode, array $payload) {
         require_once BASEPATH . 'libraries/payment/Payment_provider_factory.php';
         if (Payment_provider_factory::supports($gatewayCode)) {
             $gateway = $this->gatewayModel->getByCode($gatewayCode);
@@ -1272,12 +1281,9 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
     }
 
     /**
-     * Never trust client-supplied amounts — compare gateway-verified values to DB.
-     */
-    /**
      * Resolve gateway for payment callback (never assume Paystack when tx exists in DB).
      */
-    private function resolveCallbackGatewayCode($transactionRef) {
+    private function resolveCallbackGatewayCode(string $transactionRef) {
         if ($transactionRef !== '') {
             $existingTxn = $this->paymentTransactionModel->getByTransactionRef($transactionRef);
             if ($existingTxn && !empty($existingTxn['gateway_code'])) {
@@ -1332,50 +1338,22 @@ private function verifyPayment($transactionRef, $gatewayCode, $fromWebhook = fal
      * Re-verify pending gateway transactions and fulfill successful ones missing booking payments.
      */
     public function reconcileStaleGatewayPayments(int $limit = 100): array {
-        $stats = [
-            'pending_checked' => 0,
-            'pending_verified' => 0,
-            'fulfillment_retried' => 0,
-            'errors' => [],
-        ];
+        require_once BASEPATH . 'services/Gateway_payment_reconcile_service.php';
 
-        try {
-            $pending = $this->paymentTransactionModel->getStalePendingBookingPayments($limit);
-
-            foreach ($pending as $txn) {
-                $stats['pending_checked']++;
-                $ref = $txn['transaction_ref'] ?? '';
-                if ($ref === '') {
-                    continue;
-                }
-                try {
-                    $gatewayCode = $txn['gateway_code'] ?? 'paystack';
-                    $result = $this->verifyPayment($ref, $gatewayCode);
-                    if (empty($result['pending'])) {
-                        $stats['pending_verified']++;
-                    }
-                } catch (Exception $e) {
-                    $stats['errors'][] = $ref . ': ' . $e->getMessage();
-                }
+        $service = new Gateway_payment_reconcile_service(
+            $this->paymentTransactionModel,
+            function ($ref, $gatewayCode) {
+                return $this->verifyPayment($ref, $gatewayCode);
+            },
+            function (array $txn) {
+                return $this->bookingFulfillmentStillNeeded($txn);
+            },
+            function (array $txn) {
+                $this->processPaymentSuccess($txn);
             }
+        );
 
-            $unfulfilled = $this->paymentTransactionModel->getUnfulfilledSuccessfulBookingPayments($limit);
-
-            foreach ($unfulfilled as $txn) {
-                try {
-                    if ($this->bookingFulfillmentStillNeeded($txn)) {
-                        $this->processPaymentSuccess($txn);
-                        $stats['fulfillment_retried']++;
-                    }
-                } catch (Exception $e) {
-                    $stats['errors'][] = ($txn['transaction_ref'] ?? '?') . ': ' . $e->getMessage();
-                }
-            }
-        } catch (Exception $e) {
-            $stats['errors'][] = $e->getMessage();
-        }
-
-        return $stats;
+        return $service->run($limit);
     }
 
     /**
